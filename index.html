@@ -283,6 +283,7 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">모따기</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
     <div class="proc-row2"><span class="pr-name">밑면연마</span><span class="pr-qty" id="pl-grind">-</span><span class="pr-sub" id="ps-grind">-</span></div>
+    <div class="proc-row2"><span class="pr-name">└ 150×150</span><span class="pr-qty" id="pl-grind150">-</span><span class="pr-sub" id="ps-grind150">-</span></div>
     <div class="proc-row2"><span class="pr-name">졸리컷</span><span class="pr-qty" id="pl-jolly">-</span><span class="pr-sub" id="ps-jolly">-</span></div>
     <div class="proc-row2"><span class="pr-name">고스라</span><span class="pr-qty" id="pl-gosra">-</span><span class="pr-sub" id="ps-gosra">-</span></div>
   </div>
@@ -325,6 +326,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>모따기</label><input id="su-chamfer" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>밑면연마</label><input id="su-grind" type="text" inputmode="numeric" value="9,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="su-grind150" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>졸리컷</label><input id="su-jolly" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>고스라</label><input id="su-gosra" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
       </div>
@@ -1904,7 +1906,7 @@ function toggleSetup(){
 }
 function calcCost(){
   var lenMm={rect:0,line:0,chamfer:0,grind:0,jolly:0,gosra:0};
-  var cnt={sink:0,cook:0,hole:0};
+  var cnt={sink:0,cook:0,hole:0,grind150:0};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       if(s.groupId&&s.groupRole==='main'){
@@ -1919,7 +1921,8 @@ function calcCost(){
     } else if(s.kind==='line'){
       lenMm.line+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='grindregion'){
-      lenMm.grind+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
+      var _g150=s.depth===150&&Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1))===150;
+      if(_g150)cnt.grind150++;else lenMm.grind+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='jollymark'){
       lenMm.jolly+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='gosramark'){
@@ -1940,6 +1943,7 @@ function calcCost(){
   var pLine=gp('su-line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
   var pChamfer=gp('su-chamfer'),mChamfer=lenMm.chamfer/1000,subChamfer=mChamfer*pChamfer*qty;
   var pGrind=gp('su-grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
+  var pGrind150=gp('su-grind150'),subGrind150=cnt.grind150*pGrind150*qty;
   var pJolly=gp('su-jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
   var pGosra=gp('su-gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
@@ -1949,10 +1953,11 @@ function calcCost(){
   upd('pl-line','ps-line',mLine>0.001?mLine.toFixed(3)+'m':'-',subLine);
   upd('pl-chamfer','ps-chamfer',mChamfer>0.001?mChamfer.toFixed(3)+'m':'-',subChamfer);
   upd('pl-grind','ps-grind',mGrind>0.001?mGrind.toFixed(3)+'m':'-',subGrind);
+  upd('pl-grind150','ps-grind150',cnt.grind150>0?cnt.grind150+'회':'-',subGrind150);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
   var totalCut=subRect+subSink+subCook+subHole+subLine;
-  var totalAdd=subChamfer+subGrind+subJolly+subGosra;
+  var totalAdd=subChamfer+subGrind+subGrind150+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
   var grand=totalCut+totalAdd+totalOther;
@@ -1965,7 +1970,7 @@ function calcCost(){
 }
 function saveData(){
   var su={};
-  ['rect','sink','cook','hole','line','chamfer','grind','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);su[k]=parseFloat((el?el.value||'0':'0').replace(/,/g,''))||0;});
+  ['rect','sink','cook','hole','line','chamfer','grind','grind150','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);su[k]=parseFloat((el?el.value||'0':'0').replace(/,/g,''))||0;});
   var data={
     products:products,
     setup:su,
@@ -1990,7 +1995,7 @@ function onFileLoad(e){
       var d=JSON.parse(ev.target.result);
       if(d.products&&d.products.length){products=d.products;renderProductList();}
       else if(d.product){products=[{name:d.product,size:d.size||'',qty:parseInt(d.qty)||1}];renderProductList();}
-      if(d.setup){['rect','sink','cook','hole','line','chamfer','grind','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);if(el&&d.setup[k]!==undefined)el.value=parseFloat(d.setup[k])?parseFloat(d.setup[k]).toLocaleString():'0';});}
+      if(d.setup){['rect','sink','cook','hole','line','chamfer','grind','grind150','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);if(el&&d.setup[k]!==undefined)el.value=parseFloat(d.setup[k])?parseFloat(d.setup[k]).toLocaleString():'0';});}
       if(d.pkg!==undefined)document.getElementById('r-pkg').value=d.pkg;
       if(d.ship1!==undefined)document.getElementById('r-ship1').value=d.ship1;
       if(d.ship2!==undefined)document.getElementById('r-ship2').value=d.ship2;
@@ -2006,7 +2011,7 @@ function resetAll(){
   if(!confirm('모든 데이터를 초기화하시겠습니까?'))return;
   shapes=[];selectedShapes=[];hoverShape=null;filletSel=[];_hist=[];
   products=[{name:'',size:'',qty:1}];renderProductList();
-  var _suDef={'rect':'10,800','sink':'50,000','cook':'30,000','hole':'10,000','line':'10,800','chamfer':'10,000','grind':'9,000','jolly':'9,900','gosra':'9,900'};['rect','sink','cook','hole','line','chamfer','grind','jolly','gosra'].forEach(function(k){document.getElementById('su-'+k).value=_suDef[k]||'0';});
+  var _suDef={'rect':'10,800','sink':'50,000','cook':'30,000','hole':'10,000','line':'10,800','chamfer':'10,000','grind':'9,000','grind150':'5,000','jolly':'9,900','gosra':'9,900'};['rect','sink','cook','hole','line','chamfer','grind','jolly','gosra'].forEach(function(k){document.getElementById('su-'+k).value=_suDef[k]||'0';});
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){document.getElementById(id).value='0';});
   updatePropsPanel();redraw();calcCost();
 }
