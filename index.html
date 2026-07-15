@@ -1069,6 +1069,7 @@ function toggleRight(){
   var collapsed=r.classList.toggle('collapsed');
   btn.textContent=collapsed?'◀':'▶';
   btn.title=collapsed?'가공비 패널 펼치기':'가공비 패널 접기';
+  setTimeout(resizeCanvas,210);
 }
 
 // ═══ 전체삭제 / 뷰 맞춤 ═══
@@ -3062,8 +3063,4 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'||e.keyCode===27){
     var m=document.querySelector('.modal.show')||document.querySelector('.overlay.show');
     if(m&&m.classList.contains('show')){m.classList.remove('show');e.stopPropagation();return;}
-  }
-});
-</script>
-</body>
-</html>
+  
