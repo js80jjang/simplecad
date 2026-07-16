@@ -97,6 +97,8 @@ canvas{display:block;cursor:crosshair}
 .tier-btn:hover:not(.active){background:#152a3a;color:#B0BEC5}
 .tier-chk{width:9px;height:9px;border-radius:50%;border:1.5px solid #546E7A;display:inline-block;flex-shrink:0}
 .tier-btn.active .tier-chk{background:#E3F2FD;border-color:#E3F2FD}
+.tier-save-btn{width:100%;margin-top:6px;background:#0d47a1;border:none;color:#B3E5FC;font-size:11px;padding:4px 0;border-radius:3px;cursor:pointer;letter-spacing:.3px;}
+.tier-save-btn:hover{background:#1565C0;}
 .other-row{display:flex;align-items:center;gap:4px;padding:2px 4px;margin-bottom:1px}
 .other-row label{font-size:11px;color:#90A4AE;flex:1}
 .other-row input{width:78px;background:#263545;border:none;color:#fff;padding:2px 5px;font-size:11px;border-radius:2px;text-align:right}
@@ -313,42 +315,21 @@ canvas{display:block;cursor:crosshair}
       가공비 견적 함께 출력
     </label>
   </div>
-  <!-- 단가 구분 선택 -->
-  <div style="padding:5px 4px 4px;border-top:1px solid #2d4a5a;margin-top:4px">
-    <div style="font-size:10px;color:#546E7A;margin-bottom:4px;letter-spacing:0.3px">▸ 단가 구분</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
-      <div class="tier-btn" id="tier-cost" onclick="setTier('cost')"><span class="tier-chk"></span>원가</div>
-      <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')"><span class="tier-chk"></span>업체용 ×1.2</div>
-      <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')"><span class="tier-chk"></span>소비자용 ×1.3</div>
-      <div class="tier-btn" id="tier-custom" onclick="setTier('custom')"><span class="tier-chk"></span>커스텀</div>
-    </div>
-  </div>
-  <!-- 커스텀 단가 입력 -->
-  <div id="custom-price-body" style="display:none">
-    <div class="r-card" style="padding:5px;margin:0 0 4px">
-      <div class="su-sub">절단 가공 (커스텀)</div>
-      <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-      <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-      <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-      <div class="su-row"><label>타공</label><input id="cu-hole" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-      <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-      <div class="su-sub">추가 가공 (커스텀)</div>
-      <div class="su-row"><label>모따기</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-      <div class="su-row"><label>밑면연마</label><input id="cu-grind" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-      <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="cu-grind150" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-      <div class="su-row"><label>졸리컷</label><input id="cu-jolly" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-      <div class="su-row"><label>고스라</label><input id="cu-gosra" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-    </div>
-  </div>
-  <!-- ⑥ 단가 셋업 (하단 고정) -->
-  <div style="border-top:1px solid #2d4a5a;margin-top:8px">
-    <div class="r-sec setup-hdr" onclick="toggleSetup()" style="display:flex;align-items:center;gap:5px;cursor:pointer">
+  <!-- ⑥ 단가 설정 -->
+  <div style="border-top:1px solid #2d4a5a;margin-top:4px">
+    <div class="r-sec setup-hdr" onclick="toggleTierSection()" style="display:flex;align-items:center;gap:5px;cursor:pointer">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="#5BC8F5" style="flex-shrink:0"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.3.07-.62.07-.93s-.03-.62-.07-1l2.01-1.57c.18-.14.23-.41.12-.61l-1.9-3.3c-.11-.2-.35-.27-.55-.2l-2.37.96c-.5-.38-1.04-.7-1.62-.93L14.7 3c-.04-.24-.24-.41-.48-.41h-3.8c-.24 0-.44.17-.47.41L9.59 5.54c-.58.23-1.12.55-1.62.93L5.6 5.51c-.22-.08-.46.01-.56.2l-1.9 3.3c-.12.2-.07.47.12.61L5.27 11.2c-.04.38-.07.7-.07 1s.03.62.07 1L3.26 14.77c-.18.14-.22.41-.12.61l1.9 3.3c.11.2.35.27.55.2l2.37-.96c.5.38 1.04.7 1.62.93l.36 2.54c.03.24.23.41.47.41h3.8c.24 0 .44-.17.47-.41l.36-2.54c.58-.23 1.12-.55 1.62-.93l2.37.96c.22.08.46-.01.56-.2l1.9-3.3c.11-.2.07-.47-.12-.61l-2.01-1.57Z"/></svg>
-      <span style="flex:1">단가 셋업</span>
-      <span id="setup-arrow">▶</span>
+      <span style="flex:1">⑥ 단가 설정</span>
+      <span id="tier-sec-arrow">▶</span>
     </div>
-    <div id="setup-body2" style="display:none">
-      <div class="r-card" style="padding:5px">
+    <div id="tier-sec-body" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px 4px 0">
+        <div class="tier-btn" id="tier-cost" onclick="setTier('cost')"><span class="tier-chk"></span>원가</div>
+        <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')"><span class="tier-chk"></span>업체용</div>
+        <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')"><span class="tier-chk"></span>소비자용</div>
+        <div class="tier-btn" id="tier-custom" onclick="setTier('custom')"><span class="tier-chk"></span>커스텀</div>
+      </div>
+      <div id="panel-cost" class="r-card" style="display:none;padding:5px;margin-top:3px">
         <div class="su-sub">절단 가공</div>
         <div class="su-row"><label>사각 절단</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="su-sink" type="text" inputmode="numeric" value="50,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
@@ -361,6 +342,52 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="su-grind150" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>졸리컷</label><input id="su-jolly" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>고스라</label><input id="su-gosra" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <button class="tier-save-btn" onclick="saveTierPrices('cost')">💾 저장</button>
+      </div>
+      <div id="panel-dealer" class="r-card" style="display:none;padding:5px;margin-top:3px">
+        <div class="su-sub">절단 가공</div>
+        <div class="su-row"><label>사각 절단</label><input id="du-rect" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>싱크볼</label><input id="du-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>쿡탑</label><input id="du-cook" type="text" inputmode="numeric" value="36,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>타공</label><input id="du-hole" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>선 절단</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">추가 가공</div>
+        <div class="su-row"><label>모따기</label><input id="du-chamfer" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>밑면연마</label><input id="du-grind" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="du-grind150" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>졸리컷</label><input id="du-jolly" type="text" inputmode="numeric" value="11,880" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>고스라</label><input id="du-gosra" type="text" inputmode="numeric" value="11,880" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <button class="tier-save-btn" onclick="saveTierPrices('dealer')">💾 저장</button>
+      </div>
+      <div id="panel-consumer" class="r-card" style="display:none;padding:5px;margin-top:3px">
+        <div class="su-sub">절단 가공</div>
+        <div class="su-row"><label>사각 절단</label><input id="ru-rect" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>싱크볼</label><input id="ru-sink" type="text" inputmode="numeric" value="65,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>쿡탑</label><input id="ru-cook" type="text" inputmode="numeric" value="39,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>타공</label><input id="ru-hole" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>선 절단</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">추가 가공</div>
+        <div class="su-row"><label>모따기</label><input id="ru-chamfer" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>밑면연마</label><input id="ru-grind" type="text" inputmode="numeric" value="11,700" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="ru-grind150" type="text" inputmode="numeric" value="6,500" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>졸리컷</label><input id="ru-jolly" type="text" inputmode="numeric" value="12,870" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>고스라</label><input id="ru-gosra" type="text" inputmode="numeric" value="12,870" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <button class="tier-save-btn" onclick="saveTierPrices('consumer')">💾 저장</button>
+      </div>
+      <div id="panel-custom" class="r-card" style="display:none;padding:5px;margin-top:3px">
+        <div class="su-sub">절단 가공</div>
+        <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>타공</label><input id="cu-hole" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">추가 가공</div>
+        <div class="su-row"><label>모따기</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>밑면연마</label><input id="cu-grind" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="cu-grind150" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>졸리컷</label><input id="cu-jolly" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>고스라</label><input id="cu-gosra" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <button class="tier-save-btn" onclick="saveTierPrices('custom')">💾 저장</button>
       </div>
     </div>
   </div>
@@ -379,9 +406,13 @@ function setTier(t){
   ['cost','dealer','consumer','custom'].forEach(function(id){
     var el=document.getElementById('tier-'+id);
     if(el)el.classList.toggle('active',id===t);
+    var p=document.getElementById('panel-'+id);
+    if(p)p.style.display=(id===t)?'block':'none';
   });
-  var cb=document.getElementById('custom-price-body');
-  if(cb)cb.style.display=(t==='custom')?'block':'none';
+  // 섹션이 닫혀 있으면 열기
+  var body=document.getElementById('tier-sec-body');
+  var arrow=document.getElementById('tier-sec-arrow');
+  if(body&&body.style.display==='none'){body.style.display='block';if(arrow)arrow.textContent='▼';}
   calcCost();
 }
 // 제품목록.js 에서 로드된 카탈로그 (BAT 실행 시 세라믹제품목록.xlsx에서 자동 생성)
@@ -584,6 +615,7 @@ function toCanvas(mx,my){return[offsetX+mx*scale,offsetY+my*scale];}
 function fromCanvas(cx,cy){return[(cx-offsetX)/scale,(cy-offsetY)/scale];}
 function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);offsetX=pad;offsetY=pad;}redraw();}
 window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTimeout(resizeCanvas,200);
+loadAllTierPrices();
 
 // ═══ 스냅 ═══
 function toggleGrind150(){
@@ -1942,13 +1974,34 @@ function openDimInline(px,py,initVal,onDone){
   inp.addEventListener('keydown',onKey);
   inp.addEventListener('blur',commit,{once:true});
 }
-function toggleSetup(){
-  var body=document.getElementById('setup-body2');
-  var arrow=document.getElementById('setup-arrow');
+function toggleTierSection(){
+  var body=document.getElementById('tier-sec-body');
+  var arrow=document.getElementById('tier-sec-arrow');
   if(!body)return;
   var open=body.style.display==='none';
   body.style.display=open?'block':'none';
   if(arrow)arrow.textContent=open?'▼':'▶';
+}
+function saveTierPrices(tier){
+  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'};
+  var prefix=pmap[tier];
+  var keys=['rect','sink','cook','hole','line','chamfer','grind','grind150','jolly','gosra'];
+  var data={};
+  keys.forEach(function(k){var el=document.getElementById(prefix+k);if(el)data[k]=el.value;});
+  try{localStorage.setItem('scd_prices_'+tier,JSON.stringify(data));}catch(e){}
+  var btn=document.querySelector('#panel-'+tier+' .tier-save-btn');
+  if(btn){var orig=btn.textContent;btn.textContent='✅ 저장됨';setTimeout(function(){btn.textContent=orig;},1200);}
+}
+function loadAllTierPrices(){
+  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'};
+  var keys=['rect','sink','cook','hole','line','chamfer','grind','grind150','jolly','gosra'];
+  Object.keys(pmap).forEach(function(tier){
+    var saved;try{saved=localStorage.getItem('scd_prices_'+tier);}catch(e){}
+    if(!saved)return;
+    var data=JSON.parse(saved);
+    var prefix=pmap[tier];
+    keys.forEach(function(k){var el=document.getElementById(prefix+k);if(el&&data[k]!=null)el.value=data[k];});
+  });
 }
 function calcCost(){
   var lenMm={rect:0,line:0,chamfer:0,grind:0,jolly:0,gosra:0};
@@ -1977,25 +2030,26 @@ function calcCost(){
   });
   var qty=totalQty();
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
-  function gpt(baseId,cuId){
-    if(_tier==='custom'){var el=document.getElementById(cuId);return el?parseFloat((el.value||'').replace(/,/g,''))||0:0;}
-    return gp(baseId)*(_tierMult[_tier]||1);
+  function gta(k){
+    var pfx={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'}[_tier]||'su-';
+    var el=document.getElementById(pfx+k);
+    return el?parseFloat((el.value||'').replace(/,/g,''))||0:0;
   }
   function upd(qId,sId,qTxt,sub){
     var qEl=document.getElementById(qId),sEl=document.getElementById(sId);
     if(qEl)qEl.textContent=qTxt;
     if(sEl)sEl.textContent=sub>0?Math.round(sub).toLocaleString():'-';
   }
-  var pRect=gpt('su-rect','cu-rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
-  var pSink=gpt('su-sink','cu-sink'),subSink=cnt.sink*pSink*qty;
-  var pCook=gpt('su-cook','cu-cook'),subCook=cnt.cook*pCook*qty;
-  var pHole=gpt('su-hole','cu-hole'),subHole=cnt.hole*pHole*qty;
-  var pLine=gpt('su-line','cu-line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
-  var pChamfer=gpt('su-chamfer','cu-chamfer'),mChamfer=lenMm.chamfer/1000,subChamfer=mChamfer*pChamfer*qty;
-  var pGrind=gpt('su-grind','cu-grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
-  var pGrind150=gpt('su-grind150','cu-grind150'),subGrind150=cnt.grind150*pGrind150*qty;
-  var pJolly=gpt('su-jolly','cu-jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
-  var pGosra=gpt('su-gosra','cu-gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
+  var pRect=gta('rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
+  var pSink=gta('sink'),subSink=cnt.sink*pSink*qty;
+  var pCook=gta('cook'),subCook=cnt.cook*pCook*qty;
+  var pHole=gta('hole'),subHole=cnt.hole*pHole*qty;
+  var pLine=gta('line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
+  var pChamfer=gta('chamfer'),mChamfer=lenMm.chamfer/1000,subChamfer=mChamfer*pChamfer*qty;
+  var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
+  var pGrind150=gta('grind150'),subGrind150=cnt.grind150*pGrind150*qty;
+  var pJolly=gta('jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
+  var pGosra=gta('gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
