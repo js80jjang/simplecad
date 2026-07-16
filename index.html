@@ -3022,4 +3022,98 @@ function showPrintPreview(){
   var costHtml='';
   var printCost=document.getElementById('ck-print-cost')&&document.getElementById('ck-print-cost').checked;
   if(printCost){
-    function _gp(id){
+    function _gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
+    function _tv(id){var el=document.getElementById(id);return el&&el.textContent&&el.textContent!=='-'?el.textContent:'';}
+    function _fmt(n){return n>0?Math.round(n).toLocaleString():'';}
+    var prod=(products[0]&&products[0].name)||'';
+    var sz=(products[0]&&products[0].size)||'';
+    var qty=String(totalQty());
+    var rows=[
+      {g:'절단 가공',name:'사각 절단',qty:_tv('pl-rect'),sub:_tv('ps-rect')},
+      {name:'싱크볼',qty:_tv('pl-sink'),sub:_tv('ps-sink')},
+      {name:'쿡탑',qty:_tv('pl-cook'),sub:_tv('ps-cook')},
+      {name:'타공',qty:_tv('pl-hole'),sub:_tv('ps-hole')},
+      {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
+      {g:'추가 가공',name:'모따기',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
+      {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
+      {name:'졸리컷',qty:_tv('pl-jolly'),sub:_tv('ps-jolly')},
+      {name:'고스라',qty:_tv('pl-gosra'),sub:_tv('ps-gosra')},
+      {g:'기타 비용',name:'포장비',qty:'',sub:_gp('r-pkg')>0?_fmt(_gp('r-pkg')):''},
+      {name:'운임(공장이동)',qty:'',sub:_gp('r-ship1')>0?_fmt(_gp('r-ship1')):''},
+      {name:'운임(현장출고)',qty:'',sub:_gp('r-ship2')>0?_fmt(_gp('r-ship2')):''},
+      {name:'기타',qty:'',sub:_gp('r-other')>0?_fmt(_gp('r-other')):''},
+    ];
+    var tblRows='';
+    rows.forEach(function(r){
+      if(r.g)tblRows+='<tr class="sub-hdr"><td colspan="3">'+r.g+'</td></tr>';
+      if(r.qty||r.sub)tblRows+='<tr><td>'+r.name+'</td><td class="num">'+r.qty+'</td><td class="num">'+r.sub+'</td></tr>';
+    });
+    var sCut=document.getElementById('s-cut').textContent;
+    var sAdd=document.getElementById('s-add').textContent;
+    var sOth=document.getElementById('s-other').textContent;
+    var sTotal=document.getElementById('s-total').textContent;
+    costHtml='<div class="cost-panel">'
+      +'<h4>&#9632; 가공비 견적서</h4>'
+      +'<div class="info-row"><b>제품명</b>'+prod+'</div>'
+      +(sz?'<div class="info-row"><b>사이즈</b>'+sz+'</div>':'')
+      +'<div class="info-row"><b>수량</b>'+qty+'개</div>'
+      +'<table class="cost-tbl"><thead><tr><th>공정</th><th>수량/길이</th><th>소계(원)</th></tr></thead><tbody>'
+      +tblRows
+      +'</tbody></table>'
+      +(function(){
+        var s='<div style="font-size:10px;color:#555;line-height:1.8;margin-top:6px">';
+        s+='<b>제품 정보</b><br>';
+        products.forEach(function(p,i){
+          if(p.name||p.size)s+=(p.name||'제품'+(i+1))+(p.size?' ('+p.size+')':'')+'  수량: '+(p.qty||1)+'<br>';
+        });
+        return s+'</div>';
+      })()
+      +'</div>';
+  }
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>도면 출력</title>'
+    +'<style>'+css+'</style>'
+    +'</head><body>'
+    +'<div class="ctrl">'
+    +'<button onclick="window.print()" style="background:#1565C0;color:#fff">&#128424; 인쇄</button>'
+    +'<button onclick="window.close()" style="background:#555;color:#fff">&#10005; 닫기</button>'
+    +'</div>'
+    +'<div class="page">'
+    +'<div class="top-row">'
+    +'<div class="sec"><h4>&#9632; 도면</h4><div class="imgbox"><img id="_pdi" src=""></div></div>'
+    +(costHtml?'<div id="_pcp" class="cost-panel" style="overflow:auto"></div>':'')
+    +'</div>'
+    +(boardImg?'<div class="bot-row"><div class="sec"><h4>&#9632; 온장 배치도</h4><div class="imgbox"><img id="_pbi" src=""></div></div></div>':'')
+    +'</div>'
+    +'</body></html>';
+
+  pw.document.open();pw.document.write(html);pw.document.close();
+  function _pwInject(){
+    try{
+      var _di=pw.document.getElementById('_pdi');
+      if(_di)_di.src=drawImg;
+      var _bi=pw.document.getElementById('_pbi');
+      if(_bi&&boardImg)_bi.src=boardImg;
+      var _cp=pw.document.getElementById('_pcp');
+      if(_cp&&costHtml){
+        var _inner=costHtml.replace(/^<div[^>]*>/,'').replace(/<\/div>$/,'');
+        _cp.innerHTML=_inner
+          +(sTotal?'<div class="total-row"><span>합&nbsp;계</span><span class="total-num">'+sTotal+'</span></div>':'')
+          +'<div class="vat-note">부가세(VAT) 별도</div>';
+      }
+    }catch(e){}
+  }
+  if(pw.document.readyState==='complete'){_pwInject();}
+  else{pw.addEventListener('load',_pwInject);}
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'||e.keyCode===27){
+    var m=document.querySelector('.modal.show')||document.querySelector('.overlay.show');
+    if(m&&m.classList.contains('show')){m.classList.remove('show');e.stopPropagation();return;}
+
+  }
+});
+</script>
+</body>
+</html>
