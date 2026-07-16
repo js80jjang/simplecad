@@ -92,6 +92,11 @@ canvas{display:block;cursor:crosshair}
 .su-sub{font-size:10px;color:#546E7A;padding:4px 2px 1px;border-bottom:1px solid #263545;margin-bottom:3px}
 .setup-hdr{cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
 .setup-hdr:hover{background:#1a3040!important}
+.tier-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:#78909C;background:#0d2233;border:1px solid #1e3a4a;border-radius:4px;padding:3px 7px;cursor:pointer;user-select:none;transition:all 0.15s;white-space:nowrap}
+.tier-btn.active{color:#E3F2FD;background:#1565C0;border-color:#42A5F5}
+.tier-btn:hover:not(.active){background:#152a3a;color:#B0BEC5}
+.tier-chk{width:9px;height:9px;border-radius:50%;border:1.5px solid #546E7A;display:inline-block;flex-shrink:0}
+.tier-btn.active .tier-chk{background:#E3F2FD;border-color:#E3F2FD}
 .other-row{display:flex;align-items:center;gap:4px;padding:2px 4px;margin-bottom:1px}
 .other-row label{font-size:11px;color:#90A4AE;flex:1}
 .other-row input{width:78px;background:#263545;border:none;color:#fff;padding:2px 5px;font-size:11px;border-radius:2px;text-align:right}
@@ -308,6 +313,33 @@ canvas{display:block;cursor:crosshair}
       가공비 견적 함께 출력
     </label>
   </div>
+  <!-- 단가 구분 선택 -->
+  <div style="padding:5px 4px 4px;border-top:1px solid #2d4a5a;margin-top:4px">
+    <div style="font-size:10px;color:#546E7A;margin-bottom:4px;letter-spacing:0.3px">▸ 단가 구분</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+      <div class="tier-btn" id="tier-cost" onclick="setTier('cost')"><span class="tier-chk"></span>원가</div>
+      <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')"><span class="tier-chk"></span>업체용 ×1.2</div>
+      <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')"><span class="tier-chk"></span>소비자용 ×1.3</div>
+      <div class="tier-btn" id="tier-custom" onclick="setTier('custom')"><span class="tier-chk"></span>커스텀</div>
+    </div>
+  </div>
+  <!-- 커스텀 단가 입력 -->
+  <div id="custom-price-body" style="display:none">
+    <div class="r-card" style="padding:5px;margin:0 0 4px">
+      <div class="su-sub">절단 가공 (커스텀)</div>
+      <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+      <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+      <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+      <div class="su-row"><label>타공</label><input id="cu-hole" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+      <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+      <div class="su-sub">추가 가공 (커스텀)</div>
+      <div class="su-row"><label>모따기</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+      <div class="su-row"><label>밑면연마</label><input id="cu-grind" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+      <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="cu-grind150" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+      <div class="su-row"><label>졸리컷</label><input id="cu-jolly" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+      <div class="su-row"><label>고스라</label><input id="cu-gosra" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+    </div>
+  </div>
   <!-- ⑥ 단가 셋업 (하단 고정) -->
   <div style="border-top:1px solid #2d4a5a;margin-top:8px">
     <div class="r-sec setup-hdr" onclick="toggleSetup()" style="display:flex;align-items:center;gap:5px;cursor:pointer">
@@ -339,6 +371,19 @@ canvas{display:block;cursor:crosshair}
 // ═══ 상태 ═══
 var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
+var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
+var _tierMult={cost:1,dealer:1.2,consumer:1.3,custom:1};
+
+function setTier(t){
+  _tier=t;
+  ['cost','dealer','consumer','custom'].forEach(function(id){
+    var el=document.getElementById('tier-'+id);
+    if(el)el.classList.toggle('active',id===t);
+  });
+  var cb=document.getElementById('custom-price-body');
+  if(cb)cb.style.display=(t==='custom')?'block':'none';
+  calcCost();
+}
 // 제품목록.js 에서 로드된 카탈로그 (BAT 실행 시 세라믹제품목록.xlsx에서 자동 생성)
 var _catalog=window._PRODUCT_CATALOG||[];
 var _ddResults=[];
@@ -1932,21 +1977,25 @@ function calcCost(){
   });
   var qty=totalQty();
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
+  function gpt(baseId,cuId){
+    if(_tier==='custom'){var el=document.getElementById(cuId);return el?parseFloat((el.value||'').replace(/,/g,''))||0:0;}
+    return gp(baseId)*(_tierMult[_tier]||1);
+  }
   function upd(qId,sId,qTxt,sub){
     var qEl=document.getElementById(qId),sEl=document.getElementById(sId);
     if(qEl)qEl.textContent=qTxt;
     if(sEl)sEl.textContent=sub>0?Math.round(sub).toLocaleString():'-';
   }
-  var pRect=gp('su-rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
-  var pSink=gp('su-sink'),subSink=cnt.sink*pSink*qty;
-  var pCook=gp('su-cook'),subCook=cnt.cook*pCook*qty;
-  var pHole=gp('su-hole'),subHole=cnt.hole*pHole*qty;
-  var pLine=gp('su-line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
-  var pChamfer=gp('su-chamfer'),mChamfer=lenMm.chamfer/1000,subChamfer=mChamfer*pChamfer*qty;
-  var pGrind=gp('su-grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
-  var pGrind150=gp('su-grind150'),subGrind150=cnt.grind150*pGrind150*qty;
-  var pJolly=gp('su-jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
-  var pGosra=gp('su-gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
+  var pRect=gpt('su-rect','cu-rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
+  var pSink=gpt('su-sink','cu-sink'),subSink=cnt.sink*pSink*qty;
+  var pCook=gpt('su-cook','cu-cook'),subCook=cnt.cook*pCook*qty;
+  var pHole=gpt('su-hole','cu-hole'),subHole=cnt.hole*pHole*qty;
+  var pLine=gpt('su-line','cu-line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
+  var pChamfer=gpt('su-chamfer','cu-chamfer'),mChamfer=lenMm.chamfer/1000,subChamfer=mChamfer*pChamfer*qty;
+  var pGrind=gpt('su-grind','cu-grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
+  var pGrind150=gpt('su-grind150','cu-grind150'),subGrind150=cnt.grind150*pGrind150*qty;
+  var pJolly=gpt('su-jolly','cu-jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
+  var pGosra=gpt('su-gosra','cu-gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
@@ -2973,99 +3022,4 @@ function showPrintPreview(){
   var costHtml='';
   var printCost=document.getElementById('ck-print-cost')&&document.getElementById('ck-print-cost').checked;
   if(printCost){
-    function _gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
-    function _tv(id){var el=document.getElementById(id);return el&&el.textContent&&el.textContent!=='-'?el.textContent:'';}
-    function _fmt(n){return n>0?Math.round(n).toLocaleString():'';}
-    var prod=(products[0]&&products[0].name)||'';
-    var sz=(products[0]&&products[0].size)||'';
-    var qty=String(totalQty());
-    var rows=[
-      {g:'절단 가공',name:'사각 절단',qty:_tv('pl-rect'),sub:_tv('ps-rect')},
-      {name:'싱크볼',qty:_tv('pl-sink'),sub:_tv('ps-sink')},
-      {name:'쿡탑',qty:_tv('pl-cook'),sub:_tv('ps-cook')},
-      {name:'타공',qty:_tv('pl-hole'),sub:_tv('ps-hole')},
-      {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
-      {g:'추가 가공',name:'모따기',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
-      {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
-      {name:'졸리컷',qty:_tv('pl-jolly'),sub:_tv('ps-jolly')},
-      {name:'고스라',qty:_tv('pl-gosra'),sub:_tv('ps-gosra')},
-      {g:'기타 비용',name:'포장비',qty:'',sub:_gp('r-pkg')>0?_fmt(_gp('r-pkg')):''},
-      {name:'운임(공장이동)',qty:'',sub:_gp('r-ship1')>0?_fmt(_gp('r-ship1')):''},
-      {name:'운임(현장출고)',qty:'',sub:_gp('r-ship2')>0?_fmt(_gp('r-ship2')):''},
-      {name:'기타',qty:'',sub:_gp('r-other')>0?_fmt(_gp('r-other')):''},
-    ];
-    var tblRows='';
-    rows.forEach(function(r){
-      if(r.g)tblRows+='<tr class="sub-hdr"><td colspan="3">'+r.g+'</td></tr>';
-      if(r.qty||r.sub)tblRows+='<tr><td>'+r.name+'</td><td class="num">'+r.qty+'</td><td class="num">'+r.sub+'</td></tr>';
-    });
-    var sCut=document.getElementById('s-cut').textContent;
-    var sAdd=document.getElementById('s-add').textContent;
-    var sOth=document.getElementById('s-other').textContent;
-    var sTotal=document.getElementById('s-total').textContent;
-    costHtml='<div class="cost-panel">'
-      +'<h4>&#9632; 가공비 견적서</h4>'
-      +'<div class="info-row"><b>제품명</b>'+prod+'</div>'
-      +(sz?'<div class="info-row"><b>사이즈</b>'+sz+'</div>':'')
-      +'<div class="info-row"><b>수량</b>'+qty+'개</div>'
-      +'<table class="cost-tbl"><thead><tr><th>공정</th><th>수량/길이</th><th>소계(원)</th></tr></thead><tbody>'
-      +tblRows
-      +'</tbody></table>'
-      +(function(){
-
-        var s='<div style="font-size:10px;color:#555;line-height:1.8;margin-top:6px">';
-        s+='<b>제품 정보</b><br>';
-        products.forEach(function(p,i){
-          if(p.name||p.size)s+=(p.name||'제품'+(i+1))+(p.size?' ('+p.size+')':'')+'  수량: '+(p.qty||1)+'<br>';
-        });
-        return s+'</div>';
-      })()
-      +'</div>';
-  }
-
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>도면 출력</title>'
-    +'<style>'+css+'</style>'
-    +'</head><body>'
-    +'<div class="ctrl">'
-    +'<button onclick="window.print()" style="background:#1565C0;color:#fff">&#128424; 인쇄</button>'
-    +'<button onclick="window.close()" style="background:#555;color:#fff">&#10005; 닫기</button>'
-    +'</div>'
-    +'<div class="page">'
-    +'<div class="top-row">'
-    +'<div class="sec"><h4>&#9632; 도면</h4><div class="imgbox"><img id="_pdi" src=""></div></div>'
-    +(costHtml?'<div id="_pcp" class="cost-panel" style="overflow:auto"></div>':'')
-    +'</div>'
-    +(boardImg?'<div class="bot-row"><div class="sec"><h4>&#9632; 온장 배치도</h4><div class="imgbox"><img id="_pbi" src=""></div></div></div>':'')
-    +'</div>'
-    +'</body></html>';
-
-  pw.document.open();pw.document.write(html);pw.document.close();
-  function _pwInject(){
-    try{
-      var _di=pw.document.getElementById('_pdi');
-      if(_di)_di.src=drawImg;
-      var _bi=pw.document.getElementById('_pbi');
-      if(_bi&&boardImg)_bi.src=boardImg;
-      var _cp=pw.document.getElementById('_pcp');
-      if(_cp&&costHtml){
-        var _inner=costHtml.replace(/^<div[^>]*>/,'').replace(/<\/div>$/,'');
-        _cp.innerHTML=_inner
-          +(sTotal?'<div class="total-row"><span>합&nbsp;계</span><span class="total-num">'+sTotal+'</span></div>':'')
-          +'<div class="vat-note">부가세(VAT) 별도</div>';
-      }
-    }catch(e){}
-  }
-  if(pw.document.readyState==='complete'){_pwInject();}
-  else{pw.addEventListener('load',_pwInject);}
-}
-
-document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'||e.keyCode===27){
-    var m=document.querySelector('.modal.show')||document.querySelector('.overlay.show');
-    if(m&&m.classList.contains('show')){m.classList.remove('show');e.stopPropagation();return;}
-
-  }
-});
-</script>
-</body>
-</html>
+    function _gp(id){
