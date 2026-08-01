@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>세라믹 가공비 계산</title>
+<title>심플 캐드</title>
 <script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -56,7 +56,8 @@ body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic
 #board-cv{display:block;width:100%;height:100%}
 #canvas-wrap{flex:1;position:relative;overflow:hidden;border:1px solid #2d4a5a}
 canvas{display:block;cursor:crosshair}
-#dim-inline{position:absolute;display:none;background:#0d1822;border:1px solid #FFD740;color:#FFD740;padding:2px 4px;font-size:11px;font-family:Consolas,monospace;width:68px;z-index:20;outline:none;text-align:center}
+#dim-popup{position:absolute;display:none;z-index:21;background:#0d1822;border:1px solid #FFD740;border-radius:3px;flex-direction:row;align-items:center;gap:0}
+#dim-inline{position:static;display:block;background:#0d1822;border:none;color:#FFD740;padding:2px 4px;font-size:11px;font-family:Consolas,monospace;width:68px;outline:none;text-align:center}
 #statusbar{height:22px;background:#0d1a22;display:flex;align-items:center;padding:0 8px;gap:16px;font-size:11px;flex-shrink:0}
 #coord-lbl{color:#5BC8F5;font-family:Consolas,monospace}
 #snap-lbl{color:#FFD600}
@@ -152,7 +153,7 @@ canvas{display:block;cursor:crosshair}
 </style>
 </head>
 <body>
-<div id="header">&#9881; 세라믹 가공비 계산</div>
+<div id="header">심플 캐드</div>
 <div id="main">
 <div id="left">
   <div class="tgl" style="border-top:none;margin-top:0">선택</div>
@@ -260,7 +261,10 @@ canvas{display:block;cursor:crosshair}
   </div>
   <div id="canvas-wrap">
     <canvas id="cv"></canvas>
-    <input type="number" id="dim-inline" step="0.1">
+    <div id="dim-popup" style="position:absolute;display:none;z-index:21;background:#0d1822;border:1px solid #FFD740;border-radius:3px;display:none;flex-direction:row;align-items:center;gap:0">
+      <input type="number" id="dim-inline" step="0.1" style="position:static;display:block;border:none;border-right:1px solid #2d4a5a;border-radius:3px 0 0 3px;margin:0">
+      <button id="dim-hide-btn" title="이 치수 숨기기" style="background:none;border:none;color:#E53935;font-size:14px;padding:2px 6px;cursor:pointer;line-height:1;flex-shrink:0">×</button>
+    </div>
   </div>
   <div id="statusbar">
     <span id="coord-lbl">X: 0.000  Y: 0.000</span>
@@ -519,18 +523,35 @@ var hoverShape=null;
 var _hist=[];
 function saveHistory(){_hist.push(JSON.stringify(shapes.map(function(s){return Object.assign({},s);})));if(_hist.length>50)_hist.shift();}
 function undo(){if(!_hist.length)return;shapes=JSON.parse(_hist.pop()).map(function(d){return Object.assign({},d);});selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();}
-function makeShape(k,p){return Object.assign({id:nextId++,kind:k,ops:[]},p);}
+function makeShape(k,p){var base={id:nextId++,kind:k,ops:[]};if(k==='gosramark')base.hideDims={dist:true};return Object.assign(base,p);}
 
 // 모따기: 사각형 엣지 클릭 감지
 function syncGroupShapes(s){
   if(!s.groupId||s.kind!=='rect')return;
+  var _rot=s.rotation||0,_cx=s.x+s.w/2,_cy=s.y+s.h/2;
+  var _co=Math.cos(_rot),_si=Math.sin(_rot),_hw=s.w/2,_hh=s.h/2;
+  function _sg(dx,dy){return[_cx+dx*_co-dy*_si,_cy+dx*_si+dy*_co];}
   getGroupShapes(s).forEach(function(gs){
     if(gs===s)return;
-    var r=gs.groupRole;
-    if(r==='top'){gs.x1=s.x;gs.y1=s.y;gs.x2=s.x+s.w;gs.y2=s.y;}
-    else if(r==='bottom'){gs.x1=s.x;gs.y1=s.y+s.h;gs.x2=s.x+s.w;gs.y2=s.y+s.h;}
-    else if(r==='left'){gs.x1=s.x;gs.y1=s.y;gs.x2=s.x;gs.y2=s.y+s.h;}
-    else if(r==='right'){gs.x1=s.x+s.w;gs.y1=s.y;gs.x2=s.x+s.w;gs.y2=s.y+s.h;}
+    var r=gs.groupRole,a,b;
+    if(r==='top'){a=_sg(-_hw,-_hh);b=_sg(_hw,-_hh);}
+    else if(r==='bottom'){a=_sg(-_hw,_hh);b=_sg(_hw,_hh);}
+    else if(r==='left'){a=_sg(-_hw,-_hh);b=_sg(-_hw,_hh);}
+    else if(r==='right'){a=_sg(_hw,-_hh);b=_sg(_hw,_hh);}
+    if(a){gs.x1=a[0];gs.y1=a[1];gs.x2=b[0];gs.y2=b[1];}
+    // grind-{edge}: 수직 좌표만 엣지에 맞춤 (x1/x2 또는 y1/y2 스팬 유지)
+    else if(r&&r.indexOf('grind-')===0){
+      var gEdge=r.slice(6),ep;
+      if(gEdge==='top')ep=_sg(0,-_hh);
+      else if(gEdge==='bottom')ep=_sg(0,_hh);
+      else if(gEdge==='left')ep=_sg(-_hw,0);
+      else if(gEdge==='right')ep=_sg(_hw,0);
+      if(ep){
+        var _gIsH=Math.abs(gs.y2-gs.y1)<0.5;
+        if(gEdge==='top'||gEdge==='bottom'){gs.y1=ep[1];gs.y2=ep[1];}
+        else{gs.x1=ep[0];gs.x2=ep[0];}
+      }
+    }
   });
 }
 function hitRectEdge(s,ex,ey){
@@ -628,12 +649,21 @@ function toggleSnap(){var b=document.getElementById('snap-body'),h=document.getE
 function snapPoints(excl){
   var pts=[];
   for(var i=0;i<shapes.length;i++){var s=shapes[i];if(s===excl)continue;
-    if(s.kind==='rect'){pts.push({x:s.x,y:s.y,k:'e'},{x:s.x+s.w,y:s.y,k:'e'},{x:s.x+s.w,y:s.y+s.h,k:'e'},{x:s.x,y:s.y+s.h,k:'e'},{x:s.x+s.w/2,y:s.y,k:'m'},{x:s.x+s.w,y:s.y+s.h/2,k:'m'},{x:s.x+s.w/2,y:s.y+s.h,k:'m'},{x:s.x,y:s.y+s.h/2,k:'m'});if(snapRectCenter)pts.push({x:s.x+s.w/2,y:s.y+s.h/2,k:'c'});}
+    if(s.kind==='rect'){
+      var _rot=s.rotation||0,_cx=s.x+s.w/2,_cy=s.y+s.h/2;
+      var _co=Math.cos(_rot),_si=Math.sin(_rot),_hw=s.w/2,_hh=s.h/2;
+      function _rp(dx,dy){return{x:_cx+dx*_co-dy*_si,y:_cy+dx*_si+dy*_co};}
+      var _tl=_rp(-_hw,-_hh),_tr=_rp(_hw,-_hh),_br=_rp(_hw,_hh),_bl=_rp(-_hw,_hh);
+      var _tm=_rp(0,-_hh),_rm=_rp(_hw,0),_bm=_rp(0,_hh),_lm=_rp(-_hw,0);
+      pts.push({x:_tl.x,y:_tl.y,k:'e'},{x:_tr.x,y:_tr.y,k:'e'},{x:_br.x,y:_br.y,k:'e'},{x:_bl.x,y:_bl.y,k:'e'});
+      pts.push({x:_tm.x,y:_tm.y,k:'m'},{x:_rm.x,y:_rm.y,k:'m'},{x:_bm.x,y:_bm.y,k:'m'},{x:_lm.x,y:_lm.y,k:'m'});
+      if(snapRectCenter)pts.push({x:_cx,y:_cy,k:'c'});
+    }
     else if(s.kind==='circle'||s.kind==='hole'){pts.push({x:s.cx+s.r,y:s.cy,k:'e'},{x:s.cx-s.r,y:s.cy,k:'e'},{x:s.cx,y:s.cy+s.r,k:'e'},{x:s.cx,y:s.cy-s.r,k:'e'});if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});}
     else if(s.kind==='line'||s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'){pts.push({x:s.x1,y:s.y1,k:'e'},{x:s.x2,y:s.y2,k:'e'},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2,k:'m'});
       if(s.kind==='grindregion'){
         // 밑면연마 사각영역 4꼭짓점도 스냅
-        var isH_=Math.abs(s.y2-s.y1)<0.5,dep_=30;
+        var isH_=Math.abs(s.y2-s.y1)<0.5,dep_=s.depth||30;
         var ctx2__=findEdgeContext(s.x1,s.y1,s.x2,s.y2),inw_=ctx2__.inward;
         var xmn=Math.min(s.x1,s.x2),xmx=Math.max(s.x1,s.x2);
         var ymn=Math.min(s.y1,s.y2),ymx=Math.max(s.y1,s.y2);
@@ -653,7 +683,27 @@ function applySnap(cx,cy,excl){
   if(!snapKind&&snapIntersect){var ixpts=getIntersectPoints();ixpts.forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<tol){mx=p.x;my=p.y;snapKind='x';}});}
   if(!snapKind&&gridSnap){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
   // 그라인드/고스라 도구: 사각형 엣지 라인에 자동 스냅
-  if(!snapKind&&(tool==='grind'||tool==='gosra')){var etol=10/scale,bestEd=etol+1,esx=mx,esy=my;shapes.forEach(function(sh){if(sh.kind!=='rect')return;if(mx>=sh.x-etol&&mx<=sh.x+sh.w+etol){var dt=Math.abs(my-sh.y);if(dt<bestEd){bestEd=dt;esx=mx;esy=sh.y;}var db=Math.abs(my-(sh.y+sh.h));if(db<bestEd){bestEd=db;esx=mx;esy=sh.y+sh.h;}}if(my>=sh.y-etol&&my<=sh.y+sh.h+etol){var dl=Math.abs(mx-sh.x);if(dl<bestEd){bestEd=dl;esx=sh.x;esy=my;}var dr=Math.abs(mx-(sh.x+sh.w));if(dr<bestEd){bestEd=dr;esx=sh.x+sh.w;esy=my;}}});if(bestEd<=etol){mx=esx;my=esy;snapKind='edge';}}
+  if(!snapKind&&(tool==='grind'||tool==='gosra')){
+    var etol=10/scale,bestEd=etol+1,esx=mx,esy=my;
+    shapes.forEach(function(sh){
+      if(sh.kind!=='rect')return;
+      var _r2=sh.rotation||0,_cx2=sh.x+sh.w/2,_cy2=sh.y+sh.h/2;
+      var _co2=Math.cos(_r2),_si2=Math.sin(_r2),_hw2=sh.w/2,_hh2=sh.h/2;
+      function _rp2(dx,dy){return[_cx2+dx*_co2-dy*_si2,_cy2+dx*_si2+dy*_co2];}
+      var _c0=_rp2(-_hw2,-_hh2),_c1=_rp2(_hw2,-_hh2),_c2=_rp2(_hw2,_hh2),_c3=_rp2(-_hw2,_hh2);
+      [_c0,_c1,_c2,_c3].forEach(function(_a,_i,_arr){
+        var _b=_arr[(_i+1)%4];
+        var _dx=_b[0]-_a[0],_dy=_b[1]-_a[1],_l2=_dx*_dx+_dy*_dy;
+        if(_l2<0.0001)return;
+        var _t=((mx-_a[0])*_dx+(my-_a[1])*_dy)/_l2;
+        _t=Math.max(0,Math.min(1,_t));
+        var _fx=_a[0]+_t*_dx,_fy=_a[1]+_t*_dy;
+        var _d=Math.hypot(mx-_fx,my-_fy);
+        if(_d<bestEd){bestEd=_d;esx=_fx;esy=_fy;}
+      });
+    });
+    if(bestEd<=etol){mx=esx;my=esy;snapKind='edge';}
+  }
   // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   var applyOrtho=(tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop');
   if(applyOrtho){var dx=Math.abs(mx-drawStart[0]),dy=Math.abs(my-drawStart[1]);if(dx>=dy)my=drawStart[1];else mx=drawStart[0];}
@@ -696,20 +746,48 @@ function isInsideRect(inner,outer){var ib=getBBox(inner);if(!ib)return false;ret
 
 // ═══ 그라인드/고스라 방향 계산 ═══
 function findEdgeContext(x1,y1,x2,y2){
-  // 가장 작은(가장 안쪽) 도형을 우선 선택 → 중첩 도형에서 올바른 inward 방향 보장
+  // 회전 rect 포함 지원. 가장 면적이 작은(안쪽) rect 우선
   var isH=Math.abs(y2-y1)<0.5,tol=5;
   var xa=Math.min(x1,x2),xb=Math.max(x1,x2),ya=Math.min(y1,y2),yb=Math.max(y1,y2);
   var best=null,bestArea=Infinity;
   for(var i=0;i<shapes.length;i++){
     var s=shapes[i];if(s.kind!=='rect')continue;
-    var area=s.w*s.h;
-    if(isH){
-      if(Math.abs(y1-s.y)<tol&&xa>=s.x-tol&&xb<=s.x+s.w+tol&&area<bestArea){bestArea=area;best={edge:'top',inward:1,outward:-1,shape:s};}
-      if(Math.abs(y1-(s.y+s.h))<tol&&xa>=s.x-tol&&xb<=s.x+s.w+tol&&area<bestArea){bestArea=area;best={edge:'bottom',inward:-1,outward:1,shape:s};}
+    var area=s.w*s.h,rot=s.rotation||0,found=null;
+    if(!rot){
+      // 비회전 rect: 축정렬 비교
+      if(isH){
+        if(Math.abs(y1-s.y)<tol&&xa>=s.x-tol&&xb<=s.x+s.w+tol)found={edge:'top',inward:1,outward:-1};
+        else if(Math.abs(y1-(s.y+s.h))<tol&&xa>=s.x-tol&&xb<=s.x+s.w+tol)found={edge:'bottom',inward:-1,outward:1};
+      } else {
+        if(Math.abs(x1-s.x)<tol&&ya>=s.y-tol&&yb<=s.y+s.h+tol)found={edge:'left',inward:1,outward:-1};
+        else if(Math.abs(x1-(s.x+s.w))<tol&&ya>=s.y-tol&&yb<=s.y+s.h+tol)found={edge:'right',inward:-1,outward:1};
+      }
     } else {
-      if(Math.abs(x1-s.x)<tol&&ya>=s.y-tol&&yb<=s.y+s.h+tol&&area<bestArea){bestArea=area;best={edge:'left',inward:1,outward:-1,shape:s};}
-      if(Math.abs(x1-(s.x+s.w))<tol&&ya>=s.y-tol&&yb<=s.y+s.h+tol&&area<bestArea){bestArea=area;best={edge:'right',inward:-1,outward:1,shape:s};}
+      // 회전 rect: 각 엣지에 수직 거리로 판별
+      var scx=s.x+s.w/2,scy=s.y+s.h/2,co=Math.cos(rot),si=Math.sin(rot),hw=s.w/2,hh=s.h/2;
+      var _rpe=function(dx,dy){return[scx+dx*co-dy*si,scy+dx*si+dy*co];};
+      var edges=[
+        [_rpe(-hw,-hh),_rpe(hw,-hh),'top'],
+        [_rpe(hw,-hh),_rpe(hw,hh),'right'],
+        [_rpe(hw,hh),_rpe(-hw,hh),'bottom'],
+        [_rpe(-hw,hh),_rpe(-hw,-hh),'left']
+      ];
+      for(var ei=0;ei<edges.length;ei++){
+        var ea=edges[ei][0],eb=edges[ei][1],eName=edges[ei][2];
+        var edx=eb[0]-ea[0],edy=eb[1]-ea[1],elen=Math.hypot(edx,edy);
+        if(elen<0.001)continue;
+        var pd=Math.abs((x1-ea[0])*(-edy)+(y1-ea[1])*(edx))/elen;
+        if(pd>tol*2)continue;
+        var t=((x1-ea[0])*edx+(y1-ea[1])*edy)/(elen*elen);
+        if(t<-0.1||t>1.1)continue;
+        // inward 방향: 중심이 있는 쪽
+        var nx=-edy/elen,ny=edx/elen;
+        var inw=(scx-x1)*nx+(scy-y1)*ny>0?1:-1;
+        found={edge:eName,inward:inw,outward:-inw};
+        break;
+      }
     }
+    if(found&&area<bestArea){bestArea=area;best=Object.assign({shape:s,groupId:s.groupId||null},found);}
   }
   return best||{edge:'unknown',inward:1,outward:-1};
 }
@@ -777,6 +855,21 @@ function drawGrindRegion(s,preview){
   // Edge line
   var ep1=toCanvas(s.x1,s.y1),ep2=toCanvas(s.x2,s.y2);
   ctx.strokeStyle='#FFD740';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(ep1[0],ep1[1]);ctx.lineTo(ep2[0],ep2[1]);ctx.stroke();
+  // Depth label (밑면연마 깊이)
+  if(!preview&&!(s.hideDims&&s.hideDims['dist'])){
+    var dcx=rx+rw/2,dcy=ry+rh/2;
+    var dcp=toCanvas(dcx,dcy);
+    var dtxt=depth.toFixed(0)+' mm';
+    var dfSz=printRender?16:9;
+    ctx.save();
+    ctx.font='bold '+dfSz+'px Consolas';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    var dtw=ctx.measureText(dtxt).width;
+    ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(dcp[0]-dtw/2-3,dcp[1]-dfSz/2-2,dtw+6,dfSz+4);
+    ctx.fillStyle=printRender?'#1565C0':'#FFD740';
+    ctx.fillText(dtxt,dcp[0],dcp[1]);
+    ctx.restore();
+  }
 }
 
 function drawJollyMark(s,preview){
@@ -787,7 +880,7 @@ function drawJollyMark(s,preview){
   ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   drawStar(pc[0],pc[1],9,preview?'rgba(33,150,243,0.5)':'#2196F3');
   // length label
-  if(!preview){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+12,44,13);ctx.fillStyle='#64B5F6';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1)+' mm',pc[0],pc[1]+18);}
+  if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+12,44,13);ctx.fillStyle='#64B5F6';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1)+' mm',pc[0],pc[1]+18);}
 }
 
 function drawGosraMark(s,preview){
@@ -800,7 +893,7 @@ function drawGosraMark(s,preview){
   ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
   ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   drawTriangle(pc[0],pc[1],triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');
-  if(!preview){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+14,44,13);ctx.fillStyle='#EF9A9A';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1)+' mm',pc[0],pc[1]+20);}
+  if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+14,44,13);ctx.fillStyle='#EF9A9A';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1)+' mm',pc[0],pc[1]+20);}
 }
 
 function drawShape(s,preview){
@@ -876,16 +969,18 @@ function drawDimsLine(s,col){
   var my2=(p1[1]+p2[1])/2+Math.sin(perp)*offPx;
   var da=angle;if(Math.cos(da)<-0.01)da+=Math.PI;
   ctx.save();ctx.translate(mx2,my2);ctx.rotate(da);
-  var fw=printRender?48:30;
-  ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-fw,-9,fw*2,12);
+  var fw=printRender?60:30;
+  ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-fw,printRender?-12:-9,fw*2,printRender?16:12);
   ctx.fillStyle=col||'#90CAF9';
-  ctx.font=(printRender?'bold 14px':'bold 10px')+' Consolas';
+  ctx.font=(printRender?'bold 22px':'bold 10px')+' Consolas';
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(dist.toFixed(2),0,-2);ctx.restore();
+  // 선 길이 치수 클릭 가능하도록 등록
+  dimLabels.push({shape:s,field:'dist',px:mx2,py:my2});
 }
 
 // ─── 치수 표시 ───
-function dlbl(sel){ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 14px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';}
+function dlbl(sel){ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 22px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';}
 function autoAdjustDims(){
   var rects=shapes.filter(function(s){return s.kind==='rect'&&!(s.rotation);}); // 회전된 rect는 자동 오프셋 제외
   // ── W 치수 겹침 방지 (아래쪽 / 위쪽)
@@ -893,46 +988,51 @@ function autoAdjustDims(){
   rects.slice().sort(function(a,b){return (a.y+a.h)-(b.y+b.h);}).forEach(function(s){
     var c1=toCanvas(s.x,s.y),c2=toCanvas(s.x+s.w,s.y+s.h);
     var mx=(c1[0]+c2[0])/2;
+    var _wOff=printRender?13:9,_wGapV=printRender?28:16,_wGapH=printRender?100:72,_wStep=printRender?26:18;
     if(s.dimUserOffsetW){
       var offW=s.dimOffsetW||15;
-      wPlaced.push({mx:mx,py:offW>=0?c2[1]+offW+9:c1[1]+offW-4});
+      wPlaced.push({mx:mx,py:offW>=0?c2[1]+offW+_wOff:c1[1]+offW-4});
       return;
     }
     var offW=15,side=1; // side=1:아래, -1:위 (교대)
     for(var t=0;t<12;t++){
-      var py=c2[1]+offW+9;
-      var ok=!wPlaced.some(function(d){return Math.abs(d.mx-mx)<72&&Math.abs(d.py-py)<16;});
+      var py=c2[1]+offW+_wOff;
+      var ok=!wPlaced.some(function(d){return Math.abs(d.mx-mx)<_wGapH&&Math.abs(d.py-py)<_wGapV;});
       if(ok)break;
-      offW+=18;
+      offW+=_wStep;
     }
     s.dimOffsetW=offW;
-    wPlaced.push({mx:mx,py:c2[1]+offW+9});
+    wPlaced.push({mx:mx,py:c2[1]+offW+_wOff});
   });
   // ── H 치수 겹침 방지 (오른쪽 / 왼쪽)
   var hPlaced=[];
   rects.slice().sort(function(a,b){return (a.x+a.w)-(b.x+b.w);}).forEach(function(s){
     var c1=toCanvas(s.x,s.y),c2=toCanvas(s.x+s.w,s.y+s.h);
     var my=(c1[1]+c2[1])/2;
+    var _hOff=printRender?16:13,_hGapV=printRender?28:16,_hGapH=printRender?80:58,_hStep=printRender?26:18;
     if(s.dimUserOffsetH){
       var offH=s.dimOffsetH||15;
-      hPlaced.push({my:my,px:offH>=0?c2[0]+offH+13:c1[0]+offH-13});
+      hPlaced.push({my:my,px:offH>=0?c2[0]+offH+_hOff:c1[0]+offH-_hOff});
       return;
     }
     var offH=15;
     for(var t=0;t<12;t++){
-      var px=c2[0]+offH+13;
-      var ok=!hPlaced.some(function(d){return Math.abs(d.my-my)<16&&Math.abs(d.px-px)<58;});
+      var px=c2[0]+offH+_hOff;
+      var ok=!hPlaced.some(function(d){return Math.abs(d.my-my)<_hGapV&&Math.abs(d.px-px)<_hGapH;});
       if(ok)break;
-      offH+=18;
+      offH+=_hStep;
     }
     s.dimOffsetH=offH;
-    hPlaced.push({my:my,px:c2[0]+offH+13});
+    hPlaced.push({my:my,px:c2[0]+offH+_hOff});
   });
 }
 function drawDims(s,col){
   var sel=isSelected(s);
   var rot=s.rotation||0;
   var offW=s.dimOffsetW||15,offH=s.dimOffsetH||15;
+  // 싱크볼/쿡탑: H 치수는 왼쪽(음수), W 치수는 아래(양수) 고정
+  if(s.groupRole==='main'&&!s.dimUserOffsetH)offH=-Math.abs(offH);
+  if(s.groupRole==='main'&&!s.dimUserOffsetW)offW=Math.abs(offW);
   var rw_=mm2px(s.w),rh_=mm2px(s.h);
   var cx_mm=s.x+s.w/2,cy_mm=s.y+s.h/2;
   var cc_=toCanvas(cx_mm,cy_mm);
@@ -946,6 +1046,7 @@ function drawDims(s,col){
   ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([]);
   var mx2=(x1c+x2c)/2;
   // W 치수 (offW>=0: 아래, offW<0: 위)
+  if(!(s.hideDims&&s.hideDims['w'])){
   var wy=offW>=0?y2c+offW:y1c+offW;
   var filletH1=(tool==='fillet'&&filletSel.length===1&&filletSel[0].shape===s&&filletSel[0].field==='w');
   if(offW>=0){
@@ -956,12 +1057,14 @@ function drawDims(s,col){
     ctx.beginPath();ctx.moveTo(x2c,y1c);ctx.lineTo(x2c,wy-4);ctx.stroke();
   }
   ctx.beginPath();ctx.moveTo(x1c,wy);ctx.lineTo(x2c,wy);ctx.stroke();
-  var wlpy=offW>=0?wy+9:wy-4;
-  if(filletH1){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(mx2-30,wlpy-7,60,14);}
-  else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(mx2-30,wlpy-7,60,14);}
+  var wlpy=offW>=0?wy+(printRender?13:9):wy-(printRender?17:4);
+  if(filletH1){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
+  else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   dlbl(sel||filletH1);ctx.fillText(s.w.toFixed(1)+' mm',mx2,wlpy);
   var wlc=l2c(mx2,wlpy);dimLabels.push({shape:s,field:'w',px:wlc[0],py:wlc[1]});
+  } // end W dim
   // H 치수 (offH>=0: 오른쪽, offH<0: 왼쪽)
+  if(!(s.hideDims&&s.hideDims['h'])){
   var hx=offH>=0?x2c+offH:x1c+offH;
   var my2=(y1c+y2c)/2;
   var filletH2=(tool==='fillet'&&filletSel.length===1&&filletSel[0].shape===s&&filletSel[0].field==='h');
@@ -973,16 +1076,16 @@ function drawDims(s,col){
     ctx.beginPath();ctx.moveTo(x1c,y2c);ctx.lineTo(hx-4,y2c);ctx.stroke();
   }
   ctx.beginPath();ctx.moveTo(hx,y1c);ctx.lineTo(hx,y2c);ctx.stroke();
-  var hlpx=offH>=0?hx+13:hx-13;
+  var hlpx=offH>=0?hx+(printRender?16:13):hx-(printRender?16:13);
   if(offH>=0){
-    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx+2,my2-7,52,14);}
-    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx+2,my2-7,52,14);}
+    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx+2,my2-9,66,18);}
+    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx+2,my2-9,66,18);}
   } else {
-    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx-54,my2-7,52,14);}
-    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx-54,my2-7,52,14);}
+    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx-68,my2-9,66,18);}
+    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx-68,my2-9,66,18);}
   }
   // H 텍스트: 로컬 rotate는 현재 transform에 누적되므로 save/rotate/restore 사용
-  ctx.save();ctx.translate(hlpx,my2);ctx.rotate(Math.PI/2);ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 14px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.h.toFixed(1)+' mm',0,0);ctx.restore();
+  ctx.save();ctx.translate(hlpx,my2);ctx.rotate(Math.PI/2);ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 22px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.h.toFixed(1)+' mm',0,0);ctx.restore();
   var hlc=l2c(hlpx,my2);dimLabels.push({shape:s,field:'h',px:hlc[0],py:hlc[1]});
   // R값 표시 (fillet/chamfer 모서리)
   if(s.cornerType&&s.cornerType!=='none'&&s.cornerSize>0){
@@ -992,21 +1095,37 @@ function drawDims(s,col){
     var crx=x2c-csPx*0.5,cry=y2c-csPx*0.5;
     ctx.strokeStyle='#546E7A';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
     ctx.beginPath();ctx.moveTo(crx,cry);ctx.lineTo(crx+18,cry-18);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=printRender?'rgba(255,255,255,0.9)':'rgba(30,42,53,0.85)';ctx.fillRect(crx+14,cry-28,44,13);
-    ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 14px':'10px')+' Consolas';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(prefix+cs.toFixed(1),crx+16,cry-22);
+    ctx.fillStyle=printRender?'rgba(255,255,255,0.9)':'rgba(30,42,53,0.85)';ctx.fillRect(crx+14,cry-(printRender?36:28),(printRender?60:44),(printRender?18:13));
+    ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 22px':'10px')+' Consolas';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(prefix+cs.toFixed(1),crx+16,cry-(printRender?27:22));
     ctx.textAlign='center';
   }
+  } // end H dim
   ctx.restore();
 }
 function drawDimsCircle(s,col){
+  if(s.hideDims&&s.hideDims['r'])return; // Φ 치수 숨김
   var sel=isSelected(s);
-  var cc=toCanvas(s.cx,s.cy),rp=toCanvas(s.cx+s.r,s.cy);
-  ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([3,3]);
-  ctx.beginPath();ctx.moveTo(cc[0],cc[1]);ctx.lineTo(rp[0],rp[1]);ctx.stroke();ctx.setLineDash([]);
-  var lx=(cc[0]+rp[0])/2,ly=cc[1]-10;
-  if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(lx-32,ly-7,64,14);}
-  dlbl(sel);ctx.fillText('Φ '+(s.r*2).toFixed(1)+' mm',lx,ly);
-  dimLabels.push({shape:s,field:'r',px:lx,py:ly,displayFactor:2,saveFactor:0.5});
+  var cr=mm2px(s.r),cc=toCanvas(s.cx,s.cy);
+  var cx=cc[0],cy=cc[1];
+  var off=(s.dimOffsetD||15);
+  // 원 아래쪽 오프셋 위치에 지름 치수선 표기
+  var dy=cy+cr+off;
+  var lx=cx-cr,rx=cx+cr;
+  ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([]);
+  // 연장선 (원 하단 → 치수선)
+  ctx.beginPath();ctx.moveTo(lx,cy+cr);ctx.lineTo(lx,dy+4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rx,cy+cr);ctx.lineTo(rx,dy+4);ctx.stroke();
+  // 치수선 (수평)
+  ctx.beginPath();ctx.moveTo(lx,dy);ctx.lineTo(rx,dy);ctx.stroke();
+  // 화살표
+  if(cr>8){arrowHead(lx,dy,0,printRender?8:5,'#546E7A');arrowHead(rx,dy,Math.PI,printRender?8:5,'#546E7A');}
+  // 라벨
+  var lpy=dy+(printRender?13:9);
+  var label='Φ '+(s.r*2).toFixed(1)+' mm';
+  var tw=ctx.measureText(label).width+8;
+  if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(cx-tw/2,lpy-9,tw,18);}
+  dlbl(sel);ctx.fillText(label,cx,lpy);
+  dimLabels.push({shape:s,field:'r',px:cx,py:lpy,displayFactor:2,saveFactor:0.5});
 }
 function drawDimsEllipse(s,col){
   var sel=isSelected(s);
@@ -1073,26 +1192,84 @@ function drawDimLine(s,preview){
 
 // ─── Gap 치수 ───
 function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir){
+  if(inner&&inner.hideDims&&inner.hideDims[dir])return; // 숨김 처리
   var dist=Math.hypot(x2mm-x1mm,y2mm-y1mm);if(dist<0.5)return;
   var p1=toCanvas(x1mm,y1mm),p2=toCanvas(x2mm,y2mm);
-  var ox=isH?0:-10,oy=isH?-10:0;
-  ctx.strokeStyle='#FFD740';ctx.lineWidth=1;ctx.setLineDash([2,3]);
+  var _gdOff=printRender?16:10;var ox=isH?0:-_gdOff,oy=isH?-_gdOff:0;
+  ctx.strokeStyle='#FFD740';ctx.lineWidth=printRender?1.5:1;ctx.setLineDash([2,3]);
   ctx.beginPath();ctx.moveTo(p1[0]+ox,p1[1]+oy);ctx.lineTo(p2[0]+ox,p2[1]+oy);ctx.stroke();ctx.setLineDash([]);
   ctx.strokeStyle='rgba(255,215,64,0.4)';ctx.lineWidth=0.8;
   ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p1[0]+ox,p1[1]+oy);ctx.stroke();
   ctx.beginPath();ctx.moveTo(p2[0],p2[1]);ctx.lineTo(p2[0]+ox,p2[1]+oy);ctx.stroke();
-  if(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])>20){var ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);arrowHead(p1[0]+ox,p1[1]+oy,ang+Math.PI,5,'#FFD740');arrowHead(p2[0]+ox,p2[1]+oy,ang,5,'#FFD740');}
+  var _gadSz=printRender?8:5;if(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])>20){var ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);arrowHead(p1[0]+ox,p1[1]+oy,ang+Math.PI,_gadSz,'#FFD740');arrowHead(p2[0]+ox,p2[1]+oy,ang,_gadSz,'#FFD740');}
   var tx=(p1[0]+p2[0])/2+ox,ty=(p1[1]+p2[1])/2+oy+(isH?-4:0);
-  ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx-18,ty-7,36,13);
-  ctx.fillStyle='#FFD740';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
+  var _gfSz=printRender?14:9;ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx-(_gfSz*2+4),ty-(_gfSz/2+3),(_gfSz*4+8),_gfSz+6);
+  ctx.fillStyle='#FFD740';ctx.font=(printRender?'bold ':'')+_gfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
   if(outer&&inner&&dir)dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,field:'_gap',shape:inner,px:tx,py:ty});
 }
+function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir){
+  // 원 중심 → 싱크볼/외곽 엣지까지 직선 치수선
+  if(inner&&inner.hideDims&&inner.hideDims[dir])return; // 숨김 처리
+  var dist=Math.hypot(ex-cx,ey-cy);if(dist<0.5)return;
+  var p1=toCanvas(cx,cy),p2=toCanvas(ex,ey);
+  var _as=printRender?8:5,_fs=printRender?14:9;
+  // 치수선 (원 중심 → 엣지)
+  ctx.strokeStyle='#FFD740';ctx.lineWidth=printRender?2:2;ctx.setLineDash([5,3]);
+  ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
+  // 화살표 (엣지 방향)
+  var ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
+  arrowHead(p2[0],p2[1],ang,_as,'#FFD740');
+  // 원 중심 표시 — 밝은 원점 마커
+  ctx.fillStyle='#FFD740';
+  ctx.beginPath();ctx.arc(p1[0],p1[1],3.5,0,2*Math.PI);ctx.fill();
+  // 라벨: 원 중심에서 고정 오프셋(40px) 위치에 표시 → 항상 원 근처에 보임
+  var fixOff=printRender?60:40;
+  var lineLen=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+  var ratio=Math.min(fixOff/lineLen,0.45); // 선 길이의 45% 이내
+  var lx=p1[0]+(p2[0]-p1[0])*ratio;
+  var ly=p1[1]+(p2[1]-p1[1])*ratio;
+  if(isH)ly-=(printRender?16:12); else lx-=(printRender?20:15);
+  ctx.fillStyle='rgba(20,35,48,0.92)';ctx.fillRect(lx-(_fs*2+4),ly-(_fs/2+3),(_fs*4+8),_fs+6);
+  ctx.fillStyle='#FFD740';ctx.font='bold '+_fs+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(dist.toFixed(1),lx,ly);
+  ctx.font=_fs+'px Consolas';
+  dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,field:'_gap',shape:inner,px:lx,py:ly});
+}
 function drawNestDims(){
-  for(var i=0;i<shapes.length;i++){var outer=shapes[i];if(outer.kind!=='rect')continue;
-    for(var j=0;j<shapes.length;j++){if(i===j)continue;var inner=shapes[j];if(inner.kind==='dimline'||inner.kind==='grindregion'||inner.kind==='jollymark'||inner.kind==='gosramark')continue;
-      if(!printMode&&!isSelected(inner)&&outer!==hoverShape&&!isSelected(outer)&&inner!==hoverShape)continue;
-      if(!isInsideRect(inner,outer))continue;
-      var ib=getBBox(inner);
+  for(var j=0;j<shapes.length;j++){
+    var inner=shapes[j];
+    if(inner.kind==='dimline'||inner.kind==='grindregion'||inner.kind==='jollymark'||inner.kind==='gosramark')continue;
+    // 원/타공 여부 먼저 판단 (bestOuter 루프에서 사용)
+    var isCirc=(inner.kind==='circle'||inner.kind==='hole');
+    // 가장 가까운(면적 최소) 외곽 rect 하나만 기준
+    var bestOuter=null,bestDistSq=Infinity,bestArea=Infinity;
+    for(var i=0;i<shapes.length;i++){
+      var s=shapes[i];if(i===j||s.kind!=='rect')continue;
+      if(isCirc){
+        // 원/타공: 중심점에서 rect 경계까지의 거리(mm)² 최소인 rect 선택
+        // 중심이 rect 안에 있으면 거리=0, 밖이면 양수 → 내부 rect 우선, 외부라도 가장 가까운 rect 선택
+        var _dx=Math.max(s.x-inner.cx,0,inner.cx-(s.x+s.w));
+        var _dy=Math.max(s.y-inner.cy,0,inner.cy-(s.y+s.h));
+        var _bd=_dx*_dx+_dy*_dy;
+        if(_bd<bestDistSq||(_bd===bestDistSq&&s.w*s.h<bestArea)){
+          bestDistSq=_bd;bestArea=s.w*s.h;bestOuter=s;
+        }
+      } else {
+        if(isInsideRect(inner,s)&&s.w*s.h<bestArea){bestArea=s.w*s.h;bestOuter=s;}
+      }
+    }
+    if(!bestOuter)continue;
+    var outer=bestOuter;
+    if(!printMode&&!isSelected(inner)&&outer!==hoverShape&&!isSelected(outer)&&inner!==hoverShape)continue;
+    var ib=getBBox(inner);
+    if(isCirc){
+      // 원: 4방향 모두 표시 (상하좌우 — 원 중심에서 싱크볼 경계까지 직선)
+      drawCircleGapDim(inner.cx,inner.cy,outer.x,inner.cy,true,outer,inner,'left');
+      drawCircleGapDim(inner.cx,inner.cy,outer.x+outer.w,inner.cy,true,outer,inner,'right');
+      drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y,false,outer,inner,'top');
+      drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y+outer.h,false,outer,inner,'bottom');
+    } else {
+      // 사각형: 4방향 모두
       drawGapDim(outer.x,ib.my,ib.l,ib.my,true,outer,inner,'left');
       drawGapDim(ib.r,ib.my,outer.x+outer.w,ib.my,true,outer,inner,'right');
       drawGapDim(ib.mx,outer.y,ib.mx,ib.t,false,outer,inner,'top');
@@ -1111,13 +1288,25 @@ function drawHandles(s){
 }
 
 function drawGrid(){if(printRender)return;
-  var w=cv.width,h=cv.height,dispGm=gridMm;while(dispGm*scale<6&&dispGm<5000)dispGm*=2;var gs=dispGm*scale,major=gs*5;
-  for(var x=offsetX%gs;x<=w;x+=gs){ctx.strokeStyle=Math.abs((x-offsetX)%major)<0.5?'#2d4a5a':'#1a2c3a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
-  for(var y=offsetY%gs;y<=h;y+=gs){ctx.strokeStyle=Math.abs((y-offsetY)%major)<0.5?'#2d4a5a':'#1a2c3a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  var w=cv.width,h=cv.height,dispGm=gridMm;
+  while(dispGm*scale<6&&dispGm<5000)dispGm*=2;
+  var gs=dispGm*scale,major=gs*5,sx=offsetX%gs,sy=offsetY%gs;
+  ctx.lineWidth=1;
+  // 소선 — 픽셀 정렬로 균일한 굵기
+  ctx.beginPath();ctx.strokeStyle='#1a2c3a';
+  for(var x=sx;x<=w;x+=gs){if(Math.abs((x-offsetX)%major)>=0.5){var px=Math.floor(x)+0.5;ctx.moveTo(px,0);ctx.lineTo(px,h);}}
+  for(var y=sy;y<=h;y+=gs){if(Math.abs((y-offsetY)%major)>=0.5){var py=Math.floor(y)+0.5;ctx.moveTo(0,py);ctx.lineTo(w,py);}}
+  ctx.stroke();
+  // 대선 (major)
+  ctx.beginPath();ctx.strokeStyle='#2d4a5a';
+  for(var x=sx;x<=w;x+=gs){if(Math.abs((x-offsetX)%major)<0.5){var px=Math.floor(x)+0.5;ctx.moveTo(px,0);ctx.lineTo(px,h);}}
+  for(var y=sy;y<=h;y+=gs){if(Math.abs((y-offsetY)%major)<0.5){var py=Math.floor(y)+0.5;ctx.moveTo(0,py);ctx.lineTo(w,py);}}
+  ctx.stroke();
+  // 원점 축선
   var oxc=toCanvas(0,0)[0],oyc=toCanvas(0,0)[1];
   ctx.strokeStyle='#3a5a6a';ctx.lineWidth=1;ctx.setLineDash([6,4]);
-  ctx.beginPath();ctx.moveTo(oxc,0);ctx.lineTo(oxc,h);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,oyc);ctx.lineTo(w,oyc);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(Math.floor(oxc)+0.5,0);ctx.lineTo(Math.floor(oxc)+0.5,h);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,Math.floor(oyc)+0.5);ctx.lineTo(w,Math.floor(oyc)+0.5);ctx.stroke();ctx.setLineDash([]);
 }
 function drawSnapInd(mx,my,k){var cc=toCanvas(mx,my),cols={e:'#FFD600',m:'#00E5FF',c:'#69F0AE',grid:'rgba(96,112,128,0.45)',x:'#FF6D00'};ctx.strokeStyle=cols[k]||'white';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cc[0],cc[1],8,0,2*Math.PI);ctx.stroke();}
 function drawGuides(mx,my){
@@ -1382,7 +1571,7 @@ function finalizeShape(fmx,fmy){
       s=makeShape('dimline',{x1:x0,y1:y0,x2:mx,y2:my,offsetMm:15,labelType:dimLineType});
     }
   }
-  else if(tool==='grind'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec=findEdgeContext(x0,y0,mx,my);var gd=parseFloat(document.getElementById('grind-depth').value)||30;s=makeShape('grindregion',{x1:x0,y1:y0,x2:mx,y2:my,inward:ec.inward,depth:gd});}
+  else if(tool==='grind'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec=findEdgeContext(x0,y0,mx,my);var gd=parseFloat(document.getElementById('grind-depth').value)||30;var _gOpts={x1:x0,y1:y0,x2:mx,y2:my,inward:ec.inward,depth:gd};if(ec.groupId&&ec.edge!=='unknown'){_gOpts.groupId=ec.groupId;_gOpts.groupRole='grind-'+ec.edge;}s=makeShape('grindregion',_gOpts);}
   else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});}
   else if(tool==='gosra'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec2=findEdgeContext(x0,y0,mx,my);s=makeShape('gosramark',{x1:x0,y1:y0,x2:mx,y2:my,outward:ec2.outward});}
   else if(tool==='sinkbowl'){
@@ -1533,10 +1722,26 @@ function hitTest(mx,my){
   return null;
 }
 // 겹치는 도형 전체 반환 (순환 선택용)
+// rect 내부 클릭은 우선순위 낮춤 → 타공/원이 rect 안에 있어도 먼저 선택됨
 function hitTestAll(mx,my){
   var tol=6/scale,res=[];
-  for(var i=shapes.length-1;i>=0;i--){if(_shapeHit(shapes[i],mx,my,tol))res.push(shapes[i]);}
-  return res;
+  for(var i=shapes.length-1;i>=0;i--){
+    var s=shapes[i];
+    if(!_shapeHit(s,mx,my,tol))continue;
+    var pri=0;
+    if(s.kind==='rect'){
+      // 경계선 근처 클릭 → 우선순위 0(높음), 순수 내부 클릭 → 1(낮음)
+      var lmx=mx,lmy=my,rot=s.rotation||0;
+      if(rot){var cx2=s.x+s.w/2,cy2=s.y+s.h/2,cos2=Math.cos(-rot),sin2=Math.sin(-rot),dx2=mx-cx2,dy2=my-cy2;lmx=cx2+dx2*cos2-dy2*sin2;lmy=cy2+dx2*sin2+dy2*cos2;}
+      var edgeTol=Math.max(tol*2,4/scale);
+      var onEdge=lmx<s.x+edgeTol||lmx>s.x+s.w-edgeTol||lmy<s.y+edgeTol||lmy>s.y+s.h-edgeTol;
+      pri=onEdge?0:1;
+    }
+    res.push({s:s,pri:pri,zi:i});
+  }
+  // 우선순위 낮은 것(rect 내부) 뒤로, 같은 우선순위는 z-order(뒤에 그린 것=위) 순
+  res.sort(function(a,b){return a.pri-b.pri||b.zi-a.zi;});
+  return res.map(function(r){return r.s;});
 }
 var _cycleHitMx=null,_cycleHitMy=null,_cycleIdx=0;
 function ptLD(px,py,x1,y1,x2,y2){var dx2=x2-x1,dy2=y2-y1;if(!dx2&&!dy2)return Math.hypot(px-x1,py-y1);var t=Math.max(0,Math.min(1,((px-x1)*dx2+(py-y1)*dy2)/(dx2*dx2+dy2*dy2)));return Math.hypot(px-(x1+t*dx2),py-(y1+t*dy2));}
@@ -1575,7 +1780,7 @@ cv.addEventListener('mousedown',function(e){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}
       // 클릭=크기편집, 드래그=치수선 위치 이동 (mouseup에서 판단)
-      selectedShapes=[dh.shape];updatePropsPanel();redraw();
+      selectedShapes=(dh.shape.groupId&&dh.shape.groupRole==='main')?getGroupShapes(dh.shape):[dh.shape];updatePropsPanel();redraw();
       dimDragInfo=dh;dimDragStartX=e.offsetX;dimDragStartY=e.offsetY;
       dimDragOrigW=(dh.shape.dimOffsetW||15);dimDragOrigH=(dh.shape.dimOffsetH||15);
       return;
@@ -1599,7 +1804,7 @@ cv.addEventListener('mousedown',function(e){
         if(alreadyIn){grpSh.forEach(function(gs){var ii=selectedShapes.indexOf(gs);if(ii>=0)selectedShapes.splice(ii,1);});}
         else{grpSh.forEach(function(gs){if(selectedShapes.indexOf(gs)<0)selectedShapes.push(gs);});}
       } else {
-        if(selectedShapes.indexOf(hit)<0)selectedShapes=getGroupShapes(hit);
+        if(selectedShapes.indexOf(hit)<0){if(hit.groupId&&hit.groupRole&&hit.groupRole!=='main'){selectedShapes=[hit];}else{selectedShapes=getGroupShapes(hit);}}
       }
       dragStart=[mx,my];
       dragOriginals={};
@@ -1780,10 +1985,10 @@ cv.addEventListener('mousemove',function(e){
     if(h!==hoverShape){
       hoverShape=h;
       if(h&&!dragStart&&!selBox){
-        // 단일 선택 상태(0~1개)일 때만 호버로 자동 선택
-        // 다중 선택 중이면 덮어쓰지 않음 (그룹화 등 작업 보호)
-        if(selectedShapes.length<=1){
-          selectedShapes=getGroupShapes(h);
+        // 아무것도 선택 안 됐을 때만 호버로 자동 선택
+        // 이미 선택된 도형이 있으면 커서 이동으로 선택이 바뀌지 않도록
+        if(selectedShapes.length===0){
+          selectedShapes=(h.groupId&&h.groupRole&&h.groupRole!=='main')?[h]:getGroupShapes(h);
           updatePropsPanel();
         }
       }
@@ -1845,7 +2050,7 @@ document.addEventListener('mouseup',function(e){
 
   if(tool==='select'){
     // 회전 드래그 종료
-    if(_rotState){_rotState=null;calcCost();redraw();return;}
+    if(_rotState){selectedShapes.forEach(function(_rs){if(_rs.kind==='rect'&&_rs.groupId)syncGroupShapes(_rs);});_rotState=null;calcCost();redraw();return;}
     // 자동 치수선 드래그 종료
     if(dimDragInfo){
       var _dx2=e.offsetX-dimDragStartX,_dy2=e.offsetY-dimDragStartY;
@@ -1906,6 +2111,19 @@ function chamferLenMm(s){
   return 0;
 }
 
+function _dimPopupShow(px,py){
+  var pop=document.getElementById('dim-popup');
+  var wrap=document.getElementById('canvas-wrap');
+  var ww=wrap?wrap.clientWidth:800,wh=wrap?wrap.clientHeight:600;
+  var left=Math.max(2,Math.min(px-34,ww-120));
+  var top=Math.max(2,Math.min(py-14,wh-36));
+  pop.style.left=left+'px';pop.style.top=top+'px';
+  pop.style.display='flex';
+}
+function _dimPopupHide(){
+  var pop=document.getElementById('dim-popup');
+  pop.style.display='none';
+}
 function showDimInput(d){
   if(!d||!d.shape)return;
   var s=d.shape,fld=d.field;
@@ -1916,17 +2134,27 @@ function showDimInput(d){
   else if(fld==='r')cur=s.r*dispF;
   else if(fld==='rx')cur=s.rx;
   else if(fld==='ry')cur=s.ry;
+  else if(fld==='dist')cur=Math.hypot(s.x2-s.x1,s.y2-s.y1)*dispF;
   else return;
   var inp=document.getElementById('dim-inline');
-  if(!inp)return;
-  // d.px, d.py는 캔버스 픽셀 좌표 → 직접 위치 지정
-  inp.style.left=(d.px-34)+'px';
-  inp.style.top=(d.py-12)+'px';
-  inp.style.display='block';
+  var hideBtn=document.getElementById('dim-hide-btn');
+  if(!inp||!hideBtn)return;
+  _dimPopupShow(d.px,d.py);
   inp.value=cur.toFixed(1);
   inp.select();inp.focus();
+  // 숨기기 버튼 (onclick 덮어쓰기로 이전 이벤트 정리)
+  hideBtn.onmousedown=function(e){e.preventDefault();};
+  hideBtn.onclick=function(){
+    inp.removeEventListener('blur',commit);
+    _dimPopupHide();
+    saveHistory();
+    s.hideDims=s.hideDims||{};
+    s.hideDims[fld]=true;
+    redraw();
+    inp.removeEventListener('keydown',onKey);
+  };
   function commit(){
-    inp.style.display='none';
+    _dimPopupHide();
     var v=parseFloat(inp.value);
     if(!isNaN(v)&&v>0){
       saveHistory();
@@ -1935,6 +2163,9 @@ function showDimInput(d){
       else if(fld==='r')s.r=v*saveF;
       else if(fld==='rx')s.rx=v*saveF;
       else if(fld==='ry')s.ry=v*saveF;
+      else if(fld==='dist'){var _d0=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(_d0>0){var _nx=(s.x2-s.x1)/_d0,_ny=(s.y2-s.y1)/_d0;s.x2=s.x1+_nx*(v*saveF);s.y2=s.y1+_ny*(v*saveF);}}
+      syncGroupShapes(s);
+      if(s.groupId&&s.groupRole==='main')selectedShapes=getGroupShapes(s);
       updatePropsPanel();redraw();calcCost();
     }
     inp.removeEventListener('keydown',onKey);
@@ -1942,7 +2173,7 @@ function showDimInput(d){
   }
   function onKey(e){
     if(e.key==='Enter'){e.preventDefault();commit();}
-    if(e.key==='Escape'){inp.style.display='none';inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
+    if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
     e.stopPropagation();
   }
   inp.addEventListener('keydown',onKey);
@@ -1974,6 +2205,70 @@ function openDimInline(px,py,initVal,onDone){
   inp.addEventListener('keydown',onKey);
   inp.addEventListener('blur',commit,{once:true});
 }
+function showGapDimInput(d){
+  if(!d||!d.shape||!d.outer||!d.dir)return;
+  var outer=d.outer,inner=d.shape,dir=d.dir;
+  var ib=getBBox(inner);
+  var isCirc=(inner.kind==='circle'||inner.kind==='hole');
+  var lref=isCirc?inner.cx:ib.l, rref=isCirc?inner.cx:ib.r;
+  var tref=isCirc?inner.cy:ib.t, bref=isCirc?inner.cy:ib.b;
+  var curGap;
+  if(dir==='left')curGap=lref-outer.x;
+  else if(dir==='right')curGap=(outer.x+outer.w)-rref;
+  else if(dir==='top')curGap=tref-outer.y;
+  else if(dir==='bottom')curGap=(outer.y+outer.h)-bref;
+  else return;
+  var inp=document.getElementById('dim-inline');
+  var hideBtn=document.getElementById('dim-hide-btn');
+  if(!inp||!hideBtn)return;
+  _dimPopupShow(d.px,d.py);
+  inp.value=Math.max(0,curGap).toFixed(1);
+  inp.select();inp.focus();
+  // 숨기기 버튼
+  hideBtn.onmousedown=function(e){e.preventDefault();};
+  hideBtn.onclick=function(){
+    inp.removeEventListener('blur',commit);
+    _dimPopupHide();
+    saveHistory();
+    inner.hideDims=inner.hideDims||{};
+    inner.hideDims[dir]=true;
+    redraw();
+    inp.removeEventListener('keydown',onKey);
+  };
+  function commit(){
+    _dimPopupHide();
+    var v=parseFloat(inp.value);
+    if(!isNaN(v)&&v>=0){
+      saveHistory();
+      if(isCirc){
+        if(dir==='left')inner.cx=outer.x+v;
+        else if(dir==='right')inner.cx=outer.x+outer.w-v;
+        else if(dir==='top')inner.cy=outer.y+v;
+        else if(dir==='bottom')inner.cy=outer.y+outer.h-v;
+      } else if(inner.kind==='rect'){
+        if(dir==='left')inner.x=outer.x+v;
+        else if(dir==='right')inner.x=outer.x+outer.w-v-inner.w;
+        else if(dir==='top')inner.y=outer.y+v;
+        else if(dir==='bottom')inner.y=outer.y+outer.h-v-inner.h;
+        syncGroupShapes(inner);
+        if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+      }
+      selectedShapes=[inner];
+      if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+      updatePropsPanel();redraw();calcCost();
+    }
+    inp.removeEventListener('keydown',onKey);
+    inp.removeEventListener('blur',commit);
+  }
+  function onKey(e){
+    if(e.key==='Enter'){e.preventDefault();commit();}
+    if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
+    e.stopPropagation();
+  }
+  inp.addEventListener('keydown',onKey);
+  inp.addEventListener('blur',commit,{once:true});
+}
+
 function toggleTierSection(){
   var body=document.getElementById('tier-sec-body');
   var arrow=document.getElementById('tier-sec-arrow');
@@ -2119,6 +2414,37 @@ function resetAll(){
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){document.getElementById(id).value='0';});
   updatePropsPanel();redraw();calcCost();
 }
+function deleteSelected(){
+  if(!selectedShapes.length)return;
+  var toRemove=new Set(selectedShapes.map(function(s){return s.id;}));
+  selectedShapes.forEach(function(s){
+    if(s.groupId&&(!s.groupRole||s.groupRole==='main')){shapes.forEach(function(sh){if(sh.groupId===s.groupId)toRemove.add(sh.id);});}
+  });
+  saveHistory();
+  shapes=shapes.filter(function(s){return !toRemove.has(s.id);});
+  selectedShapes=[];hoverShape=null;filletSel=[];
+  updatePropsPanel();redraw();calcCost();
+}
+function _dimToggleBtn(key,label,hidden){
+  var on=!hidden;
+  var bc=on?'#FFD740':'#37474F',bg=on?'rgba(255,215,64,0.15)':'#1a2530',fc=on?'#FFD740':'#546E7A';
+  return '<button data-dimkey="'+key+'" onclick="toggleDim(this.dataset.dimkey)" style="padding:4px 7px;border-radius:3px;font-size:11px;cursor:pointer;border:1px solid '+bc+';background:'+bg+';color:'+fc+'">'+label+'</button>';
+}
+function toggleDim(key){
+  if(!selectedShapes.length)return;
+  saveHistory();
+  selectedShapes.forEach(function(s){
+    s.hideDims=s.hideDims||{};
+    s.hideDims[key]=!s.hideDims[key];
+  });
+  updatePropsPanel();redraw();
+}
+function resetDims(){
+  if(!selectedShapes.length)return;
+  saveHistory();
+  selectedShapes.forEach(function(s){s.hideDims={};});
+  updatePropsPanel();redraw();
+}
 document.addEventListener('keydown',function(e){
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();drawStart=null;selBox=null;undo();return;}
@@ -2227,9 +2553,22 @@ function updatePropsPanel(){
       grpHtml+='<div style="color:#FFD740;font-size:10px;padding:2px 4px 4px">그룹 (싱크볼/쿡탑)</div>';
       grpHtml+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;w&quot;,this.value)"></div>';
       grpHtml+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;h&quot;,this.value)"></div>';
+      var hd3=s.hideDims||{};
+      grpHtml+='<hr style="border:none;border-top:1px solid #2d4a5a;margin:6px 0">';
+      grpHtml+='<div style="font-size:10px;color:#546E7A;margin-bottom:4px">치수 표시</div>';
+      grpHtml+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
+      grpHtml+=_dimToggleBtn('w','W',hd3['w']);
+      grpHtml+=_dimToggleBtn('h','H',hd3['h']);
+      grpHtml+='</div>';
+      var _hasHidden3=Object.keys(hd3).some(function(k){return hd3[k];});
+      grpHtml+='<div style="display:flex;flex-direction:column;gap:4px">';
+      if(_hasHidden3)grpHtml+='<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>';
+      grpHtml+='<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button>';
+      grpHtml+='</div>';
       pp.innerHTML=grpHtml;return;
     }
-    pp.innerHTML='<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨<br><small style="color:#546E7A">Del=삭제</small></div>';return;
+    var _mhH=selectedShapes.some(function(s){return s.hideDims&&Object.keys(s.hideDims).some(function(k){return s.hideDims[k];});});
+    pp.innerHTML='<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+(_mhH?'<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>':'')+'<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button></div>';return;
   }
   var s=selectedShapes[0],html='';
   // ── 공통: 제품명 (우측 제품 목록 드롭다운) ──
@@ -2240,11 +2579,31 @@ function updatePropsPanel(){
     html+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="0.5" oninput="liveProp(\'h\',this.value)"></div>';
     html+='<div class="prop-row"><label>W치수오프셋:</label><input type="number" id="pp-dimW" value="'+(s.dimOffsetW||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;W&quot;,this.value)"></div>';
     html+='<div class="prop-row"><label>H치수오프셋:</label><input type="number" id="pp-dimH" value="'+(s.dimOffsetH||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;H&quot;,this.value)"></div>';
+    // 치수 표시 토글
+    var hd=s.hideDims||{};
+    html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">';
+    html+=_dimToggleBtn('w','W',hd['w']);
+    html+=_dimToggleBtn('h','H',hd['h']);
+    html+=_dimToggleBtn('left','←',hd['left']);
+    html+=_dimToggleBtn('right','→',hd['right']);
+    html+=_dimToggleBtn('top','↑',hd['top']);
+    html+=_dimToggleBtn('bottom','↓',hd['bottom']);
+    html+='</div>';
     html+='<hr style="border:none;border-top:1px solid #2d4a5a;margin:5px 0">';
     html+='<div class="prop-row"><label>모서리:</label><select id="pp-ctype" onchange="liveCorner()"><option value="none"'+((!s.cornerType||s.cornerType==='none')?' selected':'')+'>없음</option><option value="fillet"'+(s.cornerType==='fillet'?' selected':'')+'>라운드</option><option value="chamfer"'+(s.cornerType==='chamfer'?' selected':'')+'>챔퍼</option></select></div>';
     if(s.cornerType&&s.cornerType!=='none')html+='<div class="prop-row"><label>R(mm):</label><input type="number" id="pp-csize" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveCorner()"></div>';
   } else if(s.kind==='circle'||s.kind==='hole'){
     html+='<div class="prop-row"><label>Φ(mm):</label><input type="number" id="pp-phi" value="'+(s.r*2).toFixed(2)+'" step="1" oninput="livePropPhi(this.value)"></div>';
+    var hd=s.hideDims||{};
+    html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
+    html+=_dimToggleBtn('r','Φ',hd['r']);
+    html+=_dimToggleBtn('left','←',hd['left']);
+    html+=_dimToggleBtn('right','→',hd['right']);
+    html+=_dimToggleBtn('top','↑',hd['top']);
+    html+=_dimToggleBtn('bottom','↓',hd['bottom']);
+    html+='</div>';
   } else if(s.kind==='ellipse'){
     html+='<div class="prop-row"><label>RX(mm):</label><input type="number" id="pp-rx" value="'+s.rx.toFixed(2)+'" step="0.5" oninput="liveProp(\'rx\',this.value)"></div>';
     html+='<div class="prop-row"><label>RY(mm):</label><input type="number" id="pp-ry" value="'+s.ry.toFixed(2)+'" step="0.5" oninput="liveProp(\'ry\',this.value)"></div>';
@@ -2254,11 +2613,26 @@ function updatePropsPanel(){
     html+='<div class="prop-row"><label>라벨:</label><select id="pp-labeltype" onchange="liveProp(\'labelType\',this.value)"><option value="dist"'+(lt==='dist'?' selected':'')+'>길이</option><option value="r"'+(lt==='r'?' selected':'')+'>R값</option><option value="phi"'+(lt==='phi'?' selected':'')+'>Φ</option></select></div>';
   } else if(s.kind==='grindregion'){
     html+='<div style="color:#FFD740;font-size:11px;padding:4px">밑면연마 구간<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm / 깊이: '+(s.depth||30)+' mm</small></div>';
+    var hd=s.hideDims||{};
+    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
+    html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','깊이',hd['dist'])+'</div>';
   } else if(s.kind==='jollymark'){
     html+='<div style="color:#2196F3;font-size:11px;padding:4px">졸리컷<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
+    var hd=s.hideDims||{};
+    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
+    html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','길이',hd['dist'])+'</div>';
   } else if(s.kind==='gosramark'){
     html+='<div style="color:#F44336;font-size:11px;padding:4px">고스라<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
+    var hd=s.hideDims||{};
+    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
+    html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','길이',hd['dist'])+'</div>';
   }
+  // 치수 초기화 / 삭제 버튼
+  var _hasHidden=selectedShapes.some(function(s){return s.hideDims&&Object.keys(s.hideDims).some(function(k){return s.hideDims[k];});});
+  html+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #2d4a5a;display:flex;flex-direction:column;gap:4px">';
+  if(_hasHidden)html+='<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>';
+  html+='<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button>';
+  html+='</div>';
   pp.innerHTML=html;
 }
 function groupSelected(){
@@ -2315,6 +2689,11 @@ function liveProp(field,val){
   else if(field==='labelType'){saveHistory();s.labelType=val;redraw();}
   else if(field==='rx'||field==='ry'){if(!isNaN(v)&&v>0){saveHistory();s[field]=v;redraw();calcCost();}}
   else{if(!isNaN(v)&&v>0){saveHistory();s[field]=v;syncGroupShapes(s);redraw();calcCost();}}
+}
+function livePropPhi(val){
+  var s=selectedShapes[0];if(!s||(s.kind!=='circle'&&s.kind!=='hole'))return;
+  var v=parseFloat(val);if(isNaN(v)||v<=0)return;
+  saveHistory();s.r=v/2;redraw();calcCost();
 }
 function liveCorner(){
   var s=selectedShapes[0];if(!s||s.kind!=='rect')return;
@@ -2985,7 +3364,7 @@ function showPrintPreview(){
   // 현재 뷰 저장
   var svScale=scale,svOffX=offsetX,svOffY=offsetY;
   if(allBB){
-    var pad=90; // 치수선 여백 (px)
+    var pad=130; // 치수선 여백 (px) — 22px 폰트에 맞춰 넉넉하게
     var mmW=allBB.r-allBB.l,mmH=allBB.b-allBB.t;
     if(mmW>0&&mmH>0){
       var newSc=Math.min((mainCv.width-2*pad)/mmW,(mainCv.height-2*pad)/mmH);
