@@ -217,6 +217,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" style="background:#1565C0;color:#fff" onclick="saveProject()">💾 저장</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()">📂 불러오기</button>
+    <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
     <div id="board-panel">
       <label>온장</label>
       <input type="number" id="board-w" value="3200" min="100" step="10" title="온장 폭(mm)"> <label>×</label>
@@ -617,6 +618,7 @@ var grind150mode=false;
 var dimLineType='dist'; // 'dist' | 'r' | 'phi'
 var printMode=false;  // nest dims show-all for print
 var printRender=false; // white background for print
+var showShapeNumbers=false; // 도형 번호 표시
 function setDimLineType(t){
   dimLineType=t;
   ['dist','r','phi'].forEach(function(k){
@@ -1600,6 +1602,40 @@ function finalizeShape(fmx,fmy){
 // ─── 도형 제품명 라벨 ───
 var _LCOLS=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#37474F'];
 function _labelColor(lbl){var h=0;for(var i=0;i<lbl.length;i++)h=(h*31+lbl.charCodeAt(i))&0x7FFFFFFF;return _LCOLS[h%_LCOLS.length];}
+function drawShapeNumbers(){
+  if(!showShapeNumbers||printRender)return;
+  ctx.save();
+  var idx=0;
+  shapes.forEach(function(s){
+    idx++;
+    var anchor;
+    if(s.x!==undefined&&s.w!==undefined){anchor=toCanvas(s.x,s.y);}
+    else if(s.cx!==undefined&&s.rx!==undefined){anchor=toCanvas(s.cx-s.rx,s.cy-s.ry);}
+    else if(s.cx!==undefined&&s.r!==undefined){anchor=toCanvas(s.cx-s.r,s.cy-s.r);}
+    else if(s.x1!==undefined){anchor=toCanvas(Math.min(s.x1,s.x2),Math.min(s.y1,s.y2));}
+    else return;
+    var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(idx);
+    ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    var tw=ctx.measureText(numStr).width,bw=Math.max(tw+8,18),bh=16,r=3;
+    var bx=anchor[0]+2,by=anchor[1]+2;
+    ctx.fillStyle='rgba(21,101,192,0.88)';
+    ctx.beginPath();
+    ctx.moveTo(bx+r,by);ctx.lineTo(bx+bw-r,by);ctx.arcTo(bx+bw,by,bx+bw,by+r,r);
+    ctx.lineTo(bx+bw,by+bh-r);ctx.arcTo(bx+bw,by+bh,bx+bw-r,by+bh,r);
+    ctx.lineTo(bx+r,by+bh);ctx.arcTo(bx,by+bh,bx,by+bh-r,r);
+    ctx.lineTo(bx,by+r);ctx.arcTo(bx,by,bx+r,by,r);ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.fillText(numStr,bx+bw/2,by+bh/2);
+  });
+  ctx.restore();
+}
+function toggleShapeNumbers(){
+  showShapeNumbers=!showShapeNumbers;
+  var btn=document.getElementById('btn-shape-num');
+  if(btn){btn.style.background=showShapeNumbers?'#1565C0':'#263545';btn.style.color=showShapeNumbers?'#fff':'#90CAF9';}
+  redraw();
+}
 function drawShapeLabel(s){
   if(!s.label)return;
   // 좌상단 꼭짓점 (앵커 포인트)
@@ -1687,6 +1723,7 @@ function redraw(){
   shapes.forEach(function(s){drawShape(s);});
   drawUserGroups();
   shapes.forEach(function(s){if(s.label)drawShapeLabel(s);});
+  drawShapeNumbers();
   selectedShapes.forEach(function(s){drawHandles(s);});
   _rotHandlePx=null;
   if(selectedShapes.length&&!selBox)drawRotationHandle();
@@ -2550,6 +2587,7 @@ function updatePropsPanel(){
       var s=mainRect;
       var lc3=s.label?_labelColor(s.label):'#37474F',lbDot3=s.label?('<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+lc3+';margin-right:4px;vertical-align:middle"></span>'):'';
       var grpHtml='<div class="prop-row" style="border-bottom:1px solid #2d4a5a;margin-bottom:6px;padding-bottom:6px;display:flex;align-items:center;gap:4px"><label style="white-space:nowrap">'+lbDot3+'제품:</label>'+_buildLabelSelect(s.label||'')+'</div>';
+      grpHtml+='<div class="prop-row"><label>번호:</label><input type="text" value="'+(s.shapeNum||'')+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>';
       grpHtml+='<div style="color:#FFD740;font-size:10px;padding:2px 4px 4px">그룹 (싱크볼/쿡탑)</div>';
       grpHtml+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;w&quot;,this.value)"></div>';
       grpHtml+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;h&quot;,this.value)"></div>';
@@ -2574,6 +2612,7 @@ function updatePropsPanel(){
   // ── 공통: 제품명 (우측 제품 목록 드롭다운) ──
   var lc2=s.label?_labelColor(s.label):'#37474F',lbDot=s.label?('<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+lc2+';margin-right:4px;vertical-align:middle"></span>'):'';
   html+='<div class="prop-row" style="border-bottom:1px solid #2d4a5a;margin-bottom:6px;padding-bottom:6px;display:flex;align-items:center;gap:4px"><label style="white-space:nowrap">'+lbDot+'제품:</label>'+_buildLabelSelect(s.label||'')+'</div>';
+  html+='<div class="prop-row"><label>번호:</label><input type="text" value="'+(s.shapeNum||'')+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>';
   if(s.kind==='rect'){
     html+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="0.5" oninput="liveProp(\'w\',this.value)"></div>';
     html+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="0.5" oninput="liveProp(\'h\',this.value)"></div>';
@@ -2681,6 +2720,13 @@ function livePropDim(axis,val){
   var v=parseInt(val);if(isNaN(v)||v<5)return;
   var s=selectedShapes[0];if(!s||s.kind!=='rect')return;
   if(axis==='w')s.dimOffsetW=v;else s.dimOffsetH=v;redraw();
+}
+function livePropShapeNum(val){
+  selectedShapes.forEach(function(s){
+    saveHistory();
+    s.shapeNum=(val.trim()==='')?undefined:val.trim();
+  });
+  redraw();
 }
 function liveProp(field,val){
   var s=selectedShapes[0];if(!s)return;
@@ -3275,6 +3321,24 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       bctx.fillStyle=printRender?'#333':'#CFD8DC';bctx.font='9px Consolas';bctx.textAlign='center';bctx.textBaseline='middle';
       var lbl=p.rotated?(p.item.h.toFixed(0)+'×'+p.item.w.toFixed(0)+' ↺'):p.item.label;
       if(pw>30&&ph>12)bctx.fillText(lbl,px+pw/2,py+ph/2);
+      // 도형 번호 배지
+      if(showShapeNumbers&&pw>12&&ph>12){
+        var _sh=p.item.shape;
+        var _shIdx=shapes.indexOf(_sh)+1;
+        var _nStr=(_sh.shapeNum!==undefined&&_sh.shapeNum!=='')?String(_sh.shapeNum):String(_shIdx);
+        bctx.font='bold 10px Arial';bctx.textAlign='center';bctx.textBaseline='middle';
+        var _ntw=bctx.measureText(_nStr).width,_nbw=Math.max(_ntw+6,16),_nbh=14,_nr=3;
+        var _nbx=px+2,_nby=py+2;
+        bctx.fillStyle='rgba(21,101,192,0.88)';
+        bctx.beginPath();
+        bctx.moveTo(_nbx+_nr,_nby);bctx.lineTo(_nbx+_nbw-_nr,_nby);bctx.arcTo(_nbx+_nbw,_nby,_nbx+_nbw,_nby+_nr,_nr);
+        bctx.lineTo(_nbx+_nbw,_nby+_nbh-_nr);bctx.arcTo(_nbx+_nbw,_nby+_nbh,_nbx+_nbw-_nr,_nby+_nbh,_nr);
+        bctx.lineTo(_nbx+_nr,_nby+_nbh);bctx.arcTo(_nbx,_nby+_nbh,_nbx,_nby+_nbh-_nr,_nr);
+        bctx.lineTo(_nbx,_nby+_nr);bctx.arcTo(_nbx,_nby,_nbx+_nr,_nby,_nr);bctx.closePath();
+        bctx.fill();
+        bctx.fillStyle='#fff';
+        bctx.fillText(_nStr,_nbx+_nbw/2,_nby+_nbh/2);
+      }
     }
 
     // ── 스냅 터치 경계선 (노란 실선) ──
