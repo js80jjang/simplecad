@@ -1608,11 +1608,9 @@ function drawShapeNumbers(){
   var idx=0;
   shapes.forEach(function(s){
     idx++;
+    if(s.kind!=='rect'||s.groupId)return;
     var anchor;
     if(s.x!==undefined&&s.w!==undefined){anchor=toCanvas(s.x,s.y);}
-    else if(s.cx!==undefined&&s.rx!==undefined){anchor=toCanvas(s.cx-s.rx,s.cy-s.ry);}
-    else if(s.cx!==undefined&&s.r!==undefined){anchor=toCanvas(s.cx-s.r,s.cy-s.r);}
-    else if(s.x1!==undefined){anchor=toCanvas(Math.min(s.x1,s.x2),Math.min(s.y1,s.y2));}
     else return;
     var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(idx);
     ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
