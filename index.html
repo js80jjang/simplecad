@@ -1378,25 +1378,64 @@ function drawHandles(s){
 }
 
 function drawGrid(){if(printRender)return;
-  var w=cv.width,h=cv.height,dispGm=gridMm;
-  while(dispGm*scale<6&&dispGm<5000)dispGm*=2;
-  var gs=dispGm*scale,major=gs*5,sx=offsetX%gs,sy=offsetY%gs;
-  ctx.lineWidth=1;
-  // 소선 — 픽셀 정렬로 균일한 굵기
-  ctx.beginPath();ctx.strokeStyle='#1a2c3a';
-  for(var x=sx;x<=w;x+=gs){if(Math.abs((x-offsetX)%major)>=0.5){var px=Math.floor(x)+0.5;ctx.moveTo(px,0);ctx.lineTo(px,h);}}
-  for(var y=sy;y<=h;y+=gs){if(Math.abs((y-offsetY)%major)>=0.5){var py=Math.floor(y)+0.5;ctx.moveTo(0,py);ctx.lineTo(w,py);}}
-  ctx.stroke();
-  // 대선 (major)
-  ctx.beginPath();ctx.strokeStyle='#2d4a5a';
-  for(var x=sx;x<=w;x+=gs){if(Math.abs((x-offsetX)%major)<0.5){var px=Math.floor(x)+0.5;ctx.moveTo(px,0);ctx.lineTo(px,h);}}
-  for(var y=sy;y<=h;y+=gs){if(Math.abs((y-offsetY)%major)<0.5){var py=Math.floor(y)+0.5;ctx.moveTo(0,py);ctx.lineTo(w,py);}}
-  ctx.stroke();
+  var w=cv.width,h=cv.height;
   // 원점 축선
   var oxc=toCanvas(0,0)[0],oyc=toCanvas(0,0)[1];
   ctx.strokeStyle='#3a5a6a';ctx.lineWidth=1;ctx.setLineDash([6,4]);
   ctx.beginPath();ctx.moveTo(Math.floor(oxc)+0.5,0);ctx.lineTo(Math.floor(oxc)+0.5,h);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,Math.floor(oyc)+0.5);ctx.lineTo(w,Math.floor(oyc)+0.5);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(0,Math.floor(oyc)+0.5);ctx.lineTo(w,Math.floor(oyc)+0.5);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── 눈금자 (500mm 고정 간격) ──
+  ctx.save();
+  var rH=20;
+  var step=500;
+  ctx.fillStyle='rgba(13,22,32,0.82)';
+  ctx.fillRect(0,0,w,rH);
+  ctx.fillRect(0,0,rH,h);
+  ctx.strokeStyle='#2d4a5a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,rH+0.5);ctx.lineTo(w,rH+0.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rH+0.5,0);ctx.lineTo(rH+0.5,h);ctx.stroke();
+  ctx.font='bold 9px Consolas';
+
+  // X축 (500mm 간격)
+  var xmmS=Math.floor((0-offsetX)/scale/step)*step;
+  var xmmE=Math.ceil((w-offsetX)/scale/step)*step;
+  for(var mm=xmmS;mm<=xmmE;mm+=step){
+    var px=Math.floor(offsetX+mm*scale)+0.5;
+    if(px<rH||px>w)continue;
+    ctx.strokeStyle='#546E7A';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px,rH*0.2);ctx.lineTo(px,rH);ctx.stroke();
+    var lbl=mm+'';
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillStyle='rgba(13,22,32,0.7)';
+    var tw=ctx.measureText(lbl).width;
+    ctx.fillRect(px-tw/2-1,1,tw+2,11);
+    ctx.fillStyle='#78909C';
+    ctx.fillText(lbl,px,2);
+  }
+
+  // Y축 (500mm 간격, 90도 회전)
+  var ymmS=Math.floor((0-offsetY)/scale/step)*step;
+  var ymmE=Math.ceil((h-offsetY)/scale/step)*step;
+  for(var mm2=ymmS;mm2<=ymmE;mm2+=step){
+    var py=Math.floor(offsetY+mm2*scale)+0.5;
+    if(py<rH||py>h)continue;
+    ctx.strokeStyle='#546E7A';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(rH*0.2,py);ctx.lineTo(rH,py);ctx.stroke();
+    var lbl2=mm2+'';
+    ctx.save();
+    ctx.translate(rH-2,py);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillStyle='rgba(13,22,32,0.7)';
+    var tw2=ctx.measureText(lbl2).width;
+    ctx.fillRect(-tw2/2-1,-11,tw2+2,11);
+    ctx.fillStyle='#78909C';
+    ctx.fillText(lbl2,0,-1);
+    ctx.restore();
+  }
+  ctx.restore();
 }
 function drawSnapInd(mx,my,k){var cc=toCanvas(mx,my),cols={e:'#FFD600',m:'#00E5FF',c:'#69F0AE',grid:'rgba(96,112,128,0.45)',x:'#FF6D00'};ctx.strokeStyle=cols[k]||'white';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cc[0],cc[1],8,0,2*Math.PI);ctx.stroke();}
 function drawGuides(mx,my){
