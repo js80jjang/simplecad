@@ -241,6 +241,11 @@ canvas{display:block;cursor:crosshair}
           <span id="board-page-lbl" style="color:#90CAF9;font-size:11px;min-width:52px;text-align:center"></span>
           <button onclick="goBoardPage(1)" id="board-next-btn" style="background:#1e3a4a;border:1px solid #455A64;color:#90CAF9;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:13px">&#9654;</button>
         </span>
+        <span id="board-move-nav" style="display:none;align-items:center;gap:4px">
+          <span style="color:#FFD740;font-size:10px">선택:</span>
+          <button onclick="movePieceTo(-1)" id="board-move-prev" style="background:#37474F;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">&#9650; 이전 장</button>
+          <button onclick="movePieceTo(1)" id="board-move-next" style="background:#37474F;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">다음 장 &#9660;</button>
+        </span>
         <button id="board-modal-close" onclick="closeBoardModal()">✕</button>
       </div>
       <div id="board-canvas-wrap">
@@ -2946,7 +2951,7 @@ function showBoardLayout(){
   infoEl.innerHTML=infoStr;
 
   document.getElementById('board-modal').classList.add('show');
-  _bs={boards:allBoards,groups:groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0};
+  _bs={boards:allBoards,groups:groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0,pickedPiece:null,dragMoved:false,dragStartX:0,dragStartY:0};
   renderBoardLayout(allBoards,bw,bh,ew,eh,margin);
   _bsInitEvents();
 }
@@ -3048,6 +3053,7 @@ function _bsInitEvents(){
     var r=bcv.getBoundingClientRect();
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
     var hit=_bsHitTest(ex,ey);
+    _bs.dragStartX=ex;_bs.dragStartY=ey;_bs.dragMoved=false;
     if(hit){
       _bs.selectedPiece=hit;
       var mg=_bs.margin*_bs.sc;
@@ -3057,6 +3063,8 @@ function _bsInitEvents(){
       bcv.style.cursor='grabbing';
     } else {
       _bs.selectedPiece=null;
+      _bs.pickedPiece=null;
+      updateBoardMoveButtons();
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
     }
   };
@@ -3119,6 +3127,7 @@ function _bsInitEvents(){
     if(!_bs)return;
     var r=bcv.getBoundingClientRect();
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
+    if(_bs.selectedPiece&&Math.hypot(ex-_bs.dragStartX,ey-_bs.dragStartY)>5)_bs.dragMoved=true;
     if(_bs.selectedPiece){
       var hit=_bs.selectedPiece,p=hit.p;
       var mg=_bs.margin*_bs.sc;
@@ -3250,9 +3259,17 @@ function _bsInitEvents(){
       _bs.boards=_bs.boards.filter(function(b){return b.length>0;});
       if(_bs.boards.length===0)_bs.boards=[[]];
     }
+    // 클릭(드래그 없음)이면 pickedPiece로 유지 → 장 이동 버튼 활성화
+    if(!_bs.dragMoved&&_bs.selectedPiece){
+      _bs.pickedPiece={bi:_bs.selectedPiece.bi,p:_bs.selectedPiece.p};
+    } else {
+      _bs.pickedPiece=null;
+    }
     _bs.selectedPiece=null;
+    _bs.dragMoved=false;
     _bs.snapState=null;
     bcv.style.cursor='default';
+    updateBoardMoveButtons();
     renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
   };
   bcv.onmouseleave=function(){
@@ -3541,6 +3558,43 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   });
 }
 
+function updateBoardMoveButtons(){
+  var nav=document.getElementById('board-move-nav');
+  if(!nav||!_bs)return;
+  var picked=_bs.pickedPiece;
+  nav.style.display=picked?'flex':'none';
+  if(!picked)return;
+  var n=_bs.boards.length;
+  document.getElementById('board-move-prev').disabled=picked.bi<=0;
+  document.getElementById('board-move-next').disabled=false; // 새 장 생성 가능
+}
+function movePieceTo(dir){
+  if(!_bs||!_bs.pickedPiece)return;
+  var hit=_bs.pickedPiece,p=hit.p;
+  var srcBi=hit.bi;
+  var tgtBi=srcBi+dir;
+  if(tgtBi<0)return;
+  // 대상 장이 없으면 새로 추가
+  if(tgtBi>=_bs.boards.length)_bs.boards.push([]);
+  // 피스를 원본 장에서 제거
+  var idx=_bs.boards[srcBi].indexOf(p);
+  if(idx>=0)_bs.boards[srcBi].splice(idx,1);
+  // 빈 장 제거 — 최소 1장 유지
+  if(_bs.boards[srcBi].length===0&&_bs.boards.length>1){
+    _bs.boards.splice(srcBi,1);
+    if(tgtBi>srcBi)tgtBi--; // 인덱스 보정
+  }
+  // 대상 장에 추가 (좌상단에 배치)
+  if(tgtBi>=_bs.boards.length)_bs.boards.push([]);
+  p.x=0;p.y=0;
+  _bs.boards[tgtBi].push(p);
+  // 페이지 이동
+  _bs.boardPage=Math.floor(tgtBi/2);
+  // pickedPiece 업데이트
+  _bs.pickedPiece={bi:tgtBi,p:p};
+  updateBoardMoveButtons();
+  renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
+}
 function goBoardPage(dir){
   if(!_bs)return;
   var n=_bs.boards.length;
