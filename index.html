@@ -167,6 +167,10 @@ canvas{display:block;cursor:crosshair}
   <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#E53935" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
   <div class="fillet-sub" id="circle-sub">
     <label>Φ(mm):<input type="number" id="circle-phi" value="50" min="1" step="1"></label>
+    <div style="display:flex;gap:3px;margin-top:5px">
+      <button id="hole-type-outlet" onclick="setPendingHoleType('outlet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#1565C0;color:#fff">콘센트</button>
+      <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#263545;color:#fff">수전</button>
+    </div>
   </div>
   <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#E53935" stroke-width="2" stroke-linecap="round"/></svg> 선 절단 <span style="font-size:9px;color:#546E7A;margin-left:2px">Shift=자유</span></button>
   <button class="tool-btn" data-tool="sinkbowl"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="1.5" stroke="#2196F3" stroke-width="1.5" fill="none"/><ellipse cx="8" cy="6" rx="4.5" ry="3" stroke="#2196F3" stroke-width="1.2" fill="rgba(33,150,243,0.2)"/></svg> 싱크볼</button>
@@ -299,7 +303,8 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">사각 절단</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
     <div class="proc-row2"><span class="pr-name">싱크볼</span><span class="pr-qty" id="pl-sink">-</span><span class="pr-sub" id="ps-sink">-</span></div>
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
-    <div class="proc-row2"><span class="pr-name">타공</span><span class="pr-qty" id="pl-hole">-</span><span class="pr-sub" id="ps-hole">-</span></div>
+    <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
+    <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
   </div>
   <div class="r-sec">③ 추가 가공</div>
@@ -346,21 +351,23 @@ canvas{display:block;cursor:crosshair}
         <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')"><span class="tier-chk"></span>업체용</div>
         <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')"><span class="tier-chk"></span>소비자용</div>
         <div class="tier-btn" id="tier-custom" onclick="setTier('custom')"><span class="tier-chk"></span>커스텀</div>
+        <div class="tier-btn" id="tier-retail" onclick="setTier('retail')" style="grid-column:1/-1"><span class="tier-chk"></span>취급점</div>
       </div>
       <div id="panel-cost" class="r-card" style="display:none;padding:5px;margin-top:3px">
         <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-        <div class="su-row"><label>싱크볼</label><input id="su-sink" type="text" inputmode="numeric" value="50,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>쿡탑</label><input id="su-cook" type="text" inputmode="numeric" value="30,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>타공</label><input id="su-hole" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>사각 절단</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>싱크볼</label><input id="su-sink" type="text" inputmode="numeric" value="50,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>쿡탑</label><input id="su-cook" type="text" inputmode="numeric" value="30,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>수전 타공</label><input id="su-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>콘센트 타공</label><input id="su-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>선 절단</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="su-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>밑면연마</label><input id="su-grind" type="text" inputmode="numeric" value="9,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="su-grind150" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncGrindTierPrices('grind150');calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="su-grind100" type="text" inputmode="numeric" value="18,000" oninput="fmtMoney(this);syncGrindTierPrices('grind100');calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-        <div class="su-row"><label>졸리컷</label><input id="su-jolly" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
-        <div class="su-row"><label>고스라</label><input id="su-gosra" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>모따기</label><input id="su-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>밑면연마</label><input id="su-grind" type="text" inputmode="numeric" value="9,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="su-grind150" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="su-grind100" type="text" inputmode="numeric" value="18,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>졸리컷</label><input id="su-jolly" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>고스라</label><input id="su-gosra" type="text" inputmode="numeric" value="9,900" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <button class="tier-save-btn" onclick="saveTierPrices('cost')">💾 저장</button>
       </div>
       <div id="panel-dealer" class="r-card" style="display:none;padding:5px;margin-top:3px">
@@ -368,7 +375,8 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="du-rect" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="du-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="du-cook" type="text" inputmode="numeric" value="36,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>타공</label><input id="du-hole" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>수전 타공</label><input id="du-holef" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>콘센트 타공</label><input id="du-holeo" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>모따기</label><input id="du-chamfer" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
@@ -384,7 +392,8 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="ru-rect" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="ru-sink" type="text" inputmode="numeric" value="65,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="ru-cook" type="text" inputmode="numeric" value="39,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>타공</label><input id="ru-hole" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>수전 타공</label><input id="ru-holef" type="text" inputmode="numeric" value="6,500" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>콘센트 타공</label><input id="ru-holeo" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>모따기</label><input id="ru-chamfer" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
@@ -400,7 +409,8 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>타공</label><input id="cu-hole" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>수전 타공</label><input id="cu-holef" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>콘센트 타공</label><input id="cu-holeo" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>모따기</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
@@ -410,6 +420,23 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>졸리컷</label><input id="cu-jolly" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>고스라</label><input id="cu-gosra" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <button class="tier-save-btn" onclick="saveTierPrices('custom')">💾 저장</button>
+      </div>
+      <div id="panel-retail" class="r-card" style="display:none;padding:5px;margin-top:3px">
+        <div class="su-sub">절단 가공</div>
+        <div class="su-row"><label>사각 절단</label><input id="xt-rect" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>싱크볼</label><input id="xt-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>쿡탑</label><input id="xt-cook" type="text" inputmode="numeric" value="35,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>수전 타공</label><input id="xt-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>콘센트 타공</label><input id="xt-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>선 절단</label><input id="xt-line" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">추가 가공</div>
+        <div class="su-row"><label>모따기</label><input id="xt-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>밑면연마</label><input id="xt-grind" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="xt-grind150" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="xt-grind100" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>졸리컷</label><input id="xt-jolly" type="text" inputmode="numeric" value="11,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>고스라</label><input id="xt-gosra" type="text" inputmode="numeric" value="11,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <button class="tier-save-btn" onclick="saveTierPrices('retail')">💾 저장</button>
       </div>
     </div>
   </div>
@@ -421,11 +448,11 @@ canvas{display:block;cursor:crosshair}
 var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
 var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
-var _tierMult={cost:1,dealer:1.2,consumer:1.3,custom:1};
+var _tierMult={cost:1,dealer:1.2,consumer:1.3,custom:1,retail:1};
 
 function setTier(t){
   _tier=t;
-  ['cost','dealer','consumer','custom'].forEach(function(id){
+  ['cost','dealer','consumer','custom','retail'].forEach(function(id){
     var el=document.getElementById('tier-'+id);
     if(el)el.classList.toggle('active',id===t);
     var p=document.getElementById('panel-'+id);
@@ -538,6 +565,8 @@ var selectedShapes=[]; // multi-select
 var selBox=null; // {x1mm,y1mm,x2mm,y2mm} rubber-band box
 var filletSel=[]; // for fillet tool: up to 2 dim labels from same rect
 var hoverShape=null;
+var trimHoverShape=null,trimHoverEdge=null;
+var pendingHoleType='outlet';
 var _hist=[];
 function saveHistory(){_hist.push(JSON.stringify(shapes.map(function(s){return Object.assign({},s);})));if(_hist.length>50)_hist.shift();}
 function undo(){if(!_hist.length)return;shapes=JSON.parse(_hist.pop()).map(function(d){return Object.assign({},d);});selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();}
@@ -659,6 +688,18 @@ window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTi
 loadAllTierPrices();
 
 // ═══ 스냅 ═══
+function syncAllTierPrices(){
+  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+  keys.forEach(function(k){
+    var el=document.getElementById('su-'+k);if(!el)return;
+    var v=parseFloat((el.value||'0').replace(/,/g,''))||0;
+    var du=document.getElementById('du-'+k);
+    var ru=document.getElementById('ru-'+k);
+    if(du)du.value=v>0?Math.round(v*1.2).toLocaleString():'0';
+    if(ru)ru.value=v>0?Math.round(v*1.3).toLocaleString():'0';
+  });
+  calcCost();
+}
 function syncGrindTierPrices(k){
   function gv(id){var el=document.getElementById(id);return el?parseFloat((el.value||'0').replace(/,/g,''))||0:0;}
   function sv(id,v){var el=document.getElementById(id);if(el)el.value=v>0?Math.round(v).toLocaleString():'0';}
@@ -861,9 +902,61 @@ function drawTriangle(cx,cy,angle,sz,col){
 
 function drawGrindRegion(s,preview){
   var isH=Math.abs(s.y2-s.y1)<0.5;
+  var isV=Math.abs(s.x2-s.x1)<0.5;
   var xmin=Math.min(s.x1,s.x2),xmax=Math.max(s.x1,s.x2);
   var ymin=Math.min(s.y1,s.y2),ymax=Math.max(s.y1,s.y2);
   var depth=s.depth||30;
+  var alpha=preview?0.35:0.85;
+
+  // ── 사선(대각선) 처리: 평행사변형 해칭 ──
+  if(!isH&&!isV){
+    var llen=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(llen<0.5)return;
+    var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
+    var inw=ctx2_.inward;
+    var ux=(s.x2-s.x1)/llen,uy=(s.y2-s.y1)/llen;
+    // 법선 (선 진행방향 기준 왼쪽=inward:1, 오른쪽=inward:-1)
+    var nx=-inw*uy*depth,ny=inw*ux*depth;
+    // 평행사변형 4점 (mm)
+    var pts=[[s.x1,s.y1],[s.x2,s.y2],[s.x2+nx,s.y2+ny],[s.x1+nx,s.y1+ny]];
+    var cpts=pts.map(function(p){return toCanvas(p[0],p[1]);});
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cpts[0][0],cpts[0][1]);
+    for(var i=1;i<cpts.length;i++)ctx.lineTo(cpts[i][0],cpts[i][1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fill();
+    ctx.strokeStyle='rgba(255,215,0,'+alpha+')';ctx.lineWidth=1.2;ctx.setLineDash([]);
+    // 해칭: 클리핑 영역 전체를 대각선으로 채움
+    var bx=[cpts[0][0],cpts[1][0],cpts[2][0],cpts[3][0]];
+    var by=[cpts[0][1],cpts[1][1],cpts[2][1],cpts[3][1]];
+    var pxMin=Math.min.apply(null,bx),pxMax=Math.max.apply(null,bx);
+    var pyMin=Math.min.apply(null,by),pyMax=Math.max.apply(null,by);
+    var step=Math.max(4,mm2px(4)),span=pyMax-pyMin;
+    for(var d=-(pxMax-pxMin+span);d<(pxMax-pxMin+span);d+=step){
+      ctx.beginPath();ctx.moveTo(pxMin+d,pyMin);ctx.lineTo(pxMin+d+span,pyMin+span);ctx.stroke();
+    }
+    ctx.restore();
+    if(isSelected(s)||preview){
+      ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
+      ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+      ctx.beginPath();ctx.moveTo(cpts[0][0],cpts[0][1]);
+      for(var i=1;i<cpts.length;i++)ctx.lineTo(cpts[i][0],cpts[i][1]);
+      ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+    }
+    var ep1=toCanvas(s.x1,s.y1),ep2=toCanvas(s.x2,s.y2);
+    ctx.strokeStyle='#FFD740';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(ep1[0],ep1[1]);ctx.lineTo(ep2[0],ep2[1]);ctx.stroke();
+    if(!preview&&!(s.hideDims&&s.hideDims['dist'])){
+      var dmx=(s.x1+s.x2)/2+nx/2,dmy=(s.y1+s.y2)/2+ny/2;
+      var dcp=toCanvas(dmx,dmy);
+      var dtxt=depth.toFixed(0)+' mm';var dfSz=printRender?16:9;
+      ctx.save();ctx.font='bold '+dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+      var dtw=ctx.measureText(dtxt).width;
+      ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(dcp[0]-dtw/2-3,dcp[1]-dfSz/2-2,dtw+6,dfSz+4);
+      ctx.fillStyle=printRender?'#1565C0':'#FFD740';ctx.fillText(dtxt,dcp[0],dcp[1]);ctx.restore();
+    }
+    return;
+  }
   // 런타임에 inward 방향 재계산: 가장 가까운 사각형의 안쪽 방향
   var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
   var inward=ctx2_.inward;
@@ -884,7 +977,6 @@ function drawGrindRegion(s,preview){
   }
   var c1=toCanvas(rx,ry),c2=toCanvas(rx+rw,ry+rh);
   var px=c1[0],py=c1[1],pw=c2[0]-c1[0],ph=c2[1]-c1[1];
-  var alpha=preview?0.35:0.85;
   // Yellow hatch fill — 부모 도형이 필렛/챔퍼이면 그 경계에 맞춰 클리핑
   ctx.save();
   if(parentShape&&parentShape.kind==='rect'&&(parentShape.cornerType==='fillet'||parentShape.cornerType==='chamfer')&&(parentShape.cornerSize||0)>0){
@@ -1631,9 +1723,12 @@ function doTrim(mx,my){
   if(!hit||!hitEdge)return;
   var hx1=hitEdge.ax,hy1=hitEdge.ay,hx2=hitEdge.bx,hy2=hitEdge.by;
   var hlen=Math.hypot(hx2-hx1,hy2-hy1);if(hlen<1)return;
+
+  // 다른 도형과의 교점 수집
   var ixs=[];
   shapes.forEach(function(s){
     if(s===hit)return;
+    if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark')return;
     var edges=[];
     if(s.kind==='rect'){
       edges=[[s.x,s.y,s.x+s.w,s.y],[s.x+s.w,s.y,s.x+s.w,s.y+s.h],
@@ -1643,36 +1738,93 @@ function doTrim(mx,my){
     }
     edges.forEach(function(e){
       var p=lineSegIntersect(hx1,hy1,hx2,hy2,e[0],e[1],e[2],e[3]);
-      if(p){var t=Math.hypot(p.x-hx1,p.y-hy1)/hlen;ixs.push({x:p.x,y:p.y,t:t});}
+      if(p){
+        var t=Math.hypot(p.x-hx1,p.y-hy1)/hlen;
+        // 끝점에서 0.5mm 이상인 교점만 수집
+        var d0=Math.hypot(p.x-hx1,p.y-hy1),d1=Math.hypot(p.x-hx2,p.y-hy2);
+        if(d0>0.5&&d1>0.5)ixs.push({x:p.x,y:p.y,t:t});
+      }
     });
   });
-  if(ixs.length===0)return;
+
+  if(ixs.length===0){
+    // 교차 없는 단일 선: 클릭만으로 삭제
+    if(hitEdge.side==='line'){
+      saveHistory();
+      shapes=shapes.filter(function(s){return s!==hit;});
+      selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
+      redraw();calcCost();
+    }
+    return;
+  }
+
+  // 정렬 + 중복 제거
+  ixs.sort(function(a,b){return a.t-b.t;});
+  var dd=[];
+  for(var i=0;i<ixs.length;i++){
+    if(dd.length===0||Math.abs(ixs[i].t-dd[dd.length-1].t)>0.002)dd.push(ixs[i]);
+  }
+  if(dd.length===0)return;
+
+  var lo=null,hi=null;
+  for(var i=0;i<dd.length;i++){if(dd[i].t<hitT)lo=dd[i];}
+  for(var i=0;i<dd.length;i++){if(dd[i].t>hitT&&hi===null)hi=dd[i];}
+
   saveHistory();
-  var ci;
-  if(hitT<=0.5){ixs.sort(function(a,b){return a.t-b.t;});ci=ixs[0];}
-  else{ixs.sort(function(a,b){return b.t-a.t;});ci=ixs[0];}
 
   if(hitEdge.side==='line'){
-    // 선 트림 (기존 동작)
-    if(hitT<=0.5){hit.x1=ci.x;hit.y1=ci.y;}
-    else{hit.x2=ci.x;hit.y2=ci.y;}
-    if(Math.hypot(hit.x2-hit.x1,hit.y2-hit.y1)<0.5){
-      shapes=shapes.filter(function(s){return s!==hit;});
-      selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
+    // 선 트림: 두 교점 사이 제거 or 끝부분 제거
+    var ox1=hit.x1,oy1=hit.y1,ox2=hit.x2,oy2=hit.y2;
+    if(lo&&hi){
+      hit.x2=lo.x;hit.y2=lo.y;
+      var nl=makeShape('line',{x1:hi.x,y1:hi.y,x2:ox2,y2:oy2});
+      if(hit.color)nl.color=hit.color;if(hit.lineWidth)nl.lineWidth=hit.lineWidth;
+      var tooA=Math.hypot(hit.x2-hit.x1,hit.y2-hit.y1)<0.5;
+      var tooB=Math.hypot(nl.x2-nl.x1,nl.y2-nl.y1)<0.5;
+      if(tooA){shapes=shapes.filter(function(s){return s!==hit;});selectedShapes=selectedShapes.filter(function(s){return s!==hit;});}
+      if(!tooB)shapes.push(nl);
+    } else if(lo){
+      hit.x2=lo.x;hit.y2=lo.y;
+      if(Math.hypot(hit.x2-hit.x1,hit.y2-hit.y1)<0.5){shapes=shapes.filter(function(s){return s!==hit;});selectedShapes=selectedShapes.filter(function(s){return s!==hit;});}
+    } else if(hi){
+      hit.x1=hi.x;hit.y1=hi.y;
+      if(Math.hypot(hit.x2-hit.x1,hit.y2-hit.y1)<0.5){shapes=shapes.filter(function(s){return s!==hit;});selectedShapes=selectedShapes.filter(function(s){return s!==hit;});}
     }
   } else {
-    // rect 엣지 트림 → x/y/w/h 조정
-    var side=hitEdge.side;
-    if(side==='top'||side==='bottom'){
-      if(hitT<=0.5){hit.w=hit.x+hit.w-ci.x;hit.x=ci.x;}
-      else{hit.w=ci.x-hit.x;}
-    } else {
-      if(hitT<=0.5){hit.h=hit.y+hit.h-ci.y;hit.y=ci.y;}
-      else{hit.h=ci.y-hit.y;}
-    }
-    if(hit.w<0.5||hit.h<0.5){
-      shapes=shapes.filter(function(s){return s!==hit;});
-      selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
+    // rect 엣지: 4선분으로 분해 후 해당 선분 트림
+    var rx=hit.x,ry=hit.y,rw=hit.w,rh=hit.h;
+    shapes=shapes.filter(function(s){return s!==hit;});
+    selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
+    var sides4=[
+      {ax:rx,   ay:ry,   bx:rx+rw,by:ry,   s:'top'},
+      {ax:rx+rw,ay:ry,   bx:rx+rw,by:ry+rh,s:'right'},
+      {ax:rx+rw,ay:ry+rh,bx:rx,   by:ry+rh,s:'bottom'},
+      {ax:rx,   ay:ry+rh,bx:rx,   by:ry,   s:'left'}
+    ];
+    var ci=null;
+    if(lo&&hi){ci=(hitT-lo.t<hi.t-hitT)?lo:hi;}
+    else{ci=lo||hi;}
+    sides4.forEach(function(e){
+      if(e.s!==hitEdge.side){
+        shapes.push(makeShape('line',{x1:e.ax,y1:e.ay,x2:e.bx,y2:e.by}));
+      } else if(ci){
+        // 클릭된 엣지: 트림
+        var l1=null,l2=null;
+        if(hitT<=0.5){
+          // 앞부분 제거 → ci 이후 유지
+          l1={x1:ci.x,y1:ci.y,x2:e.bx,y2:e.by};
+        } else {
+          // 뒷부분 제거 → ci 이전 유지
+          l1={x1:e.ax,y1:e.ay,x2:ci.x,y2:ci.y};
+        }
+        if(l1&&Math.hypot(l1.x2-l1.x1,l1.y2-l1.y1)>0.5)shapes.push(makeShape('line',l1));
+      }
+      // ci없으면 해당 엣지 전체 유지
+    });
+    if(!ci){
+      // 교점 못찾으면 해당 엣지도 그대로
+      var eSide=sides4.filter(function(e){return e.s===hitEdge.side;})[0];
+      if(eSide)shapes.push(makeShape('line',{x1:eSide.ax,y1:eSide.ay,x2:eSide.bx,y2:eSide.by}));
     }
   }
   redraw();calcCost();
@@ -1686,7 +1838,7 @@ function finalizeShape(fmx,fmy){
   var mx=fmx,my=fmy;
   var s=null;
   if(tool==='rect'){var x=Math.min(x0,mx),y=Math.min(y0,my),w=Math.abs(mx-x0),h=Math.abs(my-y0);if(w<1||h<1){drawStart=null;return;}s=makeShape('rect',{x:x,y:y,w:w,h:h,cornerType:'none',cornerSize:0});}
-  else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r});}
+  else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});}
   else if(tool==='line'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('line',{x1:x0,y1:y0,x2:mx,y2:my});}
   else if(tool==='dimline'){
     if(dimLineType==='r'&&_dimRCircle){
@@ -1854,6 +2006,17 @@ function redraw(){
   if(selectedShapes.length&&!selBox)drawRotationHandle();
   drawNestDims();drawSelBox();
   if(magnetLineX!==null||magnetLineY!==null)drawMagnetLines();
+  // trim/fillet 호버 하이라이트
+  if((tool==='trim'||tool==='fillet')&&trimHoverShape&&trimHoverEdge){
+    var hep1_=toCanvas(trimHoverEdge.ax,trimHoverEdge.ay);
+    var hep2_=toCanvas(trimHoverEdge.bx,trimHoverEdge.by);
+    ctx.save();
+    ctx.strokeStyle='rgba(0,229,255,0.92)';
+    ctx.lineWidth=3.5;ctx.setLineDash([]);
+    ctx.shadowColor='rgba(0,229,255,0.55)';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(hep1_[0],hep1_[1]);ctx.lineTo(hep2_[0],hep2_[1]);ctx.stroke();
+    ctx.restore();
+  }
 }
 
 // ═══ 히트테스트 ═══
@@ -2164,6 +2327,38 @@ cv.addEventListener('mousemove',function(e){
 
   lastMx=mx;lastMy=my;
 
+  // trim/fillet 호버 감지
+  if(tool==='trim'||tool==='fillet'){
+    var _htol=12/scale;
+    var _nhs=null,_nhe=null,_nhd=_htol+1;
+    shapes.forEach(function(s){
+      if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark')return;
+      var _edges=[];
+      if(s.x1!==undefined){
+        _edges=[{ax:s.x1,ay:s.y1,bx:s.x2,by:s.y2}];
+      } else if(s.kind==='rect'){
+        _edges=[
+          {ax:s.x,     ay:s.y,      bx:s.x+s.w, by:s.y},
+          {ax:s.x+s.w, ay:s.y,      bx:s.x+s.w, by:s.y+s.h},
+          {ax:s.x,     ay:s.y+s.h,  bx:s.x+s.w, by:s.y+s.h},
+          {ax:s.x,     ay:s.y,      bx:s.x,      by:s.y+s.h}
+        ];
+      }
+      _edges.forEach(function(e){
+        var dx=e.bx-e.ax,dy=e.by-e.ay,len2=dx*dx+dy*dy;
+        if(len2<1)return;
+        var t=Math.max(0,Math.min(1,((mx-e.ax)*dx+(my-e.ay)*dy)/len2));
+        var px=e.ax+t*dx,py=e.ay+t*dy;
+        var d=Math.hypot(mx-px,my-py);
+        if(d<_nhd){_nhd=d;_nhs=s;_nhe=e;}
+      });
+    });
+    trimHoverShape=_nhd<=_htol?_nhs:null;
+    trimHoverEdge=_nhd<=_htol?_nhe:null;
+  } else {
+    trimHoverShape=null;trimHoverEdge=null;
+  }
+
   redraw();
   if(snapKind&&snapKind!=='grid')drawSnapInd(mx,my,snapKind);
   drawGuides(mx,my);
@@ -2172,7 +2367,7 @@ cv.addEventListener('mousemove',function(e){
     var x0=drawStart[0],y0=drawStart[1];
     var ps=null;
     if(tool==='rect'){ps={kind:'rect',x:Math.min(x0,mx),y:Math.min(y0,my),w:Math.abs(mx-x0),h:Math.abs(my-y0),cornerType:'none',cornerSize:0,ops:[]};}
-    else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),ops:[]};}
+    else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:pendingHoleType,ops:[]};}
     else if(tool==='line'){ps={kind:'line',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
     else if(tool==='dimline'){
       if(dimLineType==='r'&&_dimRCircle){
@@ -2442,9 +2637,9 @@ function toggleTierSection(){
   if(arrow)arrow.textContent=open?'▼':'▶';
 }
 function saveTierPrices(tier){
-  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'};
+  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
   var prefix=pmap[tier];
-  var keys=['rect','sink','cook','hole','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
   var data={};
   keys.forEach(function(k){var el=document.getElementById(prefix+k);if(el)data[k]=el.value;});
   try{localStorage.setItem('scd_prices_'+tier,JSON.stringify(data));}catch(e){}
@@ -2452,8 +2647,8 @@ function saveTierPrices(tier){
   if(btn){var orig=btn.textContent;btn.textContent='✅ 저장됨';setTimeout(function(){btn.textContent=orig;},1200);}
 }
 function loadAllTierPrices(){
-  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'};
-  var keys=['rect','sink','cook','hole','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
+  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
   Object.keys(pmap).forEach(function(tier){
     var saved;try{saved=localStorage.getItem('scd_prices_'+tier);}catch(e){}
     if(!saved)return;
@@ -2464,7 +2659,7 @@ function loadAllTierPrices(){
 }
 function calcCost(){
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0};
-  var cnt={sink:0,cook:0,hole:0,grind150:0,grind100:0,chamfer:0};
+  var cnt={sink:0,cook:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       if(s.groupId&&s.groupRole==='main'){
@@ -2475,7 +2670,7 @@ function calcCost(){
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
       }
     } else if(s.kind==='circle'||s.kind==='hole'){
-      cnt.hole++;
+      if(s.holeType==='faucet')cnt.holef++;else cnt.holeo++;
     } else if(s.kind==='line'){
       lenMm.line+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='grindregion'){
@@ -2491,7 +2686,7 @@ function calcCost(){
   var qty=totalQty();
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
   function gta(k){
-    var pfx={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-'}[_tier]||'su-';
+    var pfx={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'}[_tier]||'su-';
     var el=document.getElementById(pfx+k);
     return el?parseFloat((el.value||'').replace(/,/g,''))||0:0;
   }
@@ -2503,7 +2698,8 @@ function calcCost(){
   var pRect=gta('rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
   var pSink=gta('sink'),subSink=cnt.sink*pSink*qty;
   var pCook=gta('cook'),subCook=cnt.cook*pCook*qty;
-  var pHole=gta('hole'),subHole=cnt.hole*pHole*qty;
+  var pHolef=gta('holef'),subHolef=cnt.holef*pHolef*qty;
+  var pHoleo=gta('holeo'),subHoleo=cnt.holeo*pHoleo*qty;
   var pLine=gta('line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
   var pChamfer=gta('chamfer'),subChamfer=cnt.chamfer*pChamfer*qty;
   var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
@@ -2514,7 +2710,8 @@ function calcCost(){
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
-  upd('pl-hole','ps-hole',cnt.hole>0?cnt.hole+'회':'-',subHole);
+  upd('pl-holef','ps-holef',cnt.holef>0?cnt.holef+'회':'-',subHolef);
+  upd('pl-holeo','ps-holeo',cnt.holeo>0?cnt.holeo+'회':'-',subHoleo);
   upd('pl-line','ps-line',mLine>0.001?mLine.toFixed(3)+'m':'-',subLine);
   upd('pl-chamfer','ps-chamfer',cnt.chamfer>0?cnt.chamfer+'회':'-',subChamfer);
   upd('pl-grind','ps-grind',mGrind>0.001?mGrind.toFixed(3)+'m':'-',subGrind);
@@ -2522,7 +2719,7 @@ function calcCost(){
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subSink+subCook+subHole+subLine;
+  var totalCut=subRect+subSink+subCook+subHolef+subHoleo+subLine;
   var totalAdd=subChamfer+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
@@ -2536,7 +2733,7 @@ function calcCost(){
 }
 function saveData(){
   var su={};
-  ['rect','sink','cook','hole','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);su[k]=parseFloat((el?el.value||'0':'0').replace(/,/g,''))||0;});
+  ['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);su[k]=parseFloat((el?el.value||'0':'0').replace(/,/g,''))||0;});
   var data={
     products:products,
     setup:su,
@@ -2561,7 +2758,7 @@ function onFileLoad(e){
       var d=JSON.parse(ev.target.result);
       if(d.products&&d.products.length){products=d.products;renderProductList();}
       else if(d.product){products=[{name:d.product,size:d.size||'',qty:parseInt(d.qty)||1}];renderProductList();}
-      if(d.setup){['rect','sink','cook','hole','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);if(el&&d.setup[k]!==undefined)el.value=parseFloat(d.setup[k])?parseFloat(d.setup[k]).toLocaleString():'0';});}
+      if(d.setup){['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);if(el&&d.setup[k]!==undefined)el.value=parseFloat(d.setup[k])?parseFloat(d.setup[k]).toLocaleString():'0';});}
       if(d.pkg!==undefined)document.getElementById('r-pkg').value=d.pkg;
       if(d.ship1!==undefined)document.getElementById('r-ship1').value=d.ship1;
       if(d.ship2!==undefined)document.getElementById('r-ship2').value=d.ship2;
@@ -2577,7 +2774,7 @@ function resetAll(){
   if(!confirm('모든 데이터를 초기화하시겠습니까?'))return;
   shapes=[];selectedShapes=[];hoverShape=null;filletSel=[];_hist=[];
   products=[{name:'',size:'',qty:1}];renderProductList();
-  var _suDef={'rect':'10,800','sink':'50,000','cook':'30,000','hole':'10,000','line':'10,800','chamfer':'5,000','grind':'9,000','grind150':'5,000','grind100':'18,000','jolly':'9,900','gosra':'9,900'};['rect','sink','cook','hole','line','chamfer','grind','grind100','jolly','gosra'].forEach(function(k){document.getElementById('su-'+k).value=_suDef[k]||'0';});
+  var _suDef={'rect':'10,800','sink':'50,000','cook':'30,000','holef':'5,000','holeo':'10,000','line':'10,800','chamfer':'5,000','grind':'9,000','grind150':'5,000','grind100':'18,000','jolly':'9,900','gosra':'9,900'};['rect','sink','cook','holef','holeo','line','chamfer','grind','grind100','jolly','gosra'].forEach(function(k){document.getElementById('su-'+k).value=_suDef[k]||'0';});
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){document.getElementById(id).value='0';});
   updatePropsPanel();redraw();calcCost();
 }
@@ -2773,6 +2970,11 @@ function updatePropsPanel(){
     if(s.cornerType&&s.cornerType!=='none')html+='<div class="prop-row"><label>R(mm):</label><input type="number" id="pp-csize" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveCorner()"></div>';
   } else if(s.kind==='circle'||s.kind==='hole'){
     html+='<div class="prop-row"><label>Φ(mm):</label><input type="number" id="pp-phi" value="'+(s.r*2).toFixed(2)+'" step="1" oninput="livePropPhi(this.value)"></div>';
+    var _ht=s.holeType||'outlet';
+    html+='<div class="prop-row"><label>타공 유형:</label><div style="display:flex;gap:4px">';
+    html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="outlet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'outlet\')">콘센트</button>';
+    html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="faucet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'faucet\')">수전</button>';
+    html+='</div></div>';
     var hd=s.hideDims||{};
     html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
@@ -2874,6 +3076,17 @@ function liveProp(field,val){
   else if(field==='labelType'){saveHistory();s.labelType=val;redraw();}
   else if(field==='rx'||field==='ry'){if(!isNaN(v)&&v>0){saveHistory();s[field]=v;redraw();calcCost();}}
   else{if(!isNaN(v)&&v>0){saveHistory();s[field]=v;syncGroupShapes(s);redraw();calcCost();}}
+}
+function setPendingHoleType(t){
+  pendingHoleType=t;
+  var btn1=document.getElementById('hole-type-outlet');
+  var btn2=document.getElementById('hole-type-faucet');
+  if(btn1)btn1.style.background=t==='outlet'?'#1565C0':'#263545';
+  if(btn2)btn2.style.background=t==='faucet'?'#1565C0':'#263545';
+}
+function setHoleType(t){
+  selectedShapes.forEach(function(s){if(s.kind==='circle'||s.kind==='hole')s.holeType=t;});
+  saveHistory();redraw();calcCost();showProps();
 }
 function livePropPhi(val){
   var s=selectedShapes[0];if(!s||(s.kind!=='circle'&&s.kind!=='hole'))return;
@@ -3762,7 +3975,8 @@ function showPrintPreview(){
       {g:'절단 가공',name:'사각 절단',qty:_tv('pl-rect'),sub:_tv('ps-rect')},
       {name:'싱크볼',qty:_tv('pl-sink'),sub:_tv('ps-sink')},
       {name:'쿡탑',qty:_tv('pl-cook'),sub:_tv('ps-cook')},
-      {name:'타공',qty:_tv('pl-hole'),sub:_tv('ps-hole')},
+      {name:'수전 타공',qty:_tv('pl-holef'),sub:_tv('ps-holef')},
+      {name:'콘센트 타공',qty:_tv('pl-holeo'),sub:_tv('ps-holeo')},
       {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
       {g:'추가 가공',name:'모따기',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
       {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
