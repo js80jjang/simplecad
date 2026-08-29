@@ -163,8 +163,8 @@ canvas{display:block;cursor:crosshair}
     <button onclick="ungroupSelected()" style="flex:1;padding:4px 2px;font-size:11px;background:#263545;border:1px solid #37474F;color:#FFB74D;border-radius:3px;cursor:pointer" title="그룹 해제">&#128278; 해제</button>
   </div>
   <div class="tgl">절단 가공</div>
-  <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#E53935" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 절단</button>
-  <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#E53935" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
+  <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 절단</button>
+  <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
   <div class="fillet-sub" id="circle-sub">
     <label>Φ(mm):<input type="number" id="circle-phi" value="50" min="1" step="1"></label>
     <div style="display:flex;gap:3px;margin-top:5px">
@@ -172,14 +172,14 @@ canvas{display:block;cursor:crosshair}
       <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#263545;color:#fff">수전</button>
     </div>
   </div>
-  <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#E53935" stroke-width="2" stroke-linecap="round"/></svg> 선 절단 <span style="font-size:9px;color:#546E7A;margin-left:2px">Shift=자유</span></button>
+  <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg> 선 절단 <span style="font-size:9px;color:#546E7A;margin-left:2px">Shift=자유</span></button>
   <button class="tool-btn" data-tool="sinkbowl"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="1.5" stroke="#2196F3" stroke-width="1.5" fill="none"/><ellipse cx="8" cy="6" rx="4.5" ry="3" stroke="#2196F3" stroke-width="1.2" fill="rgba(33,150,243,0.2)"/></svg> 싱크볼</button>
   <button class="tool-btn" data-tool="cooktop"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#2196F3" stroke-width="1.5" fill="none"/><circle cx="5" cy="4.5" r="1.9" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="11" cy="4.5" r="1.9" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="5" cy="8" r="1.6" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="11" cy="8" r="1.6" stroke="#2196F3" stroke-width="1" fill="none"/></svg> 쿡탑</button>
   <div class="tgl">추가 가공 / 편집</div>
-  <button class="tool-btn" data-tool="fillet"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><path d="M5,1 L13,1 L13,10 L1,10 L1,5 Q1,1 5,1 Z" stroke="#FFD740" stroke-width="1.5" fill="none"/></svg> 모따기</button>
+  <button class="tool-btn" data-tool="fillet"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><path d="M5,1 L13,1 L13,10 L1,10 L1,5 Q1,1 5,1 Z" stroke="#FFD740" stroke-width="1.5" fill="none"/></svg> 라운드</button>
   <div class="fillet-sub" id="fillet-sub">
     <label>R(mm):<input type="number" id="fillet-r" value="5" min="0.5" step="0.5"></label>
-    <button onclick="applyChamfer5()" style="margin-top:4px;width:100%;padding:3px 0;background:#37474F;border:1px solid #546E7A;color:#CE93D8;border-radius:3px;cursor:pointer;font-size:11px">C5 모따기 적용</button>
+    <button onclick="applyChamfer5()" style="margin-top:4px;width:100%;padding:3px 0;background:#37474F;border:1px solid #546E7A;color:#CE93D8;border-radius:3px;cursor:pointer;font-size:11px">C5 라운드 적용</button>
   </div>
   <button class="tool-btn" data-tool="dimline"><svg width="16" height="10" viewBox="0 0 16 10" style="vertical-align:middle;margin-right:4px"><line x1="2.5" y1="5" x2="13.5" y2="5" stroke="#E53935" stroke-width="1.5"/><line x1="2.5" y1="2" x2="2.5" y2="8" stroke="#E53935" stroke-width="1.5"/><line x1="13.5" y1="2" x2="13.5" y2="8" stroke="#E53935" stroke-width="1.5"/><polygon points="5,4 2.5,5 5,6" fill="#E53935"/><polygon points="11,4 13.5,5 11,6" fill="#E53935"/></svg> 치수선</button>
   <div class="fillet-sub" id="dimline-sub" style="display:none">
@@ -310,7 +310,7 @@ canvas{display:block;cursor:crosshair}
   <div class="r-sec">③ 추가 가공</div>
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
-    <div class="proc-row2"><span class="pr-name">모따기</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
+    <div class="proc-row2"><span class="pr-name">라운드</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
     <div class="proc-row2"><span class="pr-name">밑면연마</span><span class="pr-qty" id="pl-grind">-</span><span class="pr-sub" id="ps-grind">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 150×150</span><span class="pr-qty" id="pl-grind150">-</span><span class="pr-sub" id="ps-grind150">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 100mm+</span><span class="pr-qty" id="pl-grind100">-</span><span class="pr-sub" id="ps-grind100">-</span></div>
@@ -362,7 +362,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>콘센트 타공</label><input id="su-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="su-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>라운드</label><input id="su-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="su-grind" type="text" inputmode="numeric" value="9,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="su-grind150" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="su-grind100" type="text" inputmode="numeric" value="18,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -379,7 +379,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>콘센트 타공</label><input id="du-holeo" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="du-chamfer" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>라운드</label><input id="du-chamfer" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="du-grind" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="du-grind150" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="du-grind100" type="text" inputmode="numeric" value="21,600" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -396,7 +396,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>콘센트 타공</label><input id="ru-holeo" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="ru-chamfer" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>라운드</label><input id="ru-chamfer" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="ru-grind" type="text" inputmode="numeric" value="11,700" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="ru-grind150" type="text" inputmode="numeric" value="6,500" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="ru-grind100" type="text" inputmode="numeric" value="23,400" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -413,7 +413,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>콘센트 타공</label><input id="cu-holeo" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>라운드</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="cu-grind" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="cu-grind150" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="cu-grind100" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -430,7 +430,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>콘센트 타공</label><input id="xt-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="xt-line" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
-        <div class="su-row"><label>모따기</label><input id="xt-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label>라운드</label><input id="xt-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="xt-grind" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label style="font-size:10px">└ 150×150</label><input id="xt-grind150" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">└ 100mm+</label><input id="xt-grind100" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -741,6 +741,10 @@ function snapPoints(excl){
       pts.push({x:_tl.x,y:_tl.y,k:'e'},{x:_tr.x,y:_tr.y,k:'e'},{x:_br.x,y:_br.y,k:'e'},{x:_bl.x,y:_bl.y,k:'e'});
       pts.push({x:_tm.x,y:_tm.y,k:'m'},{x:_rm.x,y:_rm.y,k:'m'},{x:_bm.x,y:_bm.y,k:'m'},{x:_lm.x,y:_lm.y,k:'m'});
       if(snapRectCenter)pts.push({x:_cx,y:_cy,k:'c'});
+      // 모따기/라운드 스냅: uniform cornerType
+      if((s.cornerType==='chamfer'||s.cornerType==='fillet')&&(s.cornerSize||0)>0){var _chs_=Math.min(s.cornerSize,_hw,_hh);[_rp(-_hw+_chs_,-_hh),_rp(-_hw,-_hh+_chs_),_rp(-_hw+_chs_/2,-_hh+_chs_/2),_rp(_hw-_chs_,-_hh),_rp(_hw,-_hh+_chs_),_rp(_hw-_chs_/2,-_hh+_chs_/2),_rp(-_hw+_chs_,_hh),_rp(-_hw,_hh-_chs_),_rp(-_hw+_chs_/2,_hh-_chs_/2),_rp(_hw-_chs_,_hh),_rp(_hw,_hh-_chs_),_rp(_hw-_chs_/2,_hh-_chs_/2)].forEach(function(p){pts.push({x:p.x,y:p.y,k:'e'});});}
+      // 개별 코너 필릿 (s.corners) 스냅
+      if(s.corners){var _cmapS_={tl:{dx:-_hw,dy:-_hh,ex:1,ey:1},tr:{dx:_hw,dy:-_hh,ex:-1,ey:1},bl:{dx:-_hw,dy:_hh,ex:1,ey:-1},br:{dx:_hw,dy:_hh,ex:-1,ey:-1}};Object.keys(s.corners).forEach(function(ck){var cv2=s.corners[ck];if(!cv2||(cv2.r||0)<=0)return;var cm2=_cmapS_[ck];if(!cm2)return;var _cr2=Math.min(cv2.r,_hw,_hh);var _p1=_rp(cm2.dx+cm2.ex*_cr2,cm2.dy),_p2=_rp(cm2.dx,cm2.dy+cm2.ey*_cr2);pts.push({x:_p1.x,y:_p1.y,k:'e'},{x:_p2.x,y:_p2.y,k:'e'},{x:(_p1.x+_p2.x)/2,y:(_p1.y+_p2.y)/2,k:'m'});});}
     }
     else if(s.kind==='circle'||s.kind==='hole'){pts.push({x:s.cx+s.r,y:s.cy,k:'e'},{x:s.cx-s.r,y:s.cy,k:'e'},{x:s.cx,y:s.cy+s.r,k:'e'},{x:s.cx,y:s.cy-s.r,k:'e'});if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});}
     else if(s.kind==='line'||s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'){pts.push({x:s.x1,y:s.y1,k:'e'},{x:s.x2,y:s.y2,k:'e'},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2,k:'m'});
@@ -876,8 +880,8 @@ function findEdgeContext(x1,y1,x2,y2){
 }
 
 // ═══ 도형 그리기 ═══
-var SCOL={rect:'#E53935',circle:'#E53935',ellipse:'#E53935',hole:'#b71c1c',line:'#E53935',dimline:'#78909C'};
-var SFILL={rect:'rgba(229,57,53,0.10)',circle:'rgba(229,57,53,0.10)',ellipse:'rgba(229,57,53,0.10)',hole:'rgba(183,28,28,0.15)'};
+var SCOL={rect:'#ffffff',circle:'#ffffff',ellipse:'#ffffff',hole:'#ffffff',line:'#ffffff',dimline:'#78909C'};
+var SFILL={rect:'',circle:'',ellipse:'',hole:''};
 
 function isSelected(s){return selectedShapes.indexOf(s)>=0;}
 
@@ -1125,7 +1129,7 @@ function drawDimsLine(s,col){
 }
 
 // ─── 치수 표시 ───
-function dlbl(sel){ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 22px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';}
+function dlbl(sel){ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#EF9A9A');ctx.font=(printRender?'bold 22px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';}
 function autoAdjustDims(){
   var rects=shapes.filter(function(s){return s.kind==='rect'&&!(s.rotation);}); // 회전된 rect는 자동 오프셋 제외
   // ── W 치수 겹침 방지 (아래쪽 / 위쪽)
@@ -1188,7 +1192,7 @@ function drawDims(s,col){
   var x1c=-rw_/2,y1c=-rh_/2,x2c=rw_/2,y2c=rh_/2;
   // 로컬→캔버스 변환 (dimLabels 히트 좌표용)
   function l2c(lx,ly){if(!rot)return[cc_[0]+lx,cc_[1]+ly];var co=Math.cos(rot),si=Math.sin(rot);return[cc_[0]+lx*co-ly*si,cc_[1]+lx*si+ly*co];}
-  ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([]);
+  ctx.strokeStyle='#E53935';ctx.lineWidth=1;ctx.setLineDash([]);
   var mx2=(x1c+x2c)/2;
   // W 치수 (offW>=0: 아래, offW<0: 위)
   if(!(s.hideDims&&s.hideDims['w'])){
@@ -1237,29 +1241,76 @@ function drawDims(s,col){
   ctx.restore(); // drawDims outer restore
   if(s.cornerType&&s.cornerType!=='none'&&s.cornerSize>0){
     var cs_=Math.min(s.cornerSize,s.w/2,s.h/2);
-    var cCol_=printRender?'#1565C0':(isSelected(s)?'#FFD740':'#90CAF9');
+    var cCol_=printRender?'#1565C0':(isSelected(s)?'#FFD740':'#EF9A9A');
     var lbl_rc=(s.cornerType==='chamfer'?'C ':'R ')+cs_.toFixed(1);
-    // 좌상단 모서리 → 절대 캔버스 좌표
-    var cornerAbs=toCanvas(s.x,s.y);
-    var cAx=cornerAbs[0],cAy=cornerAbs[1];
-    // 대각선 리더: 좌상 방향으로
     var lLen_=printRender?55:36;
-    var lEx_=cAx-lLen_*Math.SQRT1_2,lEy_=cAy-lLen_*Math.SQRT1_2;
-    // 보조선 (점선)
-    ctx.strokeStyle='#546E7A';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
+    var _cW_=ctx.canvas.width,_cH_=ctx.canvas.height;
+    // 바깥 방향 우선, 공간 없으면 안쪽 방향 fallback
+    var _rAll_=[
+      {wx:s.x,    wy:s.y+s.h,dx:-1,dy: 1},
+      {wx:s.x+s.w,wy:s.y+s.h,dx: 1,dy: 1},
+      {wx:s.x,    wy:s.y,    dx:-1,dy:-1},
+      {wx:s.x+s.w,wy:s.y,    dx: 1,dy:-1},
+      {wx:s.x,    wy:s.y+s.h,dx: 1,dy:-1},
+      {wx:s.x+s.w,wy:s.y+s.h,dx:-1,dy:-1},
+      {wx:s.x,    wy:s.y,    dx: 1,dy: 1},
+      {wx:s.x+s.w,wy:s.y,    dx:-1,dy: 1}
+    ];
+    var _rbst_=_rAll_[0];
+    for(var _ri_=0;_ri_<_rAll_.length;_ri_++){
+      var _cd_=_rAll_[_ri_],_cp_=toCanvas(_cd_.wx,_cd_.wy);
+      var _lx_=_cp_[0]+_cd_.dx*lLen_*Math.SQRT1_2,_ly_=_cp_[1]+_cd_.dy*lLen_*Math.SQRT1_2;
+      if(_cp_[0]>5&&_cp_[0]<_cW_-5&&_cp_[1]>5&&_cp_[1]<_cH_-5
+         &&_lx_>10&&_lx_<_cW_-10&&_ly_>10&&_ly_<_cH_-10){_rbst_=_cd_;break;}
+    }
+    var _rcp_=toCanvas(_rbst_.wx,_rbst_.wy);
+    var cAx=_rcp_[0],cAy=_rcp_[1];
+    var lEx_=cAx+_rbst_.dx*lLen_*Math.SQRT1_2,lEy_=cAy+_rbst_.dy*lLen_*Math.SQRT1_2;
+    ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
     ctx.beginPath();ctx.moveTo(cAx,cAy);ctx.lineTo(lEx_,lEy_);ctx.stroke();
     ctx.setLineDash([]);
-    // 텍스트 (리더 끝, 수평 표기 — 좌상단에 배치)
     ctx.save();
     ctx.font=(printRender?'bold 20px':'bold 11px')+' Consolas';
     var tw_rc=ctx.measureText(lbl_rc).width;
-    var bh_rc=printRender?20:14;
+    var bh_rc=printRender?20:14;var pad_rc=printRender?8:6;
     ctx.fillStyle='rgba(30,42,53,0.92)';
-    ctx.fillRect(lEx_-tw_rc-(printRender?8:6)-2,lEy_-bh_rc,tw_rc+(printRender?8:6),bh_rc);
-    ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';
-    ctx.fillText(lbl_rc,lEx_-3,lEy_-bh_rc/2);
+    if(_rbst_.dx>0){ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
+    else{ctx.fillRect(lEx_-tw_rc-pad_rc-2,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_-3,lEy_);}
     ctx.restore();
     dimLabels.push({shape:s,field:'cornerSize',px:lEx_,py:lEy_});
+  }
+  // 개별 코너 라운드(s.corners) 자동 치수 표시
+  if(s.corners){
+    var _cmap3_={tl:{wx:s.x,wy:s.y,dx:-1,dy:-1,indx:1,indy:1},tr:{wx:s.x+s.w,wy:s.y,dx:1,dy:-1,indx:-1,indy:1},bl:{wx:s.x,wy:s.y+s.h,dx:-1,dy:1,indx:1,indy:-1},br:{wx:s.x+s.w,wy:s.y+s.h,dx:1,dy:1,indx:-1,indy:-1}};
+    var _cW3_=ctx.canvas.width,_cH3_=ctx.canvas.height;
+    Object.keys(s.corners).forEach(function(ck){
+      var cv3=s.corners[ck];if(!cv3||cv3.type!=='fillet'||(cv3.r||0)<=0)return;
+      var cm3=_cmap3_[ck];if(!cm3)return;
+      var cr3=Math.min(cv3.r,s.w/2,s.h/2);
+      var lbl3='R '+cr3.toFixed(1),lLen3=printRender?55:36;
+      var _dirs3=[{dx:cm3.dx,dy:cm3.dy},{dx:cm3.indx,dy:cm3.indy}];
+      var _bd3=_dirs3[0];
+      for(var _di3=0;_di3<_dirs3.length;_di3++){
+        var _d3=_dirs3[_di3],_cp3=toCanvas(cm3.wx,cm3.wy);
+        var _lx3=_cp3[0]+_d3.dx*lLen3*Math.SQRT1_2,_ly3=_cp3[1]+_d3.dy*lLen3*Math.SQRT1_2;
+        if(_cp3[0]>5&&_cp3[0]<_cW3_-5&&_cp3[1]>5&&_cp3[1]<_cH3_-5
+           &&_lx3>10&&_lx3<_cW3_-10&&_ly3>10&&_ly3<_cH3_-10){_bd3=_d3;break;}
+      }
+      var _cp3f=toCanvas(cm3.wx,cm3.wy);
+      var cAx3=_cp3f[0],cAy3=_cp3f[1];
+      var lEx3=cAx3+_bd3.dx*lLen3*Math.SQRT1_2,lEy3=cAy3+_bd3.dy*lLen3*Math.SQRT1_2;
+      var cCol3=printRender?'#1565C0':(isSelected(s)?'#FFD740':'#EF9A9A');
+      ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
+      ctx.beginPath();ctx.moveTo(cAx3,cAy3);ctx.lineTo(lEx3,lEy3);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.save();
+      ctx.font=(printRender?'bold 20px':'bold 11px')+' Consolas';
+      var tw3=ctx.measureText(lbl3).width,bh3=printRender?20:14,pad3=printRender?8:6;
+      ctx.fillStyle='rgba(30,42,53,0.92)';
+      if(_bd3.dx>0){ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
+      else{ctx.fillRect(lEx3-tw3-pad3-2,lEy3-bh3/2,tw3+pad3,bh3);ctx.fillStyle=cCol3;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3-3,lEy3);}
+      ctx.restore();
+    });
   }
 }
 function drawDimsCircle(s,col){
@@ -1304,7 +1355,7 @@ function drawDimLine(s,preview){
   var sel=isSelected(s);
   var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2);
   var angle=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
-  var col=preview?'rgba(120,144,156,0.6)':(sel?'#FF6D00':(s===hoverShape?'#90A4AE':'#78909C'));
+  var col=preview?'rgba(255,80,80,0.5)':(sel?'#FF6D00':(s===hoverShape?'#EF9A9A':'#E53935'));
   var ahsz=printRender?11:7;
 
   // ── R / Φ 치수: 중심→원호 선 + 대각선 연장 + 화살표를 R값 끝에 ──
@@ -3978,7 +4029,7 @@ function showPrintPreview(){
       {name:'수전 타공',qty:_tv('pl-holef'),sub:_tv('ps-holef')},
       {name:'콘센트 타공',qty:_tv('pl-holeo'),sub:_tv('ps-holeo')},
       {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
-      {g:'추가 가공',name:'모따기',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
+      {g:'추가 가공',name:'라운드',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
       {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
       {name:'졸리컷',qty:_tv('pl-jolly'),sub:_tv('ps-jolly')},
       {name:'고스라',qty:_tv('pl-gosra'),sub:_tv('ps-gosra')},
