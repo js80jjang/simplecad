@@ -230,6 +230,7 @@ canvas{display:block;cursor:crosshair}
       <input type="number" id="board-h" value="1600" min="100" step="10" title="온장 높이(mm)">
       <label style="color:#546E7A">mm</label>
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
+      <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
       <button class="bp-btn" style="background:#2E7D32;margin-left:6px" onclick="showPrintPreview()">🖨 출력</button>
     </div>
     <span id="canvas-hint">드래그=다중선택 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
@@ -3910,6 +3911,98 @@ function closeBoardModal(){
 }
 function closePrintModal(){
   document.getElementById('print-modal').classList.remove('show');
+}
+function exportDrawingA4(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  var mainCv=document.getElementById('cv');
+  // 전체 도형 BBox
+  var allBB=null;
+  shapes.forEach(function(s){var bb=getBBox(s);if(!bb)return;if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}});
+  if(!allBB)return;
+  var mmW=allBB.r-allBB.l,mmH=allBB.b-allBB.t;
+  // 방향 자동 결정
+  var isPort=mmH>=mmW;
+  // 뷰 저장 후 도면 맞춤
+  var svScale=scale,svOffX=offsetX,svOffY=offsetY;
+  // 2× 해상도 렌더링 → 치수 레이블 겹침 방지 (도형은 2× 커지고 폰트 크기는 고정)
+  var _A4M=2;
+  var _origW=mainCv.width,_origH=mainCv.height;
+  mainCv.width=_origW*_A4M;mainCv.height=_origH*_A4M;
+  var pad=150*_A4M;
+  var newSc=Math.min((mainCv.width-2*pad)/mmW,(mainCv.height-2*pad)/mmH);
+  newSc=Math.min(newSc,20);
+  scale=newSc;
+  offsetX=pad+(mainCv.width-2*pad-mmW*newSc)/2-allBB.l*newSc;
+  offsetY=pad+(mainCv.height-2*pad-mmH*newSc)/2-allBB.t*newSc;
+  // printRender 모드로 캡처
+  printRender=true;printMode=true;
+  redraw();
+  var tmpCv=document.createElement('canvas');
+  tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
+  tmpCv.getContext('2d').drawImage(mainCv,0,0);
+  // 복구
+  mainCv.width=_origW;mainCv.height=_origH;
+  scale=svScale;offsetX=svOffX;offsetY=svOffY;
+  printRender=false;printMode=false;
+  redraw();
+  var imgData='';
+  try{imgData=tmpCv.toDataURL('image/png');}catch(e){alert('캡처 오류: '+e.message);return;}
+  // 축척 계산
+  var a4long=297,a4short=210;
+  var pxLong=isPort?tmpCv.height:tmpCv.width; // 2× 캡처 캔버스 기준
+  var mmLong=isPort?mmH:mmW;
+  var pxPerMm=pxLong/a4long;
+  var realScale=newSc/pxPerMm;
+  var rs=1/realScale;
+  var niceVals=[1,2,5,10,15,20,25,30,50,100,150,200,500];
+  var best=niceVals[niceVals.length-1];
+  niceVals.forEach(function(v){if(Math.abs(v-rs)<Math.abs(best-rs))best=v;});
+  var scaleStr='1:'+best;
+  var today=new Date();
+  var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
+  var orientation=isPort?'portrait':'landscape';
+  var pw=window.open('','_blank','width=900,height=750,scrollbars=yes,resizable=yes');
+  if(!pw){alert('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요.');return;}
+  var css='*{box-sizing:border-box;margin:0;padding:0;}'
+    +'@page{size:A4 '+orientation+';margin:8mm;}'
+    +'body{background:#bbb;font-family:"Malgun Gothic","맑은 고딕",sans-serif;}'
+    +'.ctrl{padding:8px 14px;background:#263238;display:flex;gap:10px;align-items:center;}'
+    +'.ctrl button{padding:6px 18px;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;background:#1565C0;color:#fff;}'
+    +'.ctrl span{font-size:11px;color:#9eceff;}'
+    +'@media print{.ctrl{display:none!important;}body{background:#fff;}}'
+    +'.page{width:'+(isPort?'194mm':'277mm')+';margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;}'
+    +'.frame{border:3mm solid #fff;border-bottom:0;display:flex;flex-direction:column;flex:1;}'
+    +'.inner-border{border:0.7pt solid #333;margin:0;flex:1;display:flex;flex-direction:column;}'
+    +'.drawing-area{flex:1;padding:2mm;display:flex;align-items:center;justify-content:center;}'
+    +'.drawing-area img{max-width:100%;max-height:100%;object-fit:contain;display:block;}'
+    +'.title-block{border-top:1pt solid #333;display:flex;font-size:0;}'
+    +'.tb-main{flex:1;border-right:0.5pt solid #999;padding:2.5mm 3mm;}'
+    +'.tb-co{font-size:7.5pt;color:#555;margin-bottom:1mm;}'
+    +'.tb-title{font-size:13pt;font-weight:900;color:#111;margin-bottom:1mm;}'
+    +'.tb-size{font-size:8pt;color:#333;font-family:Consolas,monospace;}'
+    +'.tb-cells{display:flex;flex-direction:column;}'
+    +'.tb-row{display:flex;border-bottom:0.5pt solid #ccc;}'
+    +'.tb-row:last-child{border-bottom:none;}'
+    +'.tbl{width:16mm;background:#f0f4f8;font-size:6.5pt;color:#666;padding:1.5mm 1mm;border-right:0.5pt solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;letter-spacing:-.2px;}'
+    +'.tbv{width:26mm;font-size:8.5pt;font-weight:bold;padding:1.5mm 2mm;display:flex;align-items:center;font-family:Consolas,monospace;}';
+  var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
+    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택</span></div>'
+    +'<div class="page"><div class="frame"><div class="inner-border">'
+    +'<div class="drawing-area"><img src="'+imgData+'"></div>'
+    +'<div class="title-block">'
+    +'<div class="tb-main">'
+    +'<div class="tb-co">윤현상재</div>'
+    +'<div class="tb-title">세라믹 가공 도면</div>'
+    +'<div class="tb-size">'+mmW.toFixed(0)+' × '+mmH.toFixed(0)+' mm</div>'
+    +'</div>'
+    +'<div class="tb-cells">'
+    +'<div class="tb-row"><div class="tbl">작성일</div><div class="tbv">'+dateStr+'</div></div>'
+    +'<div class="tb-row"><div class="tbl">축척</div><div class="tbv">'+scaleStr+'</div></div>'
+    +'<div class="tb-row"><div class="tbl">단위</div><div class="tbv">mm</div></div>'
+    +'</div>'
+    +'</div></div></div></div>';
+  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
+  pw.document.close();
 }
 function showPrintPreview(){
   // ① 도면 - 흰 배경 + 그리드 없음 + 도형 자동 맞춤 + 전체 치수 표시
