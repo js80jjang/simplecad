@@ -666,6 +666,7 @@ var grind100mode=false;
 var dimLineType='dist'; // 'dist' | 'r' | 'phi'
 var printMode=false;  // nest dims show-all for print
 var printRender=false; // white background for print
+var _exportLegend=null; // 도면화 시 싱크볼/쿡탑/타공 범례 수집
 var showShapeNumbers=false; // 도형 번호 표시
 function setDimLineType(t){
   dimLineType=t;
@@ -1177,6 +1178,14 @@ function autoAdjustDims(){
   });
 }
 function drawDims(s,col){
+  // 도면화 모드: 싱크볼/쿡탑은 도면 치수 숨기고 범례로 수집
+  if(_exportLegend!==null&&s.groupId&&s.groupRole==='main'){
+    var _hasGosra=shapes.some(function(sh){return sh.groupId===s.groupId&&sh.kind==='gosramark';});
+    var _legKind=_hasGosra?'싱크볼':'쿡탑';
+    var _legSize=s.w.toFixed(0)+'×'+s.h.toFixed(0)+' mm';
+    _exportLegend.push({kind:_legKind,size:_legSize});
+    return;
+  }
   var sel=isSelected(s);
   var rot=s.rotation||0;
   var offW=s.dimOffsetW||15,offH=s.dimOffsetH||15;
@@ -1315,6 +1324,12 @@ function drawDims(s,col){
   }
 }
 function drawDimsCircle(s,col){
+  // 도면화 모드: 타공은 도면 치수 숨기고 범례로 수집
+  if(_exportLegend!==null){
+    var _legKindC=(s.kind==='hole')?(s.holeType==='faucet'?'타공(수전)':s.holeType==='outlet'?'타공(콘센트)':'타공'):'원형';
+    _exportLegend.push({kind:_legKindC,size:'Φ '+(s.r*2).toFixed(0)+' mm'});
+    return;
+  }
   if(s.hideDims&&s.hideDims['r'])return; // Φ 치수 숨김
   var sel=isSelected(s);
   var cr=mm2px(s.r),cc=toCanvas(s.cx,s.cy);
@@ -3934,12 +3949,60 @@ function exportDrawingA4(){
   scale=newSc;
   offsetX=pad+(mainCv.width-2*pad-mmW*newSc)/2-allBB.l*newSc;
   offsetY=pad+(mainCv.height-2*pad-mmH*newSc)/2-allBB.t*newSc;
-  // printRender 모드로 캡처
+  // printRender 모드로 캡처 (싱크볼/쿡탑/타공 범례 수집)
+  _exportLegend=[];
   printRender=true;printMode=true;
   redraw();
   var tmpCv=document.createElement('canvas');
   tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
-  tmpCv.getContext('2d').drawImage(mainCv,0,0);
+  var tmpCtx=tmpCv.getContext('2d');
+  tmpCtx.drawImage(mainCv,0,0);
+  // 범례 테이블 그리기 (우측 하단)
+  if(_exportLegend.length>0){
+    var _leg=_exportLegend;
+    var _fs=20,_lh=28,_pad=14;
+    var _cols=['No','종류','크기'];
+    var _cw=[36,120,130];
+    var _tw=_cw.reduce(function(a,b){return a+b;})+_pad*2;
+    var _th=(_leg.length+2)*_lh+_pad*2+8;
+    var _mx=tmpCv.width-_tw-24,_my=tmpCv.height-_th-24;
+    tmpCtx.save();
+    // 배경
+    tmpCtx.fillStyle='rgba(255,255,255,0.96)';tmpCtx.fillRect(_mx,_my,_tw,_th);
+    tmpCtx.strokeStyle='#1565C0';tmpCtx.lineWidth=1.5;tmpCtx.strokeRect(_mx,_my,_tw,_th);
+    // 헤더 타이틀
+    tmpCtx.fillStyle='#1565C0';tmpCtx.fillRect(_mx,_my,_tw,_lh+4);
+    tmpCtx.fillStyle='#fff';tmpCtx.font='bold '+_fs+'px "Malgun Gothic",sans-serif';
+    tmpCtx.textAlign='center';tmpCtx.textBaseline='middle';
+    tmpCtx.fillText('내부 치수 목록',_mx+_tw/2,_my+(_lh+4)/2);
+    // 컬럼 헤더
+    var _hy=_my+_lh+4;
+    tmpCtx.fillStyle='#e8eef8';tmpCtx.fillRect(_mx,_hy,_tw,_lh);
+    tmpCtx.fillStyle='#333';tmpCtx.font='bold '+_fs+'px Consolas,monospace';
+    var _cx=_mx+_pad;
+    for(var _ci=0;_ci<_cols.length;_ci++){tmpCtx.textAlign='center';tmpCtx.fillText(_cols[_ci],_cx+_cw[_ci]/2,_hy+_lh/2);_cx+=_cw[_ci];}
+    // 구분선
+    tmpCtx.strokeStyle='#aaa';tmpCtx.lineWidth=0.8;
+    tmpCtx.beginPath();tmpCtx.moveTo(_mx,_hy+_lh);tmpCtx.lineTo(_mx+_tw,_hy+_lh);tmpCtx.stroke();
+    // 데이터 행
+    for(var _li=0;_li<_leg.length;_li++){
+      var _ry=_hy+_lh+_li*_lh;
+      if(_li%2===1){tmpCtx.fillStyle='#f5f8ff';tmpCtx.fillRect(_mx,_ry,_tw,_lh);}
+      tmpCtx.fillStyle='#111';tmpCtx.font=_fs+'px Consolas,monospace';
+      var _rx=_mx+_pad;
+      tmpCtx.textAlign='center';tmpCtx.fillText((_li+1).toString(),_rx+_cw[0]/2,_ry+_lh/2);_rx+=_cw[0];
+      tmpCtx.textAlign='left';tmpCtx.font=_fs+'px "Malgun Gothic",Consolas,sans-serif';tmpCtx.fillText(_leg[_li].kind,_rx+4,_ry+_lh/2);_rx+=_cw[1];
+      tmpCtx.font=_fs+'px Consolas,monospace';tmpCtx.fillText(_leg[_li].size,_rx+4,_ry+_lh/2);
+      // 행 구분선
+      if(_li<_leg.length-1){tmpCtx.strokeStyle='#ddd';tmpCtx.lineWidth=0.5;tmpCtx.beginPath();tmpCtx.moveTo(_mx,_ry+_lh);tmpCtx.lineTo(_mx+_tw,_ry+_lh);tmpCtx.stroke();}
+    }
+    // 세로 구분선
+    tmpCtx.strokeStyle='#bbb';tmpCtx.lineWidth=0.7;
+    var _vx=_mx+_pad;
+    for(var _vi=0;_vi<_cw.length-1;_vi++){_vx+=_cw[_vi];tmpCtx.beginPath();tmpCtx.moveTo(_vx,_my+_lh+4);tmpCtx.lineTo(_vx,_my+_th);tmpCtx.stroke();}
+    tmpCtx.restore();
+  }
+  _exportLegend=null;
   // 복구
   mainCv.width=_origW;mainCv.height=_origH;
   scale=svScale;offsetX=svOffX;offsetY=svOffY;
