@@ -1051,7 +1051,7 @@ function drawShape(s,preview){
   if(s.kind==='dimline'){drawDimLine(s,preview);return;}
   if(s.kind==='grindregion'){drawGrindRegion(s,preview);return;}
   if(s.kind==='jollymark'){drawJollyMark(s,preview);return;}
-  if(s.kind==='gosramark'){drawGosraMark(s,preview);return;}
+  if(s.kind==='gosramark'){if(_exportLegend!==null)return;drawGosraMark(s,preview);return;}
   var sel=isSelected(s);
   var col=printRender?'#1565C0':(sel?'#FF6D00':(s===hoverShape?'#64B5F6':(SCOL[s.kind]||'#1565C0')));
   var fill=printRender?'rgba(21,101,192,0.07)':(sel?'rgba(51,68,85,0.45)':(s===hoverShape?'rgba(100,181,246,0.10)':(SFILL[s.kind]||'')));
