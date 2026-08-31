@@ -667,6 +667,9 @@ var dimLineType='dist'; // 'dist' | 'r' | 'phi'
 var printMode=false;  // nest dims show-all for print
 var printRender=false; // white background for print
 var _exportLegend=null; // 도면화 시 싱크볼/쿡탑/타공 범례 수집
+var _pdr=[]; // printRender 치수 레이블 충돌 방지 레지스트리
+function _pdfit(x1,y1,x2,y2){return _pdr.every(function(r){return x2<r[0]-1||x1>r[2]+1||y2<r[1]-1||y1>r[3]+1;});}
+function _pdreg(x1,y1,x2,y2){_pdr.push([x1,y1,x2,y2]);}
 var showShapeNumbers=false; // 도형 번호 표시
 function setDimLineType(t){
   dimLineType=t;
@@ -1182,7 +1185,8 @@ function drawDims(s,col){
   if(_exportLegend!==null&&s.groupId&&s.groupRole==='main'){
     var _hasGosra=shapes.some(function(sh){return sh.groupId===s.groupId&&sh.kind==='gosramark';});
     var _legKind=_hasGosra?'싱크볼':'쿡탑';
-    var _legSize=s.w.toFixed(0)+'×'+s.h.toFixed(0)+' mm';
+    var _rStr=(s.cornerType==='fillet'&&(s.cornerSize||0)>0)?' R'+s.cornerSize.toFixed(0):''
+    var _legSize=s.w.toFixed(0)+'×'+s.h.toFixed(0)+' mm'+_rStr;
     _exportLegend.push({kind:_legKind,size:_legSize});
     return;
   }
@@ -1283,9 +1287,11 @@ function drawDims(s,col){
     ctx.font=(printRender?'bold 20px':'bold 11px')+' Consolas';
     var tw_rc=ctx.measureText(lbl_rc).width;
     var bh_rc=printRender?20:14;var pad_rc=printRender?8:6;
-    ctx.fillStyle='rgba(30,42,53,0.92)';
-    if(_rbst_.dx>0){ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
-    else{ctx.fillRect(lEx_-tw_rc-pad_rc-2,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_-3,lEy_);}
+    if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
+    if(_rbst_.dx>0)ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);
+    else ctx.fillRect(lEx_-tw_rc-pad_rc-2,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);}
+    if(_rbst_.dx>0){ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
+    else{ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_-3,lEy_);}
     ctx.restore();
     dimLabels.push({shape:s,field:'cornerSize',px:lEx_,py:lEy_});
   }
@@ -1316,9 +1322,11 @@ function drawDims(s,col){
       ctx.save();
       ctx.font=(printRender?'bold 20px':'bold 11px')+' Consolas';
       var tw3=ctx.measureText(lbl3).width,bh3=printRender?20:14,pad3=printRender?8:6;
-      ctx.fillStyle='rgba(30,42,53,0.92)';
-      if(_bd3.dx>0){ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
-      else{ctx.fillRect(lEx3-tw3-pad3-2,lEy3-bh3/2,tw3+pad3,bh3);ctx.fillStyle=cCol3;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3-3,lEy3);}
+      if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
+      if(_bd3.dx>0)ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);
+      else ctx.fillRect(lEx3-tw3-pad3-2,lEy3-bh3/2,tw3+pad3,bh3);}
+      if(_bd3.dx>0){ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
+      else{ctx.fillStyle=cCol3;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3-3,lEy3);}
       ctx.restore();
     });
   }
@@ -1407,7 +1415,7 @@ function drawDimLine(s,preview){
     ctx.translate(tx_,ty_);
     var da_=angle;if(Math.cos(da_)<-0.01)da_+=Math.PI;
     ctx.rotate(da_);
-    ctx.fillStyle='rgba(30,42,53,0.9)';ctx.fillRect(-2,-8,tw_rp+6,14);
+    if(!printRender){ctx.fillStyle='rgba(30,42,53,0.9)';ctx.fillRect(-2,-8,tw_rp+6,14);}
     ctx.fillStyle=col;ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText(lbl_rp,0,0);
     ctx.restore();ctx.restore();
@@ -1433,7 +1441,7 @@ function drawDimLine(s,preview){
   var distLabel=lt==='phi'?('Φ'+dist.toFixed(2)):dist.toFixed(2);
   ctx.save();ctx.translate(mx2,my2);var da=angle;if(Math.cos(da)<-0.01)da+=Math.PI;ctx.rotate(da);
   var dlbw=printRender?48:30;
-  ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-9,dlbw*2,12);
+  if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-9,dlbw*2,12);}
   ctx.fillStyle=col;ctx.font=(printRender?'bold 14px':'bold 10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(distLabel,0,-2);ctx.restore();
   dimLabels.push({shape:s,field:'_dist',px:mx2,py:my2});
@@ -1452,8 +1460,21 @@ function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir){
   ctx.beginPath();ctx.moveTo(p2[0],p2[1]);ctx.lineTo(p2[0]+ox,p2[1]+oy);ctx.stroke();
   var _gadSz=printRender?8:5;if(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])>20){var ang=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);arrowHead(p1[0]+ox,p1[1]+oy,ang+Math.PI,_gadSz,'#FFD740');arrowHead(p2[0]+ox,p2[1]+oy,ang,_gadSz,'#FFD740');}
   var tx=(p1[0]+p2[0])/2+ox,ty=(p1[1]+p2[1])/2+oy+(isH?-4:0);
-  var _gfSz=printRender?14:9;ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx-(_gfSz*2+4),ty-(_gfSz/2+3),(_gfSz*4+8),_gfSz+6);
-  ctx.fillStyle='#FFD740';ctx.font=(printRender?'bold ':'')+_gfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
+  var _gfSz=printRender?14:9;
+  var _glw=_gfSz*4+8,_glh=_gfSz+6;
+  if(printRender){
+    // 충돌 방지: oy/ox 방향으로 시프트
+    var _gShift=0,_gMaxS=6;
+    while(!_pdfit(tx-_glw/2,ty-_glh/2,tx+_glw/2,ty+_glh/2)&&_gShift<_gMaxS){
+      _gShift++;
+      if(oy!==0){ty+=oy<0?-(_glh+3):(_glh+3);}
+      else{tx+=ox<0?-(_glw+3):(_glw+3);}
+    }
+    _pdreg(tx-_glw/2,ty-_glh/2,tx+_glw/2,ty+_glh/2);
+  } else {
+    ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx-(_gfSz*2+4),ty-(_gfSz/2+3),_glw,_glh);
+  }
+  ctx.fillStyle=printRender?'#1565C0':'#FFD740';ctx.font=(printRender?'bold ':'')+_gfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
   if(outer&&inner&&dir)dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,field:'_gap',shape:inner,px:tx,py:ty});
 }
 function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir){
@@ -2039,6 +2060,7 @@ function drawUserGroups(){
 }
 // ─── 회전 핸들 ───
 function drawRotationHandle(){
+  if(printRender)return;
   if(!selectedShapes.length||tool!=='select')return;
   var l=Infinity,r2=-Infinity,t=Infinity,b=-Infinity;
   selectedShapes.forEach(function(s){var bb=getBBox(s);if(bb){l=Math.min(l,bb.l);r2=Math.max(r2,bb.r);t=Math.min(t,bb.t);b=Math.max(b,bb.b);}});
@@ -2063,6 +2085,7 @@ function drawRotationHandle(){
 }
 function redraw(){
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle=printRender?'#ffffff':'#1e2a35';ctx.fillRect(0,0,cv.width,cv.height);
+  if(printRender)_pdr=[];
   drawGrid();dimLabels=[];autoAdjustDims();
   shapes.forEach(function(s){drawShape(s);});
   drawUserGroups();
@@ -3962,7 +3985,7 @@ function exportDrawingA4(){
     var _leg=_exportLegend;
     var _fs=20,_lh=28,_pad=14;
     var _cols=['No','종류','크기'];
-    var _cw=[36,120,130];
+    var _cw=[36,110,170];
     var _tw=_cw.reduce(function(a,b){return a+b;})+_pad*2;
     var _th=(_leg.length+2)*_lh+_pad*2+8;
     var _mx=tmpCv.width-_tw-24,_my=tmpCv.height-_th-24;
@@ -4056,11 +4079,11 @@ function exportDrawingA4(){
     +'<div class="tb-main">'
     +'<div class="tb-co">윤현상재</div>'
     +'<div class="tb-title">세라믹 가공 도면</div>'
-    +'<div class="tb-size">'+mmW.toFixed(0)+' × '+mmH.toFixed(0)+' mm</div>'
+    +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">온장</span>'+mmW.toFixed(0)+' × '+mmH.toFixed(0)+' mm</div>'
     +'</div>'
     +'<div class="tb-cells">'
     +'<div class="tb-row"><div class="tbl">작성일</div><div class="tbv">'+dateStr+'</div></div>'
-    +'<div class="tb-row"><div class="tbl">축척</div><div class="tbv">'+scaleStr+'</div></div>'
+
     +'<div class="tb-row"><div class="tbl">단위</div><div class="tbv">mm</div></div>'
     +'</div>'
     +'</div></div></div></div>';
