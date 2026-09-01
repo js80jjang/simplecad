@@ -294,7 +294,7 @@ canvas{display:block;cursor:crosshair}
 <button id="right-toggle" onclick="toggleRight()" title="가공비 패널 접기/펼치기">▶</button>
 <div id="right">
   <div class="r-sec" style="display:flex;justify-content:space-between;align-items:center;padding-right:2px">
-    <span>① 제품 정보</span>
+    <span>① 출고 정보</span>
     <button onclick="addProduct()" style="background:#1565C0;border:none;color:#fff;font-size:11px;padding:2px 8px;border-radius:3px;cursor:pointer;flex-shrink:0">+ 추가</button>
   </div>
   <div style="padding:2px 2px 4px;display:flex;gap:4px;align-items:center">
@@ -700,6 +700,7 @@ function fromCanvas(cx,cy){return[(cx-offsetX)/scale,(cy-offsetY)/scale];}
 function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);offsetX=pad;offsetY=pad;}redraw();}
 window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTimeout(resizeCanvas,200);
 loadAllTierPrices();
+renderProductList();
 
 // ═══ 스냅 ═══
 function syncAllTierPrices(){
