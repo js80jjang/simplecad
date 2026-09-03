@@ -2717,6 +2717,14 @@ function showDimInput(d){
   }
   function onKey(e){
     if(e.key==='Enter'){e.preventDefault();commit();}
+    if(e.key==='Tab'){e.preventDefault();
+      var _s2=s,_nf=(fld==='w')?'h':(fld==='h'?'w':null);
+      commit();
+      if(_nf){setTimeout(function(){
+        for(var _i=0;_i<dimLabels.length;_i++){
+          if(dimLabels[_i].shape===_s2&&dimLabels[_i].field===_nf){showDimInput(dimLabels[_i]);break;}
+        }},0);}
+      return;}
     if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
     e.stopPropagation();
   }
