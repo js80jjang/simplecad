@@ -575,6 +575,7 @@ var selectedShapes=[]; // multi-select
 var selBox=null; // {x1mm,y1mm,x2mm,y2mm} rubber-band box
 var filletSel=[]; // for fillet tool: up to 2 dim labels from same rect
 var hoverShape=null;
+var _hoverSelected=false; // 호버로 자동 선택된 경우
 var trimHoverShape=null,trimHoverEdge=null;
 var pendingHoleType='outlet';
 var _hist=[];
@@ -2054,7 +2055,7 @@ function finalizeShape(fmx,fmy){
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main'});
     saveHistory();shapes.push(cs);selectedShapes=[cs];s=null;
   }
-  if(s){saveHistory();shapes.push(s);selectedShapes=[s];}
+  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];}
   else{}
   drawStart=null;lastMx=null;lastMy=null;
   // 연속 그리기 모드 — ESC로 select 복귀 (keydown 핸들러에서 처리)
@@ -2316,6 +2317,7 @@ cv.addEventListener('mousedown',function(e){
       } else {
         if(selectedShapes.indexOf(hit)<0){if(hit.groupId&&hit.groupRole&&hit.groupRole!=='main'){selectedShapes=[hit];}else{selectedShapes=getGroupShapes(hit);}}
       }
+      _hoverSelected=false;
       dragStart=[mx,my];
       dragOriginals={};
       selectedShapes.forEach(function(s){
@@ -2497,10 +2499,14 @@ cv.addEventListener('mousemove',function(e){
       if(h&&!dragStart&&!selBox){
         // 아무것도 선택 안 됐을 때만 호버로 자동 선택
         // 이미 선택된 도형이 있으면 커서 이동으로 선택이 바뀌지 않도록
-        if(selectedShapes.length===0){
+        if(selectedShapes.length===0||_hoverSelected){
           selectedShapes=(h.groupId&&h.groupRole&&h.groupRole!=='main')?[h]:getGroupShapes(h);
+          _hoverSelected=true;
           updatePropsPanel();
         }
+      } else if(!h&&_hoverSelected){
+        // 커서가 도형 바깥으로 나가면 호버 선택 해제
+        selectedShapes=[];_hoverSelected=false;updatePropsPanel();
       }
       redraw();
     }
