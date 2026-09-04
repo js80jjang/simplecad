@@ -251,6 +251,7 @@ canvas{display:block;cursor:crosshair}
           <button onclick="movePieceTo(-1)" id="board-move-prev" style="background:#37474F;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">&#9650; 이전 장</button>
           <button onclick="movePieceTo(1)" id="board-move-next" style="background:#37474F;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">다음 장 &#9660;</button>
         </span>
+        <button onclick="resetBoardLayout()" style="background:#37474F;border:1px solid #546E7A;color:#90CAF9;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px;margin-right:4px">↺ 초기화</button>
         <button id="board-modal-close" onclick="closeBoardModal()">✕</button>
       </div>
       <div id="board-canvas-wrap">
@@ -671,6 +672,7 @@ var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15;
+var _savedBoardLayout=null; // 마지막 온장 배치 저장
 var grind150mode=false;
 var grind100mode=false;
 var dimLineType='dist'; // 'dist' | 'r' | 'phi'
@@ -983,6 +985,70 @@ function drawGrindRegion(s,preview){
   var parentShape=ctx2_.shape;
   var edge_=ctx2_.edge||'unknown';
   var rx,ry,rw,rh;
+
+  // ── 회전된 부모 rect: 로컬 좌표계에서 그리기 ──
+  if(parentShape&&parentShape.kind==='rect'&&(parentShape.rotation||0)!==0&&edge_!=='unknown'){
+    var _rot=parentShape.rotation;
+    var _pcx=parentShape.x+parentShape.w/2,_pcy=parentShape.y+parentShape.h/2;
+    var _pc=toCanvas(_pcx,_pcy);
+    var _lrw=mm2px(parentShape.w),_lrh=mm2px(parentShape.h);
+    var _dpx=mm2px(depth);
+    // x1,y1을 부모 로컬 좌표로 변환
+    var _cos=Math.cos(-_rot),_sin=Math.sin(-_rot);
+    var _dx1=s.x1-_pcx,_dy1=s.y1-_pcy;
+    var _lx1mm=_dx1*_cos-_dy1*_sin,_ly1mm=_dx1*_sin+_dy1*_cos;
+    var _dx2=s.x2-_pcx,_dy2=s.y2-_pcy;
+    var _lx2mm=_dx2*_cos-_dy2*_sin,_ly2mm=_dx2*_sin+_dy2*_cos;
+    // mm → canvas px 변환
+    var _lx1=mm2px(_lx1mm),_ly1=mm2px(_ly1mm),_lx2=mm2px(_lx2mm),_ly2=mm2px(_ly2mm);
+    // 로컬 그리드 영역 (캔버스 픽셀 단위)
+    var _lx,_ly,_lw,_lh;
+    var _isLH=Math.abs(_ly2-_ly1)<1;
+    if(_isLH){
+      var _lxa=Math.min(_lx1,_lx2),_lxb=Math.max(_lx1,_lx2);
+      if(_ly1<0){_lx=_lxa;_ly=-_lrh/2;_lw=_lxb-_lxa;_lh=_dpx;}
+      else{_lx=_lxa;_ly=_lrh/2-_dpx;_lw=_lxb-_lxa;_lh=_dpx;}
+    } else {
+      var _lya=Math.min(_ly1,_ly2),_lyb=Math.max(_ly1,_ly2);
+      if(_lx1<0){_lx=-_lrw/2;_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
+      else{_lx=_lrw/2-_dpx;_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
+    }
+    // 회전된 캔버스에서 그리기
+    ctx.save();
+    ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
+    ctx.beginPath();ctx.rect(_lx,_ly,_lw,_lh);ctx.clip(); // 그린 스트립으로 클리핑
+    ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fillRect(_lx,_ly,_lw,_lh);
+    ctx.strokeStyle='rgba(255,215,0,'+(preview?0.35:0.85)+')';
+    ctx.lineWidth=1.2;ctx.setLineDash([]);
+    var _step2=Math.max(4,mm2px(4));
+    for(var _d2=-(_lw+Math.abs(_lh));_d2<(_lw+Math.abs(_lh));_d2+=_step2){
+      ctx.beginPath();ctx.moveTo(_lx+_d2,_ly);ctx.lineTo(_lx+_d2+Math.abs(_lh),_ly+Math.abs(_lh));ctx.stroke();
+    }
+    if(isSelected(s)||preview){
+      ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
+      ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+      ctx.strokeRect(_lx,_ly,_lw,_lh);ctx.setLineDash([]);
+    }
+    ctx.restore();
+    // 엣지 선 (이미 회전된 world 좌표)
+    var ep1_=toCanvas(s.x1,s.y1),ep2_=toCanvas(s.x2,s.y2);
+    ctx.strokeStyle='#FFD740';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(ep1_[0],ep1_[1]);ctx.lineTo(ep2_[0],ep2_[1]);ctx.stroke();
+    // 깊이 라벨 (회전된 컨텍스트)
+    if(!preview&&!(s.hideDims&&s.hideDims['dist'])){
+      ctx.save();ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
+      var _dlx2=_lx+_lw/2,_dly2=_ly+_lh/2;
+      var _dtxt=depth.toFixed(0)+' mm';var _dfSz=printRender?16:9;
+      ctx.font='bold '+_dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+      var _dtw=ctx.measureText(_dtxt).width;
+      if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(_dlx2-_dtw/2-3,_dly2-_dfSz/2-2,_dtw+6,_dfSz+4);}
+      ctx.fillStyle=printRender?'#1565C0':'#FFD740';
+      ctx.fillText(_dtxt,_dlx2,_dly2);
+      ctx.restore();
+    }
+    return;
+  }
+
   if(parentShape&&parentShape.kind==='rect'&&edge_!=='unknown'){
     // 부모 rect의 실제 엣지 좌표 기준 — 대각선으로 그려도 올바른 직사각형 보장
     if(edge_==='top'){rx=xmin;rw=xmax-xmin;ry=parentShape.y;rh=depth;}
@@ -1779,6 +1845,7 @@ function _makeProjectData(){
     offsetX:offsetX,
     offsetY:offsetY,
     scale:scale,
+    boardLayout:_savedBoardLayout,
     saved:new Date().toISOString()
   });
 }
@@ -2047,15 +2114,15 @@ function finalizeShape(fmx,fmy){
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry+432,x2:rx+828,y2:ry+432,outward:1,groupId:sgid,groupRole:'bottom'}));
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx,y2:ry+432,outward:1,groupId:sgid,groupRole:'left'}));
     shapes.push(makeShape('gosramark',{x1:rx+828,y1:ry,x2:rx+828,y2:ry+432,outward:-1,groupId:sgid,groupRole:'right'}));
-    selectedShapes=getGroupShapes(rs);s=null;
+    selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;s=null;
   }
   else if(tool==='cooktop'){
     var rx2=x0-280,ry2=y0-240;
     var cgid='grp'+(nextId);
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main'});
-    saveHistory();shapes.push(cs);selectedShapes=[cs];s=null;
+    saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;s=null;
   }
-  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];}
+  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];_savedBoardLayout=null;}
   else{}
   drawStart=null;lastMx=null;lastMy=null;
   // 연속 그리기 모드 — ESC로 select 복귀 (keydown 핸들러에서 처리)
@@ -2706,7 +2773,7 @@ function showDimInput(d){
     _dimPopupHide();
     var v=parseFloat(inp.value);
     if(!isNaN(v)&&v>0){
-      saveHistory();
+      saveHistory();_savedBoardLayout=null;
       if(fld==='w')s.w=v*saveF;
       else if(fld==='h')s.h=v*saveF;
       else if(fld==='r')s.r=v*saveF;
@@ -2797,7 +2864,7 @@ function showGapDimInput(d){
     _dimPopupHide();
     var v=parseFloat(inp.value);
     if(!isNaN(v)&&v>=0){
-      saveHistory();
+      saveHistory();_savedBoardLayout=null;
       if(isCirc){
         if(dir==='left')inner.cx=outer.x+v;
         else if(dir==='right')inner.cx=outer.x+outer.w-v;
@@ -2963,6 +3030,7 @@ function onFileLoad(e){
       if(d.ship2!==undefined)document.getElementById('r-ship2').value=d.ship2;
       if(d.other!==undefined)document.getElementById('r-other').value=d.other;
       if(d.shapes){shapes=d.shapes;nextId=shapes.reduce(function(m,s){return Math.max(m,s.id||0);},0)+1;}
+      if(d.boardLayout!==undefined)_savedBoardLayout=d.boardLayout||null;
       if(d.siteAddr!==undefined){var _el1=document.getElementById('site-addr');if(_el1)_el1.value=d.siteAddr;}
       if(d.delivDate!==undefined){var _el2=document.getElementById('deliv-date');if(_el2)_el2.value=d.delivDate;}
       if(d.delivTime!==undefined){var _el3=document.getElementById('deliv-time');if(_el3)_el3.value=d.delivTime;}
@@ -3407,6 +3475,28 @@ function showBoardLayout(){
   });
   infoEl.innerHTML=infoStr;
 
+  // 저장된 배치가 있으면 복원
+  if(_savedBoardLayout&&_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh){
+    var _shMap={};shapes.forEach(function(s){_shMap[s.id]=s;});
+    var _valid=_savedBoardLayout.boards.every(function(board){
+      return board.every(function(p){return p.shapeId!=null&&_shMap[p.shapeId];});
+    });
+    if(_valid){
+      var _rBoards=_savedBoardLayout.boards.map(function(board){
+        return board.map(function(p){
+          var _s=_shMap[p.shapeId];
+          var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
+          var _it={shape:_s,w:_w,h:_h,label:p.label||(p.rotated?p.ph+'x'+p.pw:p.pw+'x'+p.ph)};
+          return{item:_it,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated};
+        });
+      });
+      document.getElementById('board-modal').classList.add('show');
+      _bs={boards:_rBoards,groups:_savedBoardLayout.groups||groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0,pickedPiece:null,dragMoved:false,dragStartX:0,dragStartY:0};
+      renderBoardLayout(_rBoards,bw,bh,ew,eh,margin);
+      _bsInitEvents();
+      return;
+    }
+  }
   document.getElementById('board-modal').classList.add('show');
   _bs={boards:allBoards,groups:groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0,pickedPiece:null,dragMoved:false,dragStartX:0,dragStartY:0};
   renderBoardLayout(allBoards,bw,bh,ew,eh,margin);
@@ -3475,7 +3565,7 @@ function packBoards(sorted,ew,eh,gap){
   var boards=[],todo=sorted.slice();
   while(todo.length>0){
     var r=packOneBoard(todo,ew,eh,gap);
-    boards.push(r.placed);
+    if(r.placed.length>0)boards.push(r.placed); // 빈 장은 추가하지 않음
     if(r.unplaced.length===todo.length)break;
     todo=r.unplaced;
   }
@@ -4060,7 +4150,22 @@ function goBoardPage(dir){
   renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
 }
 function closeBoardModal(){
+  // 현재 배치 상태 저장
+  if(_bs&&_bs.boards){
+    _savedBoardLayout={bw:_bs.bw,bh:_bs.bh,ew:_bs.ew,eh:_bs.eh,margin:_bs.margin,gap:_bs.gap,
+      groups:_bs.groups,
+      boards:_bs.boards.map(function(board){
+        return board.map(function(p){
+          return{shapeId:(p.item&&p.item.shape)?p.item.shape.id:null,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false,label:p.item?p.item.label:''};
+        });
+      })
+    };
+  }
   document.getElementById('board-modal').classList.remove('show');
+}
+function resetBoardLayout(){
+  _savedBoardLayout=null;
+  showBoardLayout();
 }
 function closePrintModal(){
   document.getElementById('print-modal').classList.remove('show');
