@@ -231,7 +231,6 @@ canvas{display:block;cursor:crosshair}
       <label style="color:#546E7A">mm</label>
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
       <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
-      <button class="bp-btn" style="background:#2E7D32;margin-left:6px" onclick="showPrintPreview()">🖨 출력</button>
     </div>
     <span id="canvas-hint">드래그=다중선택 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
@@ -3866,6 +3865,18 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       }
       curY+=boardPxH+groupGap;
     });
+  } else if(targetCanvas){
+    // 도면화 내보내기: 모든 장을 좌→우로 배치
+    sc=Math.min((bcv.width-2*pad-gap2*(n-1))/Math.max(n,1)/bw,
+      (bcv.height-2*pad-20)/bh);
+    if(sc<=0)sc=0.01;
+    boardPxW=bw*sc;boardPxH=bh*sc;
+    var totalPxW_e=n*boardPxW+(n-1)*gap2;
+    var sX_e=pad+Math.max(0,(bcv.width-2*pad-totalPxW_e)/2);
+    var sY_e=pad+20+Math.max(0,(bcv.height-pad-20-boardPxH)/2);
+    for(var bi=0;bi<n;bi++){
+      boardOffsets[bi]={ox:sX_e+bi*(boardPxW+gap2),oy:sY_e};
+    }
   } else {
     // 페이지당 2장 위아래 배치
     var perPage=2;
@@ -4298,6 +4309,38 @@ function exportDrawingA4(){
   var today=new Date();
   var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
   var orientation=isPort?'portrait':'landscape';
+  // 온장 배치 렌더링
+  var boardImg2='';
+  var _bw2r=parseFloat(document.getElementById('board-w').value)||3200;
+  var _bh2r=parseFloat(document.getElementById('board-h').value)||1600;
+  var _margin2r=10,_gap2r=3,_ew2r=_bw2r-2*_margin2r,_eh2r=_bh2r-2*_margin2r;
+  var _allRects2r=shapes.filter(function(s){return s.kind==='rect';});
+  var _pieces2r=_allRects2r.filter(function(s){return !_allRects2r.some(function(other){return other!==s&&isInsideRect(s,other);});});
+  if(_pieces2r.length>0){
+    var _items2r=_pieces2r.map(function(s){return{shape:s,w:Math.abs(s.w),h:Math.abs(s.h),label:s.w.toFixed(0)+'×'+s.h.toFixed(0)};});
+    var _pm2r={},_po2r=[];
+    _items2r.forEach(function(it){var lbl=(it.shape.label||'').trim()||'미지정';if(!_pm2r[lbl]){_pm2r[lbl]=[];_po2r.push(lbl);}_pm2r[lbl].push(it);});
+    var _pc2r=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#546E7A'];
+    var _boards2r=[],_gm2r=[];
+    _po2r.forEach(function(lbl,gi){var _gi2=_pm2r[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});var _gb2=packBoards(_gi2,_ew2r,_eh2r,_gap2r);var _sb2=_boards2r.length;_gb2.forEach(function(b){_boards2r.push(b);});_gm2r.push({label:lbl,color:_pc2r[gi%_pc2r.length],startBi:_sb2,count:_gb2.length});});
+    var _prevBs2=_bs;
+    _bs={boards:_boards2r,groups:_gm2r,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],margin:_margin2r};
+    var _tmpBv2=document.createElement('canvas');
+    _tmpBv2.style.cssText='position:fixed;left:-9999px;top:0;display:block';
+    document.body.appendChild(_tmpBv2);
+    printRender=true;
+    try{
+      var _boardCols=_boards2r.length;
+      var _boardW2=Math.max(1200,_boardCols*900);
+      var _boardH2=Math.max(700,_gm2r.length*340);
+      renderBoardLayout(_boards2r,_bw2r,_bh2r,_ew2r,_eh2r,_margin2r,_boardW2,_boardH2,_tmpBv2);
+      boardImg2=_tmpBv2.toDataURL('image/png');
+    }catch(e2){}
+    printRender=false;
+    _bs=_prevBs2;
+    document.body.removeChild(_tmpBv2);
+  }
+
   var pw=window.open('','_blank','width=900,height=750,scrollbars=yes,resizable=yes');
   if(!pw){alert('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요.');return;}
   var css='*{box-sizing:border-box;margin:0;padding:0;}'
@@ -4321,7 +4364,13 @@ function exportDrawingA4(){
     +'.tb-row{display:flex;border-bottom:0.5pt solid #ccc;}'
     +'.tb-row:last-child{border-bottom:none;}'
     +'.tbl{width:16mm;background:#f0f4f8;font-size:6.5pt;color:#666;padding:1.5mm 1mm;border-right:0.5pt solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;letter-spacing:-.2px;}'
-    +'.tbv{width:26mm;font-size:8.5pt;font-weight:bold;padding:1.5mm 2mm;display:flex;align-items:center;font-family:Consolas,monospace;}';
+    +'.tbv{width:26mm;font-size:8.5pt;font-weight:bold;padding:1.5mm 2mm;display:flex;align-items:center;font-family:Consolas,monospace;}'
+    +'@page board-page{size:A4 landscape;margin:8mm;}'
+    +'.page2{width:277mm;margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;page-break-before:always;page:board-page;}'
+    +'.board-area{flex:1;padding:4mm;display:flex;align-items:flex-start;justify-content:center;}'
+    +'.board-area img{max-width:100%;object-fit:contain;display:block;}'
+    +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
+    +'@media print{.page2{page-break-before:always;}}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
     +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택</span></div>'
     +'<div class="page"><div class="frame"><div class="inner-border">'
@@ -4337,9 +4386,18 @@ function exportDrawingA4(){
     +(_delivDate?'<div class="tb-row"><div class="tbl">출고예정</div><div class="tbv" style="font-size:7.5pt;">'+_delivDate+'</div></div>':'')
     +'<div class="tb-row"><div class="tbl">단위</div><div class="tbv">mm</div></div>'
     +'</div>'
-    +'</div></div></div></div>';
+    +'</div></div></div></div>'
+    +(boardImg2?'<div class="page2">'
+      +'<div class="page2-title">📋 온장 배치도 — '+_bw.toFixed(0)+' × '+_bh.toFixed(0)+' mm</div>'
+      +'<div class="board-area"><img id="_bimg2" src=""></div>'
+      +'</div>':'');
   pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
   pw.document.close();
+  if(boardImg2){
+    setTimeout(function(){
+      try{var _bi2=pw.document.getElementById('_bimg2');if(_bi2)_bi2.src=boardImg2;}catch(e){}
+    },200);
+  }
 }
 function showPrintPreview(){
   // ① 도면 - 흰 배경 + 그리드 없음 + 도형 자동 맞춤 + 전체 치수 표시
