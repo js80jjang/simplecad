@@ -671,7 +671,8 @@ var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15;
-var _savedBoardLayout=null; // 마지막 온장 배치 저장
+var _savedBoardLayout=null;_savedBoardImg=null; // 마지막 온장 배치 저장
+var _savedBoardImg=null; // 마지막 온장 배치 렌더링 이미지 (도면화용)
 var grind150mode=false;
 var grind100mode=false;
 var dimLineType='dist'; // 'dist' | 'r' | 'phi'
@@ -2113,15 +2114,15 @@ function finalizeShape(fmx,fmy){
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry+432,x2:rx+828,y2:ry+432,outward:1,groupId:sgid,groupRole:'bottom'}));
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx,y2:ry+432,outward:1,groupId:sgid,groupRole:'left'}));
     shapes.push(makeShape('gosramark',{x1:rx+828,y1:ry,x2:rx+828,y2:ry+432,outward:-1,groupId:sgid,groupRole:'right'}));
-    selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;s=null;
+    selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
   else if(tool==='cooktop'){
     var rx2=x0-280,ry2=y0-240;
     var cgid='grp'+(nextId);
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main'});
-    saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;s=null;
+    saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
-  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];_savedBoardLayout=null;}
+  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];_savedBoardLayout=null;_savedBoardImg=null;}
   else{}
   drawStart=null;lastMx=null;lastMy=null;
   // 연속 그리기 모드 — ESC로 select 복귀 (keydown 핸들러에서 처리)
@@ -2772,7 +2773,7 @@ function showDimInput(d){
     _dimPopupHide();
     var v=parseFloat(inp.value);
     if(!isNaN(v)&&v>0){
-      saveHistory();_savedBoardLayout=null;
+      saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
       if(fld==='w')s.w=v*saveF;
       else if(fld==='h')s.h=v*saveF;
       else if(fld==='r')s.r=v*saveF;
@@ -2863,7 +2864,7 @@ function showGapDimInput(d){
     _dimPopupHide();
     var v=parseFloat(inp.value);
     if(!isNaN(v)&&v>=0){
-      saveHistory();_savedBoardLayout=null;
+      saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
       if(isCirc){
         if(dir==='left')inner.cx=outer.x+v;
         else if(dir==='right')inner.cx=outer.x+outer.w-v;
@@ -4171,11 +4172,21 @@ function closeBoardModal(){
         });
       })
     };
+    // 현재 배치를 이미지로 즉시 렌더링 (도면화에서 재구성 없이 바로 사용)
+    try{
+      var _imgCv=document.createElement('canvas');
+      var _n=_bs.boards.length;
+      var _imgW=Math.max(1200,_n*900),_imgH=700;
+      printRender=true;
+      renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin,_imgW,_imgH,_imgCv);
+      printRender=false;
+      _savedBoardImg=_imgCv.toDataURL('image/png');
+    }catch(e){printRender=false;_savedBoardImg=null;}
   }
   document.getElementById('board-modal').classList.remove('show');
 }
 function resetBoardLayout(){
-  _savedBoardLayout=null;
+  _savedBoardLayout=null;_savedBoardImg=null;
   showBoardLayout();
 }
 function closePrintModal(){
@@ -4309,22 +4320,49 @@ function exportDrawingA4(){
   var today=new Date();
   var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
   var orientation=isPort?'portrait':'landscape';
-  // 온장 배치 렌더링
+  // 온장 배치 렌더링: _savedBoardLayout 직접 복원 우선, 없으면 재계산
   var boardImg2='';
   var _bw2r=parseFloat(document.getElementById('board-w').value)||3200;
   var _bh2r=parseFloat(document.getElementById('board-h').value)||1600;
   var _margin2r=10,_gap2r=3,_ew2r=_bw2r-2*_margin2r,_eh2r=_bh2r-2*_margin2r;
-  var _allRects2r=shapes.filter(function(s){return s.kind==='rect';});
-  var _pieces2r=_allRects2r.filter(function(s){return !_allRects2r.some(function(other){return other!==s&&isInsideRect(s,other);});});
-  if(_pieces2r.length>0){
-    var _items2r=_pieces2r.map(function(s){return{shape:s,w:Math.abs(s.w),h:Math.abs(s.h),label:s.w.toFixed(0)+'×'+s.h.toFixed(0)};});
-    var _pm2r={},_po2r=[];
-    _items2r.forEach(function(it){var lbl=(it.shape.label||'').trim()||'미지정';if(!_pm2r[lbl]){_pm2r[lbl]=[];_po2r.push(lbl);}_pm2r[lbl].push(it);});
-    var _pc2r=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#546E7A'];
-    var _boards2r=[],_gm2r=[];
-    _po2r.forEach(function(lbl,gi){var _gi2=_pm2r[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});var _gb2=packBoards(_gi2,_ew2r,_eh2r,_gap2r);var _sb2=_boards2r.length;_gb2.forEach(function(b){_boards2r.push(b);});_gm2r.push({label:lbl,color:_pc2r[gi%_pc2r.length],startBi:_sb2,count:_gb2.length});});
+  var _boards2r=null,_gm2r=null,_use_bw=_bw2r,_use_bh=_bh2r,_use_ew=_ew2r,_use_eh=_eh2r,_use_margin=_margin2r;
+  // _savedBoardLayout에서 직접 복원 (shape ID로 매핑)
+  if(_savedBoardLayout&&_savedBoardLayout.boards&&_savedBoardLayout.boards.length>0){
+    var _shMap2r={};shapes.forEach(function(s){_shMap2r[s.id]=s;});
+    // 유효한 shapeId만 복원, 없으면 빈 item으로 처리
+    _boards2r=_savedBoardLayout.boards.map(function(board){
+      return board.map(function(p){
+        var _s=_shMap2r[p.shapeId]||null;
+        var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
+        return{item:{shape:_s,w:_w,h:_h,label:p.label||''},x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false};
+      });
+    });
+    _gm2r=_savedBoardLayout.groups||null;
+    _use_bw=_savedBoardLayout.bw||_bw2r;
+    _use_bh=_savedBoardLayout.bh||_bh2r;
+    _use_ew=_savedBoardLayout.ew||_ew2r;
+    _use_eh=_savedBoardLayout.eh||_eh2r;
+    _use_margin=_savedBoardLayout.margin||_margin2r;
+  }
+  // 저장 배치 없으면 재계산
+  if(!_boards2r){
+    var _allRects2r=shapes.filter(function(s){return s.kind==='rect';});
+    var _pieces2r=_allRects2r.filter(function(s){return !_allRects2r.some(function(other){return other!==s&&isInsideRect(s,other);});});
+    if(_pieces2r.length>0){
+      var _items2r=_pieces2r.map(function(s){return{shape:s,w:Math.abs(s.w),h:Math.abs(s.h),label:s.w.toFixed(0)+'×'+s.h.toFixed(0)};});
+      var _pm2r={},_po2r=[];
+      _items2r.forEach(function(it){var lbl=(it.shape.label||'').trim()||'미지정';if(!_pm2r[lbl]){_pm2r[lbl]=[];_po2r.push(lbl);}_pm2r[lbl].push(it);});
+      var _pc2r=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#546E7A'];
+      _boards2r=[];_gm2r=[];
+      _po2r.forEach(function(lbl,gi){var _gi2=_pm2r[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});var _gb2=packBoards(_gi2,_use_ew,_use_eh,_gap2r);var _sb2=_boards2r.length;_gb2.forEach(function(b){_boards2r.push(b);});_gm2r.push({label:lbl,color:_pc2r[gi%_pc2r.length],startBi:_sb2,count:_gb2.length});});
+    }
+  }
+  // 저장된 배치 이미지 우선 사용 (closeBoardModal에서 직접 렌더링한 이미지)
+  if(_savedBoardImg&&_savedBoardLayout){
+    boardImg2=_savedBoardImg;
+  } else if(_boards2r&&_boards2r.length>0){
     var _prevBs2=_bs;
-    _bs={boards:_boards2r,groups:_gm2r,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],margin:_margin2r};
+    _bs={boards:_boards2r,groups:_gm2r,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],margin:_use_margin};
     var _tmpBv2=document.createElement('canvas');
     _tmpBv2.style.cssText='position:fixed;left:-9999px;top:0;display:block';
     document.body.appendChild(_tmpBv2);
@@ -4332,8 +4370,8 @@ function exportDrawingA4(){
     try{
       var _boardCols=_boards2r.length;
       var _boardW2=Math.max(1200,_boardCols*900);
-      var _boardH2=Math.max(700,_gm2r.length*340);
-      renderBoardLayout(_boards2r,_bw2r,_bh2r,_ew2r,_eh2r,_margin2r,_boardW2,_boardH2,_tmpBv2);
+      var _boardH2=Math.max(700,(_gm2r?_gm2r.length:1)*340);
+      renderBoardLayout(_boards2r,_use_bw,_use_bh,_use_ew,_use_eh,_use_margin,_boardW2,_boardH2,_tmpBv2);
       boardImg2=_tmpBv2.toDataURL('image/png');
     }catch(e2){}
     printRender=false;
@@ -4388,7 +4426,7 @@ function exportDrawingA4(){
     +'</div>'
     +'</div></div></div></div>'
     +(boardImg2?'<div class="page2">'
-      +'<div class="page2-title">📋 온장 배치도 — '+_bw.toFixed(0)+' × '+_bh.toFixed(0)+' mm</div>'
+      +'<div class="page2-title">📋 온장 배치도 — '+_use_bw.toFixed(0)+' × '+_use_bh.toFixed(0)+' mm'+((_savedBoardLayout&&_boards2r)?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
       +'<div class="board-area"><img id="_bimg2" src=""></div>'
       +'</div>':'');
   pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
