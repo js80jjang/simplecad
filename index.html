@@ -3093,17 +3093,23 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyV'||e.key==='v'||e.key==='V')&&_clipboard.length){
     e.preventDefault();
     saveHistory();
-    var offset=10; // mm
+    // 붙여넣기 오프셋: 도형 너비 + 200mm 우측 (y는 그대로)
+    var _minX=Infinity,_maxX=-Infinity;
+    _clipboard.forEach(function(s){
+      if(s.x!==undefined){_minX=Math.min(_minX,s.x);_maxX=Math.max(_maxX,s.x+(s.w||0));}
+      if(s.cx!==undefined){_minX=Math.min(_minX,s.cx-(s.r||0));_maxX=Math.max(_maxX,s.cx+(s.r||0));}
+      if(s.x1!==undefined){_minX=Math.min(_minX,Math.min(s.x1,s.x2));_maxX=Math.max(_maxX,Math.max(s.x1,s.x2));}
+    });
+    var offsetX=(isFinite(_maxX)&&isFinite(_minX))?(_maxX-_minX+200):200;
     var newShapes=_clipboard.map(function(s){
       var n=JSON.parse(JSON.stringify(s));
       n.id=nextId++;
       // userGroupId 유지하되 새 그룹 ID로 교체
       if(n.userGroupId)n.userGroupId='ug'+nextId;
-      // 위치 오프셋
-      if(n.x!==undefined)n.x+=offset;
-      if(n.y!==undefined)n.y+=offset;
-      if(n.cx!==undefined){n.cx+=offset;n.cy+=offset;}
-      if(n.x1!==undefined){n.x1+=offset;n.x2+=offset;n.y1+=offset;n.y2+=offset;}
+      // 위치 오프셋 (x만, y는 그대로)
+      if(n.x!==undefined)n.x+=offsetX;
+      if(n.cx!==undefined)n.cx+=offsetX;
+      if(n.x1!==undefined){n.x1+=offsetX;n.x2+=offsetX;}
       return n;
     });
     // userGroupId 재매핑 (원본과 분리)
@@ -3125,10 +3131,9 @@ document.addEventListener('keydown',function(e){
     _clipboard=newShapes.map(function(s){return JSON.parse(JSON.stringify(s));}); // 연속 붙여넣기 시 누적 오프셋
     // 다음 붙여넣기용 클립보드도 오프셋 적용
     _clipboard.forEach(function(s){
-      if(s.x!==undefined)s.x+=offset;
-      if(s.y!==undefined)s.y+=offset;
-      if(s.cx!==undefined){s.cx+=offset;s.cy+=offset;}
-      if(s.x1!==undefined){s.x1+=offset;s.x2+=offset;s.y1+=offset;s.y2+=offset;}
+      if(s.x!==undefined)s.x+=offsetX;
+      if(s.cx!==undefined)s.cx+=offsetX;
+      if(s.x1!==undefined){s.x1+=offsetX;s.x2+=offsetX;}
     });
     updatePropsPanel();redraw();calcCost();
     return;
