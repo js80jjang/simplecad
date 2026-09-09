@@ -3088,28 +3088,23 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key==='c'||e.key==='C')&&selectedShapes.length){
     e.preventDefault();
     _clipboard=selectedShapes.map(function(s){return JSON.parse(JSON.stringify(s));});
+    window._pasteDir=0; // 복사 시 방향 리셋 (우측부터 시작)
     return;
   }
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyV'||e.key==='v'||e.key==='V')&&_clipboard.length){
     e.preventDefault();
     saveHistory();
-    // 붙여넣기 오프셋: 도형 너비 + 200mm 우측 (y는 그대로)
-    var _minX=Infinity,_maxX=-Infinity;
-    _clipboard.forEach(function(s){
-      if(s.x!==undefined){_minX=Math.min(_minX,s.x);_maxX=Math.max(_maxX,s.x+(s.w||0));}
-      if(s.cx!==undefined){_minX=Math.min(_minX,s.cx-(s.r||0));_maxX=Math.max(_maxX,s.cx+(s.r||0));}
-      if(s.x1!==undefined){_minX=Math.min(_minX,Math.min(s.x1,s.x2));_maxX=Math.max(_maxX,Math.max(s.x1,s.x2));}
-    });
-    var offsetX=(isFinite(_maxX)&&isFinite(_minX))?(_maxX-_minX+200):200;
+    // 붙여넣기: 우측 200mm + 아래 200mm 동시 이동 (대각선 계단식)
+    var offsetX=200,offsetY=200;
     var newShapes=_clipboard.map(function(s){
       var n=JSON.parse(JSON.stringify(s));
       n.id=nextId++;
       // userGroupId 유지하되 새 그룹 ID로 교체
       if(n.userGroupId)n.userGroupId='ug'+nextId;
-      // 위치 오프셋 (x만, y는 그대로)
-      if(n.x!==undefined)n.x+=offsetX;
-      if(n.cx!==undefined)n.cx+=offsetX;
-      if(n.x1!==undefined){n.x1+=offsetX;n.x2+=offsetX;}
+      // 위치 오프셋 (x, y 동시)
+      if(n.x!==undefined){n.x+=offsetX;n.y+=offsetY;}
+      if(n.cx!==undefined){n.cx+=offsetX;n.cy+=offsetY;}
+      if(n.x1!==undefined){n.x1+=offsetX;n.x2+=offsetX;n.y1+=offsetY;n.y2+=offsetY;}
       return n;
     });
     // userGroupId 재매핑 (원본과 분리)
@@ -3129,12 +3124,6 @@ document.addEventListener('keydown',function(e){
     newShapes.forEach(function(n){shapes.push(n);});
     selectedShapes=newShapes;
     _clipboard=newShapes.map(function(s){return JSON.parse(JSON.stringify(s));}); // 연속 붙여넣기 시 누적 오프셋
-    // 다음 붙여넣기용 클립보드도 오프셋 적용
-    _clipboard.forEach(function(s){
-      if(s.x!==undefined)s.x+=offsetX;
-      if(s.cx!==undefined)s.cx+=offsetX;
-      if(s.x1!==undefined){s.x1+=offsetX;s.x2+=offsetX;}
-    });
     updatePropsPanel();redraw();calcCost();
     return;
   }
