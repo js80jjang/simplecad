@@ -3481,6 +3481,8 @@ function showBoardLayout(){
     var _valid=_savedBoardLayout.boards.every(function(board){
       return board.every(function(p){return p.shapeId!=null&&_shMap[p.shapeId];});
     });
+    // 복사/추가로 도형 수가 달라지면 저장 배치 무효화
+    if(_valid){var _savedCount=_savedBoardLayout.boards.reduce(function(a,b){return a+b.length;},0);if(_savedCount!==items.length)_valid=false;}
     if(_valid){
       var _rBoards=_savedBoardLayout.boards.map(function(board){
         return board.map(function(p){
