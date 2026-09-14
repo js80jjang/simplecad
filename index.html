@@ -1693,6 +1693,8 @@ function _drawCircleVDimRight(hcx,hcy,ref,dist,dir,inner){
   ctx.font=(printRender?'bold ':'')+_fs+'px Consolas';
   ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText(dist.toFixed(1),_lx,_ly);
+  // 클릭 편집 가능하도록 dimLabels 등록
+  if(inner)dimLabels.push({kind:'gap',outer:ref,inner:inner,dir:dir,field:'_gap',shape:inner,px:_lx+10,py:_ly});
 }
 function drawNestDims(){
   for(var j=0;j<shapes.length;j++){
@@ -2889,17 +2891,17 @@ function showGapDimInput(d){
   var isCirc=(inner.kind==='circle'||inner.kind==='hole');
   var lref=isCirc?inner.cx:ib.l, rref=isCirc?inner.cx:ib.r;
   var tref=isCirc?inner.cy:ib.t, bref=isCirc?inner.cy:ib.b;
-  var curGap;
-  if(dir==='left')curGap=lref-outer.x;
-  else if(dir==='right')curGap=(outer.x+outer.w)-rref;
-  else if(dir==='top')curGap=tref-outer.y;
-  else if(dir==='bottom')curGap=(outer.y+outer.h)-bref;
+  var curGap, _outside=false;
+  if(dir==='left'){curGap=lref-outer.x;if(curGap<0){curGap=-curGap;_outside=true;}}
+  else if(dir==='right'){curGap=(outer.x+outer.w)-rref;if(curGap<0){curGap=-curGap;_outside=true;}}
+  else if(dir==='top'){curGap=tref-outer.y;if(curGap<0){curGap=-curGap;_outside=true;}}
+  else if(dir==='bottom'){curGap=(outer.y+outer.h)-bref;if(curGap<0){curGap=-curGap;_outside=true;}}
   else return;
   var inp=document.getElementById('dim-inline');
   var hideBtn=document.getElementById('dim-hide-btn');
   if(!inp||!hideBtn)return;
   _dimPopupShow(d.px,d.py);
-  inp.value=Math.max(0,curGap).toFixed(1);
+  inp.value=curGap.toFixed(1);
   inp.select();inp.focus();
   // 숨기기 버튼
   hideBtn.onmousedown=function(e){e.preventDefault();};
@@ -2918,10 +2920,10 @@ function showGapDimInput(d){
     if(!isNaN(v)&&v>=0){
       saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
       if(isCirc){
-        if(dir==='left')inner.cx=outer.x+v;
-        else if(dir==='right')inner.cx=outer.x+outer.w-v;
-        else if(dir==='top')inner.cy=outer.y+v;
-        else if(dir==='bottom')inner.cy=outer.y+outer.h-v;
+        if(dir==='left')inner.cx=_outside?outer.x-v:outer.x+v;
+        else if(dir==='right')inner.cx=_outside?outer.x+outer.w+v:outer.x+outer.w-v;
+        else if(dir==='top')inner.cy=_outside?outer.y-v:outer.y+v;
+        else if(dir==='bottom')inner.cy=_outside?outer.y+outer.h+v:outer.y+outer.h-v;
       } else if(inner.kind==='rect'){
         if(dir==='left')inner.x=outer.x+v;
         else if(dir==='right')inner.x=outer.x+outer.w-v-inner.w;
