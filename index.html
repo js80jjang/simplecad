@@ -1298,7 +1298,14 @@ function autoAdjustDims(){
 function drawDims(s,col){
   // 도면화 모드: 싱크볼/쿡탑 → 도형 내부 중앙에 치수 텍스트 표시
   if(_exportLegend!==null&&s.groupId&&s.groupRole==='main'){
-    var _rStr=(s.cornerType==='fillet'&&(s.cornerSize||0)>0)?(' R'+s.cornerSize.toFixed(0)):'';
+    // R값: 균일 cornerType/cornerSize 또는 라운드 툴로 지정한 개별 코너(s.corners) 모두 확인
+    var _rVal=0;
+    if(s.cornerType==='fillet'&&(s.cornerSize||0)>0)_rVal=s.cornerSize;
+    else if(s.corners){
+      var _rvals=Object.keys(s.corners).map(function(k){var c=s.corners[k];return(c&&c.type==='fillet')?(c.r||0):0;}).filter(function(v){return v>0;});
+      if(_rvals.length)_rVal=_rvals[0];
+    }
+    var _rStr=_rVal>0?(' R'+_rVal.toFixed(0)):'';
     var _wv=Math.abs(s.w%1)<0.05?Math.round(s.w).toString():s.w.toFixed(1);
     var _hv=Math.abs(s.h%1)<0.05?Math.round(s.h).toString():s.h.toFixed(1);
     var _clbl=_wv+'×'+_hv+_rStr;
