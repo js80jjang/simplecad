@@ -459,6 +459,8 @@ var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
 var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
 var _tierMult={cost:1,dealer:1.2,consumer:1.3,custom:1,retail:1};
+var TIER_PREFIX={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
+var TIER_KEYS=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
 
 function setTier(t){
   _tier=t;
@@ -707,8 +709,7 @@ renderProductList();
 
 // ═══ 스냅 ═══
 function syncAllTierPrices(){
-  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
-  keys.forEach(function(k){
+  TIER_KEYS.forEach(function(k){
     var el=document.getElementById('su-'+k);if(!el)return;
     var v=parseFloat((el.value||'0').replace(/,/g,''))||0;
     var du=document.getElementById('du-'+k);
@@ -922,6 +923,18 @@ function drawTriangle(cx,cy,angle,sz,col){
   ctx.closePath();ctx.fillStyle=col;ctx.fill();
 }
 
+// 밑면연마 깊이 라벨 (x,y는 현재 ctx 변환 좌표계 기준)
+function _drawGrindDepthLabel(x,y,depth){
+  var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';
+  var dfSz=printRender?32:9;
+  ctx.save();
+  ctx.font='bold '+dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+  var dtw=ctx.measureText(dtxt).width;
+  if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(x-dtw/2-3,y-dfSz/2-2,dtw+6,dfSz+4);}
+  ctx.fillStyle=printRender?'#1565C0':'#FFD740';
+  ctx.fillText(dtxt,x,y);
+  ctx.restore();
+}
 function drawGrindRegion(s,preview){
   var isH=Math.abs(s.y2-s.y1)<0.5;
   var isV=Math.abs(s.x2-s.x1)<0.5;
@@ -971,11 +984,7 @@ function drawGrindRegion(s,preview){
     if(!preview&&!(s.hideDims&&s.hideDims['dist'])&&!(printRender&&s._skipGrindLabel)){
       var dmx=(s.x1+s.x2)/2+nx/2,dmy=(s.y1+s.y2)/2+ny/2;
       var dcp=toCanvas(dmx,dmy);
-      var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';var dfSz=printRender?32:9;
-      ctx.save();ctx.font='bold '+dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
-      var dtw=ctx.measureText(dtxt).width;
-      if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(dcp[0]-dtw/2-3,dcp[1]-dfSz/2-2,dtw+6,dfSz+4);}
-      ctx.fillStyle=printRender?'#1565C0':'#FFD740';ctx.fillText(dtxt,dcp[0],dcp[1]);ctx.restore();
+      _drawGrindDepthLabel(dcp[0],dcp[1],depth);
     }
     return;
   }
@@ -1038,12 +1047,7 @@ function drawGrindRegion(s,preview){
     if(!preview&&!(s.hideDims&&s.hideDims['dist'])&&!(printRender&&s._skipGrindLabel)){
       ctx.save();ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
       var _dlx2=_lx+_lw/2,_dly2=_ly+_lh/2;
-      var _dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';var _dfSz=printRender?32:9;
-      ctx.font='bold '+_dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
-      var _dtw=ctx.measureText(_dtxt).width;
-      if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(_dlx2-_dtw/2-3,_dly2-_dfSz/2-2,_dtw+6,_dfSz+4);}
-      ctx.fillStyle=printRender?'#1565C0':'#FFD740';
-      ctx.fillText(_dtxt,_dlx2,_dly2);
+      _drawGrindDepthLabel(_dlx2,_dly2,depth);
       ctx.restore();
     }
     return;
@@ -1099,16 +1103,7 @@ function drawGrindRegion(s,preview){
       else{dcx=rx+rw/2;dcy=ry-_gOff;}
     } else {dcx=rx+rw/2;dcy=ry+rh/2;}
     var dcp=toCanvas(dcx,dcy);
-    var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';
-    var dfSz=printRender?32:9;
-    ctx.save();
-    ctx.font='bold '+dfSz+'px Consolas';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    var dtw=ctx.measureText(dtxt).width;
-    if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(dcp[0]-dtw/2-3,dcp[1]-dfSz/2-2,dtw+6,dfSz+4);}
-    ctx.fillStyle=printRender?'#1565C0':'#FFD740';
-    ctx.fillText(dtxt,dcp[0],dcp[1]);
-    ctx.restore();
+    _drawGrindDepthLabel(dcp[0],dcp[1],depth);
   }
 }
 
@@ -1477,17 +1472,11 @@ function drawDims(s,col){
   }
 }
 function drawDimsCircle(s,col){
-  // 도면화 모드: 타공은 도면 치수 숨기고 범례로 수집
-  if(_exportLegend!==null){
-    var _legKindC=(s.kind==='hole')?(s.holeType==='faucet'?'타공(수전)':s.holeType==='outlet'?'타공(콘센트)':'타공'):'원형';
-    _exportLegend.push({kind:_legKindC,size:'Φ '+(s.r*2).toFixed(0)+' mm'});
-    return;
-  }
   if(s.hideDims&&s.hideDims['r'])return; // Φ 치수 숨김
   var sel=isSelected(s);
   var cr=mm2px(s.r),cc=toCanvas(s.cx,s.cy);
   var cx=cc[0],cy=cc[1];
-  var label='Φ '+(s.r*2).toFixed(1)+' mm';
+  var label='Φ '+_fmtD(s.r*2);
   var dcol=printRender?'#1565C0':'#E53935';
   var ahsz=printRender?8:5;
   // 우상단 45° 방향
@@ -1928,8 +1917,6 @@ async function saveProject(){
   }
   // 폴백: 저장 모달 (파일명 입력 + 다운로드)
   _showSaveModal(defaultName, data);
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 // ═══ 저장 모달 (showSaveFilePicker 미지원 환경 폴백) ═══
@@ -2793,6 +2780,39 @@ function _dimPopupHide(){
   var pop=document.getElementById('dim-popup');
   pop.style.display='none';
 }
+// 공통: 치수 입력 팝업 — 위치잡기 + focus/select + Enter/Tab/Esc 키 처리 + blur 커밋
+// opts: {px,py,initVal, onCommit(v), onHide, onTab}
+function _dimInputPopup(opts){
+  var inp=document.getElementById('dim-inline');
+  var hideBtn=document.getElementById('dim-hide-btn');
+  if(!inp||!hideBtn)return;
+  _dimPopupShow(opts.px,opts.py);
+  inp.value=opts.initVal.toFixed(1);
+  inp.select();inp.focus();
+  // 숨기기 버튼 (onclick 덮어쓰기로 이전 이벤트 정리)
+  hideBtn.onmousedown=function(e){e.preventDefault();};
+  hideBtn.onclick=function(){
+    inp.removeEventListener('blur',commit);
+    _dimPopupHide();
+    if(opts.onHide)opts.onHide();
+    inp.removeEventListener('keydown',onKey);
+  };
+  function commit(){
+    _dimPopupHide();
+    var v=parseFloat(inp.value);
+    opts.onCommit(v);
+    inp.removeEventListener('keydown',onKey);
+    inp.removeEventListener('blur',commit);
+  }
+  function onKey(e){
+    if(e.key==='Enter'){e.preventDefault();commit();}
+    else if(e.key==='Tab'){e.preventDefault();commit();if(opts.onTab)opts.onTab();return;}
+    else if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
+    e.stopPropagation();
+  }
+  inp.addEventListener('keydown',onKey);
+  inp.addEventListener('blur',commit,{once:true});
+}
 function showDimInput(d){
   if(!d||!d.shape)return;
   var s=d.shape,fld=d.field;
@@ -2806,83 +2826,38 @@ function showDimInput(d){
   else if(fld==='dist')cur=Math.hypot(s.x2-s.x1,s.y2-s.y1)*dispF;
   else if(fld==='cornerSize')cur=s.cornerSize||0;
   else return;
-  var inp=document.getElementById('dim-inline');
-  var hideBtn=document.getElementById('dim-hide-btn');
-  if(!inp||!hideBtn)return;
-  _dimPopupShow(d.px,d.py);
-  inp.value=cur.toFixed(1);
-  inp.select();inp.focus();
-  // 숨기기 버튼 (onclick 덮어쓰기로 이전 이벤트 정리)
-  hideBtn.onmousedown=function(e){e.preventDefault();};
-  hideBtn.onclick=function(){
-    inp.removeEventListener('blur',commit);
-    _dimPopupHide();
-    saveHistory();
-    s.hideDims=s.hideDims||{};
-    s.hideDims[fld]=true;
-    redraw();
-    inp.removeEventListener('keydown',onKey);
-  };
-  function commit(){
-    _dimPopupHide();
-    var v=parseFloat(inp.value);
-    if(!isNaN(v)&&v>0){
-      saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
-      if(fld==='w')s.w=v*saveF;
-      else if(fld==='h')s.h=v*saveF;
-      else if(fld==='r')s.r=v*saveF;
-      else if(fld==='rx')s.rx=v*saveF;
-      else if(fld==='ry')s.ry=v*saveF;
-      else if(fld==='cornerSize'){s.cornerSize=Math.max(0,v);if(!s.cornerType||s.cornerType==='none')s.cornerType='fillet';}
-      else if(fld==='dist'){var _d0=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(_d0>0){var _nx=(s.x2-s.x1)/_d0,_ny=(s.y2-s.y1)/_d0;s.x2=s.x1+_nx*(v*saveF);s.y2=s.y1+_ny*(v*saveF);}}
-      syncGroupShapes(s);
-      if(s.groupId&&s.groupRole==='main')selectedShapes=getGroupShapes(s);
-      updatePropsPanel();redraw();calcCost();
-    }
-    inp.removeEventListener('keydown',onKey);
-    inp.removeEventListener('blur',commit);
-  }
-  function onKey(e){
-    if(e.key==='Enter'){e.preventDefault();commit();}
-    if(e.key==='Tab'){e.preventDefault();
-      var _s2=s,_nf=(fld==='w')?'h':(fld==='h'?'w':null);
-      commit();
-      if(_nf){setTimeout(function(){
+  _dimInputPopup({
+    px:d.px,py:d.py,initVal:cur,
+    onHide:function(){
+      saveHistory();
+      s.hideDims=s.hideDims||{};
+      s.hideDims[fld]=true;
+      redraw();
+    },
+    onCommit:function(v){
+      if(!isNaN(v)&&v>0){
+        saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
+        if(fld==='w')s.w=v*saveF;
+        else if(fld==='h')s.h=v*saveF;
+        else if(fld==='r')s.r=v*saveF;
+        else if(fld==='rx')s.rx=v*saveF;
+        else if(fld==='ry')s.ry=v*saveF;
+        else if(fld==='cornerSize'){s.cornerSize=Math.max(0,v);if(!s.cornerType||s.cornerType==='none')s.cornerType='fillet';}
+        else if(fld==='dist'){var _d0=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(_d0>0){var _nx=(s.x2-s.x1)/_d0,_ny=(s.y2-s.y1)/_d0;s.x2=s.x1+_nx*(v*saveF);s.y2=s.y1+_ny*(v*saveF);}}
+        syncGroupShapes(s);
+        if(s.groupId&&s.groupRole==='main')selectedShapes=getGroupShapes(s);
+        updatePropsPanel();redraw();calcCost();
+      }
+    },
+    onTab:(fld==='w'||fld==='h')?function(){
+      var _nf=(fld==='w')?'h':'w';
+      setTimeout(function(){
         for(var _i=0;_i<dimLabels.length;_i++){
-          if(dimLabels[_i].shape===_s2&&dimLabels[_i].field===_nf){showDimInput(dimLabels[_i]);break;}
-        }},0);}
-      return;}
-    if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
-    e.stopPropagation();
-  }
-  inp.addEventListener('keydown',onKey);
-  inp.addEventListener('blur',commit,{once:true});
-}
-
-function openDimInline(px,py,initVal,onDone){
-  var inp=document.getElementById('dim-inline');
-  if(!inp)return;
-  var cvRect=document.getElementById('cv').getBoundingClientRect();
-  inp.style.left=(offsetX+px*scale-34)+'px';
-  inp.style.top=(offsetY+py*scale-12)+'px';
-  inp.style.display='block';
-  inp.value=parseFloat(initVal).toFixed(1);
-  inp.select();
-  inp.focus();
-  function commit(){
-    inp.style.display='none';
-    var v=parseFloat(inp.value);
-    if(!isNaN(v))onDone(v);
-    inp.removeEventListener('keydown',onKey);
-    inp.removeEventListener('blur',commit);
-  }
-  function onKey(e){
-    if(e.key==='Enter'){e.preventDefault();commit();}
-    if(e.key==='Escape'){inp.style.display='none';inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
-    e.stopPropagation();
-  }
-  inp.addEventListener('keydown',onKey);
-  inp.addEventListener('blur',commit,{once:true});
+          if(dimLabels[_i].shape===s&&dimLabels[_i].field===_nf){showDimInput(dimLabels[_i]);break;}
+        }
+      },0);
+    }:undefined
+  });
 }
 function showGapDimInput(d){
   if(!d||!d.shape||!d.outer||!d.dir)return;
@@ -2897,55 +2872,36 @@ function showGapDimInput(d){
   else if(dir==='top'){curGap=tref-outer.y;if(curGap<0){curGap=-curGap;_outside=true;}}
   else if(dir==='bottom'){curGap=(outer.y+outer.h)-bref;if(curGap<0){curGap=-curGap;_outside=true;}}
   else return;
-  var inp=document.getElementById('dim-inline');
-  var hideBtn=document.getElementById('dim-hide-btn');
-  if(!inp||!hideBtn)return;
-  _dimPopupShow(d.px,d.py);
-  inp.value=curGap.toFixed(1);
-  inp.select();inp.focus();
-  // 숨기기 버튼
-  hideBtn.onmousedown=function(e){e.preventDefault();};
-  hideBtn.onclick=function(){
-    inp.removeEventListener('blur',commit);
-    _dimPopupHide();
-    saveHistory();
-    inner.hideDims=inner.hideDims||{};
-    inner.hideDims[dir]=true;
-    redraw();
-    inp.removeEventListener('keydown',onKey);
-  };
-  function commit(){
-    _dimPopupHide();
-    var v=parseFloat(inp.value);
-    if(!isNaN(v)&&v>=0){
-      saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
-      if(isCirc){
-        if(dir==='left')inner.cx=_outside?outer.x-v:outer.x+v;
-        else if(dir==='right')inner.cx=_outside?outer.x+outer.w+v:outer.x+outer.w-v;
-        else if(dir==='top')inner.cy=_outside?outer.y-v:outer.y+v;
-        else if(dir==='bottom')inner.cy=_outside?outer.y+outer.h+v:outer.y+outer.h-v;
-      } else if(inner.kind==='rect'){
-        if(dir==='left')inner.x=outer.x+v;
-        else if(dir==='right')inner.x=outer.x+outer.w-v-inner.w;
-        else if(dir==='top')inner.y=outer.y+v;
-        else if(dir==='bottom')inner.y=outer.y+outer.h-v-inner.h;
-        syncGroupShapes(inner);
+  _dimInputPopup({
+    px:d.px,py:d.py,initVal:curGap,
+    onHide:function(){
+      saveHistory();
+      inner.hideDims=inner.hideDims||{};
+      inner.hideDims[dir]=true;
+      redraw();
+    },
+    onCommit:function(v){
+      if(!isNaN(v)&&v>=0){
+        saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
+        if(isCirc){
+          if(dir==='left')inner.cx=_outside?outer.x-v:outer.x+v;
+          else if(dir==='right')inner.cx=_outside?outer.x+outer.w+v:outer.x+outer.w-v;
+          else if(dir==='top')inner.cy=_outside?outer.y-v:outer.y+v;
+          else if(dir==='bottom')inner.cy=_outside?outer.y+outer.h+v:outer.y+outer.h-v;
+        } else if(inner.kind==='rect'){
+          if(dir==='left')inner.x=outer.x+v;
+          else if(dir==='right')inner.x=outer.x+outer.w-v-inner.w;
+          else if(dir==='top')inner.y=outer.y+v;
+          else if(dir==='bottom')inner.y=outer.y+outer.h-v-inner.h;
+          syncGroupShapes(inner);
+          if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+        }
+        selectedShapes=[inner];
         if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+        updatePropsPanel();redraw();calcCost();
       }
-      selectedShapes=[inner];
-      if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
-      updatePropsPanel();redraw();calcCost();
     }
-    inp.removeEventListener('keydown',onKey);
-    inp.removeEventListener('blur',commit);
-  }
-  function onKey(e){
-    if(e.key==='Enter'){e.preventDefault();commit();}
-    if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
-    e.stopPropagation();
-  }
-  inp.addEventListener('keydown',onKey);
-  inp.addEventListener('blur',commit,{once:true});
+  });
 }
 
 function toggleTierSection(){
@@ -2957,24 +2913,20 @@ function toggleTierSection(){
   if(arrow)arrow.textContent=open?'▼':'▶';
 }
 function saveTierPrices(tier){
-  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
-  var prefix=pmap[tier];
-  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+  var prefix=TIER_PREFIX[tier];
   var data={};
-  keys.forEach(function(k){var el=document.getElementById(prefix+k);if(el)data[k]=el.value;});
+  TIER_KEYS.forEach(function(k){var el=document.getElementById(prefix+k);if(el)data[k]=el.value;});
   try{localStorage.setItem('scd_prices_'+tier,JSON.stringify(data));}catch(e){}
   var btn=document.querySelector('#panel-'+tier+' .tier-save-btn');
   if(btn){var orig=btn.textContent;btn.textContent='✅ 저장됨';setTimeout(function(){btn.textContent=orig;},1200);}
 }
 function loadAllTierPrices(){
-  var pmap={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
-  var keys=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
-  Object.keys(pmap).forEach(function(tier){
+  Object.keys(TIER_PREFIX).forEach(function(tier){
     var saved;try{saved=localStorage.getItem('scd_prices_'+tier);}catch(e){}
     if(!saved)return;
     var data=JSON.parse(saved);
-    var prefix=pmap[tier];
-    keys.forEach(function(k){var el=document.getElementById(prefix+k);if(el&&data[k]!=null)el.value=data[k];});
+    var prefix=TIER_PREFIX[tier];
+    TIER_KEYS.forEach(function(k){var el=document.getElementById(prefix+k);if(el&&data[k]!=null)el.value=data[k];});
   });
 }
 function calcCost(){
@@ -3006,7 +2958,7 @@ function calcCost(){
   var qty=totalQty();
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
   function gta(k){
-    var pfx={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'}[_tier]||'su-';
+    var pfx=TIER_PREFIX[_tier]||'su-';
     var el=document.getElementById(pfx+k);
     return el?parseFloat((el.value||'').replace(/,/g,''))||0:0;
   }
@@ -4272,51 +4224,6 @@ function exportDrawingA4(){
   tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
   var tmpCtx=tmpCv.getContext('2d');
   tmpCtx.drawImage(mainCv,0,0);
-  // 범례 테이블 그리기 (우측 하단)
-  if(_exportLegend.length>0){
-    var _leg=_exportLegend;
-    var _fs=20,_lh=28,_pad=14;
-    var _cols=['No','종류','크기'];
-    var _cw=[36,110,170];
-    var _tw=_cw.reduce(function(a,b){return a+b;})+_pad*2;
-    var _th=(_leg.length+2)*_lh+_pad*2+8;
-    var _mx=tmpCv.width-_tw-24,_my=tmpCv.height-_th-24;
-    tmpCtx.save();
-    // 배경
-    tmpCtx.fillStyle='rgba(255,255,255,0.96)';tmpCtx.fillRect(_mx,_my,_tw,_th);
-    tmpCtx.strokeStyle='#1565C0';tmpCtx.lineWidth=1.5;tmpCtx.strokeRect(_mx,_my,_tw,_th);
-    // 헤더 타이틀
-    tmpCtx.fillStyle='#1565C0';tmpCtx.fillRect(_mx,_my,_tw,_lh+4);
-    tmpCtx.fillStyle='#fff';tmpCtx.font='bold '+_fs+'px "Malgun Gothic",sans-serif';
-    tmpCtx.textAlign='center';tmpCtx.textBaseline='middle';
-    tmpCtx.fillText('내부 치수 목록',_mx+_tw/2,_my+(_lh+4)/2);
-    // 컬럼 헤더
-    var _hy=_my+_lh+4;
-    tmpCtx.fillStyle='#e8eef8';tmpCtx.fillRect(_mx,_hy,_tw,_lh);
-    tmpCtx.fillStyle='#333';tmpCtx.font='bold '+_fs+'px Consolas,monospace';
-    var _cx=_mx+_pad;
-    for(var _ci=0;_ci<_cols.length;_ci++){tmpCtx.textAlign='center';tmpCtx.fillText(_cols[_ci],_cx+_cw[_ci]/2,_hy+_lh/2);_cx+=_cw[_ci];}
-    // 구분선
-    tmpCtx.strokeStyle='#aaa';tmpCtx.lineWidth=0.8;
-    tmpCtx.beginPath();tmpCtx.moveTo(_mx,_hy+_lh);tmpCtx.lineTo(_mx+_tw,_hy+_lh);tmpCtx.stroke();
-    // 데이터 행
-    for(var _li=0;_li<_leg.length;_li++){
-      var _ry=_hy+_lh+_li*_lh;
-      if(_li%2===1){tmpCtx.fillStyle='#f5f8ff';tmpCtx.fillRect(_mx,_ry,_tw,_lh);}
-      tmpCtx.fillStyle='#111';tmpCtx.font=_fs+'px Consolas,monospace';
-      var _rx=_mx+_pad;
-      tmpCtx.textAlign='center';tmpCtx.fillText((_li+1).toString(),_rx+_cw[0]/2,_ry+_lh/2);_rx+=_cw[0];
-      tmpCtx.textAlign='left';tmpCtx.font=_fs+'px "Malgun Gothic",Consolas,sans-serif';tmpCtx.fillText(_leg[_li].kind,_rx+4,_ry+_lh/2);_rx+=_cw[1];
-      tmpCtx.font=_fs+'px Consolas,monospace';tmpCtx.fillText(_leg[_li].size,_rx+4,_ry+_lh/2);
-      // 행 구분선
-      if(_li<_leg.length-1){tmpCtx.strokeStyle='#ddd';tmpCtx.lineWidth=0.5;tmpCtx.beginPath();tmpCtx.moveTo(_mx,_ry+_lh);tmpCtx.lineTo(_mx+_tw,_ry+_lh);tmpCtx.stroke();}
-    }
-    // 세로 구분선
-    tmpCtx.strokeStyle='#bbb';tmpCtx.lineWidth=0.7;
-    var _vx=_mx+_pad;
-    for(var _vi=0;_vi<_cw.length-1;_vi++){_vx+=_cw[_vi];tmpCtx.beginPath();tmpCtx.moveTo(_vx,_my+_lh+4);tmpCtx.lineTo(_vx,_my+_th);tmpCtx.stroke();}
-    tmpCtx.restore();
-  }
   // 좌상단 현장주소 / 제품명 정보 오버레이
   {
     var _sa2=(document.getElementById('site-addr')||{}).value||'';
