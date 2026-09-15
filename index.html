@@ -172,6 +172,10 @@ canvas{display:block;cursor:crosshair}
       <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#263545;color:#fff">수전</button>
     </div>
   </div>
+  <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 절단</button>
+  <div class="fillet-sub" id="circlecut-sub">
+    <label>Φ(mm):<input type="number" id="circlecut-phi" value="300" min="1" step="1"></label>
+  </div>
   <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg> 선 절단 <span style="font-size:9px;color:#546E7A;margin-left:2px">Shift=자유</span></button>
   <button class="tool-btn" data-tool="sinkbowl"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="1.5" stroke="#2196F3" stroke-width="1.5" fill="none"/><ellipse cx="8" cy="6" rx="4.5" ry="3" stroke="#2196F3" stroke-width="1.2" fill="rgba(33,150,243,0.2)"/></svg> 싱크볼</button>
   <button class="tool-btn" data-tool="cooktop"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#2196F3" stroke-width="1.5" fill="none"/><circle cx="5" cy="4.5" r="1.9" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="11" cy="4.5" r="1.9" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="5" cy="8" r="1.6" stroke="#2196F3" stroke-width="1" fill="none"/><circle cx="11" cy="8" r="1.6" stroke="#2196F3" stroke-width="1" fill="none"/></svg> 쿡탑</button>
@@ -316,6 +320,7 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
     <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
+    <div class="proc-row2"><span class="pr-name">원형 절단</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
   </div>
   <div class="r-sec">③ 추가 가공</div>
   <div class="r-card" style="padding:4px">
@@ -711,8 +716,10 @@ function _findCornerAttach(x1,y1,x2,y2){
         var ck=cks[j],info=_rcInfo(s,ck);
         if(!info||info.type!=='fillet'||info.r<=0)continue;
         var pin=_rcPIn(s,ck),pout=_rcPOut(s,ck);
-        if(Math.hypot(x1-pin.x,y1-pin.y)<=tol&&Math.hypot(x2-pout.x,y2-pout.y)<=tol)return{arc:_rcArc(s,ck)};
-        if(Math.hypot(x1-pout.x,y1-pout.y)<=tol&&Math.hypot(x2-pin.x,y2-pin.y)<=tol)return{arc:_rcArc(s,ck)};
+        // 싱크볼/쿡탑은 이 rect가 "구멍"이라 재료가 코너 바깥쪽에 있음 (일반 사각 절단은 반대로 안쪽)
+        var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook');
+        if(Math.hypot(x1-pin.x,y1-pin.y)<=tol&&Math.hypot(x2-pout.x,y2-pout.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
+        if(Math.hypot(x1-pout.x,y1-pout.y)<=tol&&Math.hypot(x2-pin.x,y2-pin.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
       }
     } else if(s.kind==='arc'){
       // 트림 후 독립된 arc 도형으로 남은 라운드 코너도 동일하게 인식
@@ -721,6 +728,20 @@ function _findCornerAttach(x1,y1,x2,y2){
       if((Math.hypot(x1-ea.x,y1-ea.y)<=tol&&Math.hypot(x2-eb.x,y2-eb.y)<=tol)||
          (Math.hypot(x1-eb.x,y1-eb.y)<=tol&&Math.hypot(x2-ea.x,y2-ea.y)<=tol)){
         return{arc:{x:s.cx,y:s.cy,r:s.r,a0:s.a0,a1:s.a1}};
+      }
+    } else if(s.kind==='circle'||s.kind==='hole'){
+      // 원(원형 절단 등)의 둘레 위에 양 끝점이 놓인 밑면연마/고스라/졸리컷은 그 원의 곡률을 따라 휘어져야 함
+      var dd1=Math.hypot(x1-s.cx,y1-s.cy),dd2=Math.hypot(x2-s.cx,y2-s.cy);
+      if(Math.abs(dd1-s.r)<=tol&&Math.abs(dd2-s.r)<=tol&&Math.hypot(x1-x2,y1-y2)>0.01){
+        var ang1=Math.atan2(y1-s.cy,x1-s.cx),ang2=Math.atan2(y2-s.cy,x2-s.cx);
+        var da=ang2-ang1;
+        while(da<=-Math.PI)da+=2*Math.PI;
+        while(da>Math.PI)da-=2*Math.PI;
+        // a0<a1이 되도록, 더 짧은 방향의 호로 정규화
+        var ca0=ang1,ca1=ang1+da;
+        if(ca1<ca0){var _tmp=ca0;ca0=ca1;ca1=_tmp;}
+        // 원형 절단(홀)도 재료가 원 바깥쪽에 있음
+        return{arc:{x:s.cx,y:s.cy,r:s.r,a0:ca0,a1:ca1},matOutward:(s.holeType==='cut')};
       }
     }
   }
@@ -978,14 +999,60 @@ function findEdgeContext(x1,y1,x2,y2){
         break;
       }
     }
+    if(found){
+      // 싱크볼/쿡탑은 이 rect가 "재료"가 아니라 "잘려나가는 구멍"이므로, 재료는 이 rect 바깥쪽에 있음.
+      // 따라서 일반 사각 절단(재료=rect 안쪽)과 반대로 inward/outward를 뒤집어, 밑면연마/고스라 등이
+      // 도형 바깥쪽(둘러싼 상판 재료 쪽)으로 적용되도록 함.
+      var _at=_applianceType(s);
+      if(_at==='sink'||_at==='cook'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
+    }
     if(found&&area<bestArea){bestArea=area;best=Object.assign({shape:s,groupId:s.groupId||null},found);}
   }
-  return best||{edge:'unknown',inward:1,outward:-1};
+  if(best)return best;
+  // rect를 못 찾은 경우(트림으로 분해됨): 같은 직선상에 놓인, 원래 엣지 방향 정보를 가진 line 도형을 찾아 방향 유추
+  var ltol=5;
+  for(var j=0;j<shapes.length;j++){
+    var ls=shapes[j];
+    if(ls.kind!=='line'||ls.edgeInward===undefined)continue;
+    var lisH=Math.abs(ls.y2-ls.y1)<0.5;
+    if(lisH!==isH)continue;
+    if(isH){
+      if(Math.abs(y1-ls.y1)<ltol){
+        var lxa=Math.min(ls.x1,ls.x2),lxb=Math.max(ls.x1,ls.x2);
+        if(xb>=lxa-ltol&&xa<=lxb+ltol)return{edge:ls.edgeSide,inward:ls.edgeInward,outward:-ls.edgeInward,groupId:ls.edgeGroupId||null};
+      }
+    } else {
+      if(Math.abs(x1-ls.x1)<ltol){
+        var lya=Math.min(ls.y1,ls.y2),lyb=Math.max(ls.y1,ls.y2);
+        if(yb>=lya-ltol&&ya<=lyb+ltol)return{edge:ls.edgeSide,inward:ls.edgeInward,outward:-ls.edgeInward,groupId:ls.edgeGroupId||null};
+      }
+    }
+  }
+  return {edge:'unknown',inward:1,outward:-1};
 }
 
 // ═══ 도형 그리기 ═══
 var SCOL={rect:'#ffffff',circle:'#ffffff',ellipse:'#ffffff',hole:'#ffffff',line:'#ffffff',dimline:'#78909C'};
 var SFILL={rect:'',circle:'',ellipse:'',hole:''};
+// 싱크볼/쿡탑 메인 사각형은 일반 절단(흰색)과 구별되도록 각각 다른 색으로 표시
+function _applianceType(s){
+  if(s.kind!=='rect')return null;
+  if(s.applianceType)return s.applianceType;
+  if(s.groupId&&s.groupRole==='main')return s.cornerType==='fillet'?'sink':'cook';
+  return null;
+}
+function _baseColor(s){
+  var _at=_applianceType(s);
+  if(_at==='sink')return '#42A5F5';
+  if(_at==='cook')return '#FFA726';
+  return SCOL[s.kind]||'#1565C0';
+}
+function _baseFill(s){
+  var _at=_applianceType(s);
+  if(_at==='sink')return 'rgba(66,165,245,0.10)';
+  if(_at==='cook')return 'rgba(255,167,38,0.10)';
+  return SFILL[s.kind]||'';
+}
 
 function isSelected(s){return selectedShapes.indexOf(s)>=0;}
 
@@ -1028,17 +1095,19 @@ function drawGrindRegion(s,preview){
   var depth=s.depth||30;
   var alpha=preview?0.35:0.85;
 
-  // ── 사선(대각선) 처리 ──
-  if(!isH&&!isV){
-    var llen=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(llen<0.5)return;
-    // 라운드 코너의 탄젠트점↔탄젠트점을 가로지르는 대각선이면 직선 평행사변형이 아니라
-    // 실제 라운드 곡선을 따라가는 환형(부채꼴) 해칭으로 그림
+  // 라운드 코너(탄젠트점↔탄젠트점) 또는 원(원형 절단 등)의 둘레 위에 양 끝점이 있으면,
+  // 방향(수평/수직/대각선)과 무관하게 항상 실제 곡선을 따라가는 환형(부채꼴) 해칭으로 그림.
+  // (원의 경우 두 점이 정확히 수평/수직으로 마주보는 경우도 있을 수 있어 isH/isV 분기보다 먼저 확인해야 함)
+  {
     var _corner=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);
     if(_corner){
       var ai=_corner.arc;
-      // 라운드 코너의 재질(솔리드)은 항상 곡선 안쪽(중심 방향)에 있으므로,
-      // 코너에서는 s.inward 부호와 무관하게 경계(r)에서 중심 쪽으로 depth만큼 항상 안쪽으로 연마함
-      var rOuter=ai.r,rInner=Math.max(0,ai.r-depth);
+      // 라운드 코너의 재질(솔리드)은 보통 곡선 안쪽(중심 방향)에 있으므로 경계(r)에서 중심 쪽으로 depth만큼 연마함.
+      // 단, 싱크볼/쿡탑/원형 절단처럼 이 곡선이 "구멍"의 경계인 경우엔 재료가 반대로 바깥쪽에 있으므로
+      // 연마도 바깥쪽(반경이 커지는 방향)으로 적용해야 함.
+      var rOuter,rInner;
+      if(_corner.matOutward){rOuter=ai.r+depth;rInner=ai.r;}
+      else{rOuter=ai.r;rInner=Math.max(0,ai.r-depth);}
       var ccp=toCanvas(ai.x,ai.y);
       var rOpx=mm2px(rOuter),rIpx=mm2px(rInner);
       ctx.save();
@@ -1073,9 +1142,13 @@ function drawGrindRegion(s,preview){
       }
       return;
     }
-    // ── 코너에 붙지 않은 일반 대각선: 평행사변형 해칭 ──
+  }
+  // ── 사선(대각선) 처리: 코너/원에 붙지 않은 일반 대각선은 평행사변형 해칭 ──
+  if(!isH&&!isV){
+    var llen=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(llen<0.5)return;
     var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
-    var inw=ctx2_.inward;
+    // 부모 rect를 못 찾으면 생성 시점에 저장해둔 s.inward를 사용 (아래 축정렬 케이스와 동일한 이유)
+    var inw=ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward);
     var ux=(s.x2-s.x1)/llen,uy=(s.y2-s.y1)/llen;
     // 법선 (선 진행방향 기준 왼쪽=inward:1, 오른쪽=inward:-1)
     var nx=-inw*uy*depth,ny=inw*ux*depth;
@@ -1118,7 +1191,9 @@ function drawGrindRegion(s,preview){
   }
   // 런타임에 inward 방향 재계산: 가장 가까운 사각형의 안쪽 방향
   var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
-  var inward=ctx2_.inward;
+  // 트림 등으로 rect가 선(line)으로 분해되어 부모 rect를 못 찾으면 findEdgeContext는 기본값(1)을 반환하는데,
+  // 이때는 생성 시점에 정확히 계산해 저장해둔 s.inward를 대신 사용해야 방향이 뒤집히지 않음
+  var inward=ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward);
   var parentShape=ctx2_.shape;
   var edge_=ctx2_.edge||'unknown';
   var rx,ry,rw,rh;
@@ -1141,14 +1216,16 @@ function drawGrindRegion(s,preview){
     // 로컬 그리드 영역 (캔버스 픽셀 단위)
     var _lx,_ly,_lw,_lh;
     var _isLH=Math.abs(_ly2-_ly1)<1;
+    // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
+    var _matOutRot=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})();
     if(_isLH){
       var _lxa=Math.min(_lx1,_lx2),_lxb=Math.max(_lx1,_lx2);
-      if(_ly1<0){_lx=_lxa;_ly=-_lrh/2;_lw=_lxb-_lxa;_lh=_dpx;}
-      else{_lx=_lxa;_ly=_lrh/2-_dpx;_lw=_lxb-_lxa;_lh=_dpx;}
+      if(_ly1<0){_lx=_lxa;_ly=_matOutRot?(-_lrh/2-_dpx):(-_lrh/2);_lw=_lxb-_lxa;_lh=_dpx;}
+      else{_lx=_lxa;_ly=_matOutRot?(_lrh/2):(_lrh/2-_dpx);_lw=_lxb-_lxa;_lh=_dpx;}
     } else {
       var _lya=Math.min(_ly1,_ly2),_lyb=Math.max(_ly1,_ly2);
-      if(_lx1<0){_lx=-_lrw/2;_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
-      else{_lx=_lrw/2-_dpx;_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
+      if(_lx1<0){_lx=_matOutRot?(-_lrw/2-_dpx):(-_lrw/2);_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
+      else{_lx=_matOutRot?(_lrw/2):(_lrw/2-_dpx);_ly=_lya;_lw=_dpx;_lh=_lyb-_lya;}
     }
     // 회전된 캔버스에서 그리기
     ctx.save();
@@ -1182,11 +1259,13 @@ function drawGrindRegion(s,preview){
   }
 
   if(parentShape&&parentShape.kind==='rect'&&edge_!=='unknown'){
+    // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
+    var _matOutEdge=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})();
     // 부모 rect의 실제 엣지 좌표 기준 — 대각선으로 그려도 올바른 직사각형 보장
-    if(edge_==='top'){rx=xmin;rw=xmax-xmin;ry=parentShape.y;rh=depth;}
-    else if(edge_==='bottom'){rx=xmin;rw=xmax-xmin;ry=parentShape.y+parentShape.h-depth;rh=depth;}
-    else if(edge_==='left'){ry=ymin;rh=ymax-ymin;rx=parentShape.x;rw=depth;}
-    else if(edge_==='right'){ry=ymin;rh=ymax-ymin;rx=parentShape.x+parentShape.w-depth;rw=depth;}
+    if(edge_==='top'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y-depth):parentShape.y;rh=depth;}
+    else if(edge_==='bottom'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y+parentShape.h):(parentShape.y+parentShape.h-depth);rh=depth;}
+    else if(edge_==='left'){ry=ymin;rh=ymax-ymin;rx=_matOutEdge?(parentShape.x-depth):parentShape.x;rw=depth;}
+    else if(edge_==='right'){ry=ymin;rh=ymax-ymin;rx=_matOutEdge?(parentShape.x+parentShape.w):(parentShape.x+parentShape.w-depth);rw=depth;}
     else{if(isH){rx=xmin;rw=xmax-xmin;ry=inward>0?s.y1:s.y1-depth;rh=depth;}
     else{ry=ymin;rh=ymax-ymin;rx=inward>0?s.x1:s.x1-depth;rw=depth;}}
   } else {
@@ -1195,19 +1274,27 @@ function drawGrindRegion(s,preview){
   }
   var c1=toCanvas(rx,ry),c2=toCanvas(rx+rw,ry+rh);
   var px=c1[0],py=c1[1],pw=c2[0]-c1[0],ph=c2[1]-c1[1];
+  // 싱크볼/쿡탑처럼 재료가 rect 바깥쪽에 있는 경우, 안쪽 라운드 경계로 추가 클리핑하면 바깥쪽 스트립이
+  // 통째로 지워지므로(겹치는 영역이 거의 없음) 이 경우엔 라운드 경계 클리핑을 적용하지 않음
+  var _matOutForClip=!!(parentShape&&(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})());
   // Yellow hatch fill — 부모 도형이 라운드/챔퍼(개별 코너 s.corners 또는 균일 cornerType)이면 그 경계에 맞춰 클리핑
   ctx.save();
-  if(parentShape&&parentShape.kind==='rect'&&parentShape.corners&&Object.keys(parentShape.corners).length>0){
+  // 먼저 항상 스트립 영역(px,py,pw,ph) 자체로 클리핑을 제한한다 — 해칭 선은 스트립보다 훨씬 넓은 범위로
+  // 그려지기 때문에(빈틈없이 채우기 위한 알고리즘), 이 1차 클리핑이 없으면 라운드 경계 클리핑만으로는
+  // 해칭이 스트립 밖(도형 전체)까지 새어나가는 문제가 생김(특히 좌/우 엣지처럼 스트립이 좁고 긴 경우 심함)
+  ctx.beginPath();ctx.rect(px,py,pw,ph);ctx.clip();
+  if(!_matOutForClip&&parentShape&&parentShape.kind==='rect'&&parentShape.corners&&Object.keys(parentShape.corners).length>0){
     var pc1_=toCanvas(parentShape.x,parentShape.y),pc2_=toCanvas(parentShape.x+parentShape.w,parentShape.y+parentShape.h);
     var prx=Math.min(pc1_[0],pc2_[0]),pry=Math.min(pc1_[1],pc2_[1]),prw=Math.abs(pc2_[0]-pc1_[0]),prh=Math.abs(pc2_[1]-pc1_[1]);
     buildCornerPath(prx,pry,prw,prh,parentShape.corners);
-  } else if(parentShape&&parentShape.kind==='rect'&&(parentShape.cornerType==='fillet'||parentShape.cornerType==='chamfer')&&(parentShape.cornerSize||0)>0){
+    ctx.clip();
+  } else if(!_matOutForClip&&parentShape&&parentShape.kind==='rect'&&(parentShape.cornerType==='fillet'||parentShape.cornerType==='chamfer')&&(parentShape.cornerSize||0)>0){
     var pc1_=toCanvas(parentShape.x,parentShape.y),pc2_=toCanvas(parentShape.x+parentShape.w,parentShape.y+parentShape.h);
     var prx=Math.min(pc1_[0],pc2_[0]),pry=Math.min(pc1_[1],pc2_[1]),prw=Math.abs(pc2_[0]-pc1_[0]),prh=Math.abs(pc2_[1]-pc1_[1]);
     var csPx2=mm2px(Math.min(parentShape.cornerSize||0,parentShape.w/2,parentShape.h/2));
     if(parentShape.cornerType==='fillet')buildFillet(prx,pry,prw,prh,csPx2);else buildChamfer(prx,pry,prw,prh,csPx2);
-  } else {ctx.beginPath();ctx.rect(px,py,pw,ph);}
-  ctx.clip();
+    ctx.clip();
+  }
   ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fillRect(px,py,pw,ph);
   ctx.strokeStyle='rgba(255,215,0,'+alpha+')';ctx.lineWidth=1.2;ctx.setLineDash([]);
   var step=Math.max(4,mm2px(4));
@@ -1306,8 +1393,8 @@ function drawShape(s,preview){
   if(s.kind==='jollymark'){drawJollyMark(s,preview);return;}
   if(s.kind==='gosramark'){drawGosraMark(s,preview);return;}
   var sel=isSelected(s);
-  var col=printRender?'#1565C0':(sel?'#FF6D00':(s===hoverShape?'#64B5F6':(SCOL[s.kind]||'#1565C0')));
-  var fill=printRender?'rgba(21,101,192,0.07)':(sel?'rgba(51,68,85,0.45)':(s===hoverShape?'rgba(100,181,246,0.10)':(SFILL[s.kind]||'')));
+  var col=printRender?'#1565C0':(sel?'#FF6D00':(s===hoverShape?'#64B5F6':_baseColor(s)));
+  var fill=printRender?'rgba(21,101,192,0.07)':(sel?'rgba(51,68,85,0.45)':(s===hoverShape?'rgba(100,181,246,0.10)':_baseFill(s)));
   ctx.strokeStyle=preview?'rgba(255,80,80,0.85)':col;
   ctx.lineWidth=sel?2.5:(s===hoverShape?2:1.5);
   if(preview)ctx.setLineDash([4,3]);
@@ -1346,11 +1433,11 @@ function drawShape(s,preview){
     var cc=toCanvas(s.cx,s.cy),cr=mm2px(s.r);
     ctx.beginPath();ctx.arc(cc[0],cc[1],cr,0,2*Math.PI);
     if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}
-    // 타공 절단 경로: 파선 원 (선택/미리보기 시에는 실선 유지)
-    if(!preview&&!sel){ctx.setLineDash([5,3]);}
+    // 타공 절단 경로: 파선 원 (선택/미리보기 시에는 실선 유지). 원형 절단(홀 아닌 실제 커팅)은 항상 실선.
+    if(!preview&&!sel&&s.holeType!=='cut'){ctx.setLineDash([5,3]);}
     ctx.stroke();ctx.setLineDash([]);
-    // 중심 십자선
-    if(!preview){var cs=Math.max(4,Math.min(cr*0.28,11));ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cc[0]-cs,cc[1]);ctx.lineTo(cc[0]+cs,cc[1]);ctx.moveTo(cc[0],cc[1]-cs);ctx.lineTo(cc[0],cc[1]+cs);ctx.stroke();}
+    // 중심 십자선 (원형 절단은 타공이 아니므로 십자선 생략)
+    if(!preview&&s.holeType!=='cut'){var cs=Math.max(4,Math.min(cr*0.28,11));ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cc[0]-cs,cc[1]);ctx.lineTo(cc[0]+cs,cc[1]);ctx.moveTo(cc[0],cc[1]-cs);ctx.lineTo(cc[0],cc[1]+cs);ctx.stroke();}
     if(!preview)drawDimsCircle(s,col);
   } else if(s.kind==='ellipse'){
     var ce=toCanvas(s.cx,s.cy);ctx.beginPath();ctx.ellipse(ce[0],ce[1],mm2px(s.rx),mm2px(s.ry),0,0,2*Math.PI);
@@ -2194,6 +2281,19 @@ function doTrim(mx,my){
   var hx1=hitEdge.ax,hy1=hitEdge.ay,hx2=hitEdge.bx,hy2=hitEdge.by;
   var hlen=Math.hypot(hx2-hx1,hy2-hy1);if(hlen<1)return;
 
+  // 트림 대상이 라운드(필릿)를 가진 rect이면, 그 라운드의 탄젠트점 좌표를 미리 구해둔다.
+  // 안내선/치수선 등이 우연히 탄젠트점에 딱 맞춰 그려져 있는 경우, 그 지점의 "닿음"을
+  // 진짜 트림 절단 교차점으로 오인해서 관련 없는 코너의 라운드가 잘못 제거되는 것을 막기 위함
+  // (탄젠트점 자체에서 트림해도 실질적으로 잘려나가는 재료가 없으므로, 이 지점은 트림 절단 기준으로 의미가 없음).
+  var _tanPts=[];
+  if(hit.kind==='rect'&&(hitEdge.side==='top'||hitEdge.side==='right'||hitEdge.side==='bottom'||hitEdge.side==='left')){
+    var _ecMap={top:['tl','tr'],right:['tr','br'],bottom:['br','bl'],left:['bl','tl']};
+    _ecMap[hitEdge.side].forEach(function(ck){
+      var _info=_rcInfo(hit,ck);
+      if(_info.r>0){_tanPts.push(_rcPIn(hit,ck));_tanPts.push(_rcPOut(hit,ck));}
+    });
+  }
+
   // 다른 도형과의 교점 수집
   var ixs=[];
   shapes.forEach(function(s){
@@ -2212,7 +2312,8 @@ function doTrim(mx,my){
         var t=Math.hypot(p.x-hx1,p.y-hy1)/hlen;
         // 끝점에서 0.5mm 이상인 교점만 수집
         var d0=Math.hypot(p.x-hx1,p.y-hy1),d1=Math.hypot(p.x-hx2,p.y-hy2);
-        if(d0>0.5&&d1>0.5)ixs.push({x:p.x,y:p.y,t:t});
+        var nearTan=_tanPts.some(function(tp){return Math.hypot(p.x-tp.x,p.y-tp.y)<0.5;});
+        if(d0>0.5&&d1>0.5&&!nearTan)ixs.push({x:p.x,y:p.y,t:t});
       }
     });
   });
@@ -2292,36 +2393,54 @@ function doTrim(mx,my){
       {ax:rx+rw,ay:ry+rh,bx:rx,   by:ry+rh,s:'bottom',cA:'br',cB:'bl'},
       {ax:rx,   ay:ry+rh,bx:rx,   by:ry,   s:'left',  cA:'bl',cB:'tl'}
     ];
+    // lo와 hi가 둘 다 있으면(엣지 중간에 다른 도형이 양쪽으로 걸쳐있는 노치/컷아웃) 두 교점 "사이" 중간 구간만
+    // 제거하고 양쪽 끝(및 양쪽 코너의 라운드)은 그대로 유지해야 함. 한쪽만 있을 때만 "그 쪽 끝까지 통째로" 제거하는
+    // (코너 하나가 사라지는) 방식이 맞음 - 이 둘을 구분하지 않으면 중간 노치를 트림할 때 관련 없는 반대쪽 코너의
+    // 라운드까지 통째로 사라지는 버그가 발생함.
+    var midCut=!!(lo&&hi);
     var ci=null;
-    if(lo&&hi){ci=(hitT-lo.t<hi.t-hitT)?lo:hi;}
+    if(midCut){/* ci는 이 경우 사용하지 않음 */}
     else{ci=lo||hi;}
-    // 트림 엣지에서 잘려나가 사라지는 코너(반대쪽 코너는 그대로 유지)
+    // 트림 엣지에서 잘려나가 사라지는 코너(반대쪽 코너는 그대로 유지). 중간 노치 트림이면 양쪽 코너 모두 유지.
     var removedCorner=null;
-    if(ci){
+    if(!midCut&&ci){
       var hitSideDef=sides4.filter(function(e){return e.s===hitEdge.side;})[0];
-      removedCorner=(hitT<=0.5)?hitSideDef.cA:hitSideDef.cB;
+      // 주의: 0.5(엣지 전체 중간점)가 아니라 실제 트림 기준점 ci.t와 비교해야 함.
+      // ci는 lo/hi 중 클릭 위치에 더 가까운 쪽이므로, 클릭이 ci보다 앞(START측)이면 앞부분(cA쪽)이 제거되고,
+      // ci보다 뒤(END측)면 뒷부분(cB쪽)이 제거된다. 고정값 0.5와 비교하면 ci가 hi로 선택된 경우 등에서 반대로 판정됨.
+      removedCorner=(hitT<=ci.t)?hitSideDef.cA:hitSideDef.cB;
     }
     sides4.forEach(function(e){
       var ea={x:e.ax,y:e.ay},eb={x:e.bx,y:e.by};
       // 라운드/모따기 보존: 제거되는 코너가 아니면 끝점을 탄젠트점으로 이동
       if(e.cA!==removedCorner&&CK[e.cA].r>0)ea=_pOut(e.cA);
       if(e.cB!==removedCorner&&CK[e.cB].r>0)eb=_pIn(e.cB);
+      // 트림으로 rect가 선으로 분해된 후에도 어느 방향이 "안쪽(재료 방향)"인지 알 수 있도록
+      // 원래 rect의 엣지명과 inward 방향을 선 도형에 기록해둠 (findEdgeContext의 fallback에서 사용)
+      var _eInward=(e.s==='top'||e.s==='left')?1:-1;
       if(e.s!==hitEdge.side){
-        if(Math.hypot(eb.x-ea.x,eb.y-ea.y)>0.5)shapes.push(makeShape('line',{x1:ea.x,y1:ea.y,x2:eb.x,y2:eb.y}));
+        if(Math.hypot(eb.x-ea.x,eb.y-ea.y)>0.5)shapes.push(makeShape('line',{x1:ea.x,y1:ea.y,x2:eb.x,y2:eb.y,edgeSide:e.s,edgeInward:_eInward,edgeGroupId:hit.groupId||null}));
+      } else if(midCut){
+        // 중간 노치 트림: lo~hi 사이만 제거, 양쪽 끝(및 양쪽 코너의 라운드 보정)은 그대로 유지
+        var segA={x1:ea.x,y1:ea.y,x2:lo.x,y2:lo.y,edgeSide:e.s,edgeInward:_eInward,edgeGroupId:hit.groupId||null};
+        var segB={x1:hi.x,y1:hi.y,x2:eb.x,y2:eb.y,edgeSide:e.s,edgeInward:_eInward,edgeGroupId:hit.groupId||null};
+        if(Math.hypot(segA.x2-segA.x1,segA.y2-segA.y1)>0.5)shapes.push(makeShape('line',segA));
+        if(Math.hypot(segB.x2-segB.x1,segB.y2-segB.y1)>0.5)shapes.push(makeShape('line',segB));
       } else if(ci){
-        // 클릭된 엣지: 트림
+        // 클릭된 엣지: 한쪽 끝까지 통째로 트림(그 쪽 코너는 사라짐)
         var l1=null;
-        if(hitT<=0.5){
+        if(hitT<=ci.t){
           // 앞부분 제거 → ci 이후 유지 (반대쪽 끝은 라운드 보정된 eb)
           l1={x1:ci.x,y1:ci.y,x2:eb.x,y2:eb.y};
         } else {
           // 뒷부분 제거 → ci 이전 유지 (반대쪽 끝은 라운드 보정된 ea)
           l1={x1:ea.x,y1:ea.y,x2:ci.x,y2:ci.y};
         }
+        if(l1){l1.edgeSide=e.s;l1.edgeInward=_eInward;l1.edgeGroupId=hit.groupId||null;}
         if(l1&&Math.hypot(l1.x2-l1.x1,l1.y2-l1.y1)>0.5)shapes.push(makeShape('line',l1));
       } else {
         // 교점 못찾으면 해당 엣지도 그대로(끝점만 라운드 보정)
-        if(Math.hypot(eb.x-ea.x,eb.y-ea.y)>0.5)shapes.push(makeShape('line',{x1:ea.x,y1:ea.y,x2:eb.x,y2:eb.y}));
+        if(Math.hypot(eb.x-ea.x,eb.y-ea.y)>0.5)shapes.push(makeShape('line',{x1:ea.x,y1:ea.y,x2:eb.x,y2:eb.y,edgeSide:e.s,edgeInward:_eInward,edgeGroupId:hit.groupId||null}));
       }
     });
     // 코너 라운드(아크)/모따기(선) 복원 - 트림으로 잘려나간 코너는 제외
@@ -2350,6 +2469,7 @@ function finalizeShape(fmx,fmy){
   var s=null;
   if(tool==='rect'){var x=Math.min(x0,mx),y=Math.min(y0,my),w=Math.abs(mx-x0),h=Math.abs(my-y0);if(w<1||h<1){drawStart=null;return;}s=makeShape('rect',{x:x,y:y,w:w,h:h,cornerType:'none',cornerSize:0});}
   else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});}
+  else if(tool==='circlecut'){var dragR2=Math.hypot(mx-x0,my-y0);var phiEl2=document.getElementById('circlecut-phi');var phiVal2=phiEl2?parseFloat(phiEl2.value):0;var r2=dragR2<2&&phiVal2>0?phiVal2/2:dragR2;if(r2<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r2,holeType:'cut'});}
   else if(tool==='line'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('line',{x1:x0,y1:y0,x2:mx,y2:my});}
   else if(tool==='dimline'){
     if(dimLineType==='r'&&_dimRCircle){
@@ -2369,7 +2489,7 @@ function finalizeShape(fmx,fmy){
   else if(tool==='sinkbowl'){
     var rx=x0-414,ry=y0-216;
     var sgid='grp'+(nextId);
-    var rs=makeShape('rect',{x:rx,y:ry,w:828,h:432,cornerType:'fillet',cornerSize:24,groupId:sgid,groupRole:'main'});
+    var rs=makeShape('rect',{x:rx,y:ry,w:828,h:432,cornerType:'fillet',cornerSize:24,groupId:sgid,groupRole:'main',applianceType:'sink'});
     saveHistory();shapes.push(rs);
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx+828,y2:ry,outward:-1,groupId:sgid,groupRole:'top'}));
     shapes.push(makeShape('gosramark',{x1:rx,y1:ry+432,x2:rx+828,y2:ry+432,outward:1,groupId:sgid,groupRole:'bottom'}));
@@ -2380,7 +2500,7 @@ function finalizeShape(fmx,fmy){
   else if(tool==='cooktop'){
     var rx2=x0-280,ry2=y0-240;
     var cgid='grp'+(nextId);
-    var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main'});
+    var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main',applianceType:'cook'});
     saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
   if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];_savedBoardLayout=null;_savedBoardImg=null;}
@@ -2892,6 +3012,7 @@ cv.addEventListener('mousemove',function(e){
     var ps=null;
     if(tool==='rect'){ps={kind:'rect',x:Math.min(x0,mx),y:Math.min(y0,my),w:Math.abs(mx-x0),h:Math.abs(my-y0),cornerType:'none',cornerSize:0,ops:[]};}
     else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:pendingHoleType,ops:[]};}
+    else if(tool==='circlecut'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:'cut',ops:[]};}
     else if(tool==='line'){ps={kind:'line',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
     else if(tool==='dimline'){
       if(dimLineType==='r'&&_dimRCircle){
@@ -2904,8 +3025,8 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='grind'){var ctx2=findEdgeContext(x0,y0,mx,my);ps={kind:'grindregion',x1:x0,y1:y0,x2:mx,y2:my,inward:ctx2.inward,ops:[]};}
     else if(tool==='jollycut'){ps={kind:'jollymark',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
-    else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,ops:[]};}
-    else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,ops:[]};}
+    else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
+    else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
     if(ps){ctx.globalAlpha=0.8;drawShape(ps,true);ctx.globalAlpha=1;}
   }
 });
@@ -3155,7 +3276,7 @@ function loadAllTierPrices(){
   });
 }
 function calcCost(){
-  var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0};
+  var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
   var cnt={sink:0,cook:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
@@ -3167,7 +3288,8 @@ function calcCost(){
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
       }
     } else if(s.kind==='circle'||s.kind==='hole'){
-      if(s.holeType==='faucet')cnt.holef++;else cnt.holeo++;
+      if(s.holeType==='cut')lenMm.circlecut+=perimeterMm(s);
+      else if(s.holeType==='faucet')cnt.holef++;else cnt.holeo++;
     } else if(s.kind==='line'){
       lenMm.line+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='grindregion'){
@@ -3198,6 +3320,8 @@ function calcCost(){
   var pHolef=gta('holef'),subHolef=cnt.holef*pHolef*qty;
   var pHoleo=gta('holeo'),subHoleo=cnt.holeo*pHoleo*qty;
   var pLine=gta('line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
+  // 원형 절단 커팅비는 별도 단가 없이 "선 절단" 단가(pLine)를 그대로 따라간다
+  var mCirclecut=lenMm.circlecut/1000,subCirclecut=mCirclecut*pLine*qty;
   var pChamfer=gta('chamfer'),subChamfer=cnt.chamfer*pChamfer*qty;
   var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
   var pGrind150=gta('grind150'),subGrind150=cnt.grind150*pGrind150*qty;
@@ -3210,13 +3334,14 @@ function calcCost(){
   upd('pl-holef','ps-holef',cnt.holef>0?cnt.holef+'회':'-',subHolef);
   upd('pl-holeo','ps-holeo',cnt.holeo>0?cnt.holeo+'회':'-',subHoleo);
   upd('pl-line','ps-line',mLine>0.001?mLine.toFixed(3)+'m':'-',subLine);
+  upd('pl-circlecut','ps-circlecut',mCirclecut>0.001?mCirclecut.toFixed(3)+'m':'-',subCirclecut);
   upd('pl-chamfer','ps-chamfer',cnt.chamfer>0?cnt.chamfer+'회':'-',subChamfer);
   upd('pl-grind','ps-grind',mGrind>0.001?mGrind.toFixed(3)+'m':'-',subGrind);
   upd('pl-grind150','ps-grind150',cnt.grind150>0?cnt.grind150+'회':'-',subGrind150);
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subSink+subCook+subHolef+subHoleo+subLine;
+  var totalCut=subRect+subSink+subCook+subHolef+subHoleo+subLine+subCirclecut;
   var totalAdd=subChamfer+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
@@ -3372,6 +3497,7 @@ document.addEventListener('keydown',function(e){
       if(_sb)_sb.classList.add('active');
       document.getElementById('fillet-sub').style.display='none';
       document.getElementById('circle-sub').style.display='none';
+      document.getElementById('circlecut-sub').style.display='none';
     }
     redraw();
   }
@@ -3387,11 +3513,13 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
     document.getElementById('fillet-sub').style.display=(tool==='fillet')?'block':'none';
     document.getElementById('circle-sub').style.display=(tool==='circle')?'block':'none';
+    document.getElementById('circlecut-sub').style.display=(tool==='circlecut')?'block':'none';
     document.getElementById('grind-sub').style.display=(tool==='grind')?'block':'none';
     document.getElementById('dimline-sub').style.display=(tool==='dimline')?'block':'none';
     if(tool!=='grind'){grind150mode=false;grind100mode=false;var g150b=document.getElementById('grind-150-btn');if(g150b)g150b.style.background='#37474F';var g100b=document.getElementById('grind-100-btn');if(g100b)g100b.style.background='#37474F';}
     if(tool==='fillet')setTimeout(function(){document.getElementById('fillet-r').focus();document.getElementById('fillet-r').select();},50);
     if(tool==='circle')setTimeout(function(){document.getElementById('circle-phi').focus();document.getElementById('circle-phi').select();},50);
+    if(tool==='circlecut')setTimeout(function(){document.getElementById('circlecut-phi').focus();document.getElementById('circlecut-phi').select();},50);
     if(tool==='grind')setTimeout(function(){document.getElementById('grind-depth').focus();document.getElementById('grind-depth').select();},50);
   };
 });
@@ -3469,10 +3597,14 @@ function updatePropsPanel(){
   } else if(s.kind==='circle'||s.kind==='hole'){
     html+='<div class="prop-row"><label>Φ(mm):</label><input type="number" id="pp-phi" value="'+(s.r*2).toFixed(2)+'" step="1" oninput="livePropPhi(this.value)"></div>';
     var _ht=s.holeType||'outlet';
-    html+='<div class="prop-row"><label>타공 유형:</label><div style="display:flex;gap:4px">';
-    html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="outlet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'outlet\')">콘센트</button>';
-    html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="faucet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'faucet\')">수전</button>';
-    html+='</div></div>';
+    if(_ht==='cut'){
+      html+='<div style="color:#90CAF9;font-size:11px;padding:4px">원형 절단 (커팅비는 선 절단 단가 적용)</div>';
+    } else {
+      html+='<div class="prop-row"><label>타공 유형:</label><div style="display:flex;gap:4px">';
+      html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="outlet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'outlet\')">콘센트</button>';
+      html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="faucet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'faucet\')">수전</button>';
+      html+='</div></div>';
+    }
     var hd=s.hideDims||{};
     html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
@@ -4737,6 +4869,7 @@ function showPrintPreview(){
       {name:'수전 타공',qty:_tv('pl-holef'),sub:_tv('ps-holef')},
       {name:'콘센트 타공',qty:_tv('pl-holeo'),sub:_tv('ps-holeo')},
       {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
+      {name:'원형 절단',qty:_tv('pl-circlecut'),sub:_tv('ps-circlecut')},
       {g:'추가 가공',name:'라운드',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
       {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
       {name:'졸리컷',qty:_tv('pl-jolly'),sub:_tv('ps-jolly')},
