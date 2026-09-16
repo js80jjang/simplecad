@@ -1951,6 +1951,24 @@ function _drawCircleVDimRight(hcx,hcy,ref,dist,dir,inner){
   // 클릭 편집 가능하도록 dimLabels 등록
   if(inner)dimLabels.push({kind:'gap',outer:ref,inner:inner,dir:dir,field:'_gap',shape:inner,px:_lx+10,py:_ly});
 }
+// 선 절단(line)만으로 그려진 상판 외곽 등, 이를 감싸는 단일 rect가 없을 때 쓰는 대체 외곽 기준.
+// 도형 전체(선/사각/아크/타원 - 홀/타공/그룹(싱크볼·쿡탑 등)/치수선/가공마크는 제외)의 바운딩박스를 구함.
+function _boundaryBBox(excludeInner){
+  var l=Infinity,t=Infinity,r=-Infinity,b=-Infinity,found=false;
+  function _upd(x,y){if(x<l)l=x;if(x>r)r=x;if(y<t)t=y;if(y>b)b=y;found=true;}
+  shapes.forEach(function(s){
+    if(s===excludeInner)return;
+    if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark')return;
+    if(s.kind==='circle'||s.kind==='hole')return; // 홀/타공은 외곽 경계로 취급하지 않음
+    if(s.groupId)return; // 싱크볼/쿡탑 자신 및 그 하위 마크는 외곽 판단에서 제외
+    if(s.kind==='line'){_upd(s.x1,s.y1);_upd(s.x2,s.y2);return;}
+    var bb=getBBox(s);
+    if(!bb)return;
+    _upd(bb.l,bb.t);_upd(bb.r,bb.b);
+  });
+  if(!found)return null;
+  return {x:l,y:t,w:r-l,h:b-t};
+}
 function drawNestDims(){
   for(var j=0;j<shapes.length;j++){
     var inner=shapes[j];
@@ -1974,7 +1992,14 @@ function drawNestDims(){
         if(isInsideRect(inner,s)&&s.w*s.h<bestArea){bestArea=s.w*s.h;bestOuter=s;}
       }
     }
-    if(!bestOuter)continue;
+    if(!bestOuter){
+      // 사각 절단(rect)으로 둘러싸여 있지 않은 경우(선 절단으로만 상판 외곽을 그린 경우 등)에도
+      // 싱크볼/쿡탑/타공의 위치를 치수로 지정할 수 있도록, 전체 도형(선/사각/아크 등)의 바운딩박스를
+      // 대신 외곽 기준으로 사용한다.
+      var _isApplianceMain=(inner.kind==='rect'&&inner.groupId&&inner.groupRole==='main');
+      if(isCirc||_isApplianceMain)bestOuter=_boundaryBBox(inner);
+      if(!bestOuter)continue;
+    }
     var outer=bestOuter;
     if(!printMode&&!isSelected(inner)&&outer!==hoverShape&&!isSelected(outer)&&inner!==hoverShape)continue;
     var ib=getBBox(inner);
