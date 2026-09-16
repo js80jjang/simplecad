@@ -948,6 +948,12 @@ function getBBox(s){
   if(s.kind==='ellipse')return{l:s.cx-s.rx,t:s.cy-s.ry,r:s.cx+s.rx,b:s.cy+s.ry,mx:s.cx,my:s.cy};
   return null;
 }
+// getBBox 확장판: line(선 절단 등)도 포함 — 도면 전체 맞춤(fit) 계산처럼 모든 도형을 빠짐없이 포함해야 하는 경우에 사용.
+// getBBox가 line에 대해 null을 반환하는 이유(회전 rect 등과 개념이 다름)는 그대로 두고, 여기서만 보완함.
+function getBBoxAny(s){
+  if(s.kind==='line')return{l:Math.min(s.x1,s.x2),t:Math.min(s.y1,s.y2),r:Math.max(s.x1,s.x2),b:Math.max(s.y1,s.y2)};
+  return getBBox(s);
+}
 // 회전된 rect의 4꼭짓점 (canvas px)
 function rotRectCorners(s){
   var cx=s.x+s.w/2,cy=s.y+s.h/2,hw=s.w/2,hh=s.h/2;
@@ -1470,12 +1476,18 @@ function drawDimsLine(s,col){
   ctx.fillStyle=col||'#90CAF9';
   ctx.font=(printRender?'bold 44px':'bold 10px')+' Consolas';
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(dist.toFixed(2),0,-2);ctx.restore();
+  ctx.fillText(_fmtDim(dist),0,-2);ctx.restore();
   // 선 길이 치수 클릭 가능하도록 등록
   dimLabels.push({shape:s,field:'dist',px:mx2,py:my2});
 }
 
 // ─── 치수 표시 ───
+// 치수 값 포맷: 기본은 소수점 없이 정수로 표시하고, 실제로 소수점 아래 값이 입력된 경우에만 그 값을 그대로 보여줌(불필요한 0은 제거)
+function _fmtDim(v){
+  var r=Math.round(v);
+  if(Math.abs(v-r)<0.005)return r.toString();
+  return (Math.round(v*100)/100).toString();
+}
 function dlbl(sel){ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#EF9A9A');ctx.font=(printRender?'bold 44px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';}
 // 치수 값 포맷: printRender에서 소수점 없으면 정수, mm 생략
 function _fmtD(v){if(printRender){return Math.abs(v%1)<0.05?Math.round(v).toString():v.toFixed(1);}return v.toFixed(1)+' mm';}
@@ -1850,7 +1862,7 @@ function drawDimLine(s,preview){
   var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);
   var mx2=(q1x+q2x)/2,my2=(q1y+q2y)/2;
   var lt=s.labelType||'dist';
-  var distLabel=lt==='phi'?('Φ'+dist.toFixed(2)):dist.toFixed(2);
+  var distLabel=lt==='phi'?('Φ'+_fmtDim(dist)):_fmtDim(dist);
   ctx.save();ctx.translate(mx2,my2);var da=angle;if(Math.cos(da)<-0.01)da+=Math.PI;ctx.rotate(da);
   var dlbw=printRender?96:30;
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-9,dlbw*2,12);}
@@ -4602,7 +4614,7 @@ function exportDrawingA4(){
   var mainCv=document.getElementById('cv');
   // 전체 도형 BBox
   var allBB=null;
-  shapes.forEach(function(s){var bb=getBBox(s);if(!bb)return;if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}});
+  shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}});
   if(!allBB)return;
   var mmW=allBB.r-allBB.l,mmH=allBB.b-allBB.t;
   // 방향 자동 결정
@@ -4804,7 +4816,7 @@ function showPrintPreview(){
   // 모든 도형 BBox 계산
   var allBB=null;
   shapes.forEach(function(s){
-    var bb=getBBox(s);if(!bb)return;
+    var bb=getBBoxAny(s);if(!bb)return;
     if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}
     else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}
   });
