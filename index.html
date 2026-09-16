@@ -3235,10 +3235,15 @@ function showGapDimInput(d){
           else if(dir==='top')inner.cy=_outside?outer.y-v:outer.y+v;
           else if(dir==='bottom')inner.cy=_outside?outer.y+outer.h+v:outer.y+outer.h-v;
         } else if(inner.kind==='rect'){
-          if(dir==='left')inner.x=outer.x+v;
-          else if(dir==='right')inner.x=outer.x+outer.w-v-inner.w;
-          else if(dir==='top')inner.y=outer.y+v;
-          else if(dir==='bottom')inner.y=outer.y+outer.h-v-inner.h;
+          // 회전된 rect(싱크볼/쿡탑 등)는 inner.w/inner.h가 로컬(비회전) 치수라서 그대로 빼면 위치가 완전히 틀어짐.
+          // 대신 "이동량(shift)"을 실제 바운딩박스(ib) 기준으로 구해서 x/y에 더해준다 — 회전 여부와 무관하게
+          // 중심 이동은 바운딩박스도 그대로 같은 만큼 이동시키므로 항상 정확함.
+          var _shiftX=0,_shiftY=0;
+          if(dir==='left')_shiftX=(outer.x+v)-ib.l;
+          else if(dir==='right')_shiftX=(outer.x+outer.w-v)-ib.r;
+          else if(dir==='top')_shiftY=(outer.y+v)-ib.t;
+          else if(dir==='bottom')_shiftY=(outer.y+outer.h-v)-ib.b;
+          inner.x+=_shiftX;inner.y+=_shiftY;
           syncGroupShapes(inner);
           if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
         }
