@@ -1148,7 +1148,8 @@ function drawGrindRegion(s,preview){
     var llen=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(llen<0.5)return;
     var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
     // 부모 rect를 못 찾으면 생성 시점에 저장해둔 s.inward를 사용 (아래 축정렬 케이스와 동일한 이유)
-    var inw=ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward);
+    // 사용자가 "방향 반전" 버튼으로 직접 뒤집은 경우(s.inwardOverride)엔 항상 그 값을 우선함
+    var inw=s.inwardOverride?s.inward:(ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward));
     var ux=(s.x2-s.x1)/llen,uy=(s.y2-s.y1)/llen;
     // 법선 (선 진행방향 기준 왼쪽=inward:1, 오른쪽=inward:-1)
     var nx=-inw*uy*depth,ny=inw*ux*depth;
@@ -1193,7 +1194,8 @@ function drawGrindRegion(s,preview){
   var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
   // 트림 등으로 rect가 선(line)으로 분해되어 부모 rect를 못 찾으면 findEdgeContext는 기본값(1)을 반환하는데,
   // 이때는 생성 시점에 정확히 계산해 저장해둔 s.inward를 대신 사용해야 방향이 뒤집히지 않음
-  var inward=ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward);
+  // 사용자가 "방향 반전" 버튼으로 직접 뒤집은 경우(s.inwardOverride)엔 항상 그 값을 우선함
+  var inward=s.inwardOverride?s.inward:(ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward));
   var parentShape=ctx2_.shape;
   var edge_=ctx2_.edge||'unknown';
   var rx,ry,rw,rh;
@@ -3653,6 +3655,7 @@ function updatePropsPanel(){
     html+='<div class="prop-row"><label>라벨:</label><select id="pp-labeltype" onchange="liveProp(\'labelType\',this.value)"><option value="dist"'+(lt==='dist'?' selected':'')+'>길이</option><option value="r"'+(lt==='r'?' selected':'')+'>R값</option><option value="phi"'+(lt==='phi'?' selected':'')+'>Φ</option></select></div>';
   } else if(s.kind==='grindregion'){
     html+='<div style="color:#FFD740;font-size:11px;padding:4px">밑면연마 구간<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm / 깊이: '+(s.depth||30)+' mm</small></div>';
+    html+='<button onclick="flipGrindInward()" style="width:100%;background:#263545;border:1px solid #546E7A;color:#FFD740;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer;margin-bottom:4px">⇄ 방향 반전 (도형 밖으로 나갈 때)</button>';
     var hd=s.hideDims||{};
     html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
     html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','깊이',hd['dist'])+'</div>';
@@ -3736,6 +3739,19 @@ function liveProp(field,val){
   else if(field==='labelType'){saveHistory();s.labelType=val;redraw();}
   else if(field==='rx'||field==='ry'){if(!isNaN(v)&&v>0){saveHistory();s[field]=v;redraw();calcCost();}}
   else{if(!isNaN(v)&&v>0){saveHistory();s[field]=v;syncGroupShapes(s);redraw();calcCost();}}
+}
+function flipGrindInward(){
+  // 선(line)만으로 그린 상판 외곽처럼 부모 rect가 없어 안쪽 방향을 자동으로 알 수 없는 경우,
+  // 밑면연마 해칭이 도형 바깥쪽으로 나가면 사용자가 직접 방향을 뒤집을 수 있도록 함.
+  var s=selectedShapes[0];if(!s||s.kind!=='grindregion')return;
+  var isH=Math.abs(s.y2-s.y1)<0.5,isV=Math.abs(s.x2-s.x1)<0.5;
+  var ctx2_=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
+  // 현재 화면에 실제로 적용되는 방향값(자동계산 or 저장값)을 기준으로 반전
+  var curInward=s.inwardOverride?s.inward:(ctx2_.shape?ctx2_.inward:((s.inward!==undefined)?s.inward:ctx2_.inward));
+  saveHistory();
+  s.inward=-curInward;
+  s.inwardOverride=true;
+  redraw();
 }
 function setPendingHoleType(t){
   pendingHoleType=t;
