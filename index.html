@@ -2551,30 +2551,80 @@ function finalizeShape(fmx,fmy){
 // ─── 도형 제품명 라벨 ───
 var _LCOLS=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#37474F'];
 function _labelColor(lbl){var h=0;for(var i=0;i<lbl.length;i++)h=(h*31+lbl.charCodeAt(i))&0x7FFFFFFF;return _LCOLS[h%_LCOLS.length];}
+// 선(line)으로 이루어진 상판 외곽(부모도형)을 하나의 조각(피스)으로 묶기 위해,
+// 끝점이 서로 맞닿아 있는 line들을 연결된 그룹으로 나눔 (Union-Find, 허용오차 1.5mm).
+// 싱크볼/쿡탑 등 그룹(groupId)에 속한 line은 제외 — 그건 별도 조각의 부속물이 아니라 부모도형 자체와 무관함.
+function _lineBoundaryGroups(){
+  var items=[];
+  shapes.forEach(function(s,i){if(s.kind==='line'&&!s.groupId)items.push({s:s,i:i});});
+  var n=items.length;
+  var parent=[];for(var k=0;k<n;k++)parent.push(k);
+  function find(x){while(parent[x]!==x){x=parent[x];}return x;}
+  function union(a,b){var ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb;}
+  var tol=1.5;
+  function ptEq(x1,y1,x2,y2){return Math.hypot(x1-x2,y1-y2)<tol;}
+  for(var a=0;a<n;a++){
+    for(var b=a+1;b<n;b++){
+      var la=items[a].s,lb=items[b].s;
+      if(ptEq(la.x1,la.y1,lb.x1,lb.y1)||ptEq(la.x1,la.y1,lb.x2,lb.y2)||ptEq(la.x2,la.y2,lb.x1,lb.y1)||ptEq(la.x2,la.y2,lb.x2,lb.y2)){
+        union(a,b);
+      }
+    }
+  }
+  var map={};
+  items.forEach(function(it,k){var r=find(k);if(!map[r])map[r]=[];map[r].push(it);});
+  var groups=[];
+  Object.keys(map).forEach(function(kk){groups.push(map[kk]);});
+  return groups;
+}
+function _drawNumBadge(ax,ay,numStr){
+  var _snSz=printRender?22:11;
+  ctx.font='bold '+_snSz+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  var tw=ctx.measureText(numStr).width,bw=Math.max(tw+(printRender?16:8),printRender?36:18),bh=printRender?32:16,r=printRender?6:3;
+  var bx=ax+2,by=ay+2;
+  ctx.fillStyle='rgba(21,101,192,0.88)';
+  ctx.beginPath();
+  ctx.moveTo(bx+r,by);ctx.lineTo(bx+bw-r,by);ctx.arcTo(bx+bw,by,bx+bw,by+r,r);
+  ctx.lineTo(bx+bw,by+bh-r);ctx.arcTo(bx+bw,by+bh,bx+bw-r,by+bh,r);
+  ctx.lineTo(bx+r,by+bh);ctx.arcTo(bx,by+bh,bx,by+bh-r,r);
+  ctx.lineTo(bx,by+r);ctx.arcTo(bx,by,bx+r,by,r);ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.fillText(numStr,bx+bw/2,by+bh/2);
+}
 function drawShapeNumbers(){
   if(!showShapeNumbers)return;
   ctx.save();
+  // line 그룹(선 절단으로만 그려진 부모도형)마다, 배열상 가장 앞에 있는 line 하나를 "대표"로 삼아 배지 하나만 표시.
+  // 그룹 안의 line들 중 하나라도 번호(shapeNum)가 지정돼 있으면 그 값을 쓰고, 없으면 대표 line의 배열 위치를 자동 번호로 사용.
+  var _lgRep={}; // shapes 배열 인덱스(대표 line) → {num, x, y}
+  _lineBoundaryGroups().forEach(function(grp){
+    if(grp.length<2)return; // 선 하나뿐인 조각(트림 잔여 line 등)은 기존 rect 번호와 혼동을 피하기 위해 제외
+    var repItem=grp.reduce(function(a,b){return a.i<b.i?a:b;});
+    var l=Infinity,t=Infinity,num;
+    grp.forEach(function(it){
+      var s=it.s;
+      l=Math.min(l,s.x1,s.x2);t=Math.min(t,s.y1,s.y2);
+      if(num===undefined&&s.shapeNum!==undefined&&s.shapeNum!=='')num=s.shapeNum;
+    });
+    _lgRep[repItem.i]={num:num,x:l,y:t};
+  });
   var idx=0;
-  shapes.forEach(function(s){
+  shapes.forEach(function(s,i){
     idx++;
-    if(s.kind!=='rect'||s.groupId)return;
-    var anchor;
-    if(s.x!==undefined&&s.w!==undefined){anchor=toCanvas(s.x,s.y);}
-    else return;
-    var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(idx);
-    var _snSz=printRender?22:11;
-    ctx.font='bold '+_snSz+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-    var tw=ctx.measureText(numStr).width,bw=Math.max(tw+(printRender?16:8),printRender?36:18),bh=printRender?32:16,r=printRender?6:3;
-    var bx=anchor[0]+2,by=anchor[1]+2;
-    ctx.fillStyle='rgba(21,101,192,0.88)';
-    ctx.beginPath();
-    ctx.moveTo(bx+r,by);ctx.lineTo(bx+bw-r,by);ctx.arcTo(bx+bw,by,bx+bw,by+r,r);
-    ctx.lineTo(bx+bw,by+bh-r);ctx.arcTo(bx+bw,by+bh,bx+bw-r,by+bh,r);
-    ctx.lineTo(bx+r,by+bh);ctx.arcTo(bx,by+bh,bx,by+bh-r,r);
-    ctx.lineTo(bx,by+r);ctx.arcTo(bx,by,bx+r,by,r);ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.fillText(numStr,bx+bw/2,by+bh/2);
+    if(s.kind==='rect'&&!s.groupId){
+      if(s.x===undefined||s.w===undefined)return;
+      var anchor=toCanvas(s.x,s.y);
+      var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(idx);
+      _drawNumBadge(anchor[0],anchor[1],numStr);
+      return;
+    }
+    if(s.kind==='line'&&_lgRep[i]){
+      var info=_lgRep[i];
+      var anchor2=toCanvas(info.x,info.y);
+      var numStr2=(info.num!==undefined&&info.num!=='')?String(info.num):String(idx);
+      _drawNumBadge(anchor2[0],anchor2[1],numStr2);
+    }
   });
   ctx.restore();
 }
