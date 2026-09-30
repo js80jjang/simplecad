@@ -70,15 +70,6 @@ canvas{display:block;cursor:crosshair}
 #left{width:196px;background:#1e2a35;flex-shrink:0;overflow-y:auto;overflow-x:hidden;padding:6px 6px 12px;display:flex;flex-direction:column;gap:2px}
 .r-sec{color:#5BC8F5;font-size:12px;font-weight:bold;padding:8px 4px 2px}
 .r-card{background:#1e2a35;border:1px solid #2d4a5a;border-radius:3px;padding:6px;margin-bottom:4px}
-.r-row{display:flex;align-items:center;margin-bottom:4px;gap:4px}
-.r-row label{width:82px;text-align:right;font-size:12px;color:#aabbcc;flex-shrink:0}
-.r-row input{flex:1;background:#263545;border:none;color:#fff;padding:4px 6px;font-size:12px;border-radius:2px}
-.cut-row{display:flex;gap:4px;align-items:center;margin-bottom:3px}
-.cut-row input{background:#263545;border:none;color:#fff;padding:3px 5px;font-size:12px;border-radius:2px}
-.cut-row .cname{width:80px}.cut-row .cprice{width:72px}
-.cut-row span{color:#aabbcc;font-size:11px}
-.cut-row button{background:#b71c1c;border:none;color:#fff;padding:2px 6px;cursor:pointer;font-size:11px;border-radius:2px}
-.add-cut-btn{background:#263545;border:1px solid #37474f;color:#90CAF9;padding:3px 10px;cursor:pointer;font-size:11px;border-radius:2px;margin-top:2px}
 .proc-hdr2{display:grid;grid-template-columns:58px 1fr 60px;gap:2px;font-size:10px;color:#546E7A;padding:2px 4px;border-bottom:1px solid #2d4a5a;margin-bottom:2px;text-align:right}
 .proc-hdr2 span:first-child{text-align:left}
 .proc-row2{display:grid;grid-template-columns:58px 1fr 60px;gap:2px;align-items:center;padding:2px 4px;border-radius:2px}
@@ -127,11 +118,6 @@ canvas{display:block;cursor:crosshair}
 .prod-dd-name{color:#CFD8DC;font-size:11px}
 .prod-dd-size{color:#546E7A;font-size:10px}
 .prod-dd-section{padding:2px 6px;font-size:10px;color:#546E7A;background:#0d1822;letter-spacing:0.5px;border-bottom:1px solid #263545}
-.action-row{display:flex;gap:8px;padding:8px 4px}
-.action-btn{flex:1;padding:6px;border:none;color:#fff;cursor:pointer;font-size:13px;border-radius:3px}
-.action-btn.save{background:#1565C0}.action-btn.reset{background:#37474f}
-.action-btn.load{background:#263545;border:1px solid #37474f;color:#90CAF9}
-.action-btn:hover{opacity:0.85}
 /* 출력 */
 #print-modal{display:none;position:fixed;inset:0;z-index:3000;background:#fff;overflow:auto;}
 #print-modal.show{display:block;}
@@ -455,7 +441,6 @@ canvas{display:block;cursor:crosshair}
       </div>
     </div>
   </div>
-  <input type="file" id="file-input" accept=".json" style="display:none" onchange="onFileLoad(event)">
 </div>
 </div>
 <script>
@@ -463,7 +448,6 @@ canvas{display:block;cursor:crosshair}
 var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
 var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
-var _tierMult={cost:1,dealer:1.2,consumer:1.3,custom:1,retail:1};
 var TIER_PREFIX={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
 var TIER_KEYS=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
 
@@ -612,7 +596,6 @@ function syncGroupShapes(s){
       else if(gEdge==='left')ep=_sg(-_hw,0);
       else if(gEdge==='right')ep=_sg(_hw,0);
       if(ep){
-        var _gIsH=Math.abs(gs.y2-gs.y1)<0.5;
         if(gEdge==='top'||gEdge==='bottom'){gs.y1=ep[1];gs.y2=ep[1];}
         else{gs.x1=ep[0];gs.x2=ep[0];}
       }
@@ -673,7 +656,6 @@ function _rcArc(s,ck){var info=_rcInfo(s,ck),r=info.r,rx=s.x,ry=s.y,rw=s.w,rh=s.
   return{x:rx+r,y:ry+rh-r,r:r,a0:0.5*Math.PI,a1:Math.PI};
 }
 var _rcEdgeOfPOut={tl:'top',tr:'right',br:'bottom',bl:'left'};
-var _rcEdgeOfPIn={tl:'left',tr:'top',br:'right',bl:'bottom'};
 var _rcEdgeCorners={top:['tl','tr'],bottom:['bl','br'],left:['tl','bl'],right:['tr','br']};
 // 밑면연마/고스라 등 엣지에 붙는 마크가 부모 rect의 라운드 코너 쪽으로 뻗어 있으면,
 // 그 끝을 탄젠트점으로 당기고 코너를 따라 도는 아크 캡을 추가해 "휘어지도록" 만든다.
@@ -763,7 +745,6 @@ function perimeterMm(s){
   if(s.kind==='line')return Math.hypot(s.x2-s.x1,s.y2-s.y1);
   return 0;
 }
-function totalPerimeter(){return shapes.reduce(function(t,s){return t+perimeterMm(s);},0);}
 
 // ═══ 캔버스 ═══
 var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
@@ -775,7 +756,7 @@ var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15;
-var _savedBoardLayout=null;_savedBoardImg=null; // 마지막 온장 배치 저장
+var _savedBoardLayout=null; // 마지막 온장 배치 저장
 var _savedBoardImg=null; // 마지막 온장 배치 렌더링 이미지 (도면화용)
 var grind150mode=false;
 var grind100mode=false;
@@ -803,7 +784,6 @@ var EDITTOOLS=['fillet','grind','jollycut','gosra'];
 
 function mm2px(v){return v*scale;}
 function toCanvas(mx,my){return[offsetX+mx*scale,offsetY+my*scale];}
-function fromCanvas(cx,cy){return[(cx-offsetX)/scale,(cy-offsetY)/scale];}
 function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);offsetX=pad;offsetY=pad;}redraw();}
 window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTimeout(resizeCanvas,200);
 loadAllTierPrices();
@@ -820,14 +800,6 @@ function syncAllTierPrices(){
     if(ru)ru.value=v>0?Math.round(v*1.3).toLocaleString():'0';
   });
   calcCost();
-}
-function syncGrindTierPrices(k){
-  function gv(id){var el=document.getElementById(id);return el?parseFloat((el.value||'0').replace(/,/g,''))||0:0;}
-  function sv(id,v){var el=document.getElementById(id);if(el)el.value=v>0?Math.round(v).toLocaleString():'0';}
-  var su=gv('su-'+k),suG=gv('su-grind')||1;
-  var duG=gv('du-grind'),ruG=gv('ru-grind');
-  sv('du-'+k,su*duG/suG);
-  sv('ru-'+k,su*ruG/suG);
 }
 function applyChamfer5(){
   var s=selectedShapes[0];if(!s||s.kind!=='rect')return;
@@ -1937,7 +1909,6 @@ function _drawCircleVDimRight(hcx,hcy,ref,dist,dir,inner){
   if(dist<0.5)return;
   var _ey=dir==='top'?ref.y:ref.y+ref.h;
   var _ph=toCanvas(hcx,hcy),_pe=toCanvas(ref.x+ref.w,_ey);
-  var _phR=toCanvas(ref.x+ref.w,hcy);
   var _extOff=printRender?44:28,_as=printRender?8:5,_fs=printRender?14:9;
   var _dimX=_pe[0]+_extOff;
   // 가이드선: 홀 중심 → dimX, 싱크볼 끝라인 → dimX
@@ -3190,20 +3161,6 @@ function fmtMoney(el){
   var raw=el.value.replace(/[^0-9]/g,'');
   el.value=raw?parseInt(raw).toLocaleString():'';
 }
-function chamferLenMm(s){
-  if(s.kind!=='rect')return 0;
-  var PI=Math.PI;
-  if(s.corners&&Object.keys(s.corners).length>0){
-    var w=Math.abs(s.w),h=Math.abs(s.h);
-    function cr(k){var v=s.corners[k];return(v&&v.type==='fillet')?Math.min(v.r||0,w/2,h/2):0;}
-    return PI/2*(cr('tl')+cr('tr')+cr('br')+cr('bl'));
-  }
-  var ct=s.cornerType||'none',cs=Math.min(Math.max(0,s.cornerSize||0),Math.abs(s.w)/2,Math.abs(s.h)/2);
-  if(ct==='fillet'&&cs>0)return 2*PI*cs;
-  if(ct==='chamfer'&&cs>0)return 4*Math.SQRT2*cs;
-  return 0;
-}
-
 function _dimPopupShow(px,py){
   var pop=document.getElementById('dim-popup');
   var wrap=document.getElementById('canvas-wrap');
@@ -3448,60 +3405,6 @@ function calcCost(){
   if(sa)sa.textContent=totalAdd>0?Math.round(totalAdd).toLocaleString():'-';
   if(so)so.textContent=totalOther>0?Math.round(totalOther).toLocaleString():'-';
   if(st)st.textContent=Math.round(grand).toLocaleString();
-}
-function saveData(){
-  var su={};
-  ['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);su[k]=parseFloat((el?el.value||'0':'0').replace(/,/g,''))||0;});
-  var data={
-    products:products,
-    setup:su,
-    pkg:document.getElementById('r-pkg').value,
-    ship1:document.getElementById('r-ship1').value,
-    ship2:document.getElementById('r-ship2').value,
-    other:document.getElementById('r-other').value,
-    shapes:shapes
-  };
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=(data.product||'도면')+'_가공비.json';
-  a.click();
-}
-function loadData(){document.getElementById('file-input').click();}
-function onFileLoad(e){
-  var f=e.target.files[0];if(!f)return;
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    try{
-      var d=JSON.parse(ev.target.result);
-      if(d.products&&d.products.length){products=d.products;renderProductList();}
-      else if(d.product){products=[{name:d.product,size:d.size||'',qty:parseInt(d.qty)||1}];renderProductList();}
-      if(d.setup){['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'].forEach(function(k){var el=document.getElementById('su-'+k);if(el&&d.setup[k]!==undefined)el.value=parseFloat(d.setup[k])?parseFloat(d.setup[k]).toLocaleString():'0';});}
-      if(d.pkg!==undefined)document.getElementById('r-pkg').value=d.pkg;
-      if(d.ship1!==undefined)document.getElementById('r-ship1').value=d.ship1;
-      if(d.ship2!==undefined)document.getElementById('r-ship2').value=d.ship2;
-      if(d.other!==undefined)document.getElementById('r-other').value=d.other;
-      if(d.shapes){shapes=d.shapes;nextId=shapes.reduce(function(m,s){return Math.max(m,s.id||0);},0)+1;}
-      if(d.boardLayout!==undefined)_savedBoardLayout=d.boardLayout||null;
-      if(d.siteAddr!==undefined){var _el1=document.getElementById('site-addr');if(_el1)_el1.value=d.siteAddr;}
-      if(d.delivDate!==undefined){var _el2=document.getElementById('deliv-date');if(_el2)_el2.value=d.delivDate;}
-      if(d.delivTime!==undefined){var _el3=document.getElementById('deliv-time');if(_el3)_el3.value=d.delivTime;}
-      selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();
-    }catch(err){alert('파일 오류: '+err.message);}
-  };
-  reader.readAsText(f);
-  e.target.value='';
-}
-function resetAll(){
-  if(!confirm('모든 데이터를 초기화하시겠습니까?'))return;
-  shapes=[];selectedShapes=[];hoverShape=null;filletSel=[];_hist=[];
-  products=[{name:'',size:'',qty:1}];renderProductList();
-  var _rsa=document.getElementById('site-addr');if(_rsa)_rsa.value='';
-  var _rdd=document.getElementById('deliv-date');if(_rdd)_rdd.value='';
-  var _rdt=document.getElementById('deliv-time');if(_rdt)_rdt.value='';
-  var _suDef={'rect':'10,800','sink':'50,000','cook':'30,000','holef':'5,000','holeo':'10,000','line':'10,800','chamfer':'5,000','grind':'9,000','grind150':'5,000','grind100':'18,000','jolly':'9,900','gosra':'9,900'};['rect','sink','cook','holef','holeo','line','chamfer','grind','grind100','jolly','gosra'].forEach(function(k){document.getElementById('su-'+k).value=_suDef[k]||'0';});
-  ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){document.getElementById(id).value='0';});
-  updatePropsPanel();redraw();calcCost();
 }
 function deleteSelected(){
   if(!selectedShapes.length)return;
@@ -4733,17 +4636,6 @@ function exportDrawingA4(){
   redraw();
   var imgData='';
   try{imgData=tmpCv.toDataURL('image/png');}catch(e){alert('캡처 오류: '+e.message);return;}
-  // 축척 계산
-  var a4long=297,a4short=210;
-  var pxLong=isPort?tmpCv.height:tmpCv.width; // 2× 캡처 캔버스 기준
-  var mmLong=isPort?mmH:mmW;
-  var pxPerMm=pxLong/a4long;
-  var realScale=newSc/pxPerMm;
-  var rs=1/realScale;
-  var niceVals=[1,2,5,10,15,20,25,30,50,100,150,200,500];
-  var best=niceVals[niceVals.length-1];
-  niceVals.forEach(function(v){if(Math.abs(v-rs)<Math.abs(best-rs))best=v;});
-  var scaleStr='1:'+best;
   var _bw=parseFloat(document.getElementById('board-w').value)||3200;
   var _bh=parseFloat(document.getElementById('board-h').value)||1600;
   var _delivDateRaw=(document.getElementById('deliv-date')||{}).value||'';
@@ -4868,197 +4760,6 @@ function exportDrawingA4(){
       try{var _bi2=pw.document.getElementById('_bimg2');if(_bi2)_bi2.src=boardImg2;}catch(e){}
     },200);
   }
-}
-function showPrintPreview(){
-  // ① 도면 - 흰 배경 + 그리드 없음 + 도형 자동 맞춤 + 전체 치수 표시
-  var drawImg='';
-  var mainCv=document.getElementById('cv');
-  // 모든 도형 BBox 계산
-  var allBB=null;
-  shapes.forEach(function(s){
-    var bb=getBBoxAny(s);if(!bb)return;
-    if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}
-    else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}
-  });
-  // 현재 뷰 저장
-  var svScale=scale,svOffX=offsetX,svOffY=offsetY;
-  if(allBB){
-    var pad=130; // 치수선 여백 (px) — 22px 폰트에 맞춰 넉넉하게
-    var mmW=allBB.r-allBB.l,mmH=allBB.b-allBB.t;
-    if(mmW>0&&mmH>0){
-      var newSc=Math.min((mainCv.width-2*pad)/mmW,(mainCv.height-2*pad)/mmH);
-      newSc=Math.min(newSc,8); // 최대 배율 제한
-      scale=newSc;
-      offsetX=pad+(mainCv.width-2*pad-mmW*newSc)/2-allBB.l*newSc;
-      offsetY=pad+(mainCv.height-2*pad-mmH*newSc)/2-allBB.t*newSc;
-    }
-  }
-  printRender=true; printMode=true;
-  redraw();
-  var tmpDraw=document.createElement('canvas');
-  tmpDraw.width=mainCv.width; tmpDraw.height=mainCv.height;
-  tmpDraw.getContext('2d').drawImage(mainCv,0,0);
-  // 뷰 복구
-  scale=svScale; offsetX=svOffX; offsetY=svOffY;
-  printRender=false; printMode=false;
-  redraw();
-  try{ drawImg=tmpDraw.toDataURL('image/png'); }
-  catch(e){ alert('도면 캡처 오류: '+e.message); return; }
-
-  // ② 온장 배치 - 화면 밖 임시 캔버스에 직접 렌더링 (모달/visibility 완전 무관)
-  var boardImg='';
-  var bw2=parseFloat(document.getElementById('board-w').value)||1600;
-  var bh2=parseFloat(document.getElementById('board-h').value)||3200;
-  var margin2=10,gap2b=3,ew2=bw2-2*margin2,eh2=bh2-2*margin2;
-  var allRects2=shapes.filter(function(s){return s.kind==='rect';});
-  var pieces2=allRects2.filter(function(s){return !allRects2.some(function(other){return other!==s&&isInsideRect(s,other);});});
-  if(pieces2.length>0){
-    var items2=pieces2.map(function(s){return {shape:s,w:Math.abs(s.w),h:Math.abs(s.h),label:s.w.toFixed(0)+'×'+s.h.toFixed(0)};});
-    // 제품별 그룹화
-    var _pm={},_po=[];
-    items2.forEach(function(it){var lbl=(it.shape.label||'').trim()||'미지정';if(!_pm[lbl]){_pm[lbl]=[];_po.push(lbl);}_pm[lbl].push(it);});
-    var _pc2=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#546E7A'];
-    var boards2=[],gm2=[];
-    _po.forEach(function(lbl,gi){var gi2=_pm[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});var gb=packBoards(gi2,ew2,eh2,gap2b);var sb=boards2.length;gb.forEach(function(b){boards2.push(b);});gm2.push({label:lbl,color:_pc2[gi%_pc2.length],startBi:sb,count:gb.length});});
-    var prevBs=_bs;
-    _bs={boards:boards2,groups:gm2,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],margin:margin2};
-    var tmpBoardCv=document.createElement('canvas');
-    tmpBoardCv.style.cssText='position:fixed;left:-9999px;top:0;display:block';
-    document.body.appendChild(tmpBoardCv);
-    printRender=true;
-    try{
-      renderBoardLayout(boards2,bw2,bh2,ew2,eh2,margin2,Math.max(900,boards2.length*720),Math.max(540,gm2.length*300),tmpBoardCv);
-      boardImg=tmpBoardCv.toDataURL('image/png');
-    }catch(e2){alert('배치도 오류:'+e2.message);}
-    printRender=false;
-    _bs=prevBs;
-    document.body.removeChild(tmpBoardCv);
-  }
-
-  // ③ 팝업 - 이미지를 document.write 없이 JS로 주입 (대용량 base64 잘림 방지)
-  var pw=window.open('','_blank','width=1150,height=1000,scrollbars=yes,resizable=yes');
-  if(!pw){alert('팝업이 차단되었습니다. 주소창의 팝업 차단 아이콘을 클릭해 허용 후 다시 시도하세요.');return;}
-
-  var css='*{box-sizing:border-box;margin:0;padding:0;}'
-    +'@page{margin:10mm;}'
-    +'body{background:#fff;font-family:Malgun Gothic,sans-serif;color:#333;}'
-    +'button{padding:6px 14px;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;}'
-    +'.ctrl{padding:8px 12px;background:#f0f4f8;border-bottom:2px solid #ddd;display:flex;gap:8px;align-items:center;}'
-    +'.page{padding:6px;display:flex;flex-direction:column;gap:6px;height:calc(100vh - 50px);}'
-    +'.top-row{display:flex;gap:6px;flex:1;min-height:0;}'
-    +'.bot-row{display:flex;gap:6px;height:38%;min-height:0;}'
-    +'.sec{flex:1;min-height:0;display:flex;flex-direction:column;border:1px solid #ddd;padding:4px 6px;}'
-    +'.sec h4{font-size:9pt;color:#555;border-bottom:1px solid #eee;padding-bottom:2px;margin-bottom:3px;flex-shrink:0;}'
-    +'.imgbox{flex:1;min-height:0;position:relative;overflow:hidden;}'
-    +'.imgbox img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;object-position:top left;}'
-    +'.cost-panel{width:260px;flex-shrink:0;border:1px solid #ddd;padding:6px 8px;font-size:11px;display:flex;flex-direction:column;gap:4px;overflow:auto;}'
-    +'.cost-panel h4{font-size:10pt;font-weight:bold;color:#1565C0;border-bottom:2px solid #1565C0;padding-bottom:3px;margin-bottom:4px;}'
-    +'.info-row{display:flex;gap:4px;font-size:10px;color:#555;margin-bottom:2px;}'
-    +'.info-row b{width:46px;flex-shrink:0;color:#333;}'
-    +'.cost-tbl{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:4px;}'
-    +'.cost-tbl th{background:#f0f4f8;padding:3px 4px;text-align:left;font-weight:600;color:#444;border:1px solid #ddd;}'
-    +'.cost-tbl td{padding:3px 4px;border:1px solid #eee;color:#333;}'
-    +'.cost-tbl td.num{text-align:right;font-family:Consolas,monospace;}'
-    +'.cost-tbl tr.sub-hdr td{background:#f8f9fa;font-weight:600;color:#555;font-size:9px;letter-spacing:.5px;padding:2px 4px;}'
-    +'.total-row{display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:4px;padding-top:4px;font-weight:bold;font-size:12px;}'
-    +'.total-num{font-family:Consolas,monospace;color:#1565C0;}'
-    +'.vat-note{font-size:9px;color:#888;text-align:right;margin-top:2px;}'
-    +'@media print{'
-    +'.ctrl{display:none!important;}'
-    +'body{height:100vh!important;overflow:hidden!important;}'
-    +'.page{height:100vh!important;padding:3mm;gap:3mm;}'
-    +'.cost-panel{width:220px;}'
-    +'}';
-
-  // 가공비 견적 HTML 생성
-  var costHtml='';
-  var printCost=document.getElementById('ck-print-cost')&&document.getElementById('ck-print-cost').checked;
-  if(printCost){
-    function _gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
-    function _tv(id){var el=document.getElementById(id);return el&&el.textContent&&el.textContent!=='-'?el.textContent:'';}
-    function _fmt(n){return n>0?Math.round(n).toLocaleString():'';}
-    var prod=(products[0]&&products[0].name)||'';
-    var sz=(products[0]&&products[0].size)||'';
-    var qty=String(totalQty());
-    var rows=[
-      {g:'절단 가공',name:'사각 절단',qty:_tv('pl-rect'),sub:_tv('ps-rect')},
-      {name:'싱크볼',qty:_tv('pl-sink'),sub:_tv('ps-sink')},
-      {name:'쿡탑',qty:_tv('pl-cook'),sub:_tv('ps-cook')},
-      {name:'수전 타공',qty:_tv('pl-holef'),sub:_tv('ps-holef')},
-      {name:'콘센트 타공',qty:_tv('pl-holeo'),sub:_tv('ps-holeo')},
-      {name:'선 절단',qty:_tv('pl-line'),sub:_tv('ps-line')},
-      {name:'원형 절단',qty:_tv('pl-circlecut'),sub:_tv('ps-circlecut')},
-      {g:'추가 가공',name:'라운드',qty:_tv('pl-chamfer'),sub:_tv('ps-chamfer')},
-      {name:'밑면연마',qty:_tv('pl-grind'),sub:_tv('ps-grind')},
-      {name:'졸리컷',qty:_tv('pl-jolly'),sub:_tv('ps-jolly')},
-      {name:'고스라',qty:_tv('pl-gosra'),sub:_tv('ps-gosra')},
-      {g:'기타 비용',name:'포장비',qty:'',sub:_gp('r-pkg')>0?_fmt(_gp('r-pkg')):''},
-      {name:'운임(공장이동)',qty:'',sub:_gp('r-ship1')>0?_fmt(_gp('r-ship1')):''},
-      {name:'운임(현장출고)',qty:'',sub:_gp('r-ship2')>0?_fmt(_gp('r-ship2')):''},
-      {name:'기타',qty:'',sub:_gp('r-other')>0?_fmt(_gp('r-other')):''},
-    ];
-    var tblRows='';
-    rows.forEach(function(r){
-      if(r.g)tblRows+='<tr class="sub-hdr"><td colspan="3">'+r.g+'</td></tr>';
-      if(r.qty||r.sub)tblRows+='<tr><td>'+r.name+'</td><td class="num">'+r.qty+'</td><td class="num">'+r.sub+'</td></tr>';
-    });
-    var sCut=document.getElementById('s-cut').textContent;
-    var sAdd=document.getElementById('s-add').textContent;
-    var sOth=document.getElementById('s-other').textContent;
-    var sTotal=document.getElementById('s-total').textContent;
-    costHtml='<div class="cost-panel">'
-      +'<h4>&#9632; 가공비 견적서</h4>'
-      +'<div class="info-row"><b>제품명</b>'+prod+'</div>'
-      +(sz?'<div class="info-row"><b>사이즈</b>'+sz+'</div>':'')
-      +'<div class="info-row"><b>수량</b>'+qty+'개</div>'
-      +'<table class="cost-tbl"><thead><tr><th>공정</th><th>수량/길이</th><th>소계(원)</th></tr></thead><tbody>'
-      +tblRows
-      +'</tbody></table>'
-      +(function(){
-        var s='<div style="font-size:10px;color:#555;line-height:1.8;margin-top:6px">';
-        s+='<b>제품 정보</b><br>';
-        products.forEach(function(p,i){
-          if(p.name||p.size)s+=(p.name||'제품'+(i+1))+(p.size?' ('+p.size+')':'')+'  수량: '+(p.qty||1)+'<br>';
-        });
-        return s+'</div>';
-      })()
-      +'</div>';
-  }
-
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>도면 출력</title>'
-    +'<style>'+css+'</style>'
-    +'</head><body>'
-    +'<div class="ctrl">'
-    +'<button onclick="window.print()" style="background:#1565C0;color:#fff">&#128424; 인쇄</button>'
-    +'<button onclick="window.close()" style="background:#555;color:#fff">&#10005; 닫기</button>'
-    +'</div>'
-    +'<div class="page">'
-    +'<div class="top-row">'
-    +'<div class="sec"><h4>&#9632; 도면</h4><div class="imgbox"><img id="_pdi" src=""></div></div>'
-    +(costHtml?'<div id="_pcp" class="cost-panel" style="overflow:auto"></div>':'')
-    +'</div>'
-    +(boardImg?'<div class="bot-row"><div class="sec"><h4>&#9632; 온장 배치도</h4><div class="imgbox"><img id="_pbi" src=""></div></div></div>':'')
-    +'</div>'
-    +'</body></html>';
-
-  pw.document.open();pw.document.write(html);pw.document.close();
-  function _pwInject(){
-    try{
-      var _di=pw.document.getElementById('_pdi');
-      if(_di)_di.src=drawImg;
-      var _bi=pw.document.getElementById('_pbi');
-      if(_bi&&boardImg)_bi.src=boardImg;
-      var _cp=pw.document.getElementById('_pcp');
-      if(_cp&&costHtml){
-        var _inner=costHtml.replace(/^<div[^>]*>/,'').replace(/<\/div>$/,'');
-        _cp.innerHTML=_inner
-          +(sTotal?'<div class="total-row"><span>합&nbsp;계</span><span class="total-num">'+sTotal+'</span></div>':'')
-          +'<div class="vat-note">부가세(VAT) 별도</div>';
-      }
-    }catch(e){}
-  }
-  if(pw.document.readyState==='complete'){_pwInject();}
-  else{pw.addEventListener('load',_pwInject);}
 }
 
 document.addEventListener('keydown',function(e){

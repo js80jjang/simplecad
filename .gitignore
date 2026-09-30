@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 로그
+error_log.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 임시 파일
+*.tmp
+*.bak
+
+# 제품 데이터 (엑셀 및 엑셀에서 생성되는 파일)
+*.xlsx
+제품목록.js
