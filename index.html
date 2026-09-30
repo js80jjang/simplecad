@@ -1634,13 +1634,9 @@ function drawDims(s,col){
   }
   ctx.beginPath();ctx.moveTo(hx,y1c);ctx.lineTo(hx,y2c);ctx.stroke();
   var hlpx=offH>=0?hx+(printRender?40:13):hx-(printRender?40:13);
-  if(offH>=0){
-    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx+2,my2-9,66,18);}
-    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx+2,my2-9,66,18);}
-  } else {
-    if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hx-68,my2-9,66,18);}
-    else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hx-68,my2-9,66,18);}
-  }
+  // H 텍스트는 세로(90° 회전)로 그리므로 음영도 텍스트 중심(hlpx,my2) 기준 세로 박스
+  if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hlpx-9,my2-38,18,76);}
+  else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hlpx-9,my2-38,18,76);}
   // H 텍스트: 로컬 rotate는 현재 transform에 누적되므로 save/rotate/restore 사용
   ctx.save();ctx.translate(hlpx,my2);ctx.rotate(Math.PI/2);ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 44px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(s.h),0,0);ctx.restore();
   var hlc=l2c(hlpx,my2);dimLabels.push({shape:s,field:'h',px:hlc[0],py:hlc[1]});
