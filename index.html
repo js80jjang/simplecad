@@ -2561,12 +2561,22 @@ function _drawNumBadge(ax,ay,numStr){
   ctx.fillStyle='#fff';
   ctx.fillText(numStr,bx+bw/2,by+bh/2);
 }
-function drawShapeNumbers(){
-  if(!showShapeNumbers)return;
-  ctx.save();
-  // line 그룹(선 절단으로만 그려진 부모도형)마다, 배열상 가장 앞에 있는 line 하나를 "대표"로 삼아 배지 하나만 표시.
-  // 그룹 안의 line들 중 하나라도 번호(shapeNum)가 지정돼 있으면 그 값을 쓰고, 없으면 대표 line의 배열 위치를 자동 번호로 사용.
-  var _lgRep={}; // shapes 배열 인덱스(대표 line) → {num, x, y}
+// 자동 번호는 상판 조각(그룹 없는 rect, 선 절단 부모도형)만 순서대로 1,2,3… 부여.
+// 싱크볼/쿡탑/수전·콘센트 타공/연마·고스라 마크 등은 번호를 차지하지 않음.
+// 반환: shapes 배열 인덱스 → 자동 번호
+function _autoPieceNums(lgRep){
+  lgRep=lgRep||_lineGroupReps();
+  var nums={},n=0;
+  shapes.forEach(function(s,i){
+    if((s.kind==='rect'&&!s.groupId)||(s.kind==='line'&&lgRep[i]))nums[i]=++n;
+  });
+  return nums;
+}
+// line 그룹(선 절단으로만 그려진 부모도형)마다, 배열상 가장 앞에 있는 line 하나를 "대표"로 삼아 배지 하나만 표시.
+// 그룹 안의 line들 중 하나라도 번호(shapeNum)가 지정돼 있으면 그 값을 쓰고, 없으면 자동 번호 사용.
+// 반환: shapes 배열 인덱스(대표 line) → {num, x, y}
+function _lineGroupReps(){
+  var _lgRep={};
   _lineBoundaryGroups().forEach(function(grp){
     if(grp.length<2)return; // 선 하나뿐인 조각(트림 잔여 line 등)은 기존 rect 번호와 혼동을 피하기 위해 제외
     var repItem=grp.reduce(function(a,b){return a.i<b.i?a:b;});
@@ -2578,20 +2588,32 @@ function drawShapeNumbers(){
     });
     _lgRep[repItem.i]={num:num,x:l,y:t};
   });
-  var idx=0;
+  return _lgRep;
+}
+// 온장 배치 피스의 번호 (도면 배지와 동일). 번호 없는 피스(원형 등)는 ''
+function _boardPieceNum(sh,autoNums){
+  var src=sh.kind==='linegroup'?sh.lines:[sh];
+  for(var i=0;i<src.length;i++){if(src[i].shapeNum!==undefined&&src[i].shapeNum!=='')return String(src[i].shapeNum);}
+  for(var j=0;j<src.length;j++){var n=autoNums[shapes.indexOf(src[j])];if(n)return String(n);}
+  return '';
+}
+function drawShapeNumbers(){
+  if(!showShapeNumbers)return;
+  ctx.save();
+  var _lgRep=_lineGroupReps();
+  var _auto=_autoPieceNums(_lgRep);
   shapes.forEach(function(s,i){
-    idx++;
     if(s.kind==='rect'&&!s.groupId){
       if(s.x===undefined||s.w===undefined)return;
       var anchor=toCanvas(s.x,s.y);
-      var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(idx);
+      var numStr=(s.shapeNum!==undefined&&s.shapeNum!=='')?String(s.shapeNum):String(_auto[i]);
       _drawNumBadge(anchor[0],anchor[1],numStr);
       return;
     }
     if(s.kind==='line'&&_lgRep[i]){
       var info=_lgRep[i];
       var anchor2=toCanvas(info.x,info.y);
-      var numStr2=(info.num!==undefined&&info.num!=='')?String(info.num):String(idx);
+      var numStr2=(info.num!==undefined&&info.num!=='')?String(info.num):String(_auto[i]);
       _drawNumBadge(anchor2[0],anchor2[1],numStr2);
     }
   });
@@ -4208,6 +4230,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   bcv.width=cw||(wrap?wrap.clientWidth:800)||800;
   bcv.height=ch||(wrap?wrap.clientHeight:500)||500;
   var bctx=bcv.getContext('2d');
+  var _bAutoNums=showShapeNumbers?_autoPieceNums():{}; // 도면과 동일한 조각 자동 번호
   if(printRender){bctx.fillStyle='#ffffff';} else {bctx.fillStyle='#0d1822';}
   bctx.fillRect(0,0,bcv.width,bcv.height);
 
@@ -4407,10 +4430,8 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       var lbl=p.rotated?(p.item.h.toFixed(0)+'×'+p.item.w.toFixed(0)+' ↺'):p.item.label;
       if(pw>30&&ph>12)bctx.fillText(lbl,px+pw/2,py+ph/2);
       // 도형 번호 배지
-      if(showShapeNumbers&&pw>12&&ph>12){
-        var _sh=p.item.shape;
-        var _shIdx=shapes.indexOf(_sh)+1;
-        var _nStr=(_sh.shapeNum!==undefined&&_sh.shapeNum!=='')?String(_sh.shapeNum):String(_shIdx);
+      var _nStr=showShapeNumbers?_boardPieceNum(p.item.shape,_bAutoNums):'';
+      if(_nStr&&pw>12&&ph>12){
         bctx.font='bold 10px Arial';bctx.textAlign='center';bctx.textBaseline='middle';
         var _ntw=bctx.measureText(_nStr).width,_nbw=Math.max(_ntw+6,16),_nbh=14,_nr=3;
         var _nbx=px+2,_nby=py+2;
