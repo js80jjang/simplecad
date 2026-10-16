@@ -2278,20 +2278,21 @@ function _doSave(){
 // - 그 외 선/폴리선 → 선 절단. 곡선은 직선 여러 개로 근사(선 절단 조각·온장 배치에 그대로 연결되도록)
 // - 원: 지름 300 이상 → 원형 절단, 그 외 → 현재 선택된 타공 종류
 function _parseDxfEntities(text){
-  var raw=text.split(/\r?\n/),pairs=[];
-  for(var i=0;i+1<raw.length;i+=2){var c=parseInt(raw[i],10);if(isNaN(c))continue;pairs.push([c,raw[i+1].trim()]);}
-  var units=0,section='',ents=[],cur=null;
-  for(var j=0;j<pairs.length;j++){
-    var c2=pairs[j][0],v=pairs[j][1];
-    if(c2===0){
+  // 큰 파일(삽입된 이미지/OLE 등으로 수십 MB)도 가볍게: 줄 배열만 만들고 HEADER/ENTITIES 외 구간은 값 해석 없이 건너뜀
+  var raw=text.split('\n');
+  var units=0,section='',ents=[],cur=null,n=raw.length;
+  for(var i=0;i+1<n;i+=2){
+    var c=parseInt(raw[i],10);
+    if(c===0){
+      var v=raw[i+1].trim();
       if(cur){ents.push(cur);cur=null;}
-      if(v==='SECTION'){section=(pairs[j+1]&&pairs[j+1][0]===2)?pairs[j+1][1]:'';continue;}
+      if(v==='SECTION'){section=(i+3<n&&parseInt(raw[i+2],10)===2)?raw[i+3].trim():'';continue;}
       if(v==='ENDSEC'||v==='EOF'){section='';continue;}
       if(section==='ENTITIES')cur={type:v,p:[]};
       continue;
     }
-    if(section==='HEADER'&&c2===9&&v==='$INSUNITS'&&pairs[j+1]&&pairs[j+1][0]===70)units=parseInt(pairs[j+1][1],10)||0;
-    if(cur)cur.p.push([c2,v]);
+    if(section==='HEADER'&&c===9&&raw[i+1].trim()==='$INSUNITS'&&i+3<n&&parseInt(raw[i+2],10)===70)units=parseInt(raw[i+3],10)||0;
+    if(cur&&!isNaN(c))cur.p.push([c,raw[i+1].trim()]);
   }
   if(cur)ents.push(cur);
   return{units:units,ents:ents};
@@ -2361,6 +2362,8 @@ function importDxf(text){
     if((_dxfGet(e,8,'')||'').toLowerCase()==='defpoints')return; // 비출력 레이어
     if(e.type==='LINE'){segs.push({x1:_dxfNum(e,10,0),y1:_dxfNum(e,20,0),x2:_dxfNum(e,11,0),y2:_dxfNum(e,21,0)});}
     else if(e.type==='LWPOLYLINE'||e.type==='POLYLINE'){
+      // 선 두께(전역 폭)가 있는 폴리선 = 도면 테두리/주석 박스 (절단선은 폭 0)
+      if(_dxfNum(e,43,0)>=1){skip('테두리/주석 박스(폭 있는 폴리선)');return;}
       var verts=[],closed=(parseInt(_dxfGet(e,70,'0'),10)&1)===1;
       if(e.type==='LWPOLYLINE'){
         e.p.forEach(function(pr){if(pr[0]===10)verts.push({x:parseFloat(pr[1]),y:0,b:0});else if(pr[0]===20&&verts.length)verts[verts.length-1].y=parseFloat(pr[1]);else if(pr[0]===42&&verts.length)verts[verts.length-1].b=parseFloat(pr[1]);});
@@ -2403,6 +2406,54 @@ function importDxf(text){
     if(axis&&corners&&!touchesArc&&r-l>=1&&bt-t>=1){rects.push({x:l,y:t,w:r-l,h:bt-t,cornerType:'none',cornerSize:0});g.forEach(function(s){usedAsRect.push(s);});}
   });
   segs=segs.filter(function(s){return usedAsRect.indexOf(s)<0;});
+  // ── 상판 도면 해석 (DXF 좌표 그대로, 단위 변환 전) ──
+  var BAND=60*(1/uMul); // 가장자리 띠 판정 거리 60mm
+  var tolE=1/uMul;
+  function inRect(px,py,q,tl){tl=tl||0;return px>=q.x-tl&&px<=q.x+q.w+tl&&py>=q.y-tl&&py<=q.y+q.h+tl;}
+  function rectInside(a,b){return a!==b&&a.x>=b.x-tolE&&a.y>=b.y-tolE&&a.x+a.w<=b.x+b.w+tolE&&a.y+a.h<=b.y+b.h+tolE&&(a.w<b.w||a.h<b.h);}
+  var nSeam=0,nBand=0;
+  // 1) 가장자리 띠 표시선(OPEN/해치 경계): 사각형 안쪽, 평행한 변에서 60mm 이내의 직선 → 절단선 아님
+  //    (분할 전에 걸러야 조각 전체 길이에 걸친 띠 선도 잡힘)
+  segs=segs.filter(function(s){
+    if(s.arcR!==undefined)return true;
+    var horiz=Math.abs(s.y1-s.y2)<tolE,vert=Math.abs(s.x1-s.x2)<tolE;if(!horiz&&!vert)return true;
+    var band=rects.some(function(q){
+      if(!inRect(s.x1,s.y1,q,tolE)||!inRect(s.x2,s.y2,q,tolE))return false;
+      if(horiz)return Math.abs(s.y1-q.y)<=BAND||Math.abs(s.y1-(q.y+q.h))<=BAND;
+      return Math.abs(s.x1-q.x)<=BAND||Math.abs(s.x1-(q.x+q.w))<=BAND;
+    });
+    if(band)nBand++;
+    return !band;
+  });
+  // 2) 접합부(분할선): 사각형을 가로/세로로 완전히 가로지르는 직선(양 옆 가장자리에서 60mm 넘게 안쪽) → 두 조각으로 분할
+  var changed=true;
+  while(changed){
+    changed=false;
+    for(var si=0;si<segs.length&&!changed;si++){
+      var s=segs[si];if(s.arcR!==undefined)continue;
+      var horiz=Math.abs(s.y1-s.y2)<tolE,vert=Math.abs(s.x1-s.x2)<tolE;if(!horiz&&!vert)continue;
+      for(var ri=0;ri<rects.length;ri++){
+        var q=rects[ri];if(q.cornerType!=='none')continue;
+        if(horiz){
+          var yy=s.y1,xa=Math.min(s.x1,s.x2),xb=Math.max(s.x1,s.x2);
+          if(Math.abs(xa-q.x)<tolE&&Math.abs(xb-(q.x+q.w))<tolE&&yy>q.y+BAND&&yy<q.y+q.h-BAND){
+            rects.splice(ri,1,{x:q.x,y:q.y,w:q.w,h:yy-q.y,cornerType:'none',cornerSize:0},{x:q.x,y:yy,w:q.w,h:q.y+q.h-yy,cornerType:'none',cornerSize:0});
+            segs.splice(si,1);nSeam++;changed=true;break;
+          }
+        } else {
+          var xx=s.x1,ya=Math.min(s.y1,s.y2),yb=Math.max(s.y1,s.y2);
+          if(Math.abs(ya-q.y)<tolE&&Math.abs(yb-(q.y+q.h))<tolE&&xx>q.x+BAND&&xx<q.x+q.w-BAND){
+            rects.splice(ri,1,{x:q.x,y:q.y,w:xx-q.x,h:q.h,cornerType:'none',cornerSize:0},{x:xx,y:q.y,w:q.x+q.w-xx,h:q.h,cornerType:'none',cornerSize:0});
+            segs.splice(si,1);nSeam++;changed=true;break;
+          }
+        }
+      }
+    }
+  }
+  // 3) 조각 안의 사각형 = 타공부: 라운드 → 싱크볼, 직각 → 쿡탑
+  rects.forEach(function(q){if(rects.some(function(o){return rectInside(q,o);}))q.cutout=q.cornerType==='fillet'?'sink':'cook';});
+  // 4) 조각 안의 작은 원(φ45 이하) → 수전 타공
+  circles.forEach(function(c){if(c.r*2*uMul<=45&&rects.some(function(q){return !q.cutout&&inRect(c.cx,c.cy,q);}))c.faucet=true;});
   if(!segs.length&&!rects.length&&!circles.length){
     alert('불러올 도형이 없습니다.\n(지원: 선, 폴리선, 원, 호 — 모형 공간)');return;
   }
@@ -2416,13 +2467,38 @@ function importDxf(text){
   function Y(y){return Math.round((oyTop-y)*uMul*1000)/1000;}
   saveHistory();
   shapes=[];selectedShapes=[];hoverShape=null;_savedBoardLayout=null;_savedBoardImg=null;
-  rects.forEach(function(q){shapes.push(makeShape('rect',{x:X(q.x),y:Y(q.y+q.h),w:q.w*uMul,h:q.h*uMul,cornerType:q.cornerType,cornerSize:q.cornerSize*uMul,dimOffsetW:15,dimOffsetH:15}));count++;});
+  var nPiece=0,nSink=0,nCook=0,nFaucet=0;
+  rects.forEach(function(q){
+    var rx=X(q.x),ry=Y(q.y+q.h),rw=q.w*uMul,rh=q.h*uMul;
+    if(q.cutout==='sink'){
+      // 싱크볼 도구와 같은 구성: 본체 + 둘레 고스라 4개
+      var sgid='grp'+nextId;nSink++;
+      shapes.push(makeShape('rect',{x:rx,y:ry,w:rw,h:rh,cornerType:'fillet',cornerSize:q.cornerSize*uMul,groupId:sgid,groupRole:'main',applianceType:'sink'}));
+      shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx+rw,y2:ry,outward:-1,groupId:sgid,groupRole:'top'}));
+      shapes.push(makeShape('gosramark',{x1:rx,y1:ry+rh,x2:rx+rw,y2:ry+rh,outward:1,groupId:sgid,groupRole:'bottom'}));
+      shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx,y2:ry+rh,outward:1,groupId:sgid,groupRole:'left'}));
+      shapes.push(makeShape('gosramark',{x1:rx+rw,y1:ry,x2:rx+rw,y2:ry+rh,outward:-1,groupId:sgid,groupRole:'right'}));
+    } else if(q.cutout==='cook'){
+      nCook++;shapes.push(makeShape('rect',{x:rx,y:ry,w:rw,h:rh,cornerType:'none',cornerSize:0,groupId:'grp'+nextId,groupRole:'main',applianceType:'cook'}));
+    } else {
+      nPiece++;shapes.push(makeShape('rect',{x:rx,y:ry,w:rw,h:rh,cornerType:q.cornerType,cornerSize:q.cornerSize*uMul,dimOffsetW:15,dimOffsetH:15}));
+    }
+    count++;
+  });
   segs.forEach(function(s){var p={x1:X(s.x1),y1:Y(s.y1),x2:X(s.x2),y2:Y(s.y2)};if(s.arcR!==undefined){p.arcR=Math.round(s.arcR*uMul*10)/10;p.arcMid=s.arcMid;}shapes.push(makeShape('line',p));count++;});
-  circles.forEach(function(q){var r=q.r*uMul;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:r*2>=300?'cut':pendingHoleType}));count++;});
+  circles.forEach(function(q){var r=q.r*uMul;if(q.faucet)nFaucet++;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:q.faucet?'faucet':(r*2>=300?'cut':pendingHoleType)}));count++;});
   fitView();updatePropsPanel();redraw();calcCost();
-  var msg='DXF 불러오기 완료\n사각 '+rects.length+'개 · 선 '+segs.length+'개 · 원 '+circles.length+'개';
+  var msg='DXF 불러오기 완료\n사각 조각 '+nPiece+'개 · 선 '+segs.length+'개 · 원 '+circles.length+'개';
+  var auto=[];
+  if(nSeam)auto.push('접합부 '+nSeam+'곳에서 조각 분할');
+  if(nSink)auto.push('조각 안 라운드 사각형 → 싱크볼 '+nSink+'개');
+  if(nCook)auto.push('조각 안 직각 사각형 → 쿡탑 '+nCook+'개');
+  if(nFaucet)auto.push('φ45 이하 원 → 수전 타공 '+nFaucet+'개');
+  if(nBand)auto.push('가장자리 60mm 이내 표시선 '+nBand+'개 제외(OPEN/해치 경계)');
+  if(auto.length)msg+='\n\n자동 해석:\n· '+auto.join('\n· ');
   var sk=Object.keys(skipped);
-  if(sk.length)msg+='\n\n불러오지 않은 항목: '+sk.map(function(k){return k+' '+skipped[k];}).join(', ')+'\n(블록(INSERT)은 오토캐드에서 분해(EXPLODE) 후 저장하면 불러올 수 있습니다)';
+  if(sk.length)msg+='\n\n불러오지 않은 항목: '+sk.map(function(k){return k+' '+skipped[k];}).join(', ');
+  if(skipped.INSERT)msg+='\n(블록(INSERT) 안의 도형이 필요하면 오토캐드에서 분해(EXPLODE) 후 저장하세요. 도면 테두리 블록은 그대로 두면 됩니다)';
   alert(msg);
 }
 function loadProject(){
