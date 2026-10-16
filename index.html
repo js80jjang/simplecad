@@ -4601,11 +4601,13 @@ function exportDrawingA4(){
   var isPort=mmH>=mmW;
   // 뷰 저장 후 도면 맞춤
   var svScale=scale,svOffX=offsetX,svOffY=offsetY;
-  // 2× 해상도 렌더링 → 치수 레이블 겹침 방지 (도형은 2× 커지고 폰트 크기는 고정)
-  var _A4M=2;
+  // 캡처 캔버스를 A4 도면 영역 비율(가로 ≈267×171mm, 세로 ≈184×258mm)로 고정 크기 렌더링.
+  // 화면 캔버스 비율을 그대로 쓰면 인쇄 시 이미지가 페이지 높이를 넘쳐 다음 장으로 밀림.
   var _origW=mainCv.width,_origH=mainCv.height;
-  mainCv.width=_origW*_A4M;mainCv.height=_origH*_A4M;
-  var pad=150*_A4M;
+  var _capLong=2000,_capRatio=isPort?184/258:267/171;
+  mainCv.width=Math.round(isPort?_capLong*_capRatio:_capLong);
+  mainCv.height=Math.round(isPort?_capLong:_capLong/_capRatio);
+  var pad=300;
   var newSc=Math.min((mainCv.width-2*pad)/mmW,(mainCv.height-2*pad)/mmH);
   newSc=Math.min(newSc,20);
   scale=newSc;
@@ -4728,12 +4730,13 @@ function exportDrawingA4(){
     +'.ctrl{padding:8px 14px;background:#263238;display:flex;gap:10px;align-items:center;}'
     +'.ctrl button{padding:6px 18px;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;background:#1565C0;color:#fff;}'
     +'.ctrl span{font-size:11px;color:#9eceff;}'
-    +'@media print{.ctrl{display:none!important;}body{background:#fff;}}'
-    +'.page{width:'+(isPort?'194mm':'277mm')+';margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;}'
-    +'.frame{border:3mm solid #fff;border-bottom:0;display:flex;flex-direction:column;flex:1;}'
-    +'.inner-border{border:0.7pt solid #333;margin:0;flex:1;display:flex;flex-direction:column;}'
-    +'.drawing-area{flex:1;padding:2mm;display:flex;align-items:center;justify-content:center;}'
-    +'.drawing-area img{max-width:100%;max-height:100%;object-fit:contain;display:block;}'
+    +'@media print{.ctrl{display:none!important;}body{background:#fff;}.page,.page2{margin:0!important;border:none!important;}}'
+    // 페이지 높이를 A4 인쇄 영역(여백 8mm 제외)에 고정 → 도면+표제란이 항상 한 장에 들어감
+    +'.page{width:'+(isPort?'194mm':'281mm')+';height:'+(isPort?'280mm':'193mm')+';margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;overflow:hidden;}'
+    +'.frame{border:3mm solid #fff;border-bottom:0;display:flex;flex-direction:column;flex:1;min-height:0;}'
+    +'.inner-border{border:0.7pt solid #333;margin:0;flex:1;min-height:0;display:flex;flex-direction:column;}'
+    +'.drawing-area{flex:1;min-height:0;position:relative;}'
+    +'.drawing-area img{position:absolute;left:2mm;top:2mm;width:calc(100% - 4mm);height:calc(100% - 4mm);object-fit:contain;display:block;}'
     +'.title-block{border-top:1pt solid #333;display:flex;font-size:0;}'
     +'.tb-main{flex:1;border-right:0.5pt solid #999;padding:2.5mm 3mm;}'
     +'.tb-co{font-size:7.5pt;color:#555;margin-bottom:1mm;}'
@@ -4745,9 +4748,9 @@ function exportDrawingA4(){
     +'.tbl{width:16mm;background:#f0f4f8;font-size:6.5pt;color:#666;padding:1.5mm 1mm;border-right:0.5pt solid #ccc;display:flex;align-items:center;justify-content:center;text-align:center;letter-spacing:-.2px;}'
     +'.tbv{width:26mm;font-size:8.5pt;font-weight:bold;padding:1.5mm 2mm;display:flex;align-items:center;font-family:Consolas,monospace;}'
     +'@page board-page{size:A4 landscape;margin:8mm;}'
-    +'.page2{width:277mm;margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;page-break-before:always;page:board-page;}'
-    +'.board-area{flex:1;padding:4mm;display:flex;align-items:flex-start;justify-content:center;}'
-    +'.board-area img{max-width:100%;object-fit:contain;display:block;}'
+    +'.page2{width:281mm;height:193mm;margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;overflow:hidden;page-break-before:always;page:board-page;}'
+    +'.board-area{flex:1;min-height:0;position:relative;}'
+    +'.board-area img{position:absolute;left:4mm;top:4mm;width:calc(100% - 8mm);height:calc(100% - 8mm);object-fit:contain;object-position:top center;display:block;}'
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
     +'@media print{.page2{page-break-before:always;}}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
