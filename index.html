@@ -1435,15 +1435,51 @@ function drawShape(s,preview){
   ctx.setLineDash([]);
 }
 
+// 한 프레임 동안 재사용하는 선 그룹 목록 (redraw 시작 시 초기화)
+var _lgFrameGroups=null;
+// 선 s가 닫힌 선 그룹(상판 외곽)에 속하면, 치수를 도형 바깥쪽에 두기 위한 방향(+1/-1) 반환. 판단 불가 시 +1.
+// 기본 방향은 (dy,-dx) 법선. 그 쪽으로 살짝 옮긴 점이 도형 안이면(-1) 반대쪽으로.
+function _lineOutwardSide(s){
+  if(s.groupId)return 1;
+  if(!_lgFrameGroups)_lgFrameGroups=_lineBoundaryGroups();
+  var grp=null;
+  for(var g=0;g<_lgFrameGroups.length&&!grp;g++){if(_lgFrameGroups[g].some(function(it){return it.s===s;}))grp=_lgFrameGroups[g];}
+  if(!grp||grp.length<3)return 1;
+  // 중복 선 제거(같은 선이 두 번 있으면 교차 판정 홀짝이 틀어짐)
+  var segs=[],seen={};
+  grp.forEach(function(it){var l=it.s;var a=[l.x1,l.y1,l.x2,l.y2].map(function(v){return Math.round(v);});var k=(a[0]<a[2]||(a[0]===a[2]&&a[1]<=a[3]))?a.join(','):[a[2],a[3],a[0],a[1]].join(',');if(!seen[k]){seen[k]=1;segs.push(l);}});
+  var dx=s.x2-s.x1,dy=s.y2-s.y1,len=Math.hypot(dx,dy);if(len<1)return 1;
+  var eps=Math.min(5,len/4);
+  var px=(s.x1+s.x2)/2+dy/len*eps,py=(s.y1+s.y2)/2-dx/len*eps;
+  var inside=false;
+  segs.forEach(function(l){
+    if((l.y1>py)!==(l.y2>py)){var xi=l.x1+(py-l.y1)*(l.x2-l.x1)/(l.y2-l.y1);if(xi>px)inside=!inside;}
+  });
+  return inside?-1:1;
+}
 function drawDimsLine(s,col){
   var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(dist<0.5)return;
   var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2);
   var angle=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
   var perp=angle-Math.PI/2;
-  var offPx=14;
+  if(_lineOutwardSide(s)<0)perp+=Math.PI; // 상판 바깥쪽에 표시
+  var offPx=printRender?40:14; // 인쇄 글자(44px)가 선에 겹치지 않도록
   var mx2=(p1[0]+p2[0])/2+Math.cos(perp)*offPx;
   var my2=(p1[1]+p2[1])/2+Math.sin(perp)*offPx;
   var da=angle;if(Math.cos(da)<-0.01)da+=Math.PI;
+  if(printRender){
+    // 다른 치수 글자와 겹치면 선을 따라 조금씩 밀어서 빈 자리 찾기 (선 범위 안에서만)
+    ctx.save();ctx.font='bold 44px Consolas';var _tw=ctx.measureText(_fmtDim(dist)).width;ctx.restore();
+    var _horiz=Math.abs(Math.cos(da))>0.7,_bw=(_horiz?_tw:44)/2+4,_bh=(_horiz?44:_tw)/2+4;
+    var _len=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),_maxSh=Math.max(0,_len/2-_tw/2);
+    var _ux=Math.cos(angle),_uy=Math.sin(angle),_bx=mx2,_by=my2;
+    for(var _k=0;_k<=12;_k++){
+      var _sh=(_k%2?1:-1)*Math.ceil(_k/2)*(_maxSh/6);
+      var _cx=_bx+_ux*_sh,_cy=_by+_uy*_sh;
+      if(_pdfit(_cx-_bw,_cy-_bh,_cx+_bw,_cy+_bh)){mx2=_cx;my2=_cy;break;}
+    }
+    _pdreg(mx2-_bw,my2-_bh,mx2+_bw,my2+_bh);
+  }
   ctx.save();ctx.translate(mx2,my2);ctx.rotate(da);
   var fw=printRender?120:30;
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-fw,printRender?-24:-9,fw*2,printRender?32:12);}
@@ -2244,12 +2280,16 @@ function loadProject(){
         var data=JSON.parse(e.target.result);
         saveHistory();
         shapes=data.shapes||[];
+        // 새로 그리는 도형 id가 불러온 도형과 겹치지 않도록
+        nextId=shapes.reduce(function(m,s){return Math.max(m,s.id||0);},0)+1;
         if(data.gridMm)gridMm=data.gridMm;
         if(data.offsetX!==undefined)offsetX=data.offsetX;
         if(data.offsetY!==undefined)offsetY=data.offsetY;
         if(data.scale&&data.scale>0)scale=data.scale;
         if(data.products&&data.products.length)products=data.products;
         else if(data.product)products=[{name:data.product,size:data.size||'',qty:parseInt(data.qty)||1}];
+        // 저장해 둔 온장 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
+        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;
         selectedShapes=[];
         renderProductList();updatePropsPanel();redraw();calcCost();
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
@@ -2710,6 +2750,7 @@ function drawRotationHandle(){
 function redraw(){
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle=printRender?'#ffffff':'#1e2a35';ctx.fillRect(0,0,cv.width,cv.height);
   if(printRender)_pdr=[];
+  _lgFrameGroups=null; // 선 그룹 캐시는 매 프레임 새로 계산
   drawGrid();dimLabels=[];autoAdjustDims();
   shapes.forEach(function(s){drawShape(s);});
   drawUserGroups();
@@ -3785,13 +3826,8 @@ function liveGroupProp(fld,val){
 }
 
 // ═══ 온장 배치 ═══
-function showBoardLayout(){
-  var bw=parseFloat(document.getElementById('board-w').value)||1600;
-  var bh=parseFloat(document.getElementById('board-h').value)||3200;
-  var margin=10,gap=3;
-  var ew=bw-2*margin,eh=bh-2*margin; // 유효 영역
-
-  // 배치할 도형: rect/circle/hole/ellipse + 연결된 선 그룹
+// 배치할 피스 목록: rect/circle/hole/ellipse + 연결된 선 그룹 → [{shape,w,h,label}]
+function _collectBoardItems(){
   var physical=['rect','circle','hole','ellipse'];
   var allPhysical=shapes.filter(function(s){return physical.indexOf(s.kind)>=0;});
   var allRects=shapes.filter(function(s){return s.kind==='rect';});
@@ -3832,10 +3868,8 @@ function showBoardLayout(){
     pieces.push(pseudo);
   }
 
-  if(!pieces.length){alert('배치할 도형이 없습니다.');return;}
-
   // 각 피스의 BBox (w,h) 계산
-  var items=pieces.map(function(s){
+  return pieces.map(function(s){
     var w,h,label;
     if(s.kind==='rect'){w=Math.abs(s.w);h=Math.abs(s.h);label=w.toFixed(0)+'×'+h.toFixed(0);}
     else if(s.kind==='circle'||s.kind==='hole'){w=s.r*2;h=s.r*2;label='Φ'+w.toFixed(0);}
@@ -3844,8 +3878,9 @@ function showBoardLayout(){
     else{w=10;h=10;label='?';}
     return{shape:s,w:w,h:h,label:label};
   });
-
-  // 제품별 그룹화 → 그룹별 팩킹
+}
+// 제품별 그룹화 → 그룹별 팩킹 → {boards, groups}
+function _packBoardItems(items,ew,eh,gap){
   var _grpMap={},_grpOrder=[];
   items.forEach(function(it){
     var lbl=(it.shape.label||'').trim()||'미지정';
@@ -3861,6 +3896,38 @@ function showBoardLayout(){
     grpBoards.forEach(function(b){allBoards.push(b);});
     groupMeta.push({label:lbl,color:_grpCols[gi%_grpCols.length],startBi:startBi,count:grpBoards.length});
   });
+  return{boards:allBoards,groups:groupMeta};
+}
+// 저장된 배치(_savedBoardLayout.boards)를 현재 피스(items)에 매핑. 하나라도 못 찾거나 개수가 다르면 null.
+// 선 절단 피스는 lineIds로 매핑, lineIds가 없는 예전 파일은 크기가 같은 선 그룹 피스로 매핑.
+function _restoreSavedBoards(saved,items){
+  if(!saved||!saved.boards)return null;
+  var used=[],ok=true,count=0;
+  function take(pred){for(var k=0;k<items.length;k++){if(!used[k]&&pred(items[k])){used[k]=true;return items[k];}}return null;}
+  var boards=saved.boards.map(function(board){
+    return board.map(function(p){
+      count++;
+      var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
+      var it=null;
+      if(p.shapeId!=null)it=take(function(x){return x.shape.id===p.shapeId;});
+      else if(p.lineIds&&p.lineIds.length)it=take(function(x){return x.shape.kind==='linegroup'&&p.lineIds.every(function(id){return x.shape.lines.some(function(l){return l.id===id;});});});
+      else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
+      if(!it){ok=false;return null;}
+      return{item:{shape:it.shape,w:_w,h:_h,label:p.label||it.label},x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false};
+    });
+  });
+  if(!ok||count!==items.length)return null;
+  return boards;
+}
+function showBoardLayout(){
+  var bw=parseFloat(document.getElementById('board-w').value)||1600;
+  var bh=parseFloat(document.getElementById('board-h').value)||3200;
+  var margin=10,gap=3;
+  var ew=bw-2*margin,eh=bh-2*margin; // 유효 영역
+  var items=_collectBoardItems();
+  if(!items.length){alert('배치할 도형이 없습니다.');return;}
+  var _packed=_packBoardItems(items,ew,eh,gap);
+  var allBoards=_packed.boards,groupMeta=_packed.groups;
 
   var totalPlaced=allBoards.reduce(function(a,b){return a+b.length;},0);
   var infoEl=document.getElementById('board-modal-info');
@@ -3873,21 +3940,9 @@ function showBoardLayout(){
 
   // 저장된 배치가 있으면 복원
   if(_savedBoardLayout&&_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh){
-    var _shMap={};shapes.forEach(function(s){_shMap[s.id]=s;});
-    var _valid=_savedBoardLayout.boards.every(function(board){
-      return board.every(function(p){return p.shapeId!=null&&_shMap[p.shapeId];});
-    });
-    // 복사/추가로 도형 수가 달라지면 저장 배치 무효화
-    if(_valid){var _savedCount=_savedBoardLayout.boards.reduce(function(a,b){return a+b.length;},0);if(_savedCount!==items.length)_valid=false;}
-    if(_valid){
-      var _rBoards=_savedBoardLayout.boards.map(function(board){
-        return board.map(function(p){
-          var _s=_shMap[p.shapeId];
-          var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
-          var _it={shape:_s,w:_w,h:_h,label:p.label||(p.rotated?p.ph+'x'+p.pw:p.pw+'x'+p.ph)};
-          return{item:_it,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated};
-        });
-      });
+    // 복사/추가로 도형 수가 달라지면 저장 배치 무효화(null)
+    var _rBoards=_restoreSavedBoards(_savedBoardLayout,items);
+    if(_rBoards){
       document.getElementById('board-modal').classList.add('show');
       _bs={boards:_rBoards,groups:_savedBoardLayout.groups||groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0,pickedPiece:null,dragMoved:false,dragStartX:0,dragStartY:0};
       renderBoardLayout(_rBoards,bw,bh,ew,eh,margin);
@@ -4565,7 +4620,10 @@ function closeBoardModal(){
       groups:_bs.groups,
       boards:_bs.boards.map(function(board){
         return board.map(function(p){
-          return{shapeId:(p.item&&p.item.shape)?p.item.shape.id:null,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false,label:p.item?p.item.label:''};
+          var _sh=p.item&&p.item.shape;
+          var _rec={shapeId:(_sh&&_sh.id!=null)?_sh.id:null,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false,label:p.item?p.item.label:''};
+          if(_sh&&_sh.kind==='linegroup')_rec.lineIds=_sh.lines.map(function(l){return l.id;}); // 선 절단 피스는 선 id로 복원
+          return _rec;
         });
       })
     };
@@ -4669,39 +4727,25 @@ function exportDrawingA4(){
   var _bh2r=parseFloat(document.getElementById('board-h').value)||1600;
   var _margin2r=10,_gap2r=3,_ew2r=_bw2r-2*_margin2r,_eh2r=_bh2r-2*_margin2r;
   var _boards2r=null,_gm2r=null,_use_bw=_bw2r,_use_bh=_bh2r,_use_ew=_ew2r,_use_eh=_eh2r,_use_margin=_margin2r;
-  // _savedBoardLayout에서 직접 복원 (shape ID로 매핑)
-  if(_savedBoardLayout&&_savedBoardLayout.boards&&_savedBoardLayout.boards.length>0){
-    var _shMap2r={};shapes.forEach(function(s){_shMap2r[s.id]=s;});
-    // 유효한 shapeId만 복원, 없으면 빈 item으로 처리
-    _boards2r=_savedBoardLayout.boards.map(function(board){
-      return board.map(function(p){
-        var _s=_shMap2r[p.shapeId]||null;
-        var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
-        return{item:{shape:_s,w:_w,h:_h,label:p.label||''},x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false};
-      });
-    });
+  // 온장 배치와 같은 피스 목록(사각/원형/선 절단 조각) 사용
+  var _items2r=_collectBoardItems();
+  // _savedBoardLayout에서 복원 (도형이 바뀌어 매핑이 안 되면 null → 재계산)
+  _boards2r=_restoreSavedBoards(_savedBoardLayout,_items2r);
+  var _fromSaved=!!_boards2r;
+  if(_fromSaved){
     _gm2r=_savedBoardLayout.groups||null;
     _use_bw=_savedBoardLayout.bw||_bw2r;
     _use_bh=_savedBoardLayout.bh||_bh2r;
     _use_ew=_savedBoardLayout.ew||_ew2r;
     _use_eh=_savedBoardLayout.eh||_eh2r;
     _use_margin=_savedBoardLayout.margin||_margin2r;
-  }
-  // 저장 배치 없으면 재계산
-  if(!_boards2r){
-    var _allRects2r=shapes.filter(function(s){return s.kind==='rect';});
-    var _pieces2r=_allRects2r.filter(function(s){return !_allRects2r.some(function(other){return other!==s&&isInsideRect(s,other);});});
-    if(_pieces2r.length>0){
-      var _items2r=_pieces2r.map(function(s){return{shape:s,w:Math.abs(s.w),h:Math.abs(s.h),label:s.w.toFixed(0)+'×'+s.h.toFixed(0)};});
-      var _pm2r={},_po2r=[];
-      _items2r.forEach(function(it){var lbl=(it.shape.label||'').trim()||'미지정';if(!_pm2r[lbl]){_pm2r[lbl]=[];_po2r.push(lbl);}_pm2r[lbl].push(it);});
-      var _pc2r=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#546E7A'];
-      _boards2r=[];_gm2r=[];
-      _po2r.forEach(function(lbl,gi){var _gi2=_pm2r[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});var _gb2=packBoards(_gi2,_use_ew,_use_eh,_gap2r);var _sb2=_boards2r.length;_gb2.forEach(function(b){_boards2r.push(b);});_gm2r.push({label:lbl,color:_pc2r[gi%_pc2r.length],startBi:_sb2,count:_gb2.length});});
-    }
+  } else if(_items2r.length>0){
+    // 저장 배치 없으면 재계산
+    var _pk2r=_packBoardItems(_items2r,_use_ew,_use_eh,_gap2r);
+    _boards2r=_pk2r.boards;_gm2r=_pk2r.groups;
   }
   // 저장된 배치 이미지 우선 사용 (closeBoardModal에서 직접 렌더링한 이미지)
-  if(_savedBoardImg&&_savedBoardLayout){
+  if(_savedBoardImg&&_fromSaved){
     boardImg2=_savedBoardImg;
   } else if(_boards2r&&_boards2r.length>0){
     var _prevBs2=_bs;
@@ -4770,7 +4814,7 @@ function exportDrawingA4(){
     +'</div>'
     +'</div></div></div></div>'
     +(boardImg2?'<div class="page2">'
-      +'<div class="page2-title">📋 온장 배치도 — '+_use_bw.toFixed(0)+' × '+_use_bh.toFixed(0)+' mm'+((_savedBoardLayout&&_boards2r)?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
+      +'<div class="page2-title">📋 온장 배치도 — '+_use_bw.toFixed(0)+' × '+_use_bh.toFixed(0)+' mm'+(_fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
       +'<div class="board-area"><img id="_bimg2" src=""></div>'
       +'</div>':'');
   pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
