@@ -5100,7 +5100,7 @@ function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
   ctx.setLineDash([]);
 }
 // 화살표 치수: p1,p2(캔버스 px) 사이, 법선 n(바깥쪽 단위벡터) 방향으로 off px 띄움. 글자는 치수선 바깥쪽.
-function _expDim(p1,p2,n,off,text,col,fs){
+function _expDim(p1,p2,n,off,text,col,fs,force){
   fs=fs||32;
   var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<4)return;
   ctx.font='bold '+fs+'px '+_EXP_FONT;
@@ -5118,7 +5118,8 @@ function _expDim(p1,p2,n,off,text,col,fs){
   }
   var opts=cands(off);if(off>0)opts=opts.concat(cands(off+fs*1.1),cands(off+fs*2.2));
   var pick=opts[0];
-  for(var k=0;k<opts.length;k++){if(_pdfit(opts[k].x-hw,opts[k].y-hh,opts[k].x+hw,opts[k].y+hh)){pick=opts[k];break;}}
+  if(force)pick={o:off,x:force.x,y:force.y}; // 자리를 이미 골라서 넘겨준 경우
+  else for(var k=0;k<opts.length;k++){if(_pdfit(opts[k].x-hw,opts[k].y-hh,opts[k].x+hw,opts[k].y+hh)){pick=opts[k];break;}}
   off=pick.o;
   var a1=[p1[0]+n[0]*off,p1[1]+n[1]*off],a2=[p2[0]+n[0]*off,p2[1]+n[1]*off];
   ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;ctx.setLineDash([]);
@@ -5143,6 +5144,9 @@ function _expDim(p1,p2,n,off,text,col,fs){
 }
 // 그려진 선 목록(캔버스 px) — 지시선(R/Φ)이 어떤 선에도 걸치지 않게 하는 데 사용
 var _pseg=[];
+// 싱크볼/쿡탑 안쪽(흰 영역, px) — 다른 치수 글자가 들어가면 어느 치수인지 헷갈리므로 피함
+var _pcut=[];
+function _inCutArea(l,t,r,b){return _pcut.some(function(c){return !(r<c[0]||l>c[2]||b<c[1]||t>c[3]);});}
 function _psegAdd(x1,y1,x2,y2){_pseg.push([x1,y1,x2,y2]);}
 function _segX(a,b,c,d){ // 선분 ab, cd 교차
   function o(p,q,r){var v=(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);return v>1e-9?1:(v<-1e-9?-1:0);}
@@ -5173,9 +5177,11 @@ function _expLeader(opts,text,col,fs){
     var lead=[S[0]+d[0]*4,S[1]+d[1]*4,E[0],E[1]],tl=[E[0],E[1],T[0],T[1]];
     var bad=cd.pen;
     if(bl<4||br>cv.width-4||bt<4||bb>cv.height-4)bad+=100;
+    if(_inCutArea(bl,bt,br,bb))bad+=6;
     // 글자가 선/글자에 걸치는 것은 크게, 지시선이 선을 지나는 것은 작게 감점 (갇힌 자리에선 지시선만 선을 넘어 바깥에 글자)
     _pseg.forEach(function(s){if(_segX([lead[0],lead[1]],[lead[2],lead[3]],[s[0],s[1]],[s[2],s[3]])||_segX([tl[0],tl[1]],[tl[2],tl[3]],[s[0],s[1]],[s[2],s[3]]))bad+=1;if(_segHitsBox(s,bl,bt,br,bb))bad+=6;});
-    _pdr.forEach(function(r){if(!(br<r[0]||bl>r[2]||bb<r[1]||bt>r[3]))bad+=6;if(_segHitsBox(lead,r[0],r[1],r[2],r[3])||_segHitsBox(tl,r[0],r[1],r[2],r[3]))bad+=0.5;});
+    // 다른 글자와 붙어 보이지 않게 여유(좌우 10, 위아래 6px)를 두고 겹침 판정
+    _pdr.forEach(function(r){if(!(br+10<r[0]||bl-10>r[2]||bb+6<r[1]||bt-6>r[3]))bad+=6;if(_segHitsBox(lead,r[0],r[1],r[2],r[3])||_segHitsBox(tl,r[0],r[1],r[2],r[3]))bad+=0.5;});
     if(bad<bestBad){bestBad=bad;best={S:S,E:E,T:T,right:right,box:[bl,bt,br,bb],lead:lead,tl:tl};}
   });
   if(!best)return;
@@ -5190,14 +5196,49 @@ function _expLeader(opts,text,col,fs){
   _psegAdd.apply(null,best.lead);_psegAdd.apply(null,best.tl);_pdreg(best.box[0],best.box[1],best.box[2],best.box[3]);
 }
 // 글자: avoid=[dx,dy]를 주면 다른 글자와 겹칠 때 그 방향으로 조금씩 옮김
-function _expText(text,x,y,col,fs,weight,avoid){
+// 위치 치수 자동 배치: 치수선을 측정선에서 양쪽으로 띄운 여러 후보 중
+// 치수선·글자가 그려진 선/글자/표시에 가장 덜 걸치는 자리를 골라 그림 (보조선으로 측정점과 연결)
+function _expBestDim(p1,p2,nList,offList,text,col,fs){
+  fs=fs||26;
+  ctx.font='bold '+fs+'px '+_EXP_FONT;var tw=ctx.measureText(text).width;
+  var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<2)return;
+  var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L,horiz=Math.abs(ux)>=Math.abs(uy);
+  var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4,best=null,bestBad=Infinity;
+  function near(s,q){return Math.hypot(s[0]-q[0],s[1]-q[1])<4||Math.hypot(s[2]-q[0],s[3]-q[1])<4;}
+  var short=L<(horiz?tw:fs)+40,ext=(horiz?tw:fs)/2+16;
+  offList.forEach(function(off){nList.forEach(function(n){
+    var a1=[p1[0]+n[0]*off,p1[1]+n[1]*off],a2=[p2[0]+n[0]*off,p2[1]+n[1]*off],m=[(a1[0]+a2[0])/2,(a1[1]+a2[1])/2];
+    var dl=[a1[0],a1[1],a2[0],a2[1]],lineBad=Math.abs(off)*0.06; // 가까울수록 우선 (멀리 띄운 치수는 어디 치수인지 헷갈림)
+    _pseg.forEach(function(s){if(!near(s,a1)&&!near(s,a2)&&_segX([dl[0],dl[1]],[dl[2],dl[3]],[s[0],s[1]],[s[2],s[3]]))lineBad+=2;});
+    _pdr.forEach(function(r){if(_segHitsBox(dl,r[0],r[1],r[2],r[3]))lineBad+=2;});
+    // 글자 자리: 치수선 양쪽 가운데, (짧은 치수면) 양 화살표 끝 너머 — 모두 따져서 가장 깨끗한 곳
+    var tc=[[m[0]+n[0]*fs*0.65,m[1]+n[1]*fs*0.65,0],[m[0]-n[0]*fs*0.65,m[1]-n[1]*fs*0.65,0.3],[a2[0]+ux*ext,a2[1]+uy*ext,short?0:1],[a1[0]-ux*ext,a1[1]-uy*ext,short?0.1:1]];
+    if(short){tc[0][2]+=1;tc[1][2]+=1;} // 짧으면 사이에 안 들어가므로 끝 너머 우선
+    tc.forEach(function(t){
+      var tx=t[0],ty=t[1],bad=lineBad+t[2];
+      _pseg.forEach(function(s){if(_segHitsBox(s,tx-hw,ty-hh,tx+hw,ty+hh))bad+=6;});
+      _pdr.forEach(function(r){if(!(tx+hw<r[0]||tx-hw>r[2]||ty+hh<r[1]||ty-hh>r[3]))bad+=6;});
+      if(_inCutArea(tx-hw,ty-hh,tx+hw,ty+hh))bad+=6;
+      if(tx-hw<4||tx+hw>cv.width-4||ty-hh<4||ty+hh>cv.height-4)bad+=50;
+      if(bad<bestBad){bestBad=bad;best={n:n,off:off,tx:tx,ty:ty};}
+    });
+  });});
+  if(best)_expDim(p1,p2,best.n,best.off,text,col,fs,{x:best.tx,y:best.ty});
+}
+function _expText(text,x,y,col,fs,weight,avoid,minFs){
   ctx.font=(weight||'bold')+' '+fs+'px '+_EXP_FONT;ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
   var tw=ctx.measureText(text).width;
   if(avoid){
-    // 양쪽 방향을 번갈아 시도 (avoid, -avoid, 2×avoid, ...)
-    var ox=x,oy=y;
-    for(var k=1;k<=10&&!_pdfit(x-tw/2-3,y-fs/2-3,x+tw/2+3,y+fs/2+3);k++){var st=Math.ceil(k/2)*(k%2?1:-1);x=ox+avoid[0]*st;y=oy+avoid[1]*st;}
-    if(!_pdfit(x-tw/2-3,y-fs/2-3,x+tw/2+3,y+fs/2+3)){x=ox;y=oy;}
+    // 양쪽 방향을 번갈아 시도 (avoid, -avoid, 2×avoid, ...). 자리가 없으면 글씨를 줄여서 다시 (minFs까지)
+    var ox=x,oy=y,found=false;
+    for(var f=fs;f>=(minFs||fs)&&!found;f-=3){
+      ctx.font=(weight||'bold')+' '+f+'px '+_EXP_FONT;tw=ctx.measureText(text).width;
+      for(var k=0;k<=12;k++){
+        var st=Math.ceil(k/2)*(k%2?1:-1);x=ox+avoid[0]*st;y=oy+avoid[1]*st;
+        if(_pdfit(x-tw/2-3,y-f/2-3,x+tw/2+3,y+f/2+3)&&!_pseg.some(function(s){return _segHitsBox(s,x-tw/2-2,y-f/2-2,x+tw/2+2,y+f/2+2);})){found=true;fs=f;break;}
+      }
+    }
+    if(!found){x=ox;y=oy;ctx.font=(weight||'bold')+' '+fs+'px '+_EXP_FONT;tw=ctx.measureText(text).width;}
   }
   ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(text,x,y);
   ctx.fillStyle=col;ctx.fillText(text,x,y);_pdreg(x-tw/2-4,y-fs/2-4,x+tw/2+4,y+fs/2+4);
@@ -5255,7 +5296,7 @@ function _expPieceName(s){
 }
 function _drawCleanExport(){
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cv.width,cv.height);
-  _pdr=[];_pseg=[];_lgFrameGroups=null;
+  _pdr=[];_pseg=[];_pcut=[];_lgFrameGroups=null;
   var stats={open:false};
   var pieces=_expCollect();
   var pieceBoxesPx=pieces.map(function(p){var a=toCanvas(p.bb.l,p.bb.t),b=toCanvas(p.bb.r,p.bb.b);return{l:a[0],t:a[1],r:b[0],b:b[1]};});
@@ -5319,9 +5360,11 @@ function _drawCleanExport(){
       var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':'타공');
       var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
       var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
-      _expText(nm,cen[0],cen[1],p.col[0],fs,'bold',[0,Math.max(8,fs*0.5)]); // R값은 맨 마지막에 지시선으로
+      _expText(nm,cen[0],cen[1],p.col[0],fs,'bold',[0,Math.max(8,fs*0.5)],14); // R값은 맨 마지막에 지시선으로
     });
   });
+  // 이름을 놓은 뒤부터는 싱크볼/쿡탑 안쪽에 다른 글자가 들어가지 않게
+  pieces.forEach(function(p){p.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var u=toCanvas(qb.l,qb.t),v=toCanvas(qb.r,qb.b);_pcut.push([u[0]+2,u[1]+2,v[0]-2,v[1]-2]);});});
   // ④ 조각 치수
   pieces.forEach(function(p,pi){
     var s=p.s,col=p.col[0],hd=s.hideDims||{};
@@ -5359,15 +5402,26 @@ function _drawCleanExport(){
       var gapL=prect?L-ps.x:null,gapR=prect?ps.x+Math.abs(ps.w)-R:null,gapT=prect?T-ps.y:null,gapB=prect?ps.y+Math.abs(ps.h)-B:null;
       var useLeft=prect&&gapL<=gapR,useTop=prect&&gapT<=gapB;
       var tl=toCanvas(L,T),tr=toCanvas(R,T),br=toCanvas(R,B),bl=toCanvas(L,B);
-      // 자체 치수: 위치 치수와 반대쪽에 (W는 위치 치수가 위면 아래로)
-      if(useTop)_expDim(bl,br,[0,1],28,_fmtDim(g.w),col,28);else _expDim(tl,tr,[0,-1],28,_fmtDim(g.w),col,28);
-      if(useLeft)_expDim(tr,br,[1,0],28,_fmtDim(g.h),col,28);else _expDim(tl,bl,[-1,0],28,_fmtDim(g.h),col,28);
+      // 자체 치수: 위치 치수와 반대쪽에 (W는 위치 치수가 위면 아래로).
+      // 단, 그쪽 가까이에 수전 등 타공이 있으면 타공 없는 쪽으로 (타공 위치 치수 자리를 비워 둠)
+      var near=200;
+      function holesAt(side){return p.holes.some(function(h){
+        if(side==='l')return h.cx<L&&h.cx>L-near&&h.cy>T-near&&h.cy<B+near;
+        if(side==='r')return h.cx>R&&h.cx<R+near&&h.cy>T-near&&h.cy<B+near;
+        if(side==='t')return h.cy<T&&h.cy>T-near&&h.cx>L-near&&h.cx<R+near;
+        return h.cy>B&&h.cy<B+near&&h.cx>L-near&&h.cx<R+near;});}
+      var wBottom=useTop;if(holesAt(wBottom?'b':'t')&&!holesAt(wBottom?'t':'b'))wBottom=!wBottom;
+      var hRight=useLeft;if(holesAt(hRight?'r':'l')&&!holesAt(hRight?'l':'r'))hRight=!hRight;
+      if(wBottom)_expDim(bl,br,[0,1],28,_fmtDim(g.w),col,28);else _expDim(tl,tr,[0,-1],28,_fmtDim(g.w),col,28);
+      if(hRight)_expDim(tr,br,[1,0],28,_fmtDim(g.h),col,28);else _expDim(tl,bl,[-1,0],28,_fmtDim(g.h),col,28);
       if(prect){
         var cyM=(T+B)/2,cxM=(L+R)/2;
-        if(useLeft){if(gapL>0.5)_expDim(toCanvas(ps.x,cyM),toCanvas(L,cyM),[0,-1],0,_fmtDim(gapL),col,26);}
-        else if(gapR>0.5)_expDim(toCanvas(R,cyM),toCanvas(ps.x+Math.abs(ps.w),cyM),[0,-1],0,_fmtDim(gapR),col,26);
-        if(useTop){if(gapT>0.5)_expDim(toCanvas(cxM,ps.y),toCanvas(cxM,T),[-1,0],0,_fmtDim(gapT),col,26);}
-        else if(gapB>0.5)_expDim(toCanvas(cxM,B),toCanvas(cxM,ps.y+Math.abs(ps.h)),[-1,0],0,_fmtDim(gapB),col,26);
+        // 위치 치수: 가운데 선 위가 비었으면 그대로, 막혀 있으면 위/아래(좌/우)로 띄워서
+        var OFFS=[0,30,60,95],UD=[[0,-1],[0,1]],LR=[[-1,0],[1,0]];
+        if(useLeft){if(gapL>0.5)_expBestDim(toCanvas(ps.x,cyM),toCanvas(L,cyM),UD,OFFS,_fmtDim(gapL),col,26);}
+        else if(gapR>0.5)_expBestDim(toCanvas(R,cyM),toCanvas(ps.x+Math.abs(ps.w),cyM),UD,OFFS,_fmtDim(gapR),col,26);
+        if(useTop){if(gapT>0.5)_expBestDim(toCanvas(cxM,ps.y),toCanvas(cxM,T),LR,OFFS,_fmtDim(gapT),col,26);}
+        else if(gapB>0.5)_expBestDim(toCanvas(cxM,B),toCanvas(cxM,ps.y+Math.abs(ps.h)),LR,OFFS,_fmtDim(gapB),col,26);
       }
     });
     // 타공: Φ 표시 + 위치 치수(중심 기준). 같은 높이에 나란한 타공(수전 여러 개 등)은
@@ -5390,12 +5444,18 @@ function _drawCleanExport(){
       var first=row[0],last=row[row.length-1];
       var bxL=nearest(vx,first.cx),bxR=nearest(vx,last.cx);
       var useR=Math.abs(bxR-last.cx)<Math.abs(bxL-first.cx);
-      if(!useR&&Math.abs(bxL-first.cx)>first.r)_expDim(toCanvas(bxL,yRow),toCanvas(first.cx,yRow),nAbove,offA,_fmtDim(Math.abs(bxL-first.cx)),col,22);
-      for(var i=1;i<row.length;i++)_expDim(toCanvas(row[i-1].cx,yRow),toCanvas(row[i].cx,yRow),nAbove,offA,_fmtDim(row[i].cx-row[i-1].cx),col,22);
-      if(useR&&Math.abs(bxR-last.cx)>last.r)_expDim(toCanvas(last.cx,yRow),toCanvas(bxR,yRow),nAbove,offA,_fmtDim(Math.abs(bxR-last.cx)),col,22);
-      // 세로: 줄 전체에 한 번, 가까운 위/아래 기준선까지
+      // 타공은 중심선에 치수를 바로 겹치지 않고, 타공·싱크볼 변·다른 치수를 피해 띄운 자리에 (보조선으로 중심과 연결)
+      var rp0=mm2px(rmax),HOFF=[rp0+20,rp0+45,rp0+75,rp0+110],UD2=[[0,-1],[0,1]],LR2=[[1,0],[-1,0]];
+      if(row.length===1){
+        if(Math.abs(bxL-first.cx)>first.r)_expBestDim(toCanvas(Math.abs(bxL-first.cx)<=Math.abs(bxR-first.cx)?bxL:bxR,yRow),toCanvas(first.cx,yRow),UD2,HOFF,_fmtDim(Math.min(Math.abs(bxL-first.cx),Math.abs(bxR-first.cx))),col,22);
+      } else {
+        if(!useR&&Math.abs(bxL-first.cx)>first.r)_expDim(toCanvas(bxL,yRow),toCanvas(first.cx,yRow),nAbove,offA,_fmtDim(Math.abs(bxL-first.cx)),col,22);
+        for(var i=1;i<row.length;i++)_expDim(toCanvas(row[i-1].cx,yRow),toCanvas(row[i].cx,yRow),nAbove,offA,_fmtDim(row[i].cx-row[i-1].cx),col,22);
+        if(useR&&Math.abs(bxR-last.cx)>last.r)_expDim(toCanvas(last.cx,yRow),toCanvas(bxR,yRow),nAbove,offA,_fmtDim(Math.abs(bxR-last.cx)),col,22);
+      }
+      // 세로: 줄 전체에 한 번, 가까운 위/아래 기준선까지 (좌/우로 띄운 자리 중 빈 곳)
       var by=nearest(hy,yRow);
-      if(Math.abs(by-yRow)>rmax){_expDim(toCanvas(first.cx,by),toCanvas(first.cx,yRow),[-1,0],row.length===1?0:mm2px(first.r)+12,_fmtDim(Math.abs(by-yRow)),col,22);}
+      if(Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(first.cx,by),toCanvas(first.cx,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22);
     });
   });
   // ⑥ 사용자가 그린 치수선/졸리컷/호 (기존 인쇄 표현 그대로)
@@ -5606,12 +5666,13 @@ function exportDrawingA4(){
   var _capLong=2000,_capRatio=isPort?184/258:267/171;
   mainCv.width=Math.round(isPort?_capLong*_capRatio:_capLong);
   mainCv.height=Math.round(isPort?_capLong:_capLong/_capRatio);
-  var pad=300;
-  var newSc=Math.min((mainCv.width-2*pad)/mmW,(mainCv.height-2*pad)/mmH);
+  // 여백: 치수(약 120px) + 위쪽 현장정보/아래쪽 범례 자리. 여백이 클수록 도면이 작아져 글자가 몰리므로 필요한 만큼만
+  var padX=170,padT=190,padB=210;
+  var newSc=Math.min((mainCv.width-2*padX)/mmW,(mainCv.height-padT-padB)/mmH);
   newSc=Math.min(newSc,20);
   scale=newSc;
-  offsetX=pad+(mainCv.width-2*pad-mmW*newSc)/2-allBB.l*newSc;
-  offsetY=pad+(mainCv.height-2*pad-mmH*newSc)/2-allBB.t*newSc;
+  offsetX=padX+(mainCv.width-2*padX-mmW*newSc)/2-allBB.l*newSc;
+  offsetY=padT+(mainCv.height-padT-padB-mmH*newSc)/2-allBB.t*newSc;
   // 도면화 전용 렌더러로 캡처 (printRender: 사용자 치수선 등 기존 인쇄용 크기 사용)
   _exportLegend=[];
   printRender=true;printMode=true;
