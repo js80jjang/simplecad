@@ -5034,12 +5034,13 @@ function _expCollect(){
   });
   return pieces;
 }
-// 변(a→b, mm) 위에 놓인 밑면연마/고스라 구간 → 열린 구간 [t0,t1] (mm, a 기준). 싱크볼 그룹 마크는 제외.
+// 변(a→b, mm) 위에 놓인 밑면연마 구간 → 점선 구간 [t0,t1] (mm, a 기준). 싱크볼 그룹 마크는 제외.
+// (고스라는 밑면연마와 따로 하는 경우가 있어 점선이 아니라 빨간 삼각형으로 별도 표시)
 function _expOpenIntervals(ax,ay,bx,by){
   var dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<1)return[];
   var ux=dx/L,uy=dy/L,iv=[];
   shapes.forEach(function(m){
-    if((m.kind!=='grindregion'&&m.kind!=='gosramark')||m.groupId)return;
+    if(m.kind!=='grindregion'||m.groupId)return;
     var d1=Math.abs((m.x1-ax)*uy-(m.y1-ay)*ux),d2=Math.abs((m.x2-ax)*uy-(m.y2-ay)*ux);
     if(d1>3||d2>3)return;
     var t1=(m.x1-ax)*ux+(m.y1-ay)*uy,t2=(m.x2-ax)*ux+(m.y2-ay)*uy;
@@ -5194,6 +5195,12 @@ function _drawCleanExport(){
     });
     p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(q.r),0,2*Math.PI);ctx.stroke();});
   });
+  // ②-2 고스라: 표시 구간 가운데에 바깥쪽을 향한 빨간 삼각형 (편집 화면과 같은 방식)
+  shapes.forEach(function(m){
+    if(m.kind!=='gosramark')return;
+    var mp=toCanvas((m.x1+m.x2)/2,(m.y1+m.y2)/2),ang=Math.atan2(m.y2-m.y1,m.x2-m.x1)+(m.outward||1)*Math.PI/2;
+    drawTriangle(mp[0],mp[1],ang,m.groupId?16:22,'#E53935');stats.gosra=true;
+  });
   // ③ 조각 이름 (먼저 등록해서 치수 글자가 피해가도록)
   pieces.forEach(function(p){
     var nm=_expPieceName(p.s);if(!nm)return;
@@ -5314,13 +5321,14 @@ function _drawCleanExport(){
       ctx.fillStyle=p.col[0];ctx.fillRect(a[0]+8,a[1]+8,bw,36);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,a[0]+8+bw/2,a[1]+26);
     });
   }
-  // ⑧ 범례 (열린 모서리가 있을 때)
-  if(stats.open){
+  // ⑧ 범례 (밑면연마/고스라가 있을 때): 실선 = 막힌 모서리, 점선 = 밑면연마, ▲ = 고스라
+  if(stats.open||stats.gosra){
     var ly=cv.height-46,lx=60;
-    ctx.strokeStyle='#555';ctx.lineWidth=4;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+140,ly);ctx.stroke();
-    ctx.setLineDash([22,12]);ctx.beginPath();ctx.moveTo(lx+380,ly);ctx.lineTo(lx+520,ly);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='28px '+_EXP_FONT;ctx.fillStyle='#333';ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.fillText('막힌 모서리',lx+156,ly);ctx.fillText('열린 모서리 (밑면연마·고스라)',lx+536,ly);
+    ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.strokeStyle='#555';ctx.lineWidth=4;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+120,ly);ctx.stroke();
+    ctx.fillStyle='#333';ctx.fillText('막힌 모서리',lx+136,ly);lx+=136+ctx.measureText('막힌 모서리').width+60;
+    if(stats.open){ctx.setLineDash([22,12]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+120,ly);ctx.stroke();ctx.setLineDash([]);ctx.fillText('밑면연마',lx+136,ly);lx+=136+ctx.measureText('밑면연마').width+60;}
+    if(stats.gosra){drawTriangle(lx+16,ly,-Math.PI/2,22,'#E53935');ctx.fillStyle='#333';ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('고스라',lx+44,ly);}
   }
 }
 // 선 조각의 선들을 이어 닫힌 다각형(world 점 목록)으로. 실패하면 null
