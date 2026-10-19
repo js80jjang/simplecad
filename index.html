@@ -5107,13 +5107,19 @@ function _expDim(p1,p2,n,off,text,col,fs){
   var tw=ctx.measureText(text).width;
   var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L;
   var horiz=Math.abs(ux)>=Math.abs(uy);
-  // 글자 자리가 겹치면 바깥으로 더 밀기
-  for(var k=0;k<4;k++){
-    var mx=(p1[0]+p2[0])/2+n[0]*(off+fs*0.65),my=(p1[1]+p2[1])/2+n[1]*(off+fs*0.65);
-    var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4;
-    if(_pdfit(mx-hw,my-hh,mx+hw,my+hh))break;
-    off+=fs*1.3;
+  var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4,gapT=fs*0.65,ext=(horiz?tw:fs)/2+16;
+  // 글자 자리 후보 (치수선 위치는 그대로): ① 바깥쪽 가운데 ② 안쪽 가운데 ③④ 화살표 바깥 끝 너머(짧은 치수)
+  //   ⑤⑥ 그래도 겹치면 치수선을 조금씩 바깥으로 (조각 치수만, 최대 2단계)
+  function cands(o){
+    var a1=[p1[0]+n[0]*o,p1[1]+n[1]*o],a2=[p2[0]+n[0]*o,p2[1]+n[1]*o],m=[(a1[0]+a2[0])/2,(a1[1]+a2[1])/2];
+    var list=[[m[0]+n[0]*gapT,m[1]+n[1]*gapT],[m[0]-n[0]*gapT,m[1]-n[1]*gapT]];
+    if(L<(horiz?tw:fs)+40){list.push([a2[0]+ux*ext,a2[1]+uy*ext],[a1[0]-ux*ext,a1[1]-uy*ext]);}
+    return list.map(function(c){return{o:o,x:c[0],y:c[1]};});
   }
+  var opts=cands(off);if(off>0)opts=opts.concat(cands(off+fs*1.1),cands(off+fs*2.2));
+  var pick=opts[0];
+  for(var k=0;k<opts.length;k++){if(_pdfit(opts[k].x-hw,opts[k].y-hh,opts[k].x+hw,opts[k].y+hh)){pick=opts[k];break;}}
+  off=pick.o;
   var a1=[p1[0]+n[0]*off,p1[1]+n[1]*off],a2=[p2[0]+n[0]*off,p2[1]+n[1]*off];
   ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;ctx.setLineDash([]);
   // 보조선
@@ -5125,19 +5131,26 @@ function _expDim(p1,p2,n,off,text,col,fs){
   ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
   var ah=Math.min(18,L/3),ang=Math.atan2(uy,ux);
   arrowHead(a1[0],a1[1],ang+Math.PI,ah,col);arrowHead(a2[0],a2[1],ang,ah,col);
-  // 글자
-  var tx=(a1[0]+a2[0])/2+n[0]*(fs*0.65),ty=(a1[1]+a2[1])/2+n[1]*(fs*0.65);
+  // 글자 (흰 테두리로 뒤의 선과 구분)
+  var tx=pick.x,ty=pick.y;
   var ta=ang;if(Math.cos(ta)<-0.01||(Math.abs(Math.cos(ta))<0.01&&Math.sin(ta)>0))ta+=Math.PI; // 세로 치수는 아래→위로 읽기
   ctx.save();ctx.translate(tx,ty);ctx.rotate(ta);ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(text,0,0);ctx.restore();
-  var hw2=(horiz?tw:fs)/2+4,hh2=(horiz?fs:tw)/2+4;_pdreg(tx-hw2,ty-hh2,tx+hw2,ty+hh2);
+  ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(text,0,0);
+  ctx.fillStyle=col;ctx.fillText(text,0,0);ctx.restore();
+  _pdreg(tx-hw,ty-hh,tx+hw,ty+hh);
 }
 // 글자: avoid=[dx,dy]를 주면 다른 글자와 겹칠 때 그 방향으로 조금씩 옮김
 function _expText(text,x,y,col,fs,weight,avoid){
   ctx.font=(weight||'bold')+' '+fs+'px '+_EXP_FONT;ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
   var tw=ctx.measureText(text).width;
-  if(avoid)for(var k=0;k<6&&!_pdfit(x-tw/2-3,y-fs/2-3,x+tw/2+3,y+fs/2+3);k++){x+=avoid[0];y+=avoid[1];}
-  ctx.fillText(text,x,y);_pdreg(x-tw/2-4,y-fs/2-4,x+tw/2+4,y+fs/2+4);
+  if(avoid){
+    // 양쪽 방향을 번갈아 시도 (avoid, -avoid, 2×avoid, ...)
+    var ox=x,oy=y;
+    for(var k=1;k<=10&&!_pdfit(x-tw/2-3,y-fs/2-3,x+tw/2+3,y+fs/2+3);k++){var st=Math.ceil(k/2)*(k%2?1:-1);x=ox+avoid[0]*st;y=oy+avoid[1]*st;}
+    if(!_pdfit(x-tw/2-3,y-fs/2-3,x+tw/2+3,y+fs/2+3)){x=ox;y=oy;}
+  }
+  ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(text,x,y);
+  ctx.fillStyle=col;ctx.fillText(text,x,y);_pdreg(x-tw/2-4,y-fs/2-4,x+tw/2+4,y+fs/2+4);
 }
 // 사각형(회전 포함)의 로컬→world, 코너 정보
 function _expRectGeo(s){
@@ -5227,8 +5240,12 @@ function _drawCleanExport(){
     if(m.kind!=='gosramark')return;
     var gd=_gosraDir(m);if(!gd)return;
     var mp=toCanvas(gd.mx,gd.my),sz=m.groupId?16:22;
-    drawTriangle(mp[0]-gd.dx*sz,mp[1]-gd.dy*sz,Math.atan2(gd.dy,gd.dx),sz,'#E53935');stats.gosra=true;
+    var tcx=mp[0]-gd.dx*sz,tcy=mp[1]-gd.dy*sz;
+    drawTriangle(tcx,tcy,Math.atan2(gd.dy,gd.dx),sz,'#E53935');stats.gosra=true;
+    _pdreg(tcx-sz,tcy-sz,tcx+sz,tcy+sz); // 치수 글자가 삼각형을 피하도록
   });
+  // 타공 자리도 글자가 피하도록
+  pieces.forEach(function(p){p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy),r=mm2px(q.r)+3;_pdreg(c[0]-r,c[1]-r,c[0]+r,c[1]+r);});});
   // ③ 조각 이름 (먼저 등록해서 치수 글자가 피해가도록)
   pieces.forEach(function(p){
     var nm=_expPieceName(p.s);if(!nm)return;
@@ -5243,6 +5260,19 @@ function _drawCleanExport(){
         if(fsV>=14&&free){var cx=(a[0]+b[0])/2,cy=(a[1]+b[1])/2;ctx.save();ctx.translate(cx,cy);ctx.rotate(-Math.PI/2);ctx.font='bold '+fsV+'px '+_EXP_FONT;ctx.fillStyle=p.col[0];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(nm,0,0);var twV=ctx.measureText(nm).width;ctx.restore();_pdreg(cx-fsV/2-4,cy-twV/2-4,cx+fsV/2+4,cy+twV/2+4);}
       }
     }
+  });
+  // ③-2 싱크볼/쿡탑 이름 + R (치수보다 먼저 자리 잡기, 삼각형과 겹치면 위아래로 비켜감)
+  pieces.forEach(function(p){
+    p.cutouts.forEach(function(q){
+      if(q.kind!=='rect')return;
+      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':'타공');
+      var cc=g.c.bl.type!=='none'?g.c.bl:(g.c.tl.type!=='none'?g.c.tl:null);
+      var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
+      var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
+      var step=Math.max(8,fs*0.5);
+      _expText(nm,cen[0],cen[1]-(cc?fs*0.4:0),p.col[0],fs,'bold',[0,step]);
+      if(cc)_expText((cc.type==='chamfer'?'C':'R')+_fmtDim(cc.r),cen[0],cen[1]+fs*0.7,p.col[0],Math.round(fs*0.6),'normal',[0,step]);
+    });
   });
   // ④ 조각 치수
   pieces.forEach(function(p,pi){
@@ -5283,7 +5313,6 @@ function _drawCleanExport(){
     p.cutouts.forEach(function(q){
       if(q.kind!=='rect'){var e0=toCanvas(q.cx-q.rx,q.cy),e1=toCanvas(q.cx+q.rx,q.cy);_expDim(e0,e1,[0,-1],mm2px(q.ry)+24,_fmtDim(q.rx*2)+'×'+_fmtDim(q.ry*2),col,26);return;}
       var g=_expRectGeo(q),L=q.x,T=q.y,R=q.x+Math.abs(q.w),B=q.y+Math.abs(q.h);
-      var at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':'타공');
       // 위치: 가까운 좌/우 변, 가까운 위/아래 변
       var gapL=prect?L-ps.x:null,gapR=prect?ps.x+Math.abs(ps.w)-R:null,gapT=prect?T-ps.y:null,gapB=prect?ps.y+Math.abs(ps.h)-B:null;
       var useLeft=prect&&gapL<=gapR,useTop=prect&&gapT<=gapB;
@@ -5298,11 +5327,6 @@ function _drawCleanExport(){
         if(useTop){if(gapT>0.5)_expDim(toCanvas(cxM,ps.y),toCanvas(cxM,T),[-1,0],0,_fmtDim(gapT),col,26);}
         else if(gapB>0.5)_expDim(toCanvas(cxM,B),toCanvas(cxM,ps.y+Math.abs(ps.h)),[-1,0],0,_fmtDim(gapB),col,26);
       }
-      var cc=g.c.bl.type!=='none'?g.c.bl:(g.c.tl.type!=='none'?g.c.tl:null);
-      var cen=toCanvas((L+R)/2,(T+B)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
-      var fs=Math.max(18,Math.min(44,wpx*0.8/nm.length,hpx*0.3));
-      _expText(nm,cen[0],cen[1]-(cc?fs*0.4:0),col,Math.round(fs));
-      if(cc)_expText((cc.type==='chamfer'?'C':'R')+_fmtDim(cc.r),cen[0],cen[1]+fs*0.7,col,Math.round(fs*0.6),'normal');
     });
     // 타공: Φ 표시 + 위치 치수(중심 기준). 같은 높이에 나란한 타공(수전 여러 개 등)은
     //   첫 타공 → 가까운 기준선(조각 변/타공부 변), 이후는 타공 사이 간격으로 이어서 표시
