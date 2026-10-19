@@ -1335,6 +1335,30 @@ function drawJollyMark(s,preview){
   if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(!printRender){ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+12,44,13);}ctx.fillStyle=printRender?'#1565C0':'#64B5F6';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(dist),pc[0],pc[1]+18);}
 }
 
+// 고스라 삼각형 방향(꼭지점 = 방향): 사각/선 절단 조각 변 → 바깥에서 조각 안쪽을 향함,
+// 싱크볼/쿡탑(타공부) 변 → 타공부 안쪽에서 선을 향함. 반환 {mx,my(변 중점, mm), dx,dy(꼭지점 방향 단위벡터)}
+function _gosraDir(m){
+  var L=Math.hypot(m.x2-m.x1,m.y2-m.y1);if(L<0.5)return null;
+  var mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2,nx=-(m.y2-m.y1)/L,ny=(m.x2-m.x1)/L,e=Math.max(2,Math.min(10,L/4));
+  function inRectS(s,x,y){
+    var rot=s.rotation||0,dx=x-(s.x+s.w/2),dy=y-(s.y+s.h/2);
+    if(rot){var c=Math.cos(-rot),si=Math.sin(-rot),t=dx*c-dy*si;dy=dx*si+dy*c;dx=t;}
+    return Math.abs(dx)<Math.abs(s.w)/2&&Math.abs(dy)<Math.abs(s.h)/2;
+  }
+  var rects=shapes.filter(function(s){return s.kind==='rect';});
+  function isCut(s){return s.groupRole==='main'||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
+  function inCut(x,y){return rects.some(function(s){return isCut(s)&&inRectS(s,x,y);});}
+  function inPiece(x,y){
+    if(rects.some(function(s){return !isCut(s)&&inRectS(s,x,y);}))return true;
+    if(!_lgFrameGroups)_lgFrameGroups=_lineBoundaryGroups();
+    return _lgFrameGroups.some(function(g){if(g.length<3)return false;var ins=false;g.forEach(function(it){var l=it.s;if((l.y1>y)!==(l.y2>y)){var xi=l.x1+(y-l.y1)*(l.x2-l.x1)/(l.y2-l.y1);if(xi>x)ins=!ins;}});return ins;});
+  }
+  var px=mx+nx*e,py=my+ny*e,qx=mx-nx*e,qy=my-ny*e,d;
+  if(inCut(px,py))d=-1;else if(inCut(qx,qy))d=1;          // 타공부 쪽의 반대(=선 방향)
+  else if(inPiece(px,py))d=1;else if(inPiece(qx,qy))d=-1;  // 조각 안쪽
+  else d=-(m.outward||1);                                   // 판단 불가: 저장된 바깥 방향의 반대
+  return{mx:mx,my:my,dx:nx*d,dy:ny*d};
+}
 function drawGosraMark(s,preview){
   var outDir=s.outward||1;
   var refCol=isSelected(s)?'#FF6D00':(preview?'rgba(244,67,54,0.5)':'rgba(244,67,54,0.6)');
@@ -1365,7 +1389,10 @@ function drawGosraMark(s,preview){
     });
     ctx.setLineDash([]);
   }
-  drawTriangle(pc[0],pc[1],triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');
+  // 직선 고스라: 꼭지점이 변에 닿도록, 방향은 _gosraDir 규칙(조각=안쪽, 싱크볼/쿡탑=선 쪽)
+  var _gd=_corner?null:_gosraDir(s);
+  if(_gd){triAngle=Math.atan2(_gd.dy,_gd.dx);drawTriangle(pc[0]-_gd.dx*11,pc[1]-_gd.dy*11,triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');}
+  else drawTriangle(pc[0],pc[1],triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');
   if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(!printRender){ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+14,44,13);}ctx.fillStyle=printRender?'#1565C0':'#EF9A9A';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(dist),pc[0],pc[1]+20);}
 }
 
@@ -5195,11 +5222,12 @@ function _drawCleanExport(){
     });
     p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(q.r),0,2*Math.PI);ctx.stroke();});
   });
-  // ②-2 고스라: 표시 구간 가운데에 바깥쪽을 향한 빨간 삼각형 (편집 화면과 같은 방식)
+  // ②-2 고스라: 변 가운데, 꼭지점이 변에 닿는 빨간 삼각형 (조각 변=바깥에서 안쪽으로, 싱크볼/쿡탑=안에서 선 쪽으로)
   shapes.forEach(function(m){
     if(m.kind!=='gosramark')return;
-    var mp=toCanvas((m.x1+m.x2)/2,(m.y1+m.y2)/2),ang=Math.atan2(m.y2-m.y1,m.x2-m.x1)+(m.outward||1)*Math.PI/2;
-    drawTriangle(mp[0],mp[1],ang,m.groupId?16:22,'#E53935');stats.gosra=true;
+    var gd=_gosraDir(m);if(!gd)return;
+    var mp=toCanvas(gd.mx,gd.my),sz=m.groupId?16:22;
+    drawTriangle(mp[0]-gd.dx*sz,mp[1]-gd.dy*sz,Math.atan2(gd.dy,gd.dx),sz,'#E53935');stats.gosra=true;
   });
   // ③ 조각 이름 (먼저 등록해서 치수 글자가 피해가도록)
   pieces.forEach(function(p){
