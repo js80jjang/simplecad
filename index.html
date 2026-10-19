@@ -5338,6 +5338,91 @@ function _expChain(lines){
   }
   return eq(pts[0],pts[pts.length-1])&&pts.length>3?pts:null;
 }
+// ═══ 도면화 2페이지: 온장 배치 (도면과 같은 조각 색) ═══
+function _hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
+function _renderCleanBoards(cvs,boards,bw,bh,margin){
+  var g=cvs.getContext('2d'),W=cvs.width,H=cvs.height,PAD=40;
+  g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
+  var pieces=_expCollect(),info=new Map();
+  function keyOf(s){return s&&s.kind==='linegroup'?s.lines[0]:s;}
+  pieces.forEach(function(p){info.set(keyOf(p.s),p);});
+  var auto=showShapeNumbers?_autoPieceNums():null;
+  // 장 수에 맞춰 가장 크게 보이는 행/열 배치
+  var n=boards.length,best=null;
+  for(var cols=1;cols<=n;cols++){
+    var rows=Math.ceil(n/cols),cw=(W-2*PAD)/cols,ch=(H-2*PAD)/rows;
+    var sc=Math.min((cw-60)/bw,(ch-110)/bh);
+    if(!best||sc>best.sc)best={cols:cols,cw:cw,ch:ch,sc:sc};
+  }
+  var sc=best.sc,FONT=_EXP_FONT;
+  boards.forEach(function(board,bi){
+    var col=bi%best.cols,row=Math.floor(bi/best.cols);
+    var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2;
+    // 사용률
+    var used=board.reduce(function(a,p){return a+(p.pw||0)*(p.ph||0);},0);
+    g.font='bold 30px '+FONT;g.fillStyle='#222';g.textAlign='left';g.textBaseline='alphabetic';
+    g.fillText('온장 '+(bi+1),bx,by-22);
+    var tw=g.measureText('온장 '+(bi+1)).width;
+    g.font='24px '+FONT;g.fillStyle='#666';
+    g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18,by-22);
+    // 온장 (남는 부분 = 회색)
+    g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
+    g.strokeStyle='#555';g.lineWidth=3;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
+    board.forEach(function(p,pi){
+      var sh=p.item&&p.item.shape;if(!sh)return;
+      var pc=info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
+      var ox=bx+(margin+p.x)*sc,oy=by+(margin+p.y)*sc,pw=p.pw*sc,ph=p.ph*sc;
+      // 도형 좌표(mm) → 배치 위치(px). 회전 배치는 90° 회전
+      var bb=pc?pc.bb:{l:sh.x||0,t:sh.y||0,r:(sh.x||0)+(p.item.w||0),b:(sh.y||0)+(p.item.h||0)};
+      var iw=bb.r-bb.l;
+      function M(x,y){var u=x-bb.l,v=y-bb.t;return p.rotated?[ox+v*sc,oy+(iw-u)*sc]:[ox+u*sc,oy+v*sc];}
+      function path(pts){g.beginPath();pts.forEach(function(q,i){var m=M(q[0],q[1]);if(i)g.lineTo(m[0],m[1]);else g.moveTo(m[0],m[1]);});g.closePath();}
+      g.fillStyle=_hexA(cc[0],0.32);g.strokeStyle=cc[0];g.lineWidth=3;
+      if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(loop)path(loop);else{g.beginPath();g.rect(ox,oy,pw,ph);}}
+      else if(sh.kind==='circle'||sh.kind==='hole'){g.beginPath();g.arc(ox+pw/2,oy+ph/2,Math.min(pw,ph)/2,0,2*Math.PI);}
+      else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
+      else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
+      else{g.beginPath();g.rect(ox,oy,pw,ph);}
+      g.fill();g.stroke();
+      // 타공부/타공 (흰색)
+      if(pc){
+        g.fillStyle='#ffffff';g.lineWidth=2;
+        pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;path([[qb.l,qb.t],[qb.r,qb.t],[qb.r,qb.b],[qb.l,qb.b]]);g.fill();g.stroke();});
+        pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
+      }
+      // 이름 + 크기 (회전 배치는 ↻)
+      var nm=pc?_expPieceName(pc.s):'',sz=p.item.label||(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
+      if(p.rotated)sz+=' ↻';
+      var lines=nm?[nm,sz]:[sz];
+      var fs=Math.min(38,ph*0.28,pw*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);
+      var vertical=false;
+      if(fs<14&&ph>pw*1.5){vertical=true;fs=Math.min(34,pw*0.28,ph*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);}
+      var lx=ox+pw/2,ly=oy+ph/2;
+      if(sh.kind==='linegroup'&&pc){ // ㄱ자 등: 상자 가운데가 빈 곳일 수 있어 도형 면적 중심에
+        var cpt=_expLabelPoint(pc),wpt=[(cpt[0]-offsetX)/scale,(cpt[1]-offsetY)/scale],mp=M(wpt[0],wpt[1]);lx=mp[0];ly=mp[1];
+      }
+      if(fs>=12){
+        g.save();g.translate(lx,ly);if(vertical)g.rotate(-Math.PI/2);
+        g.textAlign='center';g.textBaseline='middle';
+        lines.forEach(function(t,li){
+          var isName=nm&&li===0,f=isName?fs:Math.max(12,fs*0.72),dy=lines.length===1?0:(li===0?-f*0.6:f*0.75);
+          g.font=(isName?'bold ':'')+Math.round(f)+'px '+FONT;
+          g.lineWidth=5;g.strokeStyle='rgba(255,255,255,0.85)';g.strokeText(t,0,dy); // 겹친 선 위에서도 잘 읽히게
+          g.fillStyle=isName?cc[0]:'#333';g.fillText(t,0,dy);
+        });
+        g.restore();
+      }
+      // 조각 번호
+      if(auto){
+        var key=keyOf(sh),num=key.shapeNum||auto[shapes.indexOf(key)];
+        if(sh.kind==='linegroup')for(var i=0;i<sh.lines.length&&!num;i++)num=auto[shapes.indexOf(sh.lines[i])];
+        if(num&&pw>30&&ph>24){var t=String(num);g.font='bold 20px Arial';var bwN=Math.max(30,g.measureText(t).width+14);g.fillStyle=cc[0];g.fillRect(ox+4,oy+4,bwN,28);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,ox+4+bwN/2,oy+18);}
+      }
+    });
+  });
+}
+// 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (온장 배치용)
+function _expRectPathLocal(s){var g=_expRectGeo({x:s.x,y:s.y,w:s.w,h:s.h,corners:s.corners,cornerType:s.cornerType,cornerSize:s.cornerSize});return _expRectPath(g);}
 // 조각 이름 자리 찾기: 큰 글씨부터 줄여가며, 조각 안에서 타공부/타공(+치수 자리)을 피하는 빈 곳 중 중심에 가까운 곳
 function _expNameSpot(p,nm){
   var c0=_expLabelPoint(p),a=toCanvas(p.bb.l,p.bb.t),b=toCanvas(p.bb.r,p.bb.b);
@@ -5368,6 +5453,15 @@ function _expLabelPoint(p){
     var pts=_expChain(s.lines);
     if(pts){var A=0,cx=0,cy=0;for(var i=0;i<pts.length-1;i++){var f=pts[i][0]*pts[i+1][1]-pts[i+1][0]*pts[i][1];A+=f;cx+=(pts[i][0]+pts[i+1][0])*f;cy+=(pts[i][1]+pts[i+1][1])*f;}
       if(Math.abs(A)>1){cx/=(3*A);cy/=(3*A);if(_expPieceContains(p,cx,cy))return toCanvas(cx,cy);}}
+    // 면적 중심이 바깥(ㄱ자 안쪽 모서리 등)이면: 도형 안에서 변들로부터 가장 먼 점
+    var best=null,bd=-1;
+    for(var gx=1;gx<20;gx++)for(var gy=1;gy<20;gy++){
+      var x=p.bb.l+(p.bb.r-p.bb.l)*gx/20,y=p.bb.t+(p.bb.b-p.bb.t)*gy/20;
+      if(!_expPieceContains(p,x,y))continue;
+      var d=Math.min.apply(null,s.lines.map(function(l){return ptLD(x,y,l.x1,l.y1,l.x2,l.y2);}));
+      if(d>bd){bd=d;best=[x,y];}
+    }
+    if(best)return toCanvas(best[0],best[1]);
   }
   return toCanvas((p.bb.l+p.bb.r)/2,(p.bb.t+p.bb.b)/2);
 }
@@ -5469,25 +5563,13 @@ function exportDrawingA4(){
     _boards2r=_pk2r.boards;_gm2r=_pk2r.groups;
   }
   // 저장된 배치 이미지 우선 사용 (closeBoardModal에서 직접 렌더링한 이미지)
-  if(_savedBoardImg&&_fromSaved){
-    boardImg2=_savedBoardImg;
-  } else if(_boards2r&&_boards2r.length>0){
-    var _prevBs2=_bs;
-    _bs={boards:_boards2r,groups:_gm2r,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],margin:_use_margin};
-    var _tmpBv2=document.createElement('canvas');
-    _tmpBv2.style.cssText='position:fixed;left:-9999px;top:0;display:block';
-    document.body.appendChild(_tmpBv2);
-    printRender=true;
+  // 온장 배치: 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm)
+  if(_boards2r&&_boards2r.length>0){
     try{
-      var _boardCols=_boards2r.length;
-      var _boardW2=Math.max(1200,_boardCols*900);
-      var _boardH2=Math.max(700,(_gm2r?_gm2r.length:1)*340);
-      renderBoardLayout(_boards2r,_use_bw,_use_bh,_use_ew,_use_eh,_use_margin,_boardW2,_boardH2,_tmpBv2);
-      boardImg2=_tmpBv2.toDataURL('image/png');
-    }catch(e2){}
-    printRender=false;
-    _bs=_prevBs2;
-    document.body.removeChild(_tmpBv2);
+      var _bcv=document.createElement('canvas');_bcv.width=2000;_bcv.height=1280;
+      _renderCleanBoards(_bcv,_boards2r,_use_bw,_use_bh,_use_margin);
+      boardImg2=_bcv.toDataURL('image/png');
+    }catch(e2){console.error(e2);}
   }
 
   var pw=window.open('','_blank','width=900,height=750,scrollbars=yes,resizable=yes');
