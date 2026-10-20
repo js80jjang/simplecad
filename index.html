@@ -439,6 +439,11 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>고스라</label><input id="xt-gosra" type="text" inputmode="numeric" value="11,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <button class="tier-save-btn" onclick="saveTierPrices('retail')">💾 저장</button>
       </div>
+      <!-- 다른 PC와 단가 공유: 단가는 이 PC 브라우저에만 저장되므로 파일로 주고받음 -->
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="tier-save-btn" style="background:#263545;border:1px solid #37474f" onclick="exportTierPrices()" title="모든 등급의 단가를 파일로 저장 (다른 PC로 옮길 때)">⬇ 단가 내보내기</button>
+        <button class="tier-save-btn" style="background:#263545;border:1px solid #37474f" onclick="importTierPrices()" title="내보낸 단가 파일을 이 PC에 적용">⬆ 단가 불러오기</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2255,6 +2260,8 @@ function _makeProjectData(){
     offsetY:offsetY,
     scale:scale,
     boardLayout:_savedBoardLayout,
+    prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
+    tier:_tier,
     saved:new Date().toISOString()
   });
 }
@@ -2674,6 +2681,11 @@ function loadProject(){
         else if(data.product)products=[{name:data.product,size:data.size||'',qty:parseInt(data.qty)||1}];
         // 저장해 둔 온장 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
         _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;
+        // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
+        if(data.prices&&JSON.stringify(data.prices)!==JSON.stringify(_currentAllPrices())){
+          if(confirm('이 도면 파일에는 저장할 때의 단가가 들어 있습니다.\n그 단가로 금액을 계산할까요?\n\n[확인] 파일의 단가로 계산\n[취소] 이 PC의 단가로 계산'))_applyAllPrices(data.prices,false);
+        }
+        if(data.tier&&TIER_PREFIX[data.tier])setTier(data.tier);
         selectedShapes=[];
         renderProductList();updatePropsPanel();redraw();calcCost();
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
@@ -3766,6 +3778,47 @@ function saveTierPrices(tier){
   try{localStorage.setItem('scd_prices_'+tier,JSON.stringify(data));}catch(e){}
   var btn=document.querySelector('#panel-'+tier+' .tier-save-btn');
   if(btn){var orig=btn.textContent;btn.textContent='✅ 저장됨';setTimeout(function(){btn.textContent=orig;},1200);}
+}
+// 현재 입력칸의 모든 등급 단가 {tier:{key:value}}
+function _currentAllPrices(){
+  var all={};
+  Object.keys(TIER_PREFIX).forEach(function(tier){
+    var d={};TIER_KEYS.forEach(function(k){var el=document.getElementById(TIER_PREFIX[tier]+k);if(el)d[k]=el.value;});all[tier]=d;
+  });
+  return all;
+}
+// 단가를 입력칸에 넣기 (persist=true면 이 PC에도 저장)
+function _applyAllPrices(all,persist){
+  Object.keys(all||{}).forEach(function(tier){
+    var prefix=TIER_PREFIX[tier];if(!prefix)return;
+    TIER_KEYS.forEach(function(k){var el=document.getElementById(prefix+k);if(el&&all[tier][k]!=null)el.value=all[tier][k];});
+    if(persist){try{localStorage.setItem('scd_prices_'+tier,JSON.stringify(all[tier]));}catch(e){}}
+  });
+  calcCost();
+}
+// 다른 PC로 옮길 단가 파일 내보내기
+function exportTierPrices(){
+  var d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  var blob=new Blob([JSON.stringify({type:'scd-prices',version:1,saved:d.toISOString(),prices:_currentAllPrices()},null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='단가설정_'+ds+'.json';a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+}
+function importTierPrices(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=function(){
+    var f=inp.files[0];if(!f)return;
+    var r=new FileReader();
+    r.onload=function(e){
+      try{
+        var d=JSON.parse(e.target.result);
+        if(d.type!=='scd-prices'||!d.prices)throw new Error('단가 파일이 아닙니다.');
+        _applyAllPrices(d.prices,true);
+        alert('단가를 불러와 이 PC에 저장했습니다.');
+      }catch(ex){alert('단가 파일을 읽을 수 없습니다.\n'+ex.message);}
+    };
+    r.readAsText(f);
+  };
+  inp.click();
 }
 function loadAllTierPrices(){
   Object.keys(TIER_PREFIX).forEach(function(tier){
