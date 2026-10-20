@@ -5224,17 +5224,18 @@ function _expLeader(opts,text,col,fs){
 // 글자: avoid=[dx,dy]를 주면 다른 글자와 겹칠 때 그 방향으로 조금씩 옮김
 // 위치 치수 자동 배치: 치수선을 측정선에서 양쪽으로 띄운 여러 후보 중
 // 치수선·글자가 그려진 선/글자/표시에 가장 덜 걸치는 자리를 골라 그림 (보조선으로 측정점과 연결)
-function _expBestDim(p1,p2,nList,offList,text,col,fs){
-  fs=fs||26;
+// opt.pen: nList 방향별 감점(선호하는 쪽 우선), opt.pad: 글자가 다른 선·글자와 붙어 보이지 않게 둘 여유(px)
+function _expBestDim(p1,p2,nList,offList,text,col,fs,opt){
+  fs=fs||26;opt=opt||{};var pad=opt.pad||0;
   ctx.font='bold '+fs+'px '+_EXP_FONT;var tw=ctx.measureText(text).width;
   var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<2)return;
   var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L,horiz=Math.abs(ux)>=Math.abs(uy);
   var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4,best=null,bestBad=Infinity;
   function near(s,q){return Math.hypot(s[0]-q[0],s[1]-q[1])<4||Math.hypot(s[2]-q[0],s[3]-q[1])<4;}
   var short=L<(horiz?tw:fs)+40,ext=(horiz?tw:fs)/2+16;
-  offList.forEach(function(off){nList.forEach(function(n){
+  offList.forEach(function(off){nList.forEach(function(n,ni){
     var a1=[p1[0]+n[0]*off,p1[1]+n[1]*off],a2=[p2[0]+n[0]*off,p2[1]+n[1]*off],m=[(a1[0]+a2[0])/2,(a1[1]+a2[1])/2];
-    var dl=[a1[0],a1[1],a2[0],a2[1]],lineBad=Math.abs(off)*0.06; // 가까울수록 우선 (멀리 띄운 치수는 어디 치수인지 헷갈림)
+    var dl=[a1[0],a1[1],a2[0],a2[1]],lineBad=Math.abs(off)*0.06+(opt.pen?opt.pen[ni]||0:0); // 가까울수록 우선 (멀리 띄운 치수는 어디 치수인지 헷갈림)
     _pseg.forEach(function(s){if(!near(s,a1)&&!near(s,a2)&&_segX([dl[0],dl[1]],[dl[2],dl[3]],[s[0],s[1]],[s[2],s[3]]))lineBad+=2;});
     _pdr.forEach(function(r){if(_segHitsBox(dl,r[0],r[1],r[2],r[3]))lineBad+=2;});
     // 글자 자리: 치수선 양쪽 가운데, (짧은 치수면) 양 화살표 끝 너머 — 모두 따져서 가장 깨끗한 곳
@@ -5242,8 +5243,9 @@ function _expBestDim(p1,p2,nList,offList,text,col,fs){
     if(short){tc[0][2]+=1;tc[1][2]+=1;} // 짧으면 사이에 안 들어가므로 끝 너머 우선
     tc.forEach(function(t){
       var tx=t[0],ty=t[1],bad=lineBad+t[2];
-      _pseg.forEach(function(s){if(_segHitsBox(s,tx-hw,ty-hh,tx+hw,ty+hh))bad+=6;});
-      _pdr.forEach(function(r){if(!(tx+hw<r[0]||tx-hw>r[2]||ty+hh<r[1]||ty-hh>r[3]))bad+=6;});
+      var ph=hw+(horiz?0:pad),pv=hh+(horiz?pad:0); // 여유는 치수선과 나란한 옆쪽으로만 (치수 양끝 기준선에는 원래 닿음)
+      _pseg.forEach(function(s){if(_segHitsBox(s,tx-ph,ty-pv,tx+ph,ty+pv))bad+=6;});
+      _pdr.forEach(function(r){if(!(tx+ph<r[0]||tx-ph>r[2]||ty+pv<r[1]||ty-pv>r[3]))bad+=6;});
       if(_inCutArea(tx-hw,ty-hh,tx+hw,ty+hh))bad+=6;
       if(tx-hw<4||tx+hw>cv.width-4||ty-hh<4||ty+hh>cv.height-4)bad+=50;
       if(bad<bestBad){bestBad=bad;best={n:n,off:off,tx:tx,ty:ty};}
@@ -5497,15 +5499,18 @@ function _drawCleanExport(){
       // 타공은 중심선에 치수를 바로 겹치지 않고, 타공·싱크볼 변·다른 치수를 피해 띄운 자리에 (보조선으로 중심과 연결)
       var rp0=mm2px(rmax),HOFF=[rp0+20,rp0+45,rp0+75,rp0+110],UD2=[[0,-1],[0,1]],LR2=[[1,0],[-1,0]];
       if(row.length===1){
-        if(Math.min(dL,dR)>first.r&&Math.min(dL,dR)<Infinity)_expBestDim(toCanvas(useR?bxR:bxL,yRow),toCanvas(first.cx,yRow),UD2,HOFF,_fmtDim(Math.min(dL,dR)),col,22);
+        if(Math.min(dL,dR)>first.r&&Math.min(dL,dR)<Infinity)_expBestDim(toCanvas(useR?bxR:bxL,yRow),toCanvas(first.cx,yRow),UD2,HOFF,_fmtDim(Math.min(dL,dR)),col,22,{pad:6});
       } else {
         if(!useR&&dL>first.r&&dL<Infinity)_expDim(toCanvas(bxL,yRow),toCanvas(first.cx,yRow),nAbove,offA,_fmtDim(dL),col,22);
         for(var i=1;i<row.length;i++)_expDim(toCanvas(row[i-1].cx,yRow),toCanvas(row[i].cx,yRow),nAbove,offA,_fmtDim(row[i].cx-row[i-1].cx),col,22);
         if(useR&&dR>last.r)_expDim(toCanvas(last.cx,yRow),toCanvas(bxR,yRow),nAbove,offA,_fmtDim(dR),col,22);
       }
       // 세로: 줄 전체에 한 번, 가까운 위/아래 기준선까지 (좌/우로 띄운 자리 중 빈 곳)
-      var by=nearSeg(segs.h,yRow,first.cx);
-      if(by!==null&&Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(first.cx,by),toCanvas(first.cx,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22);
+      //   가로 치수의 기준선 쪽에는 그 보조선이 지나가므로 반대쪽을 우선 (보조선 옆에 붙으면 어느 치수인지 헷갈림)
+      //   여러 개면 기준선에서 먼 끝 타공에서
+      var hRef=useR?bxR:bxL,vx0=useR?first.cx:last.cx,by=nearSeg(segs.h,yRow,vx0);
+      var vPen=hRef===null?null:(hRef<vx0?[0,4]:[4,0]); // LR2 = [오른쪽, 왼쪽]
+      if(by!==null&&Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(vx0,by),toCanvas(vx0,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22,{pen:vPen,pad:6});
     });
   });
   // ⑥ 사용자가 그린 치수선/졸리컷/호 (기존 인쇄 표현 그대로)
