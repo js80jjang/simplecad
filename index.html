@@ -5453,38 +5453,59 @@ function _drawCleanExport(){
         else if(gapB>0.5)_expBestDim(toCanvas(cxM,B),toCanvas(cxM,ps.y+Math.abs(ps.h)),LR,OFFS,_fmtDim(gapB),col,26);
       }
     });
-    // 타공: Φ 표시 + 위치 치수(중심 기준). 같은 높이에 나란한 타공(수전 여러 개 등)은
-    //   첫 타공 → 가까운 기준선(조각 변/타공부 변), 이후는 타공 사이 간격으로 이어서 표시
-    var vx=prect?[ps.x,ps.x+Math.abs(ps.w)]:[],hy=prect?[ps.y,ps.y+Math.abs(ps.h)]:[];
-    p.cutouts.forEach(function(q0){if(q0.kind==='rect'&&_rightAngle(q0.rotation)){var q=_axisBox(q0);vx.push(q.x,q.x+Math.abs(q.w));hy.push(q.y,q.y+Math.abs(q.h));}});
-    function nearest(arr,v){return arr.reduce(function(a,b){return Math.abs(b-v)<Math.abs(a-v)?b:a;},arr[0]);}
+    // 타공: Φ 표시 + 위치 치수(중심 기준)
+    //   수전 타공 → 가장 가까운 싱크볼의 변까지 (싱크볼이 없으면 가장 가까운 선)
+    //   콘센트 등 → 가장 가까운 선(조각 변/타공부 변)까지
+    //   같은 높이에 나란한 같은 종류 타공은 첫 타공 → 기준선, 이후는 타공 사이 간격으로 이어서 표시
+    // 기준선: 세로선 {v:x, a~b: y 범위}, 가로선 {v:y, a~b: x 범위}
+    var vSeg=[],hSeg=[],sinks=[];
+    function addBox(b,arr1,arr2){var x0=b.x,x1=b.x+Math.abs(b.w),y0=b.y,y1=b.y+Math.abs(b.h);arr1.push({v:x0,a:y0,b:y1},{v:x1,a:y0,b:y1});arr2.push({v:y0,a:x0,b:x1},{v:y1,a:x0,b:x1});}
+    if(prect)addBox(ps,vSeg,hSeg);
+    else if(p.s.kind==='linegroup')p.s.lines.forEach(function(l){
+      if(l.arcR!==undefined)return;
+      if(Math.abs(l.x1-l.x2)<0.5)vSeg.push({v:l.x1,a:Math.min(l.y1,l.y2),b:Math.max(l.y1,l.y2)});
+      else if(Math.abs(l.y1-l.y2)<0.5)hSeg.push({v:l.y1,a:Math.min(l.x1,l.x2),b:Math.max(l.x1,l.x2)});
+    });
+    p.cutouts.forEach(function(q0){if(q0.kind==='rect'&&_rightAngle(q0.rotation)){var q=_axisBox(q0);addBox(q,vSeg,hSeg);if(_applianceType(q0)==='sink')sinks.push(q);}});
+    // along 위치에서 실제로 지나가는 선 중 v에 가장 가까운 것 (없으면 null)
+    function nearSeg(segs,v,along){var best=null;segs.forEach(function(s){if(along<s.a-1||along>s.b+1)return;if(best===null||Math.abs(s.v-v)<Math.abs(best-v))best=s.v;});return best;}
+    // 수전 타공의 기준: 가장 가까운 싱크볼의 네 변 (연장선 기준이므로 범위 제한 없음)
+    function sinkSegs(h){
+      var best=null,bd=Infinity;
+      sinks.forEach(function(q){var x1=q.x+Math.abs(q.w),y1=q.y+Math.abs(q.h),dx=Math.max(q.x-h.cx,0,h.cx-x1),dy=Math.max(q.y-h.cy,0,h.cy-y1),d=Math.hypot(dx,dy);if(d<bd){bd=d;best=q;}});
+      if(!best)return null;
+      var v=[],hh=[];addBox(best,v,hh);v.forEach(function(s){s.a=-Infinity;s.b=Infinity;});hh.forEach(function(s){s.a=-Infinity;s.b=Infinity;});
+      return{v:v,h:hh};
+    }
     var rows=[];
     p.holes.slice().sort(function(a,b){return a.cy-b.cy||a.cx-b.cx;}).forEach(function(h){
-      var row=rows.filter(function(r){return Math.abs(r[0].cy-h.cy)<5;})[0];if(row)row.push(h);else rows.push([h]);
+      var fct=h.holeType==='faucet';
+      var row=rows.filter(function(r){return Math.abs(r[0].cy-h.cy)<5&&(r[0].holeType==='faucet')===fct;})[0];if(row)row.push(h);else rows.push([h]);
     });
     rows.forEach(function(row){
       row.sort(function(a,b){return a.cx-b.cx;});
       var rmax=Math.max.apply(null,row.map(function(h){return h.r;}));
       // Φ 값은 맨 마지막에 지시선으로 (치수선·다른 글자를 모두 그린 뒤 빈 자리로)
-      if(!vx.length)return;
-      // 타공 하나면 중심선을 따라(참고 도면처럼), 여러 개면 줄 위쪽에 이어서
-      var yRow=row[0].cy,nAbove=[0,-1],offA=row.length===1?0:mm2px(rmax)+14;
-      // 가로: 바깥쪽 끝 타공 → 가까운 기준선, 사이 간격
       var first=row[0],last=row[row.length-1];
-      var bxL=nearest(vx,first.cx),bxR=nearest(vx,last.cx);
-      var useR=Math.abs(bxR-last.cx)<Math.abs(bxL-first.cx);
+      var segs=(first.holeType==='faucet'&&sinkSegs(first))||{v:vSeg,h:hSeg};
+      // 타공 하나면 중심선을 따라(참고 도면처럼), 여러 개면 줄 위쪽에 이어서
+      var yRow=first.cy,nAbove=[0,-1],offA=row.length===1?0:mm2px(rmax)+14;
+      // 가로: 바깥쪽 끝 타공 → 가까운 기준선, 사이 간격
+      var bxL=nearSeg(segs.v,first.cx,yRow),bxR=nearSeg(segs.v,last.cx,yRow);
+      var dL=bxL===null?Infinity:Math.abs(bxL-first.cx),dR=bxR===null?Infinity:Math.abs(bxR-last.cx);
+      var useR=dR<dL;
       // 타공은 중심선에 치수를 바로 겹치지 않고, 타공·싱크볼 변·다른 치수를 피해 띄운 자리에 (보조선으로 중심과 연결)
       var rp0=mm2px(rmax),HOFF=[rp0+20,rp0+45,rp0+75,rp0+110],UD2=[[0,-1],[0,1]],LR2=[[1,0],[-1,0]];
       if(row.length===1){
-        if(Math.abs(bxL-first.cx)>first.r)_expBestDim(toCanvas(Math.abs(bxL-first.cx)<=Math.abs(bxR-first.cx)?bxL:bxR,yRow),toCanvas(first.cx,yRow),UD2,HOFF,_fmtDim(Math.min(Math.abs(bxL-first.cx),Math.abs(bxR-first.cx))),col,22);
+        if(Math.min(dL,dR)>first.r&&Math.min(dL,dR)<Infinity)_expBestDim(toCanvas(useR?bxR:bxL,yRow),toCanvas(first.cx,yRow),UD2,HOFF,_fmtDim(Math.min(dL,dR)),col,22);
       } else {
-        if(!useR&&Math.abs(bxL-first.cx)>first.r)_expDim(toCanvas(bxL,yRow),toCanvas(first.cx,yRow),nAbove,offA,_fmtDim(Math.abs(bxL-first.cx)),col,22);
+        if(!useR&&dL>first.r&&dL<Infinity)_expDim(toCanvas(bxL,yRow),toCanvas(first.cx,yRow),nAbove,offA,_fmtDim(dL),col,22);
         for(var i=1;i<row.length;i++)_expDim(toCanvas(row[i-1].cx,yRow),toCanvas(row[i].cx,yRow),nAbove,offA,_fmtDim(row[i].cx-row[i-1].cx),col,22);
-        if(useR&&Math.abs(bxR-last.cx)>last.r)_expDim(toCanvas(last.cx,yRow),toCanvas(bxR,yRow),nAbove,offA,_fmtDim(Math.abs(bxR-last.cx)),col,22);
+        if(useR&&dR>last.r)_expDim(toCanvas(last.cx,yRow),toCanvas(bxR,yRow),nAbove,offA,_fmtDim(dR),col,22);
       }
       // 세로: 줄 전체에 한 번, 가까운 위/아래 기준선까지 (좌/우로 띄운 자리 중 빈 곳)
-      var by=nearest(hy,yRow);
-      if(Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(first.cx,by),toCanvas(first.cx,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22);
+      var by=nearSeg(segs.h,yRow,first.cx);
+      if(by!==null&&Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(first.cx,by),toCanvas(first.cx,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22);
     });
   });
   // ⑥ 사용자가 그린 치수선/졸리컷/호 (기존 인쇄 표현 그대로)
