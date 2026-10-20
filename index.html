@@ -2493,6 +2493,17 @@ function importDxf(text){
     if(axis&&corners&&!touchesArc&&r-l>=1&&bt-t>=1){rects.push({x:l,y:t,w:r-l,h:bt-t,cornerType:'none',cornerSize:0});g.forEach(function(s){usedAsRect.push(s);});}
   });
   segs=segs.filter(function(s){return usedAsRect.indexOf(s)<0;});
+  // 단위 점검: 템플릿 탓에 $INSUNITS가 인치/피트로 잘못 저장된 mm 도면이 많음.
+  //   인치/피트로 환산한 전체 크기가 30m를 넘으면 실제로는 mm로 그린 도면으로 보고 배율 1
+  var unitFix='';
+  if(uMul>1){
+    var ux=[],uy=[];
+    segs.forEach(function(s){ux.push(s.x1,s.x2);uy.push(s.y1,s.y2);});
+    rects.forEach(function(q){ux.push(q.x,q.x+q.w);uy.push(q.y,q.y+q.h);});
+    circles.forEach(function(q){ux.push(q.cx-q.r,q.cx+q.r);uy.push(q.cy-q.r,q.cy+q.r);});
+    var ext=ux.length?Math.max(Math.max.apply(null,ux)-Math.min.apply(null,ux),Math.max.apply(null,uy)-Math.min.apply(null,uy)):0;
+    if(ext*uMul>30000){unitFix=(uMul===25.4?'인치':'피트')+'로 저장돼 있지만 크기로 보아 mm 도면 → mm로 불러옴';uMul=1;}
+  }
   // ── 상판 도면 해석 (DXF 좌표 그대로, 단위 변환 전) ──
   var BAND=60*(1/uMul); // 가장자리 띠 판정 거리 60mm
   var tolE=1/uMul;
@@ -2646,6 +2657,7 @@ function importDxf(text){
   fitView();updatePropsPanel();redraw();calcCost();
   var msg='DXF 불러오기 완료\n사각 조각 '+nPiece+'개 · 선 '+segs.length+'개 · 원 '+circles.length+'개';
   var auto=[];
+  if(unitFix)auto.push('단위: '+unitFix);
   if(nSeam)auto.push('접합부 '+nSeam+'곳에서 조각 분할');
   if(nSink)auto.push('조각 안 라운드 사각형 → 싱크볼 '+nSink+'개');
   if(nCook)auto.push('조각 안 직각 사각형 → 쿡탑 '+nCook+'개');
