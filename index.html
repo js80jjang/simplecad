@@ -4762,12 +4762,11 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   bcv.width=cw||(wrap?wrap.clientWidth:800)||800;
   bcv.height=ch||(wrap?wrap.clientHeight:500)||500;
   var bctx=bcv.getContext('2d');
-  var _bAutoNums=showShapeNumbers?_autoPieceNums():{}; // 도면과 동일한 조각 자동 번호
-  if(printRender){bctx.fillStyle='#ffffff';} else {bctx.fillStyle='#0d1822';}
-  bctx.fillRect(0,0,bcv.width,bcv.height);
+  // 도면화 2쪽 온장 배치와 같은 모양 (흰 바탕, 회색 온장, 도면과 같은 조각 색)
+  bctx.fillStyle='#ffffff';bctx.fillRect(0,0,bcv.width,bcv.height);
 
   var n=boards.length;
-  var pad=24,gap2=20,headerH=18,groupGap=14;
+  var pad=24,gap2=44,headerH=18,groupGap=14,TH=34; // TH: 장 머리글(온장 N · 크기 · 사용률) 자리
   var groups=(_bs&&_bs.groups&&_bs.groups.length>0)?_bs.groups:null;
 
   var sc,boardPxW,boardPxH;
@@ -4779,7 +4778,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     groups.forEach(function(g){if(g.count>maxCount)maxCount=g.count;});
     var numGroups=groups.length;
     var scW=(bcv.width-2*pad-gap2*(maxCount-1))/maxCount/bw;
-    var totalRowH=bcv.height-2*pad-numGroups*(headerH+groupGap);
+    var totalRowH=bcv.height-2*pad-numGroups*(headerH+groupGap+TH);
     var scH=totalRowH/numGroups/bh;
     sc=Math.min(scW,scH);if(sc<=0)sc=0.01;
     boardPxW=bw*sc;boardPxH=bh*sc;
@@ -4791,7 +4790,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       // 그룹 헤더 라벨
       bctx.fillStyle=gm.color;bctx.font='bold 11px Malgun Gothic,sans-serif';bctx.textAlign='left';bctx.textBaseline='middle';
       bctx.fillText('■ '+gm.label,pad,curY+headerH*0.5);
-      curY+=headerH;
+      curY+=headerH+TH;
       for(var bi=gm.startBi;bi<gm.startBi+gm.count;bi++){
         boardOffsets[bi]={ox:sX+(bi-gm.startBi)*(boardPxW+gap2),oy:curY};
       }
@@ -4800,12 +4799,12 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   } else if(targetCanvas){
     // 도면화 내보내기: 모든 장을 좌→우로 배치
     sc=Math.min((bcv.width-2*pad-gap2*(n-1))/Math.max(n,1)/bw,
-      (bcv.height-2*pad-20)/bh);
+      (bcv.height-2*pad-TH)/bh);
     if(sc<=0)sc=0.01;
     boardPxW=bw*sc;boardPxH=bh*sc;
     var totalPxW_e=n*boardPxW+(n-1)*gap2;
     var sX_e=pad+Math.max(0,(bcv.width-2*pad-totalPxW_e)/2);
-    var sY_e=pad+20+Math.max(0,(bcv.height-pad-20-boardPxH)/2);
+    var sY_e=pad+TH+Math.max(0,(bcv.height-pad-TH-boardPxH)/2);
     for(var bi=0;bi<n;bi++){
       boardOffsets[bi]={ox:sX_e+bi*(boardPxW+gap2),oy:sY_e};
     }
@@ -4819,12 +4818,12 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     var endBi_=Math.min(startBi_+perPage,n);
     var showCount_=endBi_-startBi_;
     sc=Math.min((bcv.width-2*pad)/bw,
-      (bcv.height-2*pad-20-gap2*Math.max(showCount_-1,0))/Math.max(showCount_,1)/bh);
+      (bcv.height-2*pad-TH-gap2*Math.max(showCount_-1,0))/Math.max(showCount_,1)/bh);
     if(sc<=0)sc=0.01;
     boardPxW=bw*sc;boardPxH=bh*sc;
     var totalPxH_=showCount_*boardPxH+(showCount_-1)*gap2;
     var sX_=pad+(bcv.width-2*pad-boardPxW)/2;
-    var sY_=pad+20+Math.max(0,(bcv.height-pad-20-totalPxH_)/2);
+    var sY_=pad+TH+Math.max(0,(bcv.height-pad-TH-totalPxH_)/2);
     for(var bi=0;bi<n;bi++){
       if(bi>=startBi_&&bi<endBi_){
         boardOffsets[bi]={ox:sX_,oy:sY_+(bi-startBi_)*(boardPxH+gap2)};
@@ -4852,138 +4851,42 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     if(boardOffsets[0]){_bs.startX=boardOffsets[0].ox;_bs.startY=boardOffsets[0].oy;}
   }
 
-  var colors=['#1565C0','#0277BD','#00838F','#2E7D32','#6A1B9A','#AD1457'];
+  var ref=_boardDrawRef(),k=Math.max(0.45,Math.min(1,boardPxW/1400)); // 글자·선 크기: 도면화(k=1) 비율로 축소
 
   boards.forEach(function(placed,bi){
-    var off=boardOffsets[bi]||{ox:pad,oy:pad+20};
+    var off=boardOffsets[bi]||{ox:pad,oy:pad+TH};
     if(off.ox<-9000)return; // 현재 페이지 아닌 보드 스킵
     var ox=off.ox,oy=off.oy;
     var mg=margin*sc;
 
-    // 온장 배경
-    bctx.fillStyle='rgba(21,101,192,0.06)';bctx.fillRect(ox,oy,boardPxW,boardPxH);
-    bctx.strokeStyle='#455A64';bctx.lineWidth=1.5;bctx.setLineDash([]);
-    bctx.strokeRect(ox,oy,boardPxW,boardPxH);
-
-    // 유효 영역 점선
-    bctx.strokeStyle='#37474F';bctx.lineWidth=1;bctx.setLineDash([3,3]);
-    bctx.strokeRect(ox+mg,oy+mg,ew*sc,eh*sc);bctx.setLineDash([]);
-
-    // 보드 번호 라벨
-    var _biLbl='온장 '+(bi+1)+'장';
-    if(groups&&groups.length>1){var _gmi=groups.filter(function(g){return bi>=g.startBi&&bi<g.startBi+g.count;})[0];if(_gmi)_biLbl=(bi-_gmi.startBi+1)+'장';}
-    bctx.fillStyle=printRender?'#1565C0':'#90CAF9';bctx.font='bold 11px Consolas';bctx.textAlign='center';bctx.textBaseline='bottom';
-    bctx.fillText(_biLbl,ox+boardPxW/2,oy-4);
+    // 장 머리글 + 온장
+    var _biLbl='온장 '+(bi+1);
+    if(groups&&groups.length>1){var _gmi=groups.filter(function(g){return bi>=g.startBi&&bi<g.startBi+g.count;})[0];if(_gmi)_biLbl=_gmi.label+' '+(bi-_gmi.startBi+1);}
+    _boardFrame(bctx,ox,oy,_biLbl,placed,bw,bh,sc,k);
 
     // 피스 배치
     for(var i=0;i<placed.length;i++){
       var p=placed[i];
       var px=ox+mg+p.x*sc,py=oy+mg+p.y*sc;
       var pw=(p.pw||p.item.w)*sc,ph=(p.ph||p.item.h)*sc;
-      var col=colors[i%colors.length];
-      var sh=p.item.shape;
-      bctx.strokeStyle=col;bctx.lineWidth=1.5;bctx.setLineDash([]);
-
-      // 도형 종류별 렌더링
-      if(sh.kind==='circle'||sh.kind==='hole'){
-        var cr=Math.min(pw,ph)/2;
-        var cx2=px+pw/2,cy2=py+ph/2;
-        bctx.fillStyle=printRender?col+'44':col+'22';
-        bctx.beginPath();bctx.arc(cx2,cy2,cr,0,2*Math.PI);bctx.fill();
-        bctx.setLineDash(sh.kind==='hole'?[]:[4,3]);
-        bctx.beginPath();bctx.arc(cx2,cy2,cr,0,2*Math.PI);bctx.stroke();bctx.setLineDash([]);
-        // 중심 십자
-        var cs2=Math.max(3,Math.min(cr*0.18,8));
-        bctx.beginPath();bctx.moveTo(cx2-cs2,cy2);bctx.lineTo(cx2+cs2,cy2);bctx.moveTo(cx2,cy2-cs2);bctx.lineTo(cx2,cy2+cs2);bctx.stroke();
-      } else if(sh.kind==='ellipse'){
-        var erx=p.rotated?ph/2:pw/2,ery=p.rotated?pw/2:ph/2;
-        bctx.fillStyle=printRender?col+'44':col+'22';
-        bctx.beginPath();bctx.ellipse(px+pw/2,py+ph/2,erx,ery,0,0,2*Math.PI);bctx.fill();bctx.stroke();
-      } else if(sh.kind==='linegroup'){
-        // 연결 선 그룹: BBox 점선 + 실제 선 렌더링
-        bctx.strokeStyle=col+'66';bctx.lineWidth=0.8;bctx.setLineDash([3,2]);
-        bctx.strokeRect(px,py,pw,ph);bctx.setLineDash([]);
-        bctx.strokeStyle=col;bctx.lineWidth=1.5;
-        sh.lines.forEach(function(l){
-          var lx1,ly1,lx2,ly2;
-          if(p.rotated){
-            lx1=px+(l.y1-sh.y)*sc;ly1=py+(l.x1-sh.x)*sc;
-            lx2=px+(l.y2-sh.y)*sc;ly2=py+(l.x2-sh.x)*sc;
-          } else {
-            lx1=px+(l.x1-sh.x)*sc;ly1=py+(l.y1-sh.y)*sc;
-            lx2=px+(l.x2-sh.x)*sc;ly2=py+(l.y2-sh.y)*sc;
-          }
-          bctx.beginPath();bctx.moveTo(lx1,ly1);bctx.lineTo(lx2,ly2);bctx.stroke();
-        });
-      } else {
-        // rect 및 기타: 바운딩박스 채우기
-        bctx.fillStyle=printRender?col+'44':col+'28';
-        bctx.fillRect(px,py,pw,ph);bctx.strokeRect(px,py,pw,ph);
-        // 회전된 경우 대각선 표시
-        if(p.rotated){
-          bctx.strokeStyle=col+'66';bctx.lineWidth=0.7;bctx.setLineDash([2,2]);
-          bctx.beginPath();bctx.moveTo(px,py);bctx.lineTo(px+pw,py+ph);bctx.stroke();bctx.setLineDash([]);
-        }
-      }
-
-      // 피스 안에 있는 선 절단 오버레이
-      if(sh.kind==='rect'){
-        var lineShapes=shapes.filter(function(ls){
-          if(ls.kind!=='line')return false;
-          var mx1=Math.min(ls.x1,ls.x2),mx2=Math.max(ls.x1,ls.x2);
-          var my1=Math.min(ls.y1,ls.y2),my2=Math.max(ls.y1,ls.y2);
-          return mx2>=sh.x&&mx1<=sh.x+sh.w&&my2>=sh.y&&my1<=sh.y+sh.h;
-        });
-        lineShapes.forEach(function(ls){
-          var lx1,ly1,lx2,ly2;
-          if(p.rotated){
-            lx1=px+(ls.y1-sh.y)*sc; ly1=py+(ls.x1-sh.x)*sc;
-            lx2=px+(ls.y2-sh.y)*sc; ly2=py+(ls.x2-sh.x)*sc;
-          } else {
-            lx1=px+(ls.x1-sh.x)*sc; ly1=py+(ls.y1-sh.y)*sc;
-            lx2=px+(ls.x2-sh.x)*sc; ly2=py+(ls.y2-sh.y)*sc;
-          }
-          bctx.strokeStyle='rgba(229,57,53,0.9)';bctx.lineWidth=1.2;bctx.setLineDash([]);
-          bctx.beginPath();bctx.moveTo(lx1,ly1);bctx.lineTo(lx2,ly2);bctx.stroke();
-        });
-      }
-
+      _boardPiece(bctx,p,i,px,py,sc,ref,k);
       // 선택 하이라이트
       var isSel=_bs&&_bs.selectedPiece&&_bs.selectedPiece.bi===bi&&_bs.selectedPiece.p===p;
       var isSnap=_bs&&_bs.snapState&&_bs.snapState.active&&_bs.snapState.bi===bi&&_bs.snapState.p===p;
       var isSnapNb=_bs&&_bs.snapState&&_bs.snapState.active&&_bs.snapState.bi===bi&&(function(){var ss=_bs.snapState;for(var ni=0;ni<ss.xNb.length;ni++)if(ss.xNb[ni].o===p)return true;for(var ni=0;ni<ss.yNb.length;ni++)if(ss.yNb[ni].o===p)return true;return false;})();
-      if(isSel&&!isSnap){bctx.strokeStyle='#FFD740';bctx.lineWidth=2.5;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
-      // 스냅 활성: 드래그 피스 밝은 노란색 테두리
-      if(isSnap){bctx.strokeStyle='#FFEB3B';bctx.lineWidth=3;bctx.setLineDash([]);bctx.strokeRect(px-2,py-2,pw+4,ph+4);}
-      // 스냅 인접 피스: 노란색 테두리
-      if(isSnapNb&&!isSnap){bctx.strokeStyle='#FFF176';bctx.lineWidth=2;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
-
-      bctx.fillStyle=printRender?'#333':'#CFD8DC';bctx.font='9px Consolas';bctx.textAlign='center';bctx.textBaseline='middle';
-      var lbl=p.rotated?(p.item.h.toFixed(0)+'×'+p.item.w.toFixed(0)+' ↺'):p.item.label;
-      if(pw>30&&ph>12)bctx.fillText(lbl,px+pw/2,py+ph/2);
-      // 도형 번호 배지
-      var _nStr=showShapeNumbers?_boardPieceNum(p.item.shape,_bAutoNums):'';
-      if(_nStr&&pw>12&&ph>12){
-        bctx.font='bold 10px Arial';bctx.textAlign='center';bctx.textBaseline='middle';
-        var _ntw=bctx.measureText(_nStr).width,_nbw=Math.max(_ntw+6,16),_nbh=14,_nr=3;
-        var _nbx=px+2,_nby=py+2;
-        bctx.fillStyle='rgba(21,101,192,0.88)';
-        bctx.beginPath();
-        bctx.moveTo(_nbx+_nr,_nby);bctx.lineTo(_nbx+_nbw-_nr,_nby);bctx.arcTo(_nbx+_nbw,_nby,_nbx+_nbw,_nby+_nr,_nr);
-        bctx.lineTo(_nbx+_nbw,_nby+_nbh-_nr);bctx.arcTo(_nbx+_nbw,_nby+_nbh,_nbx+_nbw-_nr,_nby+_nbh,_nr);
-        bctx.lineTo(_nbx+_nr,_nby+_nbh);bctx.arcTo(_nbx,_nby+_nbh,_nbx,_nby+_nbh-_nr,_nr);
-        bctx.lineTo(_nbx,_nby+_nr);bctx.arcTo(_nbx,_nby,_nbx+_nr,_nby,_nr);bctx.closePath();
-        bctx.fill();
-        bctx.fillStyle='#fff';
-        bctx.fillText(_nStr,_nbx+_nbw/2,_nby+_nbh/2);
-      }
+      // (흰 바탕이라 주황 계열로 표시)
+      if(isSel&&!isSnap){bctx.strokeStyle='#FF6D00';bctx.lineWidth=3;bctx.setLineDash([]);bctx.strokeRect(px-2,py-2,pw+4,ph+4);}
+      // 스냅 활성: 드래그 피스 테두리
+      if(isSnap){bctx.strokeStyle='#FF9100';bctx.lineWidth=3;bctx.setLineDash([]);bctx.strokeRect(px-2,py-2,pw+4,ph+4);}
+      // 스냅 인접 피스 테두리
+      if(isSnapNb&&!isSnap){bctx.strokeStyle='#FFB300';bctx.lineWidth=2;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
     }
 
-    // ── 스냅 터치 경계선 (노란 실선) ──
+    // ── 스냅 터치 경계선 ──
     if(_bs&&_bs.snapState&&_bs.snapState.active&&_bs.snapState.bi===bi){
       var ss=_bs.snapState,sp=ss.p;
       var spx=ox+mg+sp.x*sc,spy=oy+mg+sp.y*sc,spw=sp.pw*sc,sph=sp.ph*sc;
-      bctx.strokeStyle='#FFEB3B';bctx.lineWidth=2.5;bctx.setLineDash([]);
+      bctx.strokeStyle='#FF6D00';bctx.lineWidth=3;bctx.setLineDash([]);
       // X 방향 인접 경계
       ss.xNb.forEach(function(nb){
         var npx=ox+mg+nb.o.x*sc,npy=oy+mg+nb.o.y*sc,npw=nb.o.pw*sc,nph=nb.o.ph*sc;
@@ -5008,41 +4911,6 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
         bctx.beginPath();bctx.moveTo(spx,ey2);bctx.lineTo(spx+spw,ey2);bctx.stroke();
       }
     }
-    // ── 잔석 계산 및 표시 ──
-    var _mxB2=0,_myB2=0;
-    placed.forEach(function(p){if(p.x+p.pw>_mxB2)_mxB2=p.x+p.pw;if(p.y+p.ph>_myB2)_myB2=p.y+p.ph;});
-    var _rRmm=Math.max(0,ew-_mxB2-gap), _bRmm=Math.max(0,eh-_myB2-gap);
-    // 오른쪽 잔석
-    if(_rRmm>2){
-      var _rx=ox+mg+(_mxB2+gap)*sc,_rw=_rRmm*sc,_rh=eh*sc;
-      bctx.fillStyle=printRender?'rgba(255,152,0,0.15)':'rgba(255,160,0,0.12)';
-      bctx.fillRect(_rx,oy+mg,_rw,_rh);
-      bctx.strokeStyle=printRender?'#E65100':'#FFB300';bctx.lineWidth=0.8;bctx.setLineDash([3,2]);
-      bctx.strokeRect(_rx,oy+mg,_rw,_rh);bctx.setLineDash([]);
-      if(_rw>18&&_rh>14){
-        bctx.fillStyle=printRender?'#E65100':'#FFB300';bctx.font='bold 8px Consolas';
-        bctx.textAlign='center';bctx.textBaseline='middle';
-        bctx.fillText(_rRmm.toFixed(0)+'×'+eh.toFixed(0),_rx+_rw/2,oy+mg+_rh/2-6);
-      }
-    }
-    // 아래쪽 잔석
-    if(_bRmm>2){
-      var _by2=oy+mg+(_myB2+gap)*sc,_bw2=ew*sc,_bh2=_bRmm*sc;
-      bctx.fillStyle=printRender?'rgba(0,180,100,0.15)':'rgba(0,200,100,0.1)';
-      bctx.fillRect(ox+mg,_by2,_bw2,_bh2);
-      bctx.strokeStyle=printRender?'#2E7D32':'#69F0AE';bctx.lineWidth=0.8;bctx.setLineDash([3,2]);
-      bctx.strokeRect(ox+mg,_by2,_bw2,_bh2);bctx.setLineDash([]);
-      if(_bw2>18&&_bh2>10){
-        bctx.fillStyle=printRender?'#2E7D32':'#69F0AE';bctx.font='bold 8px Consolas';
-        bctx.textAlign='center';bctx.textBaseline='middle';
-        bctx.fillText(ew.toFixed(0)+'×'+_bRmm.toFixed(0),ox+mg+_bw2/2,_by2+_bh2/2);
-      }
-    }
-    // 크기 라벨
-    bctx.fillStyle='#546E7A';bctx.font='9px Consolas';bctx.textAlign='center';bctx.textBaseline='top';
-    bctx.fillText(bw+'mm',ox+boardPxW/2,oy+boardPxH+3);
-    bctx.save();bctx.translate(ox-4,oy+boardPxH/2);bctx.rotate(-Math.PI/2);
-    bctx.textBaseline='bottom';bctx.fillText(bh+'mm',0,0);bctx.restore();
   });
 }
 
@@ -5662,10 +5530,6 @@ function _hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)
 function _renderCleanBoards(cvs,boards,bw,bh,margin){
   var g=cvs.getContext('2d'),W=cvs.width,H=cvs.height,PAD=40;
   g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
-  var pieces=_expCollect(),info=new Map();
-  function keyOf(s){return s&&s.kind==='linegroup'?s.lines[0]:s;}
-  pieces.forEach(function(p){info.set(keyOf(p.s),p);});
-  var auto=showShapeNumbers?_autoPieceNums():null;
   // 장 수에 맞춰 가장 크게 보이는 행/열 배치
   var n=boards.length,best=null;
   for(var cols=1;cols<=n;cols++){
@@ -5673,72 +5537,83 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin){
     var sc=Math.min((cw-60)/bw,(ch-110)/bh);
     if(!best||sc>best.sc)best={cols:cols,cw:cw,ch:ch,sc:sc};
   }
-  var sc=best.sc,FONT=_EXP_FONT;
+  var sc=best.sc,ref=_boardDrawRef();
   boards.forEach(function(board,bi){
     var col=bi%best.cols,row=Math.floor(bi/best.cols);
     var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2;
-    // 사용률
-    var used=board.reduce(function(a,p){return a+(p.pw||0)*(p.ph||0);},0);
-    g.font='bold 30px '+FONT;g.fillStyle='#222';g.textAlign='left';g.textBaseline='alphabetic';
-    g.fillText('온장 '+(bi+1),bx,by-22);
-    var tw=g.measureText('온장 '+(bi+1)).width;
-    g.font='24px '+FONT;g.fillStyle='#666';
-    g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18,by-22);
-    // 온장 (남는 부분 = 회색)
-    g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
-    g.strokeStyle='#555';g.lineWidth=3;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
-    board.forEach(function(p,pi){
-      var sh=p.item&&p.item.shape;if(!sh)return;
-      var pc=info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
-      var ox=bx+(margin+p.x)*sc,oy=by+(margin+p.y)*sc,pw=p.pw*sc,ph=p.ph*sc;
-      // 도형 좌표(mm) → 배치 위치(px). 회전 배치는 90° 회전
-      var bb=pc?pc.bb:{l:sh.x||0,t:sh.y||0,r:(sh.x||0)+(p.item.w||0),b:(sh.y||0)+(p.item.h||0)};
-      var iw=bb.r-bb.l;
-      function M(x,y){var u=x-bb.l,v=y-bb.t;return p.rotated?[ox+v*sc,oy+(iw-u)*sc]:[ox+u*sc,oy+v*sc];}
-      function path(pts){g.beginPath();pts.forEach(function(q,i){var m=M(q[0],q[1]);if(i)g.lineTo(m[0],m[1]);else g.moveTo(m[0],m[1]);});g.closePath();}
-      g.fillStyle=_hexA(cc[0],0.32);g.strokeStyle=cc[0];g.lineWidth=3;
-      if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(loop)path(loop);else{g.beginPath();g.rect(ox,oy,pw,ph);}}
-      else if(sh.kind==='circle'||sh.kind==='hole'){g.beginPath();g.arc(ox+pw/2,oy+ph/2,Math.min(pw,ph)/2,0,2*Math.PI);}
-      else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
-      else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
-      else{g.beginPath();g.rect(ox,oy,pw,ph);}
-      g.fill();g.stroke();
-      // 타공부/타공 (흰색)
-      if(pc){
-        g.fillStyle='#ffffff';g.lineWidth=2;
-        pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;path([[qb.l,qb.t],[qb.r,qb.t],[qb.r,qb.b],[qb.l,qb.b]]);g.fill();g.stroke();});
-        pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
-      }
-      // 이름 + 크기 (회전 배치는 ↻)
-      var nm=pc?_expPieceName(pc.s):'',sz=p.item.label||(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
-      if(p.rotated)sz+=' ↻';
-      var lines=nm?[nm,sz]:[sz];
-      var fs=Math.min(38,ph*0.28,pw*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);
-      var vertical=false;
-      if(fs<14&&ph>pw*1.5){vertical=true;fs=Math.min(34,pw*0.28,ph*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);}
-      var lx=ox+pw/2,ly=oy+ph/2;
-      if(sh.kind==='linegroup'&&pc){ // ㄱ자 등: 상자 가운데가 빈 곳일 수 있어 도형 면적 중심에
-        var cpt=_expLabelPoint(pc),wpt=[(cpt[0]-offsetX)/scale,(cpt[1]-offsetY)/scale],mp=M(wpt[0],wpt[1]);lx=mp[0];ly=mp[1];
-      }
-      if(fs>=12){
-        g.save();g.translate(lx,ly);if(vertical)g.rotate(-Math.PI/2);
-        g.textAlign='center';g.textBaseline='middle';
-        lines.forEach(function(t,li){
-          var isName=nm&&li===0,f=isName?fs:Math.max(12,fs*0.72),dy=lines.length===1?0:(li===0?-f*0.6:f*0.75);
-          g.font=(isName?'bold ':'')+Math.round(f)+'px '+FONT;
-          g.lineWidth=5;g.strokeStyle='rgba(255,255,255,0.85)';g.strokeText(t,0,dy); // 겹친 선 위에서도 잘 읽히게
-          g.fillStyle=isName?cc[0]:'#333';g.fillText(t,0,dy);
-        });
-        g.restore();
-      }
-      // 조각 번호
-      if(auto){
-        var key=keyOf(sh),num=key.shapeNum||auto[shapes.indexOf(key)];
-        if(sh.kind==='linegroup')for(var i=0;i<sh.lines.length&&!num;i++)num=auto[shapes.indexOf(sh.lines[i])];
-        if(num&&pw>30&&ph>24){var t=String(num);g.font='bold 20px Arial';var bwN=Math.max(30,g.measureText(t).width+14);g.fillStyle=cc[0];g.fillRect(ox+4,oy+4,bwN,28);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,ox+4+bwN/2,oy+18);}
-      }
-    });
+    _boardFrame(g,bx,by,'온장 '+(bi+1),board,bw,bh,sc,1);
+    board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1);});
   });
+}
+// ── 온장 배치 그리기 공통 (도면화 2쪽 · 온장 배치 창이 같은 모양) ── k: 글자·선 크기 배율(도면화=1)
+function _boardDrawRef(){
+  var pieces=_expCollect(),info=new Map();
+  function keyOf(s){return s&&s.kind==='linegroup'?s.lines[0]:s;}
+  pieces.forEach(function(p){info.set(keyOf(p.s),p);});
+  return{info:info,keyOf:keyOf,auto:showShapeNumbers?_autoPieceNums():null};
+}
+// 장 머리글(이름 · 크기 · 사용률) + 온장(남는 부분 = 회색)
+function _boardFrame(g,bx,by,title,board,bw,bh,sc,k){
+  var FONT=_EXP_FONT,used=board.reduce(function(a,p){return a+(p.pw||0)*(p.ph||0);},0);
+  g.font='bold '+Math.round(30*k)+'px '+FONT;g.fillStyle='#222';g.textAlign='left';g.textBaseline='alphabetic';
+  g.fillText(title,bx,by-22*k);
+  var tw=g.measureText(title).width;
+  g.font=Math.round(24*k)+'px '+FONT;g.fillStyle='#666';
+  g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18*k,by-22*k);
+  g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
+  g.strokeStyle='#555';g.lineWidth=3*k;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
+}
+// 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
+function _boardPiece(g,p,pi,ox,oy,sc,ref,k){
+  var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
+  var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
+  var pw=p.pw*sc,ph=p.ph*sc;
+  // 도형 좌표(mm) → 배치 위치(px). 회전 배치는 90° 회전
+  var bb=pc?pc.bb:{l:sh.x||0,t:sh.y||0,r:(sh.x||0)+(p.item.w||0),b:(sh.y||0)+(p.item.h||0)};
+  var iw=bb.r-bb.l;
+  function M(x,y){var u=x-bb.l,v=y-bb.t;return p.rotated?[ox+v*sc,oy+(iw-u)*sc]:[ox+u*sc,oy+v*sc];}
+  function path(pts){g.beginPath();pts.forEach(function(q,i){var m=M(q[0],q[1]);if(i)g.lineTo(m[0],m[1]);else g.moveTo(m[0],m[1]);});g.closePath();}
+  g.setLineDash([]);g.fillStyle=_hexA(cc[0],0.32);g.strokeStyle=cc[0];g.lineWidth=3*k;
+  if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(loop)path(loop);else{g.beginPath();g.rect(ox,oy,pw,ph);}}
+  else if(sh.kind==='circle'||sh.kind==='hole'){g.beginPath();g.arc(ox+pw/2,oy+ph/2,Math.min(pw,ph)/2,0,2*Math.PI);}
+  else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
+  else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
+  else{g.beginPath();g.rect(ox,oy,pw,ph);}
+  g.fill();g.stroke();
+  // 타공부/타공 (흰색)
+  if(pc){
+    g.fillStyle='#ffffff';g.lineWidth=2*k;
+    pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;path([[qb.l,qb.t],[qb.r,qb.t],[qb.r,qb.b],[qb.l,qb.b]]);g.fill();g.stroke();});
+    pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
+  }
+  // 이름 + 크기 (회전 배치는 ↻)
+  var nm=pc?_expPieceName(pc.s):'',sz=p.item.label||(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
+  if(p.rotated)sz+=' ↻';
+  var lines=nm?[nm,sz]:[sz],minF=12*k;
+  var fs=Math.min(38*k,ph*0.28,pw*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);
+  var vertical=false;
+  if(fs<14*k&&ph>pw*1.5){vertical=true;fs=Math.min(34*k,pw*0.28,ph*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);}
+  var lx=ox+pw/2,ly=oy+ph/2;
+  if(sh.kind==='linegroup'&&pc){ // ㄱ자 등: 상자 가운데가 빈 곳일 수 있어 도형 면적 중심에
+    var cpt=_expLabelPoint(pc),wpt=[(cpt[0]-offsetX)/scale,(cpt[1]-offsetY)/scale],mp=M(wpt[0],wpt[1]);lx=mp[0];ly=mp[1];
+  }
+  if(fs>=minF){
+    g.save();g.translate(lx,ly);if(vertical)g.rotate(-Math.PI/2);
+    g.textAlign='center';g.textBaseline='middle';
+    lines.forEach(function(t,li){
+      var isName=nm&&li===0,f=isName?fs:Math.max(minF,fs*0.72),dy=lines.length===1?0:(li===0?-f*0.6:f*0.75);
+      g.font=(isName?'bold ':'')+Math.round(f)+'px '+FONT;
+      g.lineWidth=5*k;g.strokeStyle='rgba(255,255,255,0.85)';g.strokeText(t,0,dy); // 겹친 선 위에서도 잘 읽히게
+      g.fillStyle=isName?cc[0]:'#333';g.fillText(t,0,dy);
+    });
+    g.restore();
+  }
+  // 조각 번호
+  if(auto){
+    var key=keyOf(sh),num=key.shapeNum||auto[shapes.indexOf(key)];
+    if(sh.kind==='linegroup')for(var i=0;i<sh.lines.length&&!num;i++)num=auto[shapes.indexOf(sh.lines[i])];
+    if(num&&pw>30*k&&ph>24*k){var t=String(num);g.font='bold '+Math.round(20*k)+'px Arial';var bwN=Math.max(30*k,g.measureText(t).width+14*k);g.fillStyle=cc[0];g.fillRect(ox+4*k,oy+4*k,bwN,28*k);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,ox+4*k+bwN/2,oy+18*k);}
+  }
 }
 // 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (온장 배치용)
 function _expRectPathLocal(s){var g=_expRectGeo({x:s.x,y:s.y,w:s.w,h:s.h,corners:s.corners,cornerType:s.cornerType,cornerSize:s.cornerSize});return _expRectPath(g);}
