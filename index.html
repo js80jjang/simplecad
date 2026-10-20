@@ -950,6 +950,22 @@ function isInsideRect(inner,outer){
 }
 // 회전이 90°의 배수인지 (회전 사각형을 축정렬 상자로 다뤄도 되는지)
 function _rightAngle(rot){return Math.abs(Math.sin(2*(rot||0)))<1e-3;}
+// 180° 돌려도 숫자로 읽히는데 값이 달라지는 수(6↔9, 18↔81, 66↔99 …)인지
+function _ambigNum(t){
+  t=String(t);if(!/^[01689]+$/.test(t))return false;
+  var r=t.split('').reverse().map(function(c){return c==='6'?'9':(c==='9'?'6':c);}).join('');
+  return r!==t&&!(r.length>1&&r[0]==='0'); // 돌리면 0으로 시작(600→009)하면 숫자로 안 읽히니 제외
+}
+// 방금 fillText(t,x,y)로 쓴 글자가 헷갈리는 수면 아래에 밑줄 (현재 c의 글꼴·정렬·변환 기준)
+function _numUnderline(c,t,x,y){
+  if(!_ambigNum(t))return;
+  var m=/(\d+(?:\.\d+)?)px/.exec(c.font),fs=m?parseFloat(m[1]):10,tw=c.measureText(String(t)).width;
+  var x0=c.textAlign==='left'||c.textAlign==='start'?x:(c.textAlign==='right'||c.textAlign==='end'?x-tw:x-tw/2);
+  var bl=c.textBaseline,yb=bl==='top'?y+fs*0.8:(bl==='bottom'||bl==='alphabetic'?y:y+fs*0.4);
+  var uy=yb+Math.max(1,fs*0.1);
+  c.save();c.strokeStyle=c.fillStyle;c.lineWidth=Math.max(1,fs*0.07);c.setLineDash([]);
+  c.beginPath();c.moveTo(x0,uy);c.lineTo(x0+tw,uy);c.stroke();c.restore();
+}
 // 사각형의 화면상 축정렬 상자 {x,y,w,h} (회전 포함)
 function _axisBox(s){if(!(s.rotation))return s;var b=getBBox(s);return{x:b.l,y:b.t,w:b.r-b.l,h:b.b-b.t,rotation:0,_src:s};}
 
@@ -1081,7 +1097,7 @@ function _drawGrindDepthLabel(x,y,depth){
   var dtw=ctx.measureText(dtxt).width;
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(x-dtw/2-3,y-dfSz/2-2,dtw+6,dfSz+4);}
   ctx.fillStyle=printRender?'#1565C0':'#FFD740';
-  ctx.fillText(dtxt,x,y);
+  ctx.fillText(dtxt,x,y);_numUnderline(ctx,dtxt,x,y);
   ctx.restore();
 }
 function drawGrindRegion(s,preview){
@@ -1535,7 +1551,7 @@ function drawDimsLine(s,col){
   ctx.fillStyle=col||'#90CAF9';
   ctx.font=(printRender?'bold 44px':'bold 10px')+' Consolas';
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(lbl,0,-2);ctx.restore();
+  ctx.fillText(lbl,0,-2);_numUnderline(ctx,lbl,0,-2);ctx.restore();
   // 선 길이 치수 클릭 가능하도록 등록 (곡선 근사 선분은 길이 편집 대상 아님)
   if(!isArc)dimLabels.push({shape:s,field:'dist',px:mx2,py:my2});
 }
@@ -1709,7 +1725,7 @@ function drawDims(s,col){
   if(filletH1){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   // 회전된 사각형이어도 글자는 거꾸로 서지 않게 (_uprightAng)
-  dlbl(sel||filletH1);ctx.save();ctx.translate(mx2,wlpy);ctx.rotate(_uprightAng(rot,0));ctx.fillText(_fmtD(s.w),0,0);ctx.restore();
+  dlbl(sel||filletH1);ctx.save();ctx.translate(mx2,wlpy);ctx.rotate(_uprightAng(rot,0));ctx.fillText(_fmtD(s.w),0,0);_numUnderline(ctx,_fmtD(s.w),0,0);ctx.restore();
   var wlc=l2c(mx2,wlpy);dimLabels.push({shape:s,field:'w',px:wlc[0],py:wlc[1]});
   } // end W dim
   // H 치수 (offH>=0: 오른쪽, offH<0: 왼쪽)
@@ -1730,7 +1746,7 @@ function drawDims(s,col){
   if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hlpx-9,my2-38,18,76);}
   else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hlpx-9,my2-38,18,76);}
   // H 텍스트: 로컬 rotate는 현재 transform에 누적되므로 save/rotate/restore 사용
-  ctx.save();ctx.translate(hlpx,my2);ctx.rotate(_uprightAng(rot,Math.PI/2));ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 44px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(s.h),0,0);ctx.restore();
+  ctx.save();ctx.translate(hlpx,my2);ctx.rotate(_uprightAng(rot,Math.PI/2));ctx.fillStyle=printRender?'#1565C0':(sel?'#FFD740':'#90CAF9');ctx.font=(printRender?'bold 44px':'10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(s.h),0,0);_numUnderline(ctx,_fmtD(s.h),0,0);ctx.restore();
   var hlc=l2c(hlpx,my2);dimLabels.push({shape:s,field:'h',px:hlc[0],py:hlc[1]});
   } // end H dim
   // R/C 치수 표시 (H dim과 독립) — ctx.restore() 후 절대좌표로 그림
@@ -1929,7 +1945,7 @@ function drawDimLine(s,preview){
   var dlbw=printRender?96:30;
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-9,dlbw*2,12);}
   ctx.fillStyle=col;ctx.font=(printRender?'bold 28px':'bold 10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(distLabel,0,-2);ctx.restore();
+  ctx.fillText(distLabel,0,-2);_numUnderline(ctx,distLabel,0,-2);ctx.restore();
   dimLabels.push({shape:s,field:'_dist',px:mx2,py:my2});
 }
 
@@ -5230,7 +5246,7 @@ function _expDim(p1,p2,n,off,text,col,fs,force){
   var ta=ang;if(Math.cos(ta)<-0.01||(Math.abs(Math.cos(ta))<0.01&&Math.sin(ta)>0))ta+=Math.PI; // 세로 치수는 아래→위로 읽기
   ctx.save();ctx.translate(tx,ty);ctx.rotate(ta);ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(text,0,0);
-  ctx.fillStyle=col;ctx.fillText(text,0,0);ctx.restore();
+  ctx.fillStyle=col;ctx.fillText(text,0,0);_numUnderline(ctx,text,0,0);ctx.restore();
   _pdreg(tx-hw,ty-hh,tx+hw,ty+hh);
 }
 // 그려진 선 목록(캔버스 px) — 지시선(R/Φ)이 어떤 선에도 걸치지 않게 하는 데 사용
