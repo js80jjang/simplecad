@@ -234,7 +234,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" style="background:#1565C0;color:#fff" onclick="saveProject()">💾 저장</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
-    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="오토캐드 등 캐드 프로그램에서 여는 DXF 파일로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button>
+    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="기본 양식(가공의뢰서)에 넣어 DXF로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button><button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7;padding-left:6px;padding-right:6px;margin-left:-4px" onclick="dxfFormSettings()" title="DXF 양식 설정: 기본 양식 바꾸기 / 양식 없이 내보내기">⚙</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
     <div id="board-panel">
       <label>온장</label>
@@ -3243,17 +3243,23 @@ function _doExportDxf(useForm){
     var data=buildDxf();if(!data){alert('내보낼 도형이 없습니다.');return;}_saveDxfFile(data,name);
   }
 }
+// DXF 내보내기 버튼: 묻지 않고 기본 양식(이 PC에 저장된 양식)에 넣어서 내보냄. 처음 한 번만 양식 파일을 고름
 function exportDxf(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  _doExportDxf(true);
+}
+// ⚙ 양식 설정: 양식 바꾸기 / 양식 없이 도면만 내보내기
+function dxfFormSettings(){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var ex=document.getElementById('dxf-modal');if(ex)ex.remove();
   var tn=_dxfTemplateName(),B='width:100%;padding:8px 0;border-radius:3px;cursor:pointer;font-size:12px;margin-top:6px;';
   var md=document.createElement('div');md.id='dxf-modal';
   md.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
   md.innerHTML='<div style="background:#1a2d3d;border:1px solid #2d4a5a;border-radius:6px;padding:18px;width:330px">'
-    +'<div style="font-size:13px;font-weight:bold;color:#A5D6A7;margin-bottom:10px">📐 DXF 내보내기</div>'
-    +'<button onclick="_doExportDxf(true)" style="'+B+'background:#1565C0;border:none;color:#fff;font-weight:bold">양식에 넣어서 내보내기'+(tn?'<br><small style="font-weight:normal;color:#BBDEFB">'+escHtml(tn)+'</small>':'<br><small style="font-weight:normal;color:#BBDEFB">처음 한 번 양식 DXF 파일을 고릅니다</small>')+'</button>'
-    +'<button onclick="_doExportDxf(false)" style="'+B+'background:#263545;border:1px solid #37474f;color:#90CAF9">양식 없이 도면만</button>'
-    +(tn?'<button onclick="document.getElementById(\'dxf-modal\').remove();pickDxfTemplate()" style="'+B+'background:none;border:1px dashed #546E7A;color:#78909C">양식 파일 바꾸기</button>':'')
+    +'<div style="font-size:13px;font-weight:bold;color:#A5D6A7;margin-bottom:10px">⚙ DXF 양식 설정</div>'
+    +'<div style="font-size:11px;color:#90CAF9">기본 양식: '+(tn?escHtml(tn):'<span style="color:#FFB74D">아직 없음 (DXF 내보내기를 누르면 처음 한 번 고릅니다)</span>')+'</div>'
+    +'<button onclick="document.getElementById(\'dxf-modal\').remove();pickDxfTemplate()" style="'+B+'background:#1565C0;border:none;color:#fff;font-weight:bold">'+(tn?'기본 양식 바꾸기':'기본 양식 고르기')+'</button>'
+    +'<button onclick="_doExportDxf(false)" style="'+B+'background:#263545;border:1px solid #37474f;color:#90CAF9">이번만 양식 없이 도면만 내보내기</button>'
     +'<div style="font-size:10px;color:#546E7A;margin-top:8px;line-height:1.5">도면은 실제 크기(mm)로 들어가고, 양식이 도면 크기에 맞춰 축척(1/20, 1/30 …)으로 커집니다. 양식은 이 PC의 브라우저에 저장됩니다.</div>'
     +'<button onclick="document.getElementById(\'dxf-modal\').remove()" style="'+B+'background:#37474f;border:none;color:#ccc">취소</button>'
     +'</div>';
