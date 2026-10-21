@@ -55,6 +55,29 @@ body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic
 #board-modal-close:hover{color:#fff}
 #board-canvas-wrap{flex:1;overflow:hidden;position:relative}
 #board-cv{display:block;width:100%;height:100%}
+/* 작업 정보 줄 (현장 · 제품 · 출고) */
+#work-bar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-shrink:0;margin-bottom:4px;padding:4px 8px;background:#1a2d3d;border:1px solid #2d4a5a;border-radius:3px;position:relative;z-index:30}
+#work-bar input{background:#263545;border:1px solid #2d4a5a;color:#fff;padding:4px 6px;font-size:12px;border-radius:2px;min-width:0}
+#work-bar input:focus{outline:none;border-color:#1976D2}
+#work-bar input[type=date],#work-bar input[type=time]{color:#9eceff;padding:3px 4px}
+#site-addr{flex:1 1 220px;max-width:420px}
+.wb-lbl{font-size:11px;color:#78909C;white-space:nowrap}
+.wb-sep{width:1px;align-self:stretch;background:#2d4a5a;margin:0 3px}
+.wb-q{background:#263545;border:1px solid #37474f;color:#9eceff;font-size:11px;padding:3px 6px;border-radius:2px;cursor:pointer}
+.wb-q:hover{background:#2d4a5a;color:#fff}
+#product-list{display:flex;align-items:center;gap:5px;position:relative}
+.wb-prod{display:flex;align-items:center;gap:4px}
+.wb-prod .prod-search-wrap{flex:none;width:190px}
+.wb-prod .prod-search-wrap input,.wb-prod .wb-name{width:190px}
+.wb-prod .wb-size{width:120px}
+.wb-qty{display:flex;align-items:center}
+.wb-qty input{width:34px;text-align:center;border-radius:0!important}
+.wb-qty button{background:#37474f;border:none;color:#fff;width:20px;height:24px;cursor:pointer;font-size:13px;line-height:1}
+.wb-qty button:first-child{border-radius:2px 0 0 2px}.wb-qty button:last-child{border-radius:0 2px 2px 0}
+.wb-qty button:hover{background:#546E7A}
+.wb-more{background:#1565C0;border:none;color:#fff;font-size:11px;padding:4px 8px;border-radius:2px;cursor:pointer;white-space:nowrap}
+#prod-pop{position:absolute;top:calc(100% + 6px);left:0;background:#1a2d3d;border:1px solid #1976D2;border-radius:4px;padding:6px;display:none;flex-direction:column;gap:4px;box-shadow:0 6px 18px rgba(0,0,0,0.5);z-index:40}
+#prod-pop.open{display:flex}
 #canvas-wrap{flex:1;position:relative;overflow:hidden;border:1px solid #2d4a5a}
 canvas{display:block;cursor:crosshair}
 #dim-popup{position:absolute;display:none;z-index:21;background:#0d1822;border:1px solid #FFD740;border-radius:3px;flex-direction:row;align-items:center;gap:0}
@@ -247,6 +270,19 @@ canvas{display:block;cursor:crosshair}
     </div>
     <span id="canvas-hint">드래그=다중선택 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
+  <!-- 작업 정보(출고 정보): 도면 바로 위 한 줄 — 오른쪽 패널을 접어도 보임 -->
+  <div id="work-bar">
+    <span class="wb-lbl">현장</span>
+    <input type="text" id="site-addr" list="site-history" placeholder="현장 주소 (최근 주소는 칸을 누르면 목록)" autocomplete="off" onchange="rememberSite(this.value)">
+    <datalist id="site-history"></datalist>
+    <span class="wb-sep"></span>
+    <div id="product-list"></div>
+    <span class="wb-sep"></span>
+    <span class="wb-lbl">출고</span>
+    <input type="date" id="deliv-date">
+    <input type="time" id="deliv-time">
+    <button class="wb-q" onclick="setDelivIn(0)" title="출고일을 오늘로">오늘</button><button class="wb-q" onclick="setDelivIn(1)" title="출고일을 내일로">내일</button><button class="wb-q" onclick="setDelivIn(3)" title="출고일을 3일 뒤로">+3일</button>
+  </div>
   <!-- 온장 배치 모달 -->
   <div id="board-modal">
     <div id="board-modal-inner">
@@ -306,21 +342,7 @@ canvas{display:block;cursor:crosshair}
 <div id="right-wrap">
 <button id="right-toggle" onclick="toggleRight()" title="가공비 패널 접기/펼치기">▶</button>
 <div id="right">
-  <div class="r-sec" style="display:flex;justify-content:space-between;align-items:center;padding-right:2px">
-    <span>① 출고 정보</span>
-    <button onclick="addProduct()" style="background:#1565C0;border:none;color:#fff;font-size:11px;padding:2px 8px;border-radius:3px;cursor:pointer;flex-shrink:0">+ 추가</button>
-  </div>
-  <div style="padding:2px 2px 4px;display:flex;gap:4px;align-items:center">
-    <span style="font-size:10px;color:#546E7A;white-space:nowrap;flex-shrink:0;width:36px">현장주소</span>
-    <input type="text" id="site-addr" placeholder="현장 주소" style="flex:1;background:#263545;border:none;color:#fff;padding:3px 5px;font-size:11px;border-radius:2px">
-  </div>
-  <div id="product-list" style="margin-bottom:4px"></div>
-  <div style="padding:2px 2px 5px;display:flex;gap:4px;align-items:center">
-    <span style="font-size:10px;color:#546E7A;white-space:nowrap;flex-shrink:0">출고예정일</span>
-    <input type="date" id="deliv-date" style="flex:1;min-width:0;background:#263545;border:none;color:#9eceff;padding:2px 4px;font-size:10px;border-radius:2px">
-    <input type="time" id="deliv-time" style="width:65px;background:#263545;border:none;color:#9eceff;padding:2px 4px;font-size:10px;border-radius:2px">
-  </div>
-  <div class="r-sec">② 절단 가공</div>
+  <div class="r-sec">① 절단 가공</div>
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">사각 절단</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
@@ -331,7 +353,7 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
     <div class="proc-row2"><span class="pr-name">원형 절단</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
   </div>
-  <div class="r-sec">③ 추가 가공</div>
+  <div class="r-sec">② 추가 가공</div>
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">라운드</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
@@ -341,14 +363,14 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">졸리컷</span><span class="pr-qty" id="pl-jolly">-</span><span class="pr-sub" id="ps-jolly">-</span></div>
     <div class="proc-row2"><span class="pr-name">고스라</span><span class="pr-qty" id="pl-gosra">-</span><span class="pr-sub" id="ps-gosra">-</span></div>
   </div>
-  <div class="r-sec">④ 기타 비용</div>
+  <div class="r-sec">③ 기타 비용</div>
   <div class="r-card">
     <div class="other-row"><label>포장비</label><input type="number" id="r-pkg" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>운임 (공장이동)</label><input type="number" id="r-ship1" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>운임 (현장출고)</label><input type="number" id="r-ship2" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>기타</label><input type="number" id="r-other" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
   </div>
-  <div class="r-sec">⑤ 합계</div>
+  <div class="r-sec">④ 합계</div>
   <div class="r-card">
     <div class="sum-row"><span>절단 가공 합</span><span class="sum-val" id="s-cut">-</span></div>
     <div class="sum-row"><span>추가 가공 합</span><span class="sum-val" id="s-add">-</span></div>
@@ -546,50 +568,73 @@ function _selectCatalogItem(i,name,size){
   redraw();updatePropsPanel();calcCost();
 }
 
+// 작업 정보 줄의 제품: 첫 제품은 줄 안에, 두 번째부터는 "제품 N개 ▾" 목록(#prod-pop) 안에
+var _prodPopOpen=false;
+function _prodRow(i){
+  var p=products[i],col=p.name?_labelColor(p.name):'#37474F',h='<div class="wb-prod">';
+  h+='<div class="prod-dot" style="background:'+col+'" title="제품 색 (도형에 붙인 제품 표시와 같음)"></div>';
+  if(_catalog.length>0){
+    h+='<div class="prod-search-wrap" id="psw-'+i+'">';
+    h+='<input type="text" placeholder="제품명 검색" value="'+escHtml(p.name||'')+'" ';
+    h+='oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';_showProdDropdown('+i+',this);redraw();updatePropsPanel()" ';
+    h+='onfocus="_showProdDropdown('+i+',this)" ';
+    h+='onblur="setTimeout(function(){var dd=document.querySelector(\'#psw-'+i+' .prod-dropdown\');if(dd)dd.classList.remove(\'open\');},150)">';
+    h+='<div class="prod-dropdown" id="pdd-'+i+'"></div></div>';
+  } else {
+    h+='<input type="text" class="wb-name" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';redraw();updatePropsPanel()">';
+  }
+  h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value">';
+  h+='<span class="wb-lbl">수량</span><span class="wb-qty"><button onclick="changeQty('+i+',-1)" title="한 장 빼기">−</button>';
+  h+='<input type="number" value="'+(p.qty||1)+'" min="1" oninput="products['+i+'].qty=parseInt(this.value)||1;calcCost()"><button onclick="changeQty('+i+',1)" title="한 장 더하기">+</button></span>';
+  if(products.length>1)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="이 제품 빼기">✕</button>';
+  return h+'</div>';
+}
 function renderProductList(){
   var container=document.getElementById('product-list');
   if(!container)return;
-  var hasCatalog=_catalog.length>0;
-  var html='';
-  products.forEach(function(p,i){
-    var col=p.name?_labelColor(p.name):'#37474F';
-    html+='<div class="prod-item">';
-    html+='<div class="p-row1">';
-    html+='<div class="prod-dot" style="background:'+col+'"></div>';
-    if(hasCatalog){
-      html+='<div class="prod-search-wrap" id="psw-'+i+'">';
-      html+='<input type="text" placeholder="제품명 검색..." value="'+escHtml(p.name||'')+'" ';
-      html+='oninput="products['+i+'].name=this.value;var d=document.querySelector(\'#psw-'+i+' .prod-dot\');if(!d)d=this.closest(\'.p-row1\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';_showProdDropdown('+i+',this);redraw();updatePropsPanel()" ';
-      html+='onfocus="_showProdDropdown('+i+',this)" ';
-      html+='onblur="setTimeout(function(){var dd=document.querySelector(\'#psw-'+i+' .prod-dropdown\');if(dd)dd.classList.remove(\'open\');},150)">';
-      html+='<div class="prod-dropdown" id="pdd-'+i+'"></div>';
-      html+='</div>';
-    } else {
-      html+='<input type="text" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="products['+i+'].name=this.value;var d=this.parentNode.querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';redraw();updatePropsPanel()" style="flex:2">';
-    }
-    html+=(products.length>1?'<button class="prod-del" onclick="removeProduct('+i+')">✕</button>':'');
-    html+='</div>';
-    html+='<div class="p-row2">';
-    html+='<input type="text" placeholder="사이즈(예:900×600)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value" style="flex:2">';
-    html+='<span class="prod-label" style="margin-left:4px">수량</span>';
-    html+='<input type="number" value="'+(p.qty||1)+'" min="1" oninput="products['+i+'].qty=parseInt(this.value)||1;calcCost()">';
-    html+='</div>';
-    html+='</div>';
-  });
+  var n=products.length,html='<span class="wb-lbl">제품</span>'+_prodRow(0);
+  html+='<button class="wb-more" onclick="'+(n>1?'toggleProdPop()':'addProduct()')+'" title="'+(n>1?'다른 제품 보기/고치기':'제품 하나 더 추가')+'">'+(n>1?'제품 '+n+'개 '+(_prodPopOpen?'▴':'▾'):'+ 제품')+'</button>';
+  if(n>1){
+    html+='<div id="prod-pop" class="'+(_prodPopOpen?'open':'')+'">';
+    for(var i=1;i<n;i++)html+=_prodRow(i);
+    html+='<button class="wb-more" style="align-self:flex-start" onclick="addProduct()">+ 제품 추가</button></div>';
+  }
   container.innerHTML=html;
 }
-
+function toggleProdPop(){_prodPopOpen=!_prodPopOpen;renderProductList();}
+function changeQty(i,d){products[i].qty=Math.max(1,(parseInt(products[i].qty)||1)+d);renderProductList();calcCost();}
 function addProduct(){
   products.push({name:'',size:'',qty:1});
-  renderProductList();
+  _prodPopOpen=true;renderProductList();
+  var pop=document.getElementById('prod-pop');if(pop){var ins=pop.querySelectorAll('input[type=text]');if(ins.length)ins[ins.length-2].focus();} // 새 제품 이름 칸으로
 }
-
 function removeProduct(i){
   if(products.length<=1)return;
   products.splice(i,1);
+  if(products.length<=1)_prodPopOpen=false;
   renderProductList();
   calcCost();
 }
+// 바깥을 누르면 제품 목록 닫기
+document.addEventListener('mousedown',function(e){
+  if(!_prodPopOpen)return;var pl=document.getElementById('product-list');
+  if(pl&&!pl.contains(e.target)){_prodPopOpen=false;renderProductList();}
+});
+// 출고일 빠른 입력: 오늘 / 내일 / +3일
+function setDelivIn(days){
+  var d=new Date();d.setDate(d.getDate()+days);
+  document.getElementById('deliv-date').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// 최근 현장 주소 (이 PC 브라우저에 15개까지) → 현장 칸 목록
+function _siteHistory(){try{return JSON.parse(localStorage.getItem('scd_site_history')||'[]');}catch(e){return[];}}
+function renderSiteHistory(){var dl=document.getElementById('site-history');if(dl)dl.innerHTML=_siteHistory().map(function(a){return '<option value="'+escHtml(a)+'">';}).join('');}
+function rememberSite(v){
+  v=(v||'').trim();if(!v)return;
+  var h=_siteHistory().filter(function(a){return a!==v;});h.unshift(v);
+  try{localStorage.setItem('scd_site_history',JSON.stringify(h.slice(0,15)));}catch(e){}
+  renderSiteHistory();
+}
+setTimeout(renderSiteHistory,0);
 var selectedShapes=[]; // multi-select
 var selBox=null; // {x1mm,y1mm,x2mm,y2mm} rubber-band box
 var filletSel=[]; // for fillet tool: up to 2 dim labels from same rect
