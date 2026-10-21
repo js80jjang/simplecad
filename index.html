@@ -193,8 +193,7 @@ canvas{display:block;cursor:crosshair}
       <button id="ab-1" onclick="setArrowBend(0.3)" style="flex:1;padding:3px 0;font-size:10px;background:#1565C0;border:1px solid #1976D2;color:#fff;border-radius:3px;cursor:pointer">곡선 ⤴</button>
       <button id="ab-2" onclick="setArrowBend(-0.3)" style="flex:1;padding:3px 0;font-size:10px;background:#37474F;border:1px solid #546E7A;color:#fff;border-radius:3px;cursor:pointer">곡선 ⤵</button>
     </div>
-    <div style="font-size:10px;color:#aabbcc;margin:4px 0 2px">크기</div>
-    <div id="arrow-sizes" style="display:flex;gap:3px"></div>
+    <div style="font-size:10px;color:#aabbcc;margin-top:4px">그린 뒤에는 양 끝 주황 점을 끌어 길이·방향 수정</div>
     <div id="ann-cols-arrow" style="display:flex;gap:3px;margin-top:4px"></div>
   </div>
   <button class="tool-btn" data-tool="linkmark"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M1,4.5 C4,-0.5 6,1.5 8,4 C10,6.5 12,8.5 15,3.5" stroke="#64B5F6" stroke-width="1.3" fill="none"/><path d="M1,8.5 C4,3.5 6,5.5 8,8 C10,10.5 12,12.5 15,7.5" stroke="#64B5F6" stroke-width="1.3" fill="none"/></svg> 연결 표시</button>
@@ -781,6 +780,7 @@ var _dimRCircle=null; // R 치수선 모드에서 선택된 원
 var _viewInit=false;
 var _rotState=null;   // 회전 드래그 상태 {startAngle, cx_px, cy_px, cx_mm, cy_mm, origData}
 var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
+var _endDrag=null; // 화살표·연결 표시 끝점 끌기 {s, w:1|2}
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15;
@@ -3851,6 +3851,12 @@ cv.addEventListener('mousedown',function(e){
   var sn=applySnap(e.offsetX,e.offsetY),mx=sn[0],my=sn[1];
 
   if(tool==='select'){
+    // 화살표·연결 표시 하나만 선택돼 있으면 양 끝 핸들을 끌어 길이·방향 바꾸기
+    if(selectedShapes.length===1&&(selectedShapes[0].kind==='arrow'||selectedShapes[0].kind==='linkmark')){
+      var es=selectedShapes[0],ep1=toCanvas(es.x1,es.y1),ep2=toCanvas(es.x2,es.y2);
+      var ed1=Math.hypot(e.offsetX-ep1[0],e.offsetY-ep1[1]),ed2=Math.hypot(e.offsetX-ep2[0],e.offsetY-ep2[1]);
+      if(Math.min(ed1,ed2)<=9){saveHistory();_endDrag={s:es,w:ed2<ed1?2:1};cv.style.cursor='crosshair';e.preventDefault();return;}
+    }
     // 회전 핸들 감지
     if(_rotHandlePx&&Math.hypot(e.offsetX-_rotHandlePx.x,e.offsetY-_rotHandlePx.y)<=11){
       saveHistory();
@@ -4020,6 +4026,12 @@ cv.addEventListener('mousemove',function(e){
   if(panOrigin){offsetX=panOrig[0]+(e.offsetX-panOrigin[0]);offsetY=panOrig[1]+(e.offsetY-panOrigin[1]);redraw();return;}
 
   if(tool==='select'){
+    if(_endDrag){var es2=_endDrag.s;if(_endDrag.w===1){es2.x1=mx;es2.y1=my;}else{es2.x2=mx;es2.y2=my;}redraw();return;}
+    // 화살표 끝 핸들 위에서는 커서 바꿈
+    if(!dragStart&&!selBox&&!_rotState&&selectedShapes.length===1&&(selectedShapes[0].kind==='arrow'||selectedShapes[0].kind==='linkmark')){
+      var hs=selectedShapes[0],h1=toCanvas(hs.x1,hs.y1),h2=toCanvas(hs.x2,hs.y2);
+      if(Math.min(Math.hypot(e.offsetX-h1[0],e.offsetY-h1[1]),Math.hypot(e.offsetX-h2[0],e.offsetY-h2[1]))<=9){cv.style.cursor='crosshair';lastMx=mx;lastMy=my;return;}
+    }
     // 회전 드래그
     if(_rotState){
       var curA=Math.atan2(e.offsetY-_rotState.cy_px,e.offsetX-_rotState.cx_px);
@@ -4183,6 +4195,7 @@ document.addEventListener('mouseup',function(e){
   if(e.button===1){panOrigin=null;return;}
   if(e.button!==0)return;
   if(panOrigin){panOrigin=null;return;}
+  if(_endDrag){_endDrag=null;cv.style.cursor='default';updatePropsPanel();redraw();return;} // 화살표 끝점 드래그 종료
 
   if(tool==='select'){
     // 회전 드래그 종료
@@ -4837,13 +4850,17 @@ function _annPropsHtml(s){
     h+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">크기</div><div style="display:flex;gap:3px">';
     [[24,'작게'],[32,'보통'],[44,'크게'],[60,'아주 크게']].forEach(function(o){h+=btn((s.fs||32)===o[0],o[1],'setAnnProp(\'fs\','+o[0]+')');});
     h+='</div>';
-  } else if(s.kind==='linkmark'){
-    h+='<div style="font-size:10px;color:#546E7A;padding:0 4px">크기·방향은 드래그한 길이·방향대로 (바꾸려면 지우고 다시 그리기, 회전 핸들로 돌리기)</div>';
   } else {
+    // 길이: 시작점·방향은 그대로 두고 끝점만 옮김. 화면에서는 양 끝 주황 점을 끌어도 됨
+    var len=Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1));
+    h+='<div class="prop-row"><label>길이(mm):</label><input type="number" value="'+len+'" min="1" step="10" onfocus="saveHistory()" onchange="setAnnLength(this.value)"></div>';
+    h+='<div style="font-size:10px;color:#546E7A;padding:0 4px 2px">양 끝 주황 점을 끌면 길이·방향이 바뀝니다</div>';
+  }
+  if(s.kind==='arrow'){
     var b=s.bend||0,sz=s.size||1;
     h+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">모양</div><div style="display:flex;gap:3px">';
     h+=btn(b===0,'직선','setAnnProp(\'bend\',0)')+btn(b>0,'곡선 ⤴','setAnnProp(\'bend\',0.3)')+btn(b<0,'곡선 ⤵','setAnnProp(\'bend\',-0.3)');
-    h+='</div><div style="font-size:10px;color:#546E7A;margin:4px 0 2px">크기 (선 굵기·화살촉)</div><div style="display:flex;gap:3px">';
+    h+='</div><div style="font-size:10px;color:#546E7A;margin:4px 0 2px">굵기 (선·화살촉)</div><div style="display:flex;gap:3px">';
     ARROW_SIZES.forEach(function(o){h+=btn(sz===o[0],o[1],'setAnnProp(\'size\','+o[0]+')');});
     h+='</div><button onclick="flipArrow()" style="width:100%;margin-top:4px;background:#263545;border:1px solid #546E7A;color:#64B5F6;padding:4px 0;border-radius:3px;font-size:11px;cursor:pointer">⇄ 화살촉 방향 바꾸기</button>';
   }
@@ -4857,6 +4874,11 @@ function setAnnProp(field,val,typing){
   s[field]=val;redraw();if(!typing)updatePropsPanel();
 }
 function setAnnPropColor(c){annColor=c;setAnnProp('color',c);}
+function setAnnLength(v){
+  var s=selectedShapes[0],L=parseFloat(v);if(!s||s.x1===undefined||!(L>0))return;
+  var dx=s.x2-s.x1,dy=s.y2-s.y1,cur=Math.hypot(dx,dy)||1;
+  s.x2=s.x1+dx/cur*L;s.y2=s.y1+dy/cur*L;redraw();updatePropsPanel();
+}
 function flipArrow(){
   var s=selectedShapes[0];if(!s||s.kind!=='arrow')return;
   saveHistory();var x=s.x1,y=s.y1;s.x1=s.x2;s.y1=s.y2;s.x2=x;s.y2=y;s.bend=-(s.bend||0);redraw();updatePropsPanel();
