@@ -52,6 +52,15 @@
 - 조각 이름: 조각 안(없으면 300mm 이내) 짧은 글자
 - 닫힌 폴리선 사각형은 코너마다 라운드/모따기가 달라도 사각 조각(`corners`)으로
 
+## PDF 불러오기 (`importPdf`, "불러오기"에서 .pdf)
+- 캐드에서 PDF로 저장한 **벡터** 도면만 (스캔/그림 PDF는 선이 없어 안내 후 중단). 외부 라이브러리 없이 직접 해석:
+  `_pdfDoc`(객체·ObjStm, FlateDecode는 브라우저 `DecompressionStream`) → `_pdfPagePaths`(m/l/c/v/y/re/h, S/f/B/n, q/Q/cm, Do 폼, BDC /OC 레이어)
+  → `_pdfToDxf`(선만 사용: 채우기만 한 것=글자·화살촉·해치 제외, 레이어 이름 dim/text/hatch/도곽… 제외, 페이지 60% 덮는 테두리 제외,
+  5mm(종이) 미만 묶음=글자 획 제외(원·사각형은 유지), 거의 같은 좌표 맞물림, 베지어→원호/원) → R12 DXF 글 → `importDxf(text,{source:'PDF'})`
+- 축척: 1/N 또는 "가장 큰 사각형의 실제 가로(mm)" 입력. 모르면 불러온 뒤 속성 칸 `📏 실제 길이로 전체 맞추기`(`rescaleToRealLength`)
+  — 불러오기에서 자동 판정한 것(`_auto`: 타공 종류, 밑면연마 깊이)은 새 크기로 다시 판정
+- `importDxf` 공통: 조각 변에 붙은 얇은(60mm 이하) 직각 사각형 = 밑면연마 띠로 해석(쿡탑 아님)
+
 ## DXF 내보내기 (`exportDxf` 창 → `buildDxf` / `buildDxfInForm`, 상단 "DXF 내보내기" 버튼)
 - 도형 → 추상 엔티티 `_dxfCollect(H)` → `_dxfWriteEnts`(R12 또는 R2000+ 핸들 형식). mm, Y 뒤집기, 한글 `\U+XXXX`, Φ `%%c`, 글자 스타일 `SC-KOR`(malgun.ttf)
 - 양식 없이: R12(AC1009) ASCII
