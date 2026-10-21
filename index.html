@@ -227,7 +227,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn red" onclick="clearAll()">전체삭제</button>
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" style="background:#1565C0;color:#fff" onclick="saveProject()">💾 저장</button>
-    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic), 오토캐드 DXF(.dxf), 캐드에서 저장한 PDF(.pdf) 불러오기">📂 불러오기</button>
+    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="오토캐드 등 캐드 프로그램에서 여는 DXF 파일로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
     <div id="board-panel">
@@ -2506,8 +2506,7 @@ function _dxfCleanText(s){
   s=s.replace(/\\P/g,' ').replace(/\\[A-Za-z][^;\\{}]*;/g,'').replace(/\\[~^I]/g,' ').replace(/[{}]/g,'').replace(/\^I/g,' ');
   return s.replace(/\s+/g,' ').trim();
 }
-function importDxf(text,opts){
-  opts=opts||{}; // {source:'PDF', note:'…'} — PDF 불러오기도 이 해석을 그대로 씀
+function importDxf(text){
   if(/^AutoCAD Binary DXF/.test(text)){alert('바이너리 DXF는 지원하지 않습니다.\n오토캐드에서 "다른 이름으로 저장 → DXF(ASCII)"로 저장해 주세요.');return;}
   var parsed=_parseDxfEntities(text);
   // $INSUNITS → mm 배율 (0=미지정은 mm로 간주)
@@ -2654,16 +2653,6 @@ function importDxf(text,opts){
       }
     }
   }
-  // 2-1) 조각 안에서 한 변에 딱 붙은 얇은(60mm 이하) 직각 사각형 = 밑면연마 띠(해치 경계를 닫힌 사각형으로 그린 경우) → 해치처럼
-  var nBandRect=0;
-  rects=rects.filter(function(q){
-    if(q.cornerType!=='none'||q.corners)return true;
-    var o=rects.filter(function(p){return rectInside(q,p);})[0];if(!o)return true;
-    var horiz=q.w>=q.h,th=horiz?q.h:q.w;if(th>BAND)return true;
-    var flush=horiz?(Math.abs(q.y-o.y)<tolE||Math.abs(q.y+q.h-(o.y+o.h))<tolE):(Math.abs(q.x-o.x)<tolE||Math.abs(q.x+q.w-(o.x+o.w))<tolE);
-    if(!flush)return true;
-    hatchBoxes.push({l:q.x,r:q.x+q.w,b:q.y,t:q.y+q.h});nBandRect++;return false;
-  });
   // 3) 조각 안의 사각형 = 타공부: 라운드 → 싱크볼, 직각 → 쿡탑
   rects.forEach(function(q){if(rects.some(function(o){return rectInside(q,o);}))q.cutout=q.cornerType==='fillet'?'sink':'cook';});
   // 4) 조각 안의 작은 원(φ45 이하) → 수전 타공
@@ -2760,19 +2749,18 @@ function importDxf(text,opts){
     count++;
   });
   segs.forEach(function(s){var p={x1:X(s.x1),y1:Y(s.y1),x2:X(s.x2),y2:Y(s.y2)};if(s.arcR!==undefined){p.arcR=Math.round(s.arcR*uMul*10)/10;p.arcMid=s.arcMid;}shapes.push(makeShape('line',p));count++;});
-  circles.forEach(function(q){var r=q.r*uMul;if(q.faucet)nFaucet++;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:q.faucet?'faucet':(r*2>=300?'cut':pendingHoleType),_auto:true}));count++;}); // _auto: 불러오기에서 정한 종류 (크기 맞추기 때 다시 판정)
+  circles.forEach(function(q){var r=q.r*uMul;if(q.faucet)nFaucet++;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:q.faucet?'faucet':(r*2>=300?'cut':pendingHoleType)}));count++;});
   // OPEN 변: 밑면연마 + 고스라 (조각이 만들어진 뒤라야 findEdgeContext로 재료 방향을 알 수 있음)
   var gLen=0;
   openSpans.forEach(function(sp){
     var x1=X(sp.x1),y1=Y(sp.y1),x2=X(sp.x2),y2=Y(sp.y2);
     var ec=findEdgeContext(x1,y1,x2,y2);
-    shapes.push(makeShape('grindregion',{x1:x1,y1:y1,x2:x2,y2:y2,inward:ec.inward,depth:Math.round(sp.depth),_auto:true}));
+    shapes.push(makeShape('grindregion',{x1:x1,y1:y1,x2:x2,y2:y2,inward:ec.inward,depth:Math.round(sp.depth)}));
     shapes.push(makeShape('gosramark',{x1:x1,y1:y1,x2:x2,y2:y2,outward:ec.outward}));
     gLen+=Math.hypot(x2-x1,y2-y1);
   });
   fitView();updatePropsPanel();redraw();calcCost();
-  var msg=(opts.source||'DXF')+' 불러오기 완료\n사각 조각 '+nPiece+'개 · 선 '+segs.length+'개 · 원 '+circles.length+'개';
-  if(opts.note)msg+='\n'+opts.note;
+  var msg='DXF 불러오기 완료\n사각 조각 '+nPiece+'개 · 선 '+segs.length+'개 · 원 '+circles.length+'개';
   var auto=[];
   if(unitFix)auto.push('단위: '+unitFix);
   if(nSeam)auto.push('접합부 '+nSeam+'곳에서 조각 분할');
@@ -3237,285 +3225,12 @@ function exportDxf(){
     +'</div>';
   document.body.appendChild(md);
 }
-// ═══ PDF 불러오기 (캐드에서 PDF로 저장한 벡터 도면) ═══
-// 외부 라이브러리 없이: PDF 객체/압축(FlateDecode, 브라우저 DecompressionStream) → 페이지 그리기 명령(m l c re h S …, q Q cm, Do 폼)
-// → 선·호(베지어를 원호로 되돌림)·원 → DXF 글로 만들어 importDxf로 해석(조각·싱크볼·타공 자동 인식)
-// PDF에는 실제 크기가 없어서 축척(1/N)을 물어봄. 스캔(그림) PDF는 선이 없어서 불가.
-// 치수·글자·해치·도곽 레이어(PDF 레이어 이름), 페이지를 둘러싼 테두리, 글자 획 같은 작은 조각은 걸러냄
-async function _pdfInflate(bytes){
-  async function run(fmt,b){var ds=new DecompressionStream(fmt),w=ds.writable.getWriter();w.write(b).catch(function(){});w.close().catch(function(){});
-    var r=ds.readable.getReader(),chunks=[],n=0;
-    try{for(;;){var x=await r.read();if(x.done)break;chunks.push(x.value);n+=x.value.length;}}catch(e){if(!n)throw e;} // 끝부분 찌꺼기로 실패해도 앞은 씀
-    var out=new Uint8Array(n),o=0;chunks.forEach(function(c){out.set(c,o);o+=c.length;});return out;}
-  try{return await run('deflate',bytes);}catch(e){return await run('deflate-raw',bytes.subarray(2));}
-}
-function _pdfLatin1(b){var s='';for(var i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return s;}
-// PDF 값 해석: 사전 << >>, 배열 [ ], 이름 /X, 숫자, 참조 n g R, 문자열 ( ) < >
-function _pdfParse(s,pos){
-  var i=pos||0;
-  function ws(){for(;;){while(i<s.length&&/[\s\0]/.test(s[i]))i++;if(s[i]==='%'){while(i<s.length&&s[i]!=='\n'&&s[i]!=='\r')i++;}else break;}}
-  function val(){
-    ws();var c=s[i];
-    if(c==='<'&&s[i+1]==='<'){i+=2;var d={};for(;;){ws();if(s[i]==='>'&&s[i+1]==='>'){i+=2;return d;}var k=val();var v=val();if(k&&k.name!==undefined)d[k.name]=v;else if(i>=s.length)return d;}}
-    if(c==='['){i++;var a=[];for(;;){ws();if(s[i]===']'){i++;break;}if(i>=s.length)break;a.push(val());}
-      // 배열 안 "n g R" 묶기
-      var b=[];for(var k=0;k<a.length;k++){if(typeof a[k]==='number'&&typeof a[k+1]==='number'&&a[k+2]&&a[k+2].op==='R'){b.push({ref:a[k]});k+=2;}else b.push(a[k]);}return b;}
-    if(c==='/'){i++;var st=i;while(i<s.length&&!/[\s\/\[\]<>()%{}\0]/.test(s[i]))i++;return{name:s.slice(st,i).replace(/#([0-9a-fA-F]{2})/g,function(_,h){return String.fromCharCode(parseInt(h,16));})};}
-    if(c==='('){i++;var depth=1,out='';while(i<s.length&&depth){var ch=s[i++];if(ch==='\\'){var nx=s[i++];var m={n:'\n',r:'\r',t:'\t',b:'\b',f:'\f'}[nx];if(m)out+=m;else if(/[0-7]/.test(nx)){var oc=nx;while(oc.length<3&&/[0-7]/.test(s[i]))oc+=s[i++];out+=String.fromCharCode(parseInt(oc,8));}else if(nx==='\r'||nx==='\n'){if(nx==='\r'&&s[i]==='\n')i++;}else out+=nx;}else if(ch==='('){depth++;out+=ch;}else if(ch===')'){depth--;if(depth)out+=ch;}else out+=ch;}return{str:out};}
-    if(c==='<'){i++;var st2=i;while(i<s.length&&s[i]!=='>')i++;var hx=s.slice(st2,i).replace(/\s/g,'');i++;if(hx.length%2)hx+='0';var o2='';for(var k2=0;k2<hx.length;k2+=2)o2+=String.fromCharCode(parseInt(hx.substr(k2,2),16));return{str:o2};}
-    var st3=i;while(i<s.length&&!/[\s\/\[\]<>()%{}\0]/.test(s[i]))i++;var t=s.slice(st3,i);
-    if(t==='')return null;
-    if(/^[+-]?(\d+\.?\d*|\.\d+)$/.test(t)){var num=parseFloat(t);
-      // 참조 "n g R"?
-      var save=i;ws();var st4=i;while(i<s.length&&/\d/.test(s[i]))i++;var g=s.slice(st4,i);ws();if(g&&s[i]==='R'&&!/[A-Za-z]/.test(s[i+1]||'')){i++;return{ref:num};}i=save;return num;}
-    return{op:t};
-  }
-  var v=val();return{v:v,end:i};
-}
-function _pdfStr(o){ // PDF 문자열 → 글자 (UTF-16BE BOM이면 디코드)
-  if(!o||o.str===undefined)return o&&o.name||'';var s=o.str;
-  if(s.charCodeAt(0)===0xFE&&s.charCodeAt(1)===0xFF){var r='';for(var i=2;i+1<s.length;i+=2)r+=String.fromCharCode(s.charCodeAt(i)<<8|s.charCodeAt(i+1));return r;}
-  return s;
-}
-async function _pdfDoc(buf){
-  var b=new Uint8Array(buf),s=_pdfLatin1(b),objs={},re=/(\d+)\s+(\d+)\s+obj\b/g,m;
-  while((m=re.exec(s))){
-    var num=+m[1],p=_pdfParse(s,m.index+m[0].length),o={v:p.v},k=p.end;
-    while(k<s.length&&/\s/.test(s[k]))k++;
-    if(s.substr(k,6)==='stream'){k+=6;if(s[k]==='\r')k++;if(s[k]==='\n')k++;
-      var len=p.v&&typeof p.v.Length==='number'?p.v.Length:-1,e=s.indexOf('endstream',k);
-      if(len<0||k+len>e+1)len=e-k;o.raw=b.subarray(k,k+len);re.lastIndex=k+len;}
-    objs[num]=o;
-  }
-  // 압축된 객체 묶음(ObjStm) 풀기
-  for(var key in objs){var o=objs[key];if(!o.raw||!o.v||!o.v.Type||o.v.Type.name!=='ObjStm')continue;
-    try{var d=await _pdfStream(o),ds=_pdfLatin1(d),first=o.v.First,hdr=ds.slice(0,first).trim().split(/\s+/).map(Number);
-      for(var j=0;j+1<hdr.length;j+=2){if(objs[hdr[j]]&&!objs[hdr[j]].fromStm&&objs[hdr[j]].v!==undefined&&!objs[hdr[j]].free)continue;objs[hdr[j]]={v:_pdfParse(ds,first+hdr[j+1]).v,fromStm:true};}
-    }catch(e){}
-  }
-  return objs;
-}
-async function _pdfStream(o){
-  if(!o||!o.raw)return new Uint8Array(0);
-  var f=o.v&&o.v.Filter,fl=Array.isArray(f)?f.map(function(x){return x.name;}):(f?[f.name]:[]);
-  var d=o.raw;for(var i=0;i<fl.length;i++){if(fl[i]==='FlateDecode'||fl[i]==='Fl')d=await _pdfInflate(d);else throw new Error('지원하지 않는 압축: '+fl[i]);}
-  return d;
-}
-// 행렬 [a b c d e f]: p' = (a x + c y + e, b x + d y + f)
-function _pdfMul(m,n){return[m[0]*n[0]+m[1]*n[2],m[0]*n[1]+m[1]*n[3],m[2]*n[0]+m[3]*n[2],m[2]*n[1]+m[3]*n[3],m[4]*n[0]+m[5]*n[2]+n[4],m[4]*n[1]+m[5]*n[3]+n[5]];}
-async function _pdfPagePaths(objs,pageNo){
-  function R(x){var g=0;while(x&&x.ref!==undefined&&g++<50)x=objs[x.ref]?objs[x.ref].v:null;return x;}
-  var pages=[];
-  // 페이지 순서: Catalog → Pages 트리
-  var cat=null;for(var k in objs){var v=objs[k].v;if(v&&v.Type&&v.Type.name==='Catalog'){cat=v;break;}}
-  (function walk(n,depth){n=R(n);if(!n||depth>40)return;if(n.Type&&n.Type.name==='Page'){pages.push(n);return;}(R(n.Kids)||[]).forEach(function(c){walk(c,depth+1);});})(cat?cat.Pages:null,0);
-  if(!pages.length)for(var k2 in objs){var v2=objs[k2].v;if(v2&&v2.Type&&v2.Type.name==='Page')pages.push(v2);}
-  if(!pages.length)throw new Error('PDF에서 페이지를 찾지 못했습니다.');
-  var page=pages[Math.min(pages.length,Math.max(1,pageNo||1))-1];
-  function inherit(p,k){var g=0;while(p&&g++<40){if(p[k]!==undefined)return R(p[k]);p=R(p.Parent);}return null;}
-  var media=(inherit(page,'MediaBox')||[0,0,842,595]).map(function(x){return R(x);});
-  var paths=[];
-  async function run(contentBytes,res,ctm){
-    res=R(res)||{};
-    var s=_pdfLatin1(contentBytes),i=0,ops=[],gs={ctm:ctm,lw:1},stack=[],path=[],cur=null,start=null,oc=[];
-    var xobj=R(res.XObject)||{},props=R(res.Properties)||{};
-    function T(x,y){var c=gs.ctm;return[c[0]*x+c[2]*y+c[4],c[1]*x+c[3]*y+c[5]];}
-    function sub(){if(!path.length||path[path.length-1].done)path.push({segs:[],closed:false});return path[path.length-1];}
-    function layer(){for(var q=oc.length-1;q>=0;q--)if(oc[q])return oc[q];return '';}
-    function emit(stroke,fill){
-      var sc=Math.sqrt(Math.abs(gs.ctm[0]*gs.ctm[3]-gs.ctm[1]*gs.ctm[2]))||1;
-      path.forEach(function(sp){if(sp.segs.length)paths.push({segs:sp.segs,closed:sp.closed,stroke:stroke,fill:fill,lw:gs.lw*sc,layer:layer()});});
-      path=[];cur=null;start=null;
-    }
-    while(i<s.length){
-      // 문자열·사전·배열은 _pdfParse로, 나머지는 토큰
-      var c=s[i];
-      if(/[\s\0]/.test(c)){i++;continue;}
-      if(c==='%'){while(i<s.length&&s[i]!=='\n'&&s[i]!=='\r')i++;continue;}
-      var p=_pdfParse(s,i);i=p.end;if(p.end<=0)break;var t=p.v;
-      if(t===null){i++;continue;}
-      if(!(t&&t.op!==undefined)){ops.push(t);continue;}
-      var op=t.op,a=ops;ops=[];
-      switch(op){
-        case 'q':stack.push({ctm:gs.ctm,lw:gs.lw});break;
-        case 'Q':if(stack.length)gs=stack.pop();break;
-        case 'cm':if(a.length>=6)gs={ctm:_pdfMul(a.slice(-6),gs.ctm),lw:gs.lw};break;
-        case 'w':if(typeof a[0]==='number')gs.lw=a[0];break;
-        case 'm':cur=T(a[0],a[1]);start=cur;path.push({segs:[],closed:false});break;
-        case 'l':var p2=T(a[0],a[1]);if(cur)sub().segs.push({t:'L',a:cur,b:p2});cur=p2;break;
-        case 'c':var c1=T(a[0],a[1]),c2=T(a[2],a[3]),p3=T(a[4],a[5]);if(cur)sub().segs.push({t:'C',a:cur,c1:c1,c2:c2,b:p3});cur=p3;break;
-        case 'v':var v2=T(a[0],a[1]),v3=T(a[2],a[3]);if(cur)sub().segs.push({t:'C',a:cur,c1:cur,c2:v2,b:v3});cur=v3;break;
-        case 'y':var y1=T(a[0],a[1]),y3=T(a[2],a[3]);if(cur)sub().segs.push({t:'C',a:cur,c1:y1,c2:y3,b:y3});cur=y3;break;
-        case 'h':if(cur&&start){var sp=sub();if(Math.hypot(cur[0]-start[0],cur[1]-start[1])>1e-6)sp.segs.push({t:'L',a:cur,b:start});sp.closed=true;sp.done=true;cur=start;}break;
-        case 're':var x=a[0],y=a[1],w=a[2],h=a[3],q1=T(x,y),q2=T(x+w,y),q3=T(x+w,y+h),q4=T(x,y+h);
-          path.push({segs:[{t:'L',a:q1,b:q2},{t:'L',a:q2,b:q3},{t:'L',a:q3,b:q4},{t:'L',a:q4,b:q1}],closed:true,done:true});cur=q1;start=q1;break;
-        case 'S':emit(true,false);break;
-        case 's':if(path.length)path[path.length-1].closed=true;emit(true,false);break;
-        case 'f':case 'F':case 'f*':emit(false,true);break;
-        case 'B':case 'B*':emit(true,true);break;
-        case 'b':case 'b*':if(path.length)path[path.length-1].closed=true;emit(true,true);break;
-        case 'n':path=[];cur=null;start=null;break;
-        case 'BDC':var tag=a[0]&&a[0].name,pr=a[1];var nm='';
-          if(tag==='OC'){var ocg=pr&&pr.name!==undefined?R(props[pr.name]):R(pr);if(ocg)nm=_pdfStr(R(ocg.Name))||(ocg.OCGs?'':'');}
-          oc.push(nm);break;
-        case 'BMC':oc.push('');break;
-        case 'EMC':oc.pop();break;
-        case 'BI':var e=s.indexOf('EI',i);i=e<0?s.length:e+2;break; // 인라인 그림 건너뜀
-        case 'Do':var xo=a[0]&&a[0].name&&xobj[a[0].name],xoObj=xo&&xo.ref!==undefined?objs[xo.ref]:null;
-          if(xoObj&&xoObj.v&&xoObj.v.Subtype&&xoObj.v.Subtype.name==='Form'){
-            var mtx=R(xoObj.v.Matrix)||[1,0,0,1,0,0];
-            try{var data=await _pdfStream(xoObj);var save=gs;await run(data,xoObj.v.Resources||res,_pdfMul(mtx,gs.ctm));gs=save;}catch(err){}
-          }
-          break;
-      }
-    }
-  }
-  var cont=R(page.Contents),list=Array.isArray(cont)?cont:[page.Contents],bytes=[];
-  for(var j=0;j<list.length;j++){var co=list[j]&&list[j].ref!==undefined?objs[list[j].ref]:null;if(co)bytes.push(await _pdfStream(co));}
-  var tot=bytes.reduce(function(a,b){return a+b.length+1;},0),all=new Uint8Array(tot),off=0;bytes.forEach(function(b){all.set(b,off);off+=b.length;all[off++]=10;});
-  await run(all,inherit(page,'Resources'),[1,0,0,1,0,0]);
-  return{paths:paths,media:media,pageCount:pages.length};
-}
-// 베지어 하나가 원호인지: 세 점(시작·가운데·끝)을 지나는 원에 1/4·3/4 점도 붙어 있으면 원호
-function _pdfBezArc(sg){
-  function B(t){var u=1-t;return[u*u*u*sg.a[0]+3*u*u*t*sg.c1[0]+3*u*t*t*sg.c2[0]+t*t*t*sg.b[0],u*u*u*sg.a[1]+3*u*u*t*sg.c1[1]+3*u*t*t*sg.c2[1]+t*t*t*sg.b[1]];}
-  var p1=sg.a,p2=B(0.5),p3=sg.b,ax=p1[0],ay=p1[1],bx=p2[0],by=p2[1],cx=p3[0],cy=p3[1];
-  var d=2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));if(Math.abs(d)<1e-9)return null;
-  var ux=((ax*ax+ay*ay)*(by-cy)+(bx*bx+by*by)*(cy-ay)+(cx*cx+cy*cy)*(ay-by))/d,uy=((ax*ax+ay*ay)*(cx-bx)+(bx*bx+by*by)*(ax-cx)+(cx*cx+cy*cy)*(bx-ax))/d;
-  var r=Math.hypot(ax-ux,ay-uy);if(!(r>0))return null;
-  var ok=[0.25,0.75].every(function(t){var q=B(t);return Math.abs(Math.hypot(q[0]-ux,q[1]-uy)-r)<Math.max(r*0.01,0.02);});
-  if(!ok)return null;
-  var a0=Math.atan2(ay-uy,ax-ux),am=Math.atan2(by-uy,bx-ux),a1=Math.atan2(cy-uy,cx-ux);
-  function norm(x){while(x<=-Math.PI)x+=2*Math.PI;while(x>Math.PI)x-=2*Math.PI;return x;}
-  var s1=norm(am-a0),s2=norm(a1-am),sweep=s1+s2; // 부호 = 방향(+ 반시계, Y 위가 +)
-  return{cx:ux,cy:uy,r:r,sweep:sweep};
-}
-function _pdfBezPts(sg,n){var r=[];for(var k=1;k<=n;k++){var t=k/n,u=1-t;r.push([u*u*u*sg.a[0]+3*u*u*t*sg.c1[0]+3*u*t*t*sg.c2[0]+t*t*t*sg.b[0],u*u*u*sg.a[1]+3*u*u*t*sg.c1[1]+3*u*t*t*sg.c2[1]+t*t*t*sg.b[1]]);}return r;}
-// 경로들 → R12 DXF 글 (좌표: pt × mul = mm)
-function _pdfToDxf(res,mul){
-  var W=res.media[2]-res.media[0],Hm=res.media[3]-res.media[1],paper=Math.max(W,Hm);
-  var SKIP=/dim|치수|text|txt|글자|문자|hatch|해치|pattern|frame|도곽|border|title|표제|anno|주석|center|중심|defpoints|viewport/i;
-  var ents=[],stats={paths:res.paths.length,skipLayer:0,skipFrame:0,skipSmall:0,skipFill:0};
-  // 닫기(h) 없이 시작점으로 돌아온 경로도 닫힌 것으로 (원은 보통 베지어 4개가 제자리로)
-  res.paths.forEach(function(p){var a=p.segs[0].a,b=p.segs[p.segs.length-1].b;if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-3)p.closed=true;});
-  // 1) 선택: 선으로 그린 것만 (채우기만 한 것 = 글자 외곽·화살촉·해치 → 제외), 레이어 이름 거르기
-  var cand=res.paths.filter(function(p){
-    if(!p.stroke){stats.skipFill++;return false;}
-    if(p.layer&&SKIP.test(p.layer)){stats.skipLayer++;return false;}
-    return true;
-  });
-  // 2) 경로 범위 → 페이지 테두리(페이지의 60% 이상 덮는 닫힌 사각형/선) 제외
-  function box(p){var xs=[],ys=[];p.segs.forEach(function(s){xs.push(s.a[0],s.b[0]);ys.push(s.a[1],s.b[1]);});return{l:Math.min.apply(null,xs),r:Math.max.apply(null,xs),b:Math.min.apply(null,ys),t:Math.max.apply(null,ys)};}
-  cand=cand.filter(function(p){var bb=box(p);p.bb=bb;if((bb.r-bb.l)>W*0.6&&(bb.t-bb.b)>Hm*0.6){stats.skipFrame++;return false;}return true;});
-  // 3) 글자 획 걸러내기: 끝점이 이어진 묶음의 크기가 아주 작고(종이에서 5mm 미만) 원이 아닌 것
-  var tiny=paper*0.012,n=cand.length,par=[];for(var i=0;i<n;i++)par.push(i);
-  function fd(x){while(par[x]!==x)x=par[x]=par[par[x]];return x;}
-  var grid={},G=Math.max(0.5,tiny/4);
-  function keyOf(pt){return Math.round(pt[0]/G)+','+Math.round(pt[1]/G);}
-  cand.forEach(function(p,i){p.segs.forEach(function(s){[s.a,s.b].forEach(function(pt){var k=keyOf(pt);if(grid[k]!==undefined)par[fd(i)]=fd(grid[k]);else grid[k]=i;});});});
-  var gb={};cand.forEach(function(p,i){var r=fd(i),b=gb[r]||(gb[r]={l:Infinity,r:-Infinity,b:Infinity,t:-Infinity});b.l=Math.min(b.l,p.bb.l);b.r=Math.max(b.r,p.bb.r);b.b=Math.min(b.b,p.bb.b);b.t=Math.max(b.t,p.bb.t);});
-  cand=cand.filter(function(p,i){
-    var b=gb[fd(i)],sz=Math.max(b.r-b.l,b.t-b.b);
-    var isCircle=p.closed&&p.segs.length>=2&&p.segs.every(function(s){return s.t==='C';});
-    var isRect=p.closed&&p.segs.length===4&&p.segs.every(function(s){return s.t==='L'&&(Math.abs(s.a[0]-s.b[0])<0.05||Math.abs(s.a[1]-s.b[1])<0.05);});
-    if(sz<tiny&&!isCircle&&!isRect){stats.skipSmall++;return false;}
-    if(sz<0.3){stats.skipSmall++;return false;}
-    return true;
-  });
-  // 3-1) 좌표 잡음 정리: 거의 같은 X(또는 Y)값은 하나로 → 사각형·라운드 코너가 정확히 맞물려 인식됨
-  function snapAxis(idx){
-    var vals=[];cand.forEach(function(p){p.segs.forEach(function(s){['a','b','c1','c2'].forEach(function(k){if(s[k])vals.push(s[k][idx]);});});});
-    vals.sort(function(a,b){return a-b;});var map=new Map(),grp=[],eps=0.06;
-    function flush(){if(!grp.length)return;var m=grp.reduce(function(a,b){return a+b;},0)/grp.length;grp.forEach(function(v){map.set(v,m);});grp=[];}
-    vals.forEach(function(v){if(grp.length&&v-grp[grp.length-1]>eps)flush();grp.push(v);});flush();
-    cand.forEach(function(p){p.segs.forEach(function(s){['a','b','c1','c2'].forEach(function(k){if(s[k]){var q=s[k].slice();q[idx]=map.get(s[k][idx]);s[k]=q;}});});});
-  }
-  snapAxis(0);snapAxis(1);
-  // 4) DXF로
-  var out=[];function g(c,v){out.push(String(c),String(v));}
-  function N(v){return(Math.round(v*mul*1000)/1000).toString();}
-  g(0,'SECTION');g(2,'HEADER');g(9,'$INSUNITS');g(70,4);g(0,'ENDSEC');g(0,'SECTION');g(2,'ENTITIES');
-  cand.forEach(function(p){
-    var L='PDF'+(p.layer?'-'+p.layer.replace(/[^\w가-힣-]/g,'_'):'');
-    // 원: 닫힌 경로가 모두 같은 중심·반지름의 원호
-    var arcs=p.segs.map(function(s){return s.t==='C'?_pdfBezArc(s):null;});
-    if(p.closed&&p.segs.length>=2&&arcs.every(function(a){return a;})){
-      var a0=arcs[0],same=arcs.every(function(a){return Math.hypot(a.cx-a0.cx,a.cy-a0.cy)<a0.r*0.02&&Math.abs(a.r-a0.r)<a0.r*0.02;}),sw=arcs.reduce(function(t,a){return t+a.sweep;},0);
-      if(same&&Math.abs(Math.abs(sw)-2*Math.PI)<0.05){g(0,'CIRCLE');g(8,L);g(10,N(a0.cx));g(20,N(a0.cy));g(30,0);g(40,N(a0.r));return;}
-    }
-    // 폴리선: 직선은 꼭지점, 원호 베지어는 볼록(bulge), 그 밖의 곡선은 잘게 나눔
-    var verts=[];
-    p.segs.forEach(function(s,k){
-      if(s.t==='L'){verts.push([s.a[0],s.a[1],0]);return;}
-      var ar=arcs[k];
-      if(ar&&Math.abs(ar.sweep)<Math.PI*1.01){
-        var swp=ar.sweep;if(Math.abs(Math.abs(swp)-Math.PI/2)<Math.PI/180)swp=Math.sign(swp)*Math.PI/2; // 거의 90°면 정확히 90° (라운드 코너 인식)
-        verts.push([s.a[0],s.a[1],Math.tan(swp/4)]);return;}
-      verts.push([s.a[0],s.a[1],0]);_pdfBezPts(s,8).slice(0,-1).forEach(function(q){verts.push([q[0],q[1],0]);});
-    });
-    var last=p.segs[p.segs.length-1].b,first=p.segs[0].a,closed=p.closed||Math.hypot(last[0]-first[0],last[1]-first[1])<1e-3;
-    if(!closed)verts.push([last[0],last[1],0]);
-    // 같은 점 연속 제거
-    verts=verts.filter(function(v,k){var pv=verts[k-1];return !pv||Math.hypot(v[0]-pv[0],v[1]-pv[1])>1e-4||v[2];});
-    if(verts.length<2)return;
-    g(0,'POLYLINE');g(8,L);g(66,1);g(70,closed?1:0);
-    verts.forEach(function(v){g(0,'VERTEX');g(8,L);g(10,N(v[0]));g(20,N(v[1]));if(v[2])g(42,(Math.round(v[2]*1e6)/1e6).toString());});
-    g(0,'SEQEND');g(8,L);
-  });
-  g(0,'ENDSEC');g(0,'EOF');
-  stats.kept=cand.length;
-  return{text:out.join('\n'),stats:stats};
-}
-async function importPdf(buf){
-  if(typeof DecompressionStream==='undefined'){alert('이 브라우저는 PDF 압축 풀기를 지원하지 않습니다. 크롬/엣지 최신 버전을 써 주세요.');return;}
-  var objs,res;
-  try{objs=await _pdfDoc(buf);res=await _pdfPagePaths(objs,1);}catch(e){alert('PDF를 읽지 못했습니다.\n'+e.message);return;}
-  if(res.pageCount>1){
-    var pg=parseInt(prompt('PDF에 페이지가 '+res.pageCount+'장 있습니다. 몇 쪽을 불러올까요?','1'),10);
-    if(!(pg>=1))return;
-    if(pg!==1){try{res=await _pdfPagePaths(objs,pg);}catch(e){alert('PDF를 읽지 못했습니다.\n'+e.message);return;}}
-  }
-  if(!res.paths.some(function(p){return p.stroke;})){alert('이 PDF에는 선(벡터)이 없습니다.\n스캔한 그림 PDF는 불러올 수 없습니다. 캐드에서 PDF로 저장한 도면을 써 주세요.');return;}
-  // 축척: 1/N 또는 "가장 큰 사각형"의 실제 가로(mm) — 맞는 축척이어야 수전(Φ45 이하)·밑면연마(60mm) 같은 자동 해석이 맞음
-  var bigW=0;res.paths.forEach(function(p){if(!p.stroke||p.segs.length!==4)return;var xs=[];p.segs.forEach(function(s){xs.push(s.a[0],s.b[0]);});var w=Math.max.apply(null,xs)-Math.min.apply(null,xs);
-    var pw=res.media[2]-res.media[0];if(w>bigW&&w<pw*0.6)bigW=w;});
-  var bigMm=bigW*25.4/72;
-  var sc=prompt('PDF 도면의 축척을 입력하세요.  예) 1/30이면 30\n\n'+(bigMm>1?'또는 가장 큰 사각형(종이에서 가로 '+bigMm.toFixed(1)+'mm)의 실제 가로 길이를 mm로 입력하세요.  예) 2400mm\n\n':'')+'모르면 1로 두고, 불러온 뒤 크기를 아는 조각을 골라 "📏 실제 길이로 전체 맞추기"를 누르세요.','30');
-  if(sc===null)return;
-  var sv=String(sc).trim(),num=parseFloat(sv.replace(/^1\s*\/\s*/,''))||1,N;
-  if(bigMm>1&&(/mm/i.test(sv)||num>200))N=num/bigMm; // 실제 길이로 입력
-  else N=num;
-  var conv=_pdfToDxf(res,25.4/72*N);
-  importDxf(conv.text,{source:'PDF',note:'PDF 선 '+conv.stats.paths+'개 중 '+conv.stats.kept+'개 사용 (치수·글자 레이어 '+conv.stats.skipLayer+', 채우기(글자·화살촉·해치) '+conv.stats.skipFill+', 테두리 '+conv.stats.skipFrame+', 작은 획 '+conv.stats.skipSmall+' 제외) · 축척 1/'+(Math.round(N*100)/100)});
-}
-// 선택한 조각(사각형 W 또는 선 길이)을 실제 길이로 → 도면 전체 크기 맞춤
-function rescaleToRealLength(){
-  var s=selectedShapes[0];if(!s)return;
-  var cur=s.kind==='rect'?Math.abs(s.w):(s.x1!==undefined?Math.hypot(s.x2-s.x1,s.y2-s.y1):(s.r?s.r*2:0));
-  if(!(cur>0))return;
-  var what=s.kind==='rect'?'가로(W)':(s.r?'지름(Φ)':'길이');
-  var v=parseFloat(prompt('이 도형의 실제 '+what+'(mm)를 입력하세요.\n지금: '+_fmtDim(cur)+' mm → 도면 전체를 같은 비율로 키우거나 줄입니다.',_fmtDim(cur)));
-  if(!(v>0))return;
-  var k=v/cur;saveHistory();
-  shapes.forEach(function(o){
-    ['x','y','w','h','cx','cy','r','rx','ry','x1','y1','x2','y2','cornerSize','offsetMm'].forEach(function(f){if(typeof o[f]==='number')o[f]*=k;});
-    if(o.corners)Object.keys(o.corners).forEach(function(c){if(o.corners[c]&&typeof o.corners[c].r==='number')o.corners[c].r*=k;});
-    if(typeof o.arcR==='number')o.arcR=Math.round(o.arcR*k*10)/10;
-    // 불러오기에서 자동으로 정한 것은 새 크기로 다시: 밑면연마 깊이, 타공 종류(Φ45 이하 수전 / Φ300 이상 원형 절단)
-    if(o._auto&&o.kind==='grindregion')o.depth=Math.round(o.depth*k);
-    if(o._auto&&o.kind==='circle'){var dd=o.r*2;o.holeType=dd<=45.5?'faucet':(dd>=300?'cut':'outlet');}
-    if(o.lines)o.lines.forEach(function(l){['x1','y1','x2','y2'].forEach(function(f){l[f]*=k;});});
-  });
-  _savedBoardLayout=null;_savedBoardImg=null;
-  fitView();updatePropsPanel();redraw();calcCost();
-}
 function loadProject(){
   var inp=document.createElement('input');
-  inp.type='file';inp.accept='.ceramic,.json,.dxf,.pdf';
+  inp.type='file';inp.accept='.ceramic,.json,.dxf';
   inp.onchange=function(){
     var file=inp.files[0];if(!file)return;
     var reader=new FileReader();
-    if(/\.pdf$/i.test(file.name)){reader.onload=function(e){importPdf(e.target.result);};reader.readAsArrayBuffer(file);return;}
     reader.onload=function(e){
       if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
@@ -5012,8 +4727,6 @@ function updatePropsPanel(){
   var _hasHidden=selectedShapes.some(function(s){return s.hideDims&&Object.keys(s.hideDims).some(function(k){return s.hideDims[k];});});
   html+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #2d4a5a;display:flex;flex-direction:column;gap:4px">';
   if(_hasHidden)html+='<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>';
-  // PDF처럼 크기가 안 맞게 불러온 도면: 이 도형의 실제 길이로 전체 비율 맞춤
-  if(s.kind==='rect'||s.kind==='line'||s.kind==='circle')html+='<button onclick="rescaleToRealLength()" title="PDF 등으로 불러와 크기가 안 맞을 때: 이 도형의 실제 길이를 넣으면 도면 전체를 같은 비율로 맞춤" style="width:100%;background:#263545;border:1px solid #546E7A;color:#A5D6A7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">📏 실제 길이로 전체 맞추기</button>';
   html+='<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button>';
   html+='</div>';
   pp.innerHTML=html;
