@@ -3679,6 +3679,70 @@ function doTrim(mx,my){
   redraw();calcCost();
 }
 
+// ═══ 선 절단: 오토캐드 LINE 방식 ═══
+// 클릭으로 시작점 → 클릭/숫자 입력으로 다음 점, 끝점에서 계속 이어서. drawStart = 지금 점(직교·스냅 기준)
+var lineChain=null; // {first:[x,y] 시작점, segs:[이번에 그은 선들], buf:'입력 중인 글자'}
+function _lineAddTo(x,y){
+  if(!lineChain||!drawStart)return;
+  if(Math.hypot(x-drawStart[0],y-drawStart[1])<0.01)return;
+  saveHistory();
+  var s=makeShape('line',{x1:drawStart[0],y1:drawStart[1],x2:x,y2:y});
+  shapes.push(s);lineChain.segs.push(s);lineChain.buf='';
+  drawStart=[x,y];_savedBoardLayout=null;_savedBoardImg=null;
+  calcCost();_lineRedraw();
+}
+function _lineEnd(){if(!lineChain)return;lineChain=null;drawStart=null;redraw();calcCost();}
+function _lineUndo(){
+  var c=lineChain;if(!c||!c.segs.length){_lineEnd();return;}
+  var s=c.segs.pop(),i=shapes.indexOf(s);if(i>=0)shapes.splice(i,1);
+  drawStart=[s.x1,s.y1];calcCost();_lineRedraw();
+}
+// 입력한 글자 → 다음 점 (y는 화면 아래가 +라서 위쪽 + 입력은 뒤집음)
+//   "500" = 마우스 방향(직교면 가로/세로)으로 500 / "300,-200"·"@300,-200" = 지금 점에서 오른쪽 300, 아래 200 / "500<90" = 길이 500, 90°(0°=오른쪽, 반시계)
+function _lineTarget(buf){
+  var t=String(buf).replace(/^@/,'').trim(),m,x0=drawStart[0],y0=drawStart[1];
+  if((m=/^(-?\d*\.?\d+)\s*<\s*(-?\d*\.?\d+)$/.exec(t))){var L=+m[1],a=+m[2]*Math.PI/180;return[x0+L*Math.cos(a),y0-L*Math.sin(a)];}
+  if((m=/^(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)$/.exec(t)))return[x0+(+m[1]),y0-(+m[2])];
+  if((m=/^(\d*\.?\d+)$/.exec(t))){
+    var L2=+m[1],dx=(lastMx==null?x0+1:lastMx)-x0,dy=(lastMy==null?y0:lastMy)-y0,d=Math.hypot(dx,dy);
+    if(d<1e-6){dx=1;dy=0;d=1;} // 마우스가 그 자리면 오른쪽으로
+    return[x0+dx/d*L2,y0+dy/d*L2];
+  }
+  return null;
+}
+// 선 절단 중 키 입력 (처리했으면 true)
+function _lineKey(e){
+  var c=lineChain,k=e.key;
+  if(/^[0-9.,<@\-]$/.test(k)){c.buf+=k;_lineRedraw();return true;}
+  if(k==='Backspace'){c.buf=c.buf.slice(0,-1);_lineRedraw();return true;}
+  if(k==='Enter'||k===' '){
+    if(!c.buf){_lineEnd();return true;}           // 빈 Enter = 끝
+    var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{c.buf='';_lineRedraw();}
+    return true;
+  }
+  if(k==='Escape'){if(c.buf){c.buf='';_lineRedraw();}else _lineEnd();return true;}
+  if((k==='c'||k==='C')&&!c.buf){if(c.segs.length>=2)_lineAddTo(c.first[0],c.first[1]);_lineEnd();return true;} // 닫기
+  if((k==='u'||k==='U')&&!c.buf){_lineUndo();return true;}                                                    // 마지막 선 취소
+  return false;
+}
+// 지금 점 → 마우스(또는 입력값) 미리보기 선 + 커서 옆 입력 상자
+function _lineOverlay(){
+  if(!lineChain||!drawStart)return;
+  var tgt=lineChain.buf?_lineTarget(lineChain.buf):null,ex=tgt?tgt[0]:lastMx,ey=tgt?tgt[1]:lastMy;
+  if(ex==null)return;
+  ctx.globalAlpha=0.8;drawShape({kind:'line',x1:drawStart[0],y1:drawStart[1],x2:ex,y2:ey,ops:[]},true);ctx.globalAlpha=1;
+  var p=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy),len=Math.hypot(ex-drawStart[0],ey-drawStart[1]);
+  var l1=lineChain.buf?('입력: '+lineChain.buf+'▏'):('길이 '+_fmtD(len)+'  (숫자 입력)'),l2=lineChain.segs.length?'Enter 그리기 · 빈 Enter/Esc 끝 · C 닫기 · U 취소':'숫자 + Enter = 그 길이로 · 클릭 = 그 점까지';
+  ctx.save();
+  ctx.font='bold 12px Consolas, "Malgun Gothic"';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic"';var w=Math.max(w1,ctx.measureText(l2).width)+12;
+  var bx=p[0]+16,by=p[1]+14;if(bx+w>cv.width)bx=p[0]-16-w;if(by+38>cv.height)by=p[1]-52;
+  ctx.fillStyle='rgba(13,24,34,0.92)';ctx.strokeStyle=lineChain.buf?'#FFD740':'#1976D2';ctx.lineWidth=1;ctx.fillRect(bx,by,w,36);ctx.strokeRect(bx,by,w,36);
+  ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.font='bold 12px Consolas, "Malgun Gothic"';ctx.fillStyle=lineChain.buf?'#FFD740':'#E3F2FD';ctx.fillText(l1,bx+6,by+11);
+  ctx.font='11px "Malgun Gothic"';ctx.fillStyle='#78909C';ctx.fillText(l2,bx+6,by+27);
+  ctx.restore();
+}
+function _lineRedraw(){redraw();_lineOverlay();}
 function finalizeShape(fmx,fmy){
   
   if(!drawStart){return;}
@@ -4151,6 +4215,12 @@ cv.addEventListener('mousedown',function(e){
   } else if(tool==='trim'){
     cv.focus();doTrim(mx,my);
 
+  } else if(tool==='line'){
+    // 선 절단(오토캐드 LINE처럼): 첫 클릭 = 시작점, 다음 클릭마다 그 점까지 선을 긋고 이어감
+    //   숫자 입력 + Enter = 마우스 방향으로 그 길이만큼 / 빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
+    cv.focus();
+    if(!lineChain){lineChain={first:[mx,my],segs:[],buf:''};drawStart=[mx,my];lastMx=mx;lastMy=my;_lineRedraw();}
+    else _lineAddTo(mx,my);
   } else {
     cv.focus();
     // R/Φ 치수선: 원 클릭 감지
@@ -4193,13 +4263,13 @@ cv.addEventListener('pointerdown',function(e){
 cv.addEventListener('pointerup',function(e){
   if(e.button!==0)return;
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
-  if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
+  if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim'||tool==='line')return; // 선 절단은 클릭으로 점을 이어감(오토캐드식)
   if(!drawStart)return;
   finalizeShape(lastMx,lastMy);
 });
 cv.addEventListener('pointermove',function(e){
   // drawStart 중 e.buttons=0 감지 → 즉시 완성
-  if(drawStart&&e.buttons===0&&lastMx!==null){finalizeShape(lastMx,lastMy);}
+  if(tool!=='line'&&drawStart&&e.buttons===0&&lastMx!==null){finalizeShape(lastMx,lastMy);}
 });
 
 cv.addEventListener('mousemove',function(e){
@@ -4343,7 +4413,6 @@ cv.addEventListener('mousemove',function(e){
     if(tool==='rect'){ps={kind:'rect',x:Math.min(x0,mx),y:Math.min(y0,my),w:Math.abs(mx-x0),h:Math.abs(my-y0),cornerType:'none',cornerSize:0,ops:[]};}
     else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:pendingHoleType,ops:[]};}
     else if(tool==='circlecut'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:'cut',ops:[]};}
-    else if(tool==='line'){ps={kind:'line',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
     else if(tool==='dimline'){
       if(dimLineType==='r'&&_dimRCircle){
         var _ang=Math.atan2(my-_dimRCircle.cy,mx-_dimRCircle.cx);
@@ -4360,6 +4429,7 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
     else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
     if(ps){ctx.globalAlpha=0.8;drawShape(ps,true);ctx.globalAlpha=1;}
+    if(tool==='line')_lineOverlay(); // 선 절단: 미리보기 + 길이/입력 상자
   }
 });
 
@@ -4446,7 +4516,7 @@ cv.addEventListener('wheel',function(e){
 },{passive:false});
 
 cv.setAttribute('tabindex','0');
-cv.addEventListener('contextmenu',function(e){e.preventDefault();});
+cv.addEventListener('contextmenu',function(e){e.preventDefault();if(tool==='line'&&lineChain)_lineEnd();}); // 선 절단 중 오른쪽 클릭 = 끝내기
 function fmtMoney(el){
   var raw=el.value.replace(/[^0-9]/g,'');
   el.value=raw?parseInt(raw).toLocaleString():'';
@@ -4769,6 +4839,10 @@ function resetDims(){
   updatePropsPanel();redraw();
 }
 document.addEventListener('keydown',function(e){
+  // 선 절단 이어 그리기 중: 숫자·Enter·Esc·C·U를 먼저 받음 (입력칸에 쓰는 중이면 제외)
+  if(tool==='line'&&lineChain&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
+    if(_lineKey(e)){e.preventDefault();e.stopPropagation();return;}
+  }
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();drawStart=null;selBox=null;undo();return;}
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key==='c'||e.key==='C')&&selectedShapes.length){
@@ -4841,6 +4915,7 @@ document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=fals
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
+    if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 절단 이어 그리기 끝
     tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;
     document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
