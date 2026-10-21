@@ -152,10 +152,10 @@ canvas{display:block;cursor:crosshair}
   <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 절단</button>
   <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
   <div class="fillet-sub" id="circle-sub">
-    <label>Φ(mm):<input type="number" id="circle-phi" value="50" min="1" step="1"></label>
+    <label>Φ(mm):<input type="number" id="circle-phi" value="35" min="1" step="1"></label>
     <div style="display:flex;gap:3px;margin-top:5px">
-      <button id="hole-type-outlet" onclick="setPendingHoleType('outlet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#1565C0;color:#fff">콘센트</button>
-      <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#263545;color:#fff">수전</button>
+      <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#1565C0;color:#fff">수전</button>
+      <button id="hole-type-outlet" onclick="setPendingHoleType('outlet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:#263545;color:#fff">콘센트</button>
     </div>
   </div>
   <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 절단</button>
@@ -595,7 +595,7 @@ var filletSel=[]; // for fillet tool: up to 2 dim labels from same rect
 var hoverShape=null;
 var _hoverSelected=false; // 호버로 자동 선택된 경우
 var trimHoverShape=null,trimHoverEdge=null;
-var pendingHoleType='outlet';
+var pendingHoleType='faucet'; // 타공 도구 기본: Φ35 수전
 var _hist=[];
 function saveHistory(){_hist.push(JSON.stringify(shapes.map(function(s){return Object.assign({},s);})));if(_hist.length>50)_hist.shift();}
 function undo(){if(!_hist.length)return;shapes=JSON.parse(_hist.pop()).map(function(d){return Object.assign({},d);});selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();}
@@ -2782,7 +2782,7 @@ function importDxf(text){
     count++;
   });
   segs.forEach(function(s){var p={x1:X(s.x1),y1:Y(s.y1),x2:X(s.x2),y2:Y(s.y2)};if(s.arcR!==undefined){p.arcR=Math.round(s.arcR*uMul*10)/10;p.arcMid=s.arcMid;}shapes.push(makeShape('line',p));count++;});
-  circles.forEach(function(q){var r=q.r*uMul;if(q.faucet)nFaucet++;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:q.faucet?'faucet':(r*2>=300?'cut':pendingHoleType)}));count++;});
+  circles.forEach(function(q){var r=q.r*uMul;if(q.faucet)nFaucet++;shapes.push(makeShape('circle',{cx:X(q.cx),cy:Y(q.cy),r:r,holeType:q.faucet?'faucet':(r*2>=300?'cut':'outlet')}));count++;}); // 수전이 아닌 타공은 콘센트 (도구 기본값과 무관)
   // OPEN 변: 밑면연마 + 고스라 (조각이 만들어진 뒤라야 findEdgeContext로 재료 방향을 알 수 있음)
   var gLen=0;
   openSpans.forEach(function(sp){
@@ -4765,8 +4765,8 @@ function updatePropsPanel(){
       html+='<div style="color:#90CAF9;font-size:11px;padding:4px">원형 절단 (커팅비는 선 절단 단가 적용)</div>';
     } else {
       html+='<div class="prop-row"><label>타공 유형:</label><div style="display:flex;gap:4px">';
-      html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="outlet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'outlet\')">콘센트</button>';
       html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="faucet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'faucet\')">수전</button>';
+      html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #546E7A;cursor:pointer;background:'+(_ht==="outlet"?"#1565C0":"#263545")+';color:#fff" onclick="setHoleType(\'outlet\')">콘센트</button>';
       html+='</div></div>';
     }
     var hd=s.hideDims||{};
