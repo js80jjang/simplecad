@@ -52,8 +52,16 @@
 - 조각 이름: 조각 안(없으면 300mm 이내) 짧은 글자
 - 닫힌 폴리선 사각형은 코너마다 라운드/모따기가 달라도 사각 조각(`corners`)으로
 
-## DXF 내보내기 (`buildDxf` / `exportDxf`, 상단 "DXF 내보내기" 버튼)
-- 오토캐드 R12(AC1009) ASCII, mm(`$INSUNITS`=4), Y 뒤집기, 한글은 `\U+XXXX`, Φ는 `%%c`
-- 레이어: `SC-PIECE` 조각 / `SC-CUTOUT` 싱크볼·쿡탑 / `SC-HOLE` 타공 / `SC-GRIND` 밑면연마 띠 / `SC-GOSRA` 고스라 ▲(SOLID)
-  / `SC-DIM` 치수(선+화살촉+글자) / `SC-NAME` 조각 이름 / `SC-NOTE` 도면 글자·화살표 / `SC-JOLLY` 졸리컷
-- 다시 불러오기 호환: `SC-DIM/NOTE/GOSRA/JOLLY`는 무시, `SC-GRIND` 띠는 해치처럼(밑면연마+고스라) 해석
+## DXF 내보내기 (`exportDxf` 창 → `buildDxf` / `buildDxfInForm`, 상단 "DXF 내보내기" 버튼)
+- 도형 → 추상 엔티티 `_dxfCollect(H)` → `_dxfWriteEnts`(R12 또는 R2000+ 핸들 형식). mm, Y 뒤집기, 한글 `\U+XXXX`, Φ `%%c`, 글자 스타일 `SC-KOR`(malgun.ttf)
+- 양식 없이: R12(AC1009) ASCII
+- 양식에 넣어서(`buildDxfInForm`): 사용자가 고른 양식 DXF(R2000+, `$HANDSEED` 필요)를 **이 PC 브라우저 localStorage**(`scd_dxf_template`)에 저장해 둠
+  (회사 양식·로고 경로가 공개 저장소에 올라가지 않게 파일로 커밋하지 않음)
+  - 양식의 모형 공간 내용 전체를 블록 `SC_FORM`으로 옮기고(소유자 330만 교체) INSERT로 축척만큼 키움 → 도면은 1:1 mm
+  - 테두리 블록 = 표제란 글자(도면명·축척·납품일정·납품장소…)가 든 블록. 굵은 폴리선으로 안쪽 테두리·표제란 경계를 찾음
+  - 축척: 테두리 폭=A3 420mm 기준, 1/5·1/10·1/15·1/20… 중 치수 포함 도면이 들어가는 가장 작은 값. 치수 글자 = 범례 글자(40)×배율
+  - 표제란 채움(레이어 `SC-TITLE`): 도면명=제품명, 축척=A3 1/N, 납품일정=출고 예정일, 납품장소=현장 주소
+  - 검증: ezdxf(`python -m pip install --user ezdxf matplotlib`)로 recover/audit + PNG 렌더 (앱에는 안 씀)
+- 레이어: `SC-PIECE` 조각 / `SC-CUTOUT` 싱크볼·쿡탑 / `SC-HOLE` 타공 / `SC-GRIND` 밑면연마 띠+45° 빗금 / `SC-GOSRA` 고스라 ▲
+  / `SC-DIM` 치수(선+화살촉+글자) / `SC-NAME` 조각 이름 / `SC-NOTE` 도면 글자·화살표 / `SC-JOLLY` 졸리컷 ★ / `SC-TITLE` 표제란
+- 다시 불러오기 호환: `SC-DIM/NOTE/GOSRA/JOLLY/TITLE`은 무시, `SC-GRIND` 띠는 해치처럼(밑면연마+고스라) 해석, 양식 블록(INSERT)은 무시

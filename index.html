@@ -2519,7 +2519,7 @@ function importDxf(text){
     if((_dxfGet(e,8,'')||'').toLowerCase()==='defpoints')return; // 비출력 레이어
     // 심플캐드에서 내보낸 DXF: 치수·글자·화살표·고스라·졸리컷 레이어는 도형이 아님, 밑면연마 띠는 해치처럼
     var _lay=(_dxfGet(e,8,'')||'').toUpperCase();
-    if(/^SC-(DIM|NOTE|GOSRA|JOLLY)$/.test(_lay))return;
+    if(/^SC-(DIM|NOTE|GOSRA|JOLLY|TITLE)$/.test(_lay))return;
     if(_lay==='SC-GRIND'){
       if(e.type!=='POLYLINE'&&e.type!=='LWPOLYLINE')return;
       var gb={l:Infinity,r:-Infinity,b:Infinity,t:-Infinity};
@@ -2776,40 +2776,40 @@ function importDxf(text){
   if(skipped.INSERT)msg+='\n(블록(INSERT) 안의 도형이 필요하면 오토캐드에서 분해(EXPLODE) 후 저장하세요. 도면 테두리 블록은 그대로 두면 됩니다)';
   alert(msg);
 }
-// ═══ DXF 내보내기 (오토캐드 R12 ASCII — 어떤 캐드에서도 열림) ═══
-// 레이어: SC-PIECE 조각 외곽 / SC-CUTOUT 싱크볼·쿡탑 / SC-HOLE 타공 / SC-GRIND 밑면연마 띠 / SC-GOSRA 고스라 ▲
-//         SC-DIM 치수 / SC-NAME 조각 이름 / SC-NOTE 도면 글자·화살표 / SC-JOLLY 졸리컷
+// ═══ DXF 내보내기 ═══
+// 두 가지: ① 양식 없이 — 오토캐드 R12 ASCII (어떤 캐드에서도 열림)
+//          ② 양식에 넣어서 — 등록한 양식 DXF(윤현상재 가공의뢰서 등, R2000 이상) 안에 도면을 1:1로 넣고
+//             양식(테두리·표제란·범례)은 도면 크기에 맞춰 축척(1/20, 1/25 …)으로 키워서 둘러쌈. 표제란 칸도 채움
+// 레이어: SC-PIECE 조각 외곽 / SC-CUTOUT 싱크볼·쿡탑 / SC-HOLE 타공 / SC-GRIND 밑면연마 띠(빗금) / SC-GOSRA 고스라 ▲
+//         SC-DIM 치수 / SC-NAME 조각 이름 / SC-NOTE 도면 글자·화살표 / SC-JOLLY 졸리컷 ★ / SC-TITLE 표제란 글자
 // 좌표는 mm, DXF는 위쪽이 +Y라 Y를 뒤집음. 다시 불러오면(importDxf) 조각·싱크볼·타공·밑면연마·이름이 복원됨.
-var _DXF_LAYERS=[['SC-PIECE',7],['SC-CUTOUT',4],['SC-HOLE',4],['SC-GRIND',2],['SC-GOSRA',1],['SC-DIM',1],['SC-NAME',7],['SC-NOTE',5],['SC-JOLLY',5]];
+var _DXF_LAYERS=[['SC-PIECE',7],['SC-CUTOUT',4],['SC-HOLE',4],['SC-GRIND',2],['SC-GOSRA',1],['SC-DIM',1],['SC-NAME',7],['SC-NOTE',5],['SC-JOLLY',5],['SC-TITLE',7]];
+var _DXF_FONT='malgun.ttf'; // 한글이 보이는 글꼴 (글자 스타일 SC-KOR)
 function _dxfText(t){
-  // Φ → 오토캐드 지름 기호, 한글 등 ASCII 밖 글자 → \U+XXXX (파일은 순수 ASCII)
+  // Φ → 오토캐드 지름 기호, 한글 등 ASCII 밖 글자 → \U+XXXX (파일 인코딩과 무관하게 안전)
   return String(t).replace(/Φ|Ø|φ/g,'%%c').replace(/[^\x20-\x7E]/g,function(c){return '\\U+'+('000'+c.charCodeAt(0).toString(16).toUpperCase()).slice(-4);});
 }
-function buildDxf(){
-  var out=[],ext={l:Infinity,t:Infinity,r:-Infinity,b:-Infinity};
-  function g(c,v){out.push(String(c),String(v));}
-  function n(v){return(Math.round(v*1000)/1000).toString();}
-  function P(c,x,y){ext.l=Math.min(ext.l,x);ext.r=Math.max(ext.r,x);ext.t=Math.min(ext.t,y);ext.b=Math.max(ext.b,y);g(c,n(x));g(c+10,n(-y));} // (x,y)=편집 좌표(mm, 아래가 +)
-  function ent(type,layer,col){g(0,type);g(8,layer);if(col)g(62,col);}
-  function line(L,a,b,col){ent('LINE',L,col);P(10,a[0],a[1]);g(30,0);P(11,b[0],b[1]);g(31,0);}
-  function circle(L,cx,cy,r){ent('CIRCLE',L);P(10,cx,cy);g(30,0);g(40,n(r));}
-  function poly(L,pts,closed,col){ // pts: [[x,y,bulge?],...] — 편집 좌표계의 시계방향이 DXF에서도 시계방향(볼록은 -)
-    ent('POLYLINE',L,col);g(66,1);g(10,0);g(20,0);g(30,0);g(70,closed?1:0);
-    pts.forEach(function(p){ent('VERTEX',L,col);P(10,p[0],p[1]);g(30,0);if(p[2])g(42,n(p[2]));});
-    ent('SEQEND',L,col);
-  }
-  function solid(L,a,b,c,col){ent('SOLID',L,col);P(10,a[0],a[1]);g(30,0);P(11,b[0],b[1]);g(31,0);P(12,c[0],c[1]);g(32,0);P(13,c[0],c[1]);g(33,0);}
-  function text(L,x,y,h,s,angRad,col){ // 가운데 정렬. angRad: 편집 좌표계 각도
+function _dxfN(v){return(Math.round(v*1000)/1000).toString();}
+// 도형 전체 범위(편집 좌표, mm)
+function _dxfShapesBox(){
+  var all=null;
+  shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!all)all={l:bb.l,t:bb.t,r:bb.r,b:bb.b};else{all.l=Math.min(all.l,bb.l);all.t=Math.min(all.t,bb.t);all.r=Math.max(all.r,bb.r);all.b=Math.max(all.b,bb.b);}});
+  return all;
+}
+// 도형 → 추상 엔티티 목록 (DXF 좌표: 위가 +Y). H = 치수 글자 높이(mm)
+function _dxfCollect(H){
+  var ents=[],AH=H*0.8;
+  function Q(x,y){return[x,-y];}
+  function line(L,a,b,col){ents.push({t:'LINE',L:L,col:col,a:Q(a[0],a[1]),b:Q(b[0],b[1])});}
+  function poly(L,pts,closed,col){ents.push({t:'POLY',L:L,col:col,closed:closed,pts:pts.map(function(p){return[p[0],-p[1],p[2]||0];})});}
+  function solid(L,a,b,c,col){ents.push({t:'SOLID',L:L,col:col,p:[Q(a[0],a[1]),Q(b[0],b[1]),Q(c[0],c[1]),Q(c[0],c[1])]});}
+  function text(L,x,y,h,s,angRad,col){
     var deg=-angRad*180/Math.PI;deg=((deg%360)+360)%360;if(deg>90.01&&deg<=270.01)deg-=180; // 글자는 바로 서게
-    ent('TEXT',L,col);P(10,x,y);g(30,0);g(40,n(h));g(1,_dxfText(s));if(deg)g(50,n(deg));g(72,1);g(73,2);P(11,x,y);g(31,0);
+    ents.push({t:'TEXT',L:L,col:col,p:Q(x,y),h:h,s:String(s),deg:deg,align:'c'});
   }
   var rects=shapes.filter(function(s){return s.kind==='rect';});
   function isCut(s){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
   function inAnyRect(x,y){return rects.some(function(o){return !isCut(o)&&x>=Math.min(o.x,o.x+o.w)&&x<=Math.max(o.x,o.x+o.w)&&y>=Math.min(o.y,o.y+o.h)&&y<=Math.max(o.y,o.y+o.h);});}
-  // 글자/화살촉 크기: 도면 전체 크기에 맞춰
-  var all=null;shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!all)all={l:bb.l,t:bb.t,r:bb.r,b:bb.b};else{all.l=Math.min(all.l,bb.l);all.t=Math.min(all.t,bb.t);all.r=Math.max(all.r,bb.r);all.b=Math.max(all.b,bb.b);}});
-  if(!all)return null;
-  var H=Math.max(20,Math.min(150,Math.round(Math.max(all.r-all.l,all.b-all.t)/60))),AH=H*0.8;
   // 치수: p1→p2, nrm(단위 법선) 방향으로 off 떨어진 치수선 + 보조선 + 양 화살촉 + 글자
   function dim(p1,p2,nrm,off,label){
     var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<1)return;
@@ -2823,11 +2823,16 @@ function buildDxf(){
     solid('SC-DIM',a2,[a2[0]-ux*ah-uy*hw,a2[1]-uy*ah+ux*hw],[a2[0]-ux*ah+uy*hw,a2[1]-uy*ah-ux*hw]);
     var tg=H*0.8;text('SC-DIM',(a1[0]+a2[0])/2+nrm[0]*tg,(a1[1]+a2[1])/2+nrm[1]*tg,H,label,Math.atan2(uy,ux));
   }
+  // 채운 별(★, 졸리컷 표시): 가운데에서 꼭지점 쌍으로 삼각형
+  function star(L,cx,cy,R){
+    var pts=[];for(var i=0;i<10;i++){var a=-Math.PI/2+i*Math.PI/5,rr=i%2?R*0.42:R;pts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);}
+    for(var k=0;k<10;k++)solid(L,[cx,cy],pts[k],pts[(k+1)%10]);
+  }
   var COLS={'#1565C0':5,'#E53935':1,'#2E7D32':3,'#222222':7};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       var g0=_expRectGeo(s),w=g0.w/2,h=g0.h/2,c=g0.c,B=-Math.tan(Math.PI/8),pts=[];
-      // 코너별 [들어가는 점, 나가는 점] (로컬, tl→tr→br→bl 순 = 화면에서 시계방향)
+      // 코너별 [들어가는 점, 나가는 점] (로컬, tl→tr→br→bl 순 = 화면에서 시계방향 → 볼록은 -)
       [['tl',[-w,-h+c.tl.r],[-w+c.tl.r,-h],[-w,-h]],['tr',[w-c.tr.r,-h],[w,-h+c.tr.r],[w,-h]],['br',[w,h-c.br.r],[w-c.br.r,h],[w,h]],['bl',[-w+c.bl.r,h],[-w,h-c.bl.r],[-w,h]]].forEach(function(k){
         var ci=c[k[0]];
         if(ci.type==='none'||ci.r<=0){var q=g0.W(k[3][0],k[3][1]);pts.push([q[0],q[1]]);return;}
@@ -2842,22 +2847,21 @@ function buildDxf(){
         else{if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T));}
       }
       if(!cut&&s.pieceName){
-        // 이름은 싱크볼·쿡탑·타공을 피한 자리 중 가운데에 가까운 곳 (타공부 안에 있으면 다시 불러올 때 이름으로 안 잡힘)
+        // 이름은 싱크볼·쿡탑·타공(+Φ 글자)을 피한 자리 중 가운데에 가까운 곳 (타공부 안에 있으면 다시 불러올 때 이름으로 안 잡힘)
         var occ=shapes.filter(function(o){return o!==s&&(o.kind==='rect'||o.kind==='circle'||o.kind==='hole')&&isInsideRect(o,s);}).map(function(o){
-          var bb=getBBox(o);if(bb&&o.kind!=='rect')bb={l:bb.l,t:bb.t-H*2,r:bb.r+H*6,b:bb.b}; // 타공은 오른쪽 위 Φ 글자 자리까지
+          var bb=getBBox(o);if(bb&&o.kind!=='rect')bb={l:bb.l,t:bb.t-H*2,r:bb.r+H*6,b:bb.b};
           return bb;}).filter(Boolean);
         var fr=[0.5,0.35,0.65,0.2,0.8,0.1,0.9],cand=[];
         fr.forEach(function(fx){fr.forEach(function(fy){cand.push([(fx-0.5)*g0.w,(fy-0.5)*g0.h,Math.hypot(fx-0.5,fy-0.5)]);});});
         cand.sort(function(a,b){return a[2]-b[2];});
-        // 이름 글자 상자(대략: 한 글자 ≈ 글자 높이)가 겹치지 않는 자리
         var nh=H*1.6,nw=String(s.pieceName).length*nh*0.95,m=H*0.6;
         var spot=cand.map(function(c){return g0.W(c[0],c[1]);}).filter(function(p){return !occ.some(function(o){return p[0]+nw/2>o.l-m&&p[0]-nw/2<o.r+m&&p[1]+nh/2>o.t-m&&p[1]-nh/2<o.b+m;});})[0]||g0.W(0,0);
-        text('SC-NAME',spot[0],spot[1],H*1.6,s.pieceName,0);
+        text('SC-NAME',spot[0],spot[1],nh,s.pieceName,0);
       }
     }
     else if(s.kind==='circle'||s.kind==='hole'){
       var piece=s.holeType==='cut'||!inAnyRect(s.cx,s.cy);
-      circle(piece?'SC-PIECE':'SC-HOLE',s.cx,s.cy,s.r);
+      ents.push({t:'CIRCLE',L:piece?'SC-PIECE':'SC-HOLE',c:Q(s.cx,s.cy),r:s.r});
       text('SC-DIM',s.cx+s.r*0.75+H*1.6,s.cy-s.r*0.75-H*0.6,H,'Φ'+_fmtDim(s.r*2),0);
       if(piece&&s.pieceName)text('SC-NAME',s.cx,s.cy,H*1.6,s.pieceName,0);
     }
@@ -2868,19 +2872,29 @@ function buildDxf(){
     else if(s.kind==='line'){line('SC-PIECE',[s.x1,s.y1],[s.x2,s.y2]);if(s.pieceName)text('SC-NAME',(s.x1+s.x2)/2,(s.y1+s.y2)/2-H*2,H*1.6,s.pieceName,0);}
     else if(s.kind==='arc'){
       // 편집 좌표(아래가 +)의 a0→a1(시계)은 DXF에서 -a1→-a0(반시계)
-      ent('ARC','SC-PIECE');P(10,s.cx,s.cy);g(30,0);g(40,n(s.r));g(50,n(-s.a1*180/Math.PI));g(51,n(-s.a0*180/Math.PI));
+      ents.push({t:'ARC',L:'SC-PIECE',c:Q(s.cx,s.cy),r:s.r,a0:-s.a1*180/Math.PI,a1:-s.a0*180/Math.PI});
     }
     else if(s.kind==='grindregion'){
-      // 연마 띠: 변에서 재료 쪽(고스라 판정과 같은 방향)으로 깊이만큼
+      // 연마 띠: 변에서 재료 쪽(고스라 판정과 같은 방향)으로 깊이만큼 + 45° 빗금 (양식 범례의 밑면연마 표시)
       var gd=_gosraDir(s),dp=s.depth||30;if(!gd)return;
-      poly('SC-GRIND',[[s.x1,s.y1],[s.x2,s.y2],[s.x2+gd.dx*dp,s.y2+gd.dy*dp],[s.x1+gd.dx*dp,s.y1+gd.dy*dp]],true);
+      var b1=[s.x1,s.y1],b2=[s.x2,s.y2],b3=[s.x2+gd.dx*dp,s.y2+gd.dy*dp],b4=[s.x1+gd.dx*dp,s.y1+gd.dy*dp];
+      poly('SC-GRIND',[b1,b2,b3,b4],true);
+      var gl=Math.hypot(s.x2-s.x1,s.y2-s.y1),ux=(s.x2-s.x1)/gl,uy=(s.y2-s.y1)/gl,stp=Math.max(dp*0.8,H*0.8);
+      for(var d0=stp/2;d0<gl+dp;d0+=stp){ // 띠 안에서 대각선: 변 위 d0에서 깊이 쪽으로 기울여서
+        var pa=Math.min(d0,gl),pb=Math.max(0,d0-dp),ta=(d0-pa),tb=(d0-pb);
+        if(ta>dp||tb<0)continue;
+        line('SC-GRIND',[s.x1+ux*pa+gd.dx*ta,s.y1+uy*pa+gd.dy*ta],[s.x1+ux*pb+gd.dx*Math.min(tb,dp),s.y1+uy*pb+gd.dy*Math.min(tb,dp)]);
+      }
     }
     else if(s.kind==='gosramark'){
       var gm=_gosraDir(s);if(!gm)return;var sz=s.groupId?H*0.7:H;
       var cx=gm.mx-gm.dx*sz,cy=gm.my-gm.dy*sz,an=Math.atan2(gm.dy,gm.dx);
       solid('SC-GOSRA',[gm.mx,gm.my],[cx+Math.cos(an+2.094)*sz,cy+Math.sin(an+2.094)*sz],[cx+Math.cos(an-2.094)*sz,cy+Math.sin(an-2.094)*sz]);
     }
-    else if(s.kind==='jollymark'){line('SC-JOLLY',[s.x1,s.y1],[s.x2,s.y2]);}
+    else if(s.kind==='jollymark'){
+      line('SC-JOLLY',[s.x1,s.y1],[s.x2,s.y2]);
+      var jm=_gosraDir(s);if(jm)star('SC-JOLLY',jm.mx+jm.dx*H*1.2,jm.my+jm.dy*H*1.2,H*0.9);
+    }
     else if(s.kind==='dimline'){
       var an2=Math.atan2(s.y2-s.y1,s.x2-s.x1),pp=an2-Math.PI/2,d=Math.hypot(s.x2-s.x1,s.y2-s.y1),lt=s.labelType||'dist';
       dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm||15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d));
@@ -2896,22 +2910,212 @@ function buildDxf(){
       solid('SC-NOTE',e,[e[0]-Math.cos(aa-0.38)*ah2,e[1]-Math.sin(aa-0.38)*ah2],[e[0]-Math.cos(aa+0.38)*ah2,e[1]-Math.sin(aa+0.38)*ah2],col);
     }
   });
-  var body=out;out=[];
-  // 머리말(단위 mm, 범위) + 레이어 표
+  return ents;
+}
+// 엔티티 범위 (DXF 좌표)
+function _dxfEntsBox(ents){
+  var b={l:Infinity,b:Infinity,r:-Infinity,t:-Infinity};
+  function a(p){b.l=Math.min(b.l,p[0]);b.r=Math.max(b.r,p[0]);b.b=Math.min(b.b,p[1]);b.t=Math.max(b.t,p[1]);}
+  ents.forEach(function(e){
+    if(e.t==='LINE'){a(e.a);a(e.b);}else if(e.t==='POLY')e.pts.forEach(a);else if(e.t==='SOLID')e.p.forEach(a);
+    else if(e.t==='CIRCLE'||e.t==='ARC'){a([e.c[0]-e.r,e.c[1]-e.r]);a([e.c[0]+e.r,e.c[1]+e.r]);}
+    else if(e.t==='TEXT'){var w=e.s.length*e.h*0.5;a([e.p[0]-w,e.p[1]-e.h]);a([e.p[0]+w,e.p[1]+e.h]);}
+  });
+  return b;
+}
+// 엔티티 → DXF 그룹 코드 줄. modern=true면 R2000+ 형식(핸들·소유자·하위클래스, LWPOLYLINE)
+function _dxfWriteEnts(ents,out,modern,hnd,owner){
+  var N=_dxfN;
+  function g(c,v){out.push(String(c),String(v));}
+  function head(type,L,col,sub){g(0,type);if(modern){g(5,hnd());g(330,owner);g(100,'AcDbEntity');}g(8,L);if(col)g(62,col);if(modern&&sub)g(100,sub);}
+  ents.forEach(function(e){
+    if(e.t==='LINE'){head('LINE',e.L,e.col,'AcDbLine');g(10,N(e.a[0]));g(20,N(e.a[1]));g(30,0);g(11,N(e.b[0]));g(21,N(e.b[1]));g(31,0);}
+    else if(e.t==='CIRCLE'){head('CIRCLE',e.L,e.col,'AcDbCircle');g(10,N(e.c[0]));g(20,N(e.c[1]));g(30,0);g(40,N(e.r));}
+    else if(e.t==='ARC'){head('ARC',e.L,e.col,'AcDbCircle');g(10,N(e.c[0]));g(20,N(e.c[1]));g(30,0);g(40,N(e.r));if(modern)g(100,'AcDbArc');g(50,N(e.a0));g(51,N(e.a1));}
+    else if(e.t==='SOLID'){head('SOLID',e.L,e.col,'AcDbTrace');e.p.forEach(function(p,i){g(10+i,N(p[0]));g(20+i,N(p[1]));g(30+i,0);});}
+    else if(e.t==='TEXT'){
+      head('TEXT',e.L,e.col,'AcDbText');g(10,N(e.p[0]));g(20,N(e.p[1]));g(30,0);g(40,N(e.h));g(1,_dxfText(e.s));if(e.deg)g(50,N(e.deg));g(7,'SC-KOR');
+      if(e.align==='l'){if(modern)g(100,'AcDbText');}
+      else{g(72,1);g(11,N(e.p[0]));g(21,N(e.p[1]));g(31,0);if(modern)g(100,'AcDbText');g(73,2);}
+    }
+    else if(e.t==='POLY'){
+      if(modern){
+        head('LWPOLYLINE',e.L,e.col,'AcDbPolyline');g(90,e.pts.length);g(70,e.closed?1:0);
+        e.pts.forEach(function(p){g(10,N(p[0]));g(20,N(p[1]));if(p[2])g(42,N(p[2]));});
+      } else {
+        head('POLYLINE',e.L,e.col);g(66,1);g(10,0);g(20,0);g(30,0);g(70,e.closed?1:0);
+        e.pts.forEach(function(p){head('VERTEX',e.L,e.col);g(10,N(p[0]));g(20,N(p[1]));g(30,0);if(p[2])g(42,N(p[2]));});
+        head('SEQEND',e.L,e.col);
+      }
+    }
+  });
+}
+// ① 양식 없이: R12
+function buildDxf(){
+  var box=_dxfShapesBox();if(!box)return null;
+  var H=Math.max(20,Math.min(150,Math.round(Math.max(box.r-box.l,box.b-box.t)/60)));
+  var ents=_dxfCollect(H),ext=_dxfEntsBox(ents),out=[];
+  function g(c,v){out.push(String(c),String(v));}
+  var N=_dxfN;
   g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSUNITS');g(70,4);g(9,'$MEASUREMENT');g(70,1);
-  g(9,'$EXTMIN');g(10,n(ext.l));g(20,n(-ext.b));g(30,0);g(9,'$EXTMAX');g(10,n(ext.r));g(20,n(-ext.t));g(30,0);g(0,'ENDSEC');
+  g(9,'$EXTMIN');g(10,N(ext.l));g(20,N(ext.b));g(30,0);g(9,'$EXTMAX');g(10,N(ext.r));g(20,N(ext.t));g(30,0);g(0,'ENDSEC');
   g(0,'SECTION');g(2,'TABLES');
   g(0,'TABLE');g(2,'LTYPE');g(70,1);g(0,'LTYPE');g(2,'CONTINUOUS');g(70,0);g(3,'Solid line');g(72,65);g(73,0);g(40,0);g(0,'ENDTAB');
   g(0,'TABLE');g(2,'LAYER');g(70,_DXF_LAYERS.length);
   _DXF_LAYERS.forEach(function(l){g(0,'LAYER');g(2,l[0]);g(70,0);g(62,l[1]);g(6,'CONTINUOUS');});
-  g(0,'ENDTAB');g(0,'ENDSEC');
-  g(0,'SECTION');g(2,'ENTITIES');out=out.concat(body);g(0,'ENDSEC');g(0,'EOF');
+  g(0,'ENDTAB');
+  g(0,'TABLE');g(2,'STYLE');g(70,1);g(0,'STYLE');g(2,'SC-KOR');g(70,0);g(40,0);g(41,1);g(50,0);g(71,0);g(42,2.5);g(3,_DXF_FONT);g(4,'');g(0,'ENDTAB');
+  g(0,'ENDSEC');
+  g(0,'SECTION');g(2,'ENTITIES');_dxfWriteEnts(ents,out,false);g(0,'ENDSEC');g(0,'EOF');
   return out.join('\r\n')+'\r\n';
 }
-async function exportDxf(){
-  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
-  var data=buildDxf();if(!data){alert('내보낼 도형이 없습니다.');return;}
-  var name=((products[0]&&products[0].name)||'도면').trim()||'도면';
+// ② 양식에 넣어서: 양식 DXF(R2000+, 핸들 있음)의 모형 공간 내용을 블록 SC_FORM으로 묶어 축척만큼 키워 넣고, 도면은 1:1
+function buildDxfInForm(tpl){
+  var box=_dxfShapesBox();if(!box)return null;
+  var raw=tpl.replace(/\r\n?/g,'\n').split('\n');if(raw.length&&raw[raw.length-1]==='')raw.pop();
+  var P=[];for(var i=0;i+1<raw.length;i+=2)P.push([raw[i].trim(),raw[i+1]]);
+  function val(i){return P[i][1].trim();}
+  // 섹션 범위
+  var sec={};for(var i=0;i<P.length;i++)if(P[i][0]==='0'&&val(i)==='SECTION'&&P[i+1][0]==='2'){var nm=val(i+1);for(var j=i+2;j<P.length;j++)if(P[j][0]==='0'&&val(j)==='ENDSEC'){sec[nm]={s:i,e:j};break;}}
+  if(!sec.HEADER||!sec.TABLES||!sec.BLOCKS||!sec.ENTITIES)throw new Error('DXF 양식에 필요한 구역(HEADER/TABLES/BLOCKS/ENTITIES)이 없습니다.');
+  // 엔티티(0 ~ 다음 0) 단위 목록
+  function entsIn(s,e){var r=[],cur=null;for(var i=s+2;i<e;i++){if(P[i][0]==='0'){if(cur){cur.e=i;r.push(cur);}cur={s:i,type:val(i)};}}if(cur){cur.e=e;r.push(cur);}return r;}
+  function code(en,c){for(var i=en.s+1;i<en.e;i++)if(P[i][0]===c)return val(i);return null;}
+  // 소유자(330): {ACAD_REACTORS …} 같은 102 묶음 안의 330은 소유자가 아님
+  function ownerIdx(en){var inG=false;for(var i=en.s+1;i<en.e;i++){if(P[i][0]==='102'){inG=val(i).charAt(0)==='{';continue;}if(!inG&&P[i][0]==='330')return i;}return -1;}
+  function owner(en){var i=ownerIdx(en);return i<0?null:val(i);}
+  function codes(en,c){var r=[];for(var i=en.s+1;i<en.e;i++)if(P[i][0]===c)r.push(parseFloat(P[i][1]));return r;}
+  // 핸들
+  var hsIdx=-1;for(var i=sec.HEADER.s;i<sec.HEADER.e;i++)if(P[i][0]==='9'&&val(i)==='$HANDSEED'){hsIdx=i+1;break;}
+  if(hsIdx<0)throw new Error('이 양식은 R12 형식이라 쓸 수 없습니다. 오토캐드에서 2000 이상 DXF로 저장해 주세요.');
+  var seed=parseInt(val(hsIdx),16);
+  function hnd(){return(seed++).toString(16).toUpperCase();}
+  // 표: BLOCK_RECORD / LAYER / STYLE
+  var tbls=entsIn(sec.TABLES.s,sec.TABLES.e);
+  function table(name){for(var i=0;i<tbls.length;i++)if(tbls[i].type==='TABLE'&&code(tbls[i],'2')===name){var t=tbls[i];for(var j=i+1;j<tbls.length;j++)if(tbls[j].type==='ENDTAB')return{head:t,recs:tbls.slice(i+1,j),end:tbls[j]};}return null;}
+  var tBR=table('BLOCK_RECORD'),tLY=table('LAYER'),tST=table('STYLE');
+  var msBR=null;tBR.recs.forEach(function(r){if((code(r,'2')||'').toUpperCase()==='*MODEL_SPACE')msBR=code(r,'5');});
+  if(!msBR)throw new Error('양식에서 모형 공간을 찾지 못했습니다.');
+  // 양식 테두리 블록: 모형 공간 INSERT 중 표제란 글자(도면명 등)가 든 블록
+  var blks=entsIn(sec.BLOCKS.s,sec.BLOCKS.e),blockEnts={},curB=null;
+  blks.forEach(function(en){if(en.type==='BLOCK'){curB=code(en,'2');blockEnts[curB]=[];}else if(en.type==='ENDBLK')curB=null;else if(curB!==null)blockEnts[curB].push(en);});
+  var ents=entsIn(sec.ENTITIES.s,sec.ENTITIES.e);
+  var msEnts=ents.filter(function(en){return owner(en)===msBR&&code(en,'67')!=='1';});
+  function key(t){return String(t||'').replace(/\s+/g,'');}
+  var FIELDS=['도면명','도면번호','축척','납품일정','납품장소','담당자'];
+  var frame=null;
+  msEnts.forEach(function(en){
+    if(en.type!=='INSERT'||frame)return;var bn=code(en,'2'),be=blockEnts[bn];if(!be)return;
+    var labels={};be.forEach(function(b){if(b.type==='TEXT'){var k=key(code(b,'1'));if(FIELDS.indexOf(k)>=0)labels[k]={x:parseFloat(code(b,'10')),y:parseFloat(code(b,'20')),h:parseFloat(code(b,'40'))};}});
+    if(!Object.keys(labels).length)return;
+    // 굵은 선(폭 있는 폴리선) = 안쪽 테두리 + 표제란 경계
+    var vx=[],hy=[];
+    be.forEach(function(b){if(b.type!=='LWPOLYLINE'||!(parseFloat(code(b,'43')||'0')>0))return;var xs=codes(b,'10'),ys=codes(b,'20');
+      if(Math.max.apply(null,xs)-Math.min.apply(null,xs)<1)vx.push(xs[0]);else if(Math.max.apply(null,ys)-Math.min.apply(null,ys)<1)hy.push(ys[0]);});
+    var all=[];be.forEach(function(b){if(b.type==='LWPOLYLINE'){codes(b,'10').forEach(function(x,i){all.push([x,codes(b,'20')[i]]);});}});
+    var fx=all.map(function(p){return p[0];}),fy=all.map(function(p){return p[1];});
+    vx.sort(function(a,b){return a-b;});
+    var L=vx.length?vx[0]:Math.min.apply(null,fx),R=vx.length>1?vx[vx.length-1]:Math.max.apply(null,fx),Bt=hy.length?Math.min.apply(null,hy):Math.min.apply(null,fy),T=hy.length?Math.max.apply(null,hy):Math.max.apply(null,fy);
+    var col=vx.length>2?vx[vx.length-2]:R; // 표제란 왼쪽 경계
+    var sc=parseFloat(code(en,'41')||'1');
+    frame={ins:[parseFloat(code(en,'10')),parseFloat(code(en,'20'))],f0:sc,outer:{l:Math.min.apply(null,fx),r:Math.max.apply(null,fx),b:Math.min.apply(null,fy),t:Math.max.apply(null,fy)},
+      area:{l:L,r:col,b:Bt,t:T},colR:R,labels:labels};
+  });
+  if(!frame)throw new Error('양식에서 표제란(도면명·축척 등)이 있는 테두리 블록을 찾지 못했습니다.');
+  function toB(x,y){return[(x-frame.ins[0])/frame.f0,(y-frame.ins[1])/frame.f0];} // 모형 좌표 → 테두리 블록 좌표
+  // 도면 영역 아래쪽에 있는 양식 글자/표시(예: "평 면 도" 제목)는 피함
+  var areaB=frame.area,bottom=areaB.b;
+  msEnts.forEach(function(en){if(en.type==='INSERT')return;var xs=codes(en,'10'),ys=codes(en,'20');xs.forEach(function(x,i){var b=toB(x,ys[i]||0);if(b[0]>areaB.l&&b[0]<areaB.r&&b[1]>areaB.b&&b[1]<areaB.b+(areaB.t-areaB.b)*0.3)bottom=Math.max(bottom,b[1]+(en.type==='TEXT'?parseFloat(code(en,'40')||'0')/frame.f0:0));});});
+  var pad=(areaB.t-areaB.b)*0.03,aw=areaB.r-areaB.l-2*pad,ah=areaB.t-bottom-2*pad;
+  // 축척: 테두리 폭 = A3(420mm). 치수 글자 = 범례 글자(40)와 같은 비율 → 여백 약 5×글자
+  var paperW=frame.outer.r-frame.outer.l,W=box.r-box.l,Hh=box.b-box.t,TXT=40;
+  // 작은 축척부터 실제로 그려 보고(치수·글자 포함) 영역에 들어가는 첫 축척
+  var NICE=[1,2,2.5,5,10,15,20,25,30,40,50,60,75,80,100,125,150,200,250,300,400,500,750,1000],Nsc,f,s,H,ents2,eb;
+  for(var ni=0;ni<NICE.length;ni++){
+    Nsc=NICE[ni];f=Nsc*420/paperW;s=f/frame.f0;H=TXT*s;
+    if(W>aw*f||Hh>ah*f)continue; // 도형만으로도 넘치면 계산할 필요 없음
+    ents2=_dxfCollect(H);eb=_dxfEntsBox(ents2);
+    if(eb.r-eb.l<=aw*f&&eb.t-eb.b<=ah*f)break;
+  }
+  if(!ents2){ents2=_dxfCollect(H);eb=_dxfEntsBox(ents2);} // 아주 큰 도면: 가장 큰 축척으로
+  // 도면 가운데를 영역 가운데에
+  var cB=[(areaB.l+areaB.r)/2,(bottom+areaB.t)/2],cM=[frame.ins[0]+cB[0]*frame.f0,frame.ins[1]+cB[1]*frame.f0];
+  var Dc=[(eb.l+eb.r)/2,(eb.b+eb.t)/2],Pins=[Dc[0]-s*cM[0],Dc[1]-s*cM[1]];
+  function W2(bx,by){return[Pins[0]+s*(frame.ins[0]+bx*frame.f0),Pins[1]+s*(frame.ins[1]+by*frame.f0)];} // 테두리 블록 좌표 → 최종 좌표
+  // 표제란 채우기
+  var deliv=(((document.getElementById('deliv-date')||{}).value||'').replace(/-/g,'.')+' '+((document.getElementById('deliv-time')||{}).value||'')).trim();
+  var vals={'도면명':((products[0]&&products[0].name)||'').trim(),'축척':'A3  1/'+Nsc,'납품일정':deliv,'납품장소':((document.getElementById('site-addr')||{}).value||'').trim()};
+  Object.keys(vals).forEach(function(k){
+    var lb=frame.labels[k],v=vals[k];if(!lb||!v)return;
+    var th=lb.h*0.75,perLine=Math.max(6,Math.floor((frame.colR-lb.x-lb.h*1.5)/(th*1.1))); // 한글 한 글자 ≈ 글자 높이
+    var lines=[];for(var i=0;i<v.length;i+=perLine)lines.push(v.slice(i,i+perLine));
+    if(k!=='납품장소')lines=lines.slice(0,1);else lines=lines.slice(0,4);
+    lines.forEach(function(t,i){var p=W2(lb.x+lb.h*0.5,lb.y-lb.h*1.5-i*th*1.5);ents2.push({t:'TEXT',L:'SC-TITLE',p:p,h:th*f,s:t,deg:0,align:'l'});});
+  });
+  // ── 파일 조립 ──
+  var out=[];function g(c,v){out.push(String(c),String(v));}
+  function copy(a,b){for(var i=a;i<b;i++)out.push(P[i][0],P[i][1]);} // 원래 줄 그대로
+  var formBR=hnd(),formBlk=hnd(),formEnd=hnd(),insH=hnd();
+  // HEADER (핸들 시드는 맨 끝에 다시 씀)
+  var outer=[W2(frame.outer.l,frame.outer.b),W2(frame.outer.r,frame.outer.t)];
+  copy(0,sec.HEADER.e);
+  // TABLES: 레코드 추가 + 개수 갱신
+  var have={};tLY.recs.forEach(function(r){have[(code(r,'2')||'').toUpperCase()]=1;});
+  var lay0=tLY.recs.filter(function(r){return code(r,'2')==='0';})[0];
+  var addRecs={};
+  addRecs[tBR.end.s]=function(){g(0,'BLOCK_RECORD');g(5,formBR);g(330,code(tBR.head,'5'));g(100,'AcDbSymbolTableRecord');g(100,'AcDbBlockTableRecord');g(2,'SC_FORM');g(340,0);g(70,0);g(280,1);g(281,0);};
+  addRecs[tLY.end.s]=function(){_DXF_LAYERS.forEach(function(l){if(have[l[0]])return;g(0,'LAYER');g(5,hnd());g(330,code(tLY.head,'5'));g(100,'AcDbSymbolTableRecord');g(100,'AcDbLayerTableRecord');g(2,l[0]);g(70,0);g(62,l[1]);g(6,'Continuous');g(370,-3);if(lay0&&code(lay0,'390'))g(390,code(lay0,'390'));if(lay0&&code(lay0,'347'))g(347,code(lay0,'347'));});};
+  if(tST)addRecs[tST.end.s]=function(){g(0,'STYLE');g(5,hnd());g(330,code(tST.head,'5'));g(100,'AcDbSymbolTableRecord');g(100,'AcDbTextStyleTableRecord');g(2,'SC-KOR');g(70,0);g(40,0);g(41,1);g(50,0);g(71,0);g(42,2.5);g(3,_DXF_FONT);g(4,'');};
+  var nNewLayers=_DXF_LAYERS.filter(function(l){return !have[l[0]];}).length;
+  for(var i=sec.HEADER.e;i<sec.BLOCKS.s;i++){if(addRecs[i])addRecs[i]();out.push(P[i][0],P[i][1]);} // 표 개수(70)는 맨 끝에서 고침
+  // BLOCKS: 맨 끝에 SC_FORM 블록 (원래 모형 공간 내용, 소유자만 바꿔서)
+  copy(sec.BLOCKS.s,sec.BLOCKS.e);
+  g(0,'BLOCK');g(5,formBlk);g(330,formBR);g(100,'AcDbEntity');g(8,'0');g(100,'AcDbBlockBegin');g(2,'SC_FORM');g(70,0);g(10,0);g(20,0);g(30,0);g(3,'SC_FORM');g(1,'');
+  msEnts.forEach(function(en){var oi=ownerIdx(en);for(var i=en.s;i<en.e;i++){if(i===oi)out.push(P[i][0],formBR);else out.push(P[i][0],P[i][1]);}});
+  g(0,'ENDBLK');g(5,formEnd);g(330,formBR);g(100,'AcDbEntity');g(8,'0');g(100,'AcDbBlockEnd');
+  out.push(P[sec.BLOCKS.e][0],P[sec.BLOCKS.e][1]); // ENDSEC
+  // 블록과 엔티티 사이 구역(있으면) 그대로
+  copy(sec.BLOCKS.e+1,sec.ENTITIES.s+2);
+  // ENTITIES: 모형 공간 내용은 빼고(블록으로 옮김), 양식 INSERT + 도면
+  ents.forEach(function(en){if(msEnts.indexOf(en)<0)copy(en.s,en.e);});
+  g(0,'INSERT');g(5,insH);g(330,msBR);g(100,'AcDbEntity');g(8,'0');g(100,'AcDbBlockReference');g(2,'SC_FORM');g(10,_dxfN(Pins[0]));g(20,_dxfN(Pins[1]));g(30,0);g(41,_dxfN(s));g(42,_dxfN(s));g(43,_dxfN(s));
+  _dxfWriteEnts(ents2,out,true,hnd,msBR);
+  copy(sec.ENTITIES.e,P.length);
+  // 숫자 값 고치기: 핸들 시드, 범위, 표 개수, 보기 창
+  var lines=[];for(var i=0;i<out.length;i++)lines.push(out[i]);
+  function setAfter(name,codeV,v){for(var i=0;i<lines.length-2;i+=2){if(lines[i].trim()==='9'&&lines[i+1].trim()===name){for(var j=i+2;j<lines.length;j+=2){if(lines[j].trim()==='9'||lines[j].trim()==='0')break;if(lines[j].trim()===codeV){lines[j+1]=v;break;}}return;}}}
+  setAfter('$HANDSEED','5',seed.toString(16).toUpperCase());
+  setAfter('$EXTMIN','10',_dxfN(outer[0][0]));setAfter('$EXTMIN','20',_dxfN(outer[0][1]));
+  setAfter('$EXTMAX','10',_dxfN(outer[1][0]));setAfter('$EXTMAX','20',_dxfN(outer[1][1]));
+  // 표 개수(70): TABLE 바로 뒤 첫 70
+  [['BLOCK_RECORD',1],['LAYER',nNewLayers],['STYLE',tST?1:0]].forEach(function(tc){
+    for(var i=0;i<lines.length-2;i+=2){if(lines[i].trim()==='0'&&lines[i+1].trim()==='TABLE'&&lines[i+2].trim()==='2'&&lines[i+3].trim()===tc[0]){
+      for(var j=i+4;j<lines.length;j+=2){if(lines[j].trim()==='0')break;if(lines[j].trim()==='70'){lines[j+1]=String((parseInt(lines[j+1],10)||0)+tc[1]);break;}}break;}}
+  });
+  // *Active 보기 창: 양식 가운데, 높이 맞춤
+  for(var i=0;i<lines.length-2;i+=2){if(lines[i].trim()==='0'&&lines[i+1].trim()==='VPORT'&&lines[i+2].trim()==='5'){
+    var isAct=false;for(var j=i+2;j<lines.length;j+=2){if(lines[j].trim()==='0')break;if(lines[j].trim()==='2'&&lines[j+1].trim().toUpperCase()==='*ACTIVE')isAct=true;}
+    if(!isAct)continue;
+    for(var j=i+2;j<lines.length;j+=2){var c=lines[j].trim();if(c==='0')break;
+      if(c==='12')lines[j+1]=_dxfN((outer[0][0]+outer[1][0])/2);if(c==='22')lines[j+1]=_dxfN((outer[0][1]+outer[1][1])/2);if(c==='40')lines[j+1]=_dxfN((outer[1][1]-outer[0][1])*1.05);}
+  }}
+  return{text:lines.join('\r\n')+'\r\n',scale:Nsc};
+}
+var _DXF_TPL_KEY='scd_dxf_template';
+function _dxfTemplate(){try{return localStorage.getItem(_DXF_TPL_KEY);}catch(e){return null;}}
+function _dxfTemplateName(){try{return localStorage.getItem(_DXF_TPL_KEY+'_name')||'';}catch(e){return '';}}
+// 양식 DXF 고르기 → 이 PC 브라우저에 저장 (공개 저장소에 회사 양식을 올리지 않으려고 파일로 두지 않음)
+function pickDxfTemplate(then){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.dxf';
+  inp.onchange=function(){var f=inp.files[0];if(!f)return;var rd=new FileReader();
+    rd.onload=function(ev){var t=ev.target.result;
+      if(!/\$HANDSEED/.test(t)){alert('이 양식은 R12 형식이거나 DXF가 아닙니다.\n오토캐드에서 "다른 이름으로 저장 → 2000 이상 DXF"로 저장한 파일을 골라 주세요.');return;}
+      try{localStorage.setItem(_DXF_TPL_KEY,t);localStorage.setItem(_DXF_TPL_KEY+'_name',f.name);}catch(e){alert('양식을 저장하지 못했습니다(브라우저 저장 공간 부족).');return;}
+      if(then)then();
+    };rd.readAsText(f,'utf-8');};
+  inp.click();
+}
+async function _saveDxfFile(data,name){
   if(typeof window.showSaveFilePicker==='function'){
     try{
       var fh=await window.showSaveFilePicker({suggestedName:name+'.dxf',startIn:'documents',types:[{description:'오토캐드 DXF',accept:{'application/dxf':['.dxf']}}]});
@@ -2923,6 +3127,32 @@ async function exportDxf(){
   }
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/dxf'}));a.download=name+'.dxf';
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function _doExportDxf(useForm){
+  var m=document.getElementById('dxf-modal');if(m)m.remove();
+  var name=((products[0]&&products[0].name)||'도면').trim()||'도면';
+  if(useForm){
+    var tpl=_dxfTemplate();if(!tpl){pickDxfTemplate(function(){_doExportDxf(true);});return;}
+    try{var r=buildDxfInForm(tpl);_saveDxfFile(r.text,name+'_가공의뢰서');}catch(e){alert('양식에 넣지 못했습니다.\n'+e.message);}
+  } else {
+    var data=buildDxf();if(!data){alert('내보낼 도형이 없습니다.');return;}_saveDxfFile(data,name);
+  }
+}
+function exportDxf(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  var ex=document.getElementById('dxf-modal');if(ex)ex.remove();
+  var tn=_dxfTemplateName(),B='width:100%;padding:8px 0;border-radius:3px;cursor:pointer;font-size:12px;margin-top:6px;';
+  var md=document.createElement('div');md.id='dxf-modal';
+  md.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  md.innerHTML='<div style="background:#1a2d3d;border:1px solid #2d4a5a;border-radius:6px;padding:18px;width:330px">'
+    +'<div style="font-size:13px;font-weight:bold;color:#A5D6A7;margin-bottom:10px">📐 DXF 내보내기</div>'
+    +'<button onclick="_doExportDxf(true)" style="'+B+'background:#1565C0;border:none;color:#fff;font-weight:bold">양식에 넣어서 내보내기'+(tn?'<br><small style="font-weight:normal;color:#BBDEFB">'+escHtml(tn)+'</small>':'<br><small style="font-weight:normal;color:#BBDEFB">처음 한 번 양식 DXF 파일을 고릅니다</small>')+'</button>'
+    +'<button onclick="_doExportDxf(false)" style="'+B+'background:#263545;border:1px solid #37474f;color:#90CAF9">양식 없이 도면만</button>'
+    +(tn?'<button onclick="document.getElementById(\'dxf-modal\').remove();pickDxfTemplate()" style="'+B+'background:none;border:1px dashed #546E7A;color:#78909C">양식 파일 바꾸기</button>':'')
+    +'<div style="font-size:10px;color:#546E7A;margin-top:8px;line-height:1.5">도면은 실제 크기(mm)로 들어가고, 양식이 도면 크기에 맞춰 축척(1/20, 1/30 …)으로 커집니다. 양식은 이 PC의 브라우저에 저장됩니다.</div>'
+    +'<button onclick="document.getElementById(\'dxf-modal\').remove()" style="'+B+'background:#37474f;border:none;color:#ccc">취소</button>'
+    +'</div>';
+  document.body.appendChild(md);
 }
 function loadProject(){
   var inp=document.createElement('input');
