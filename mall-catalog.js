@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-10-21",
+"updated":"2026-10-22",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -430,17 +430,6 @@ window._MALL_CATALOG={
 "m2":352000,
 "img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005413/image/list/1000005413_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005413",
-"cate":"009003"
-},
-{
-"id":"1000007083",
-"name":"아주르 비 매트",
-"en":"AZURE B MATTE",
-"size":"1600×3200×12T",
-"price":1802200,
-"m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000007083/image/list/1000007083_list_011.jpg",
-"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007083",
 "cate":"009003"
 },
 {
