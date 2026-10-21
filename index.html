@@ -5377,6 +5377,12 @@ function liveGroupProp(fld,val){
 
 // ═══ 온장 배치 ═══
 // 배치할 피스 목록: rect/circle/hole/ellipse + 연결된 선 그룹 → [{shape,w,h,label}]
+// 선 조각을 th(라디안, 화면 좌표 기준 시계 +)만큼 돌렸을 때의 상자 {x0,y0,w,h}
+function _rotBox(lines,th){
+  var c=Math.cos(th),sn=Math.sin(th),x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  lines.forEach(function(l){[[l.x1,l.y1],[l.x2,l.y2]].forEach(function(p){var u=p[0]*c-p[1]*sn,v=p[0]*sn+p[1]*c;x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v);});});
+  return{x0:x0,y0:y0,w:x1-x0,h:y1-y0};
+}
 function _collectBoardItems(){
   var physical=['rect','circle','hole','ellipse'];
   var allPhysical=shapes.filter(function(s){return physical.indexOf(s.kind)>=0;});
@@ -5432,14 +5438,11 @@ function _collectBoardItems(){
       // 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌려서 배치
       var fit=function(a,b){return (a<=_ew&&b<=_eh)||(b<=_ew&&a<=_eh);};
       if(!fit(w,h)){
-        var pts=[];s.lines.forEach(function(l){pts.push([l.x1,l.y1],[l.x2,l.y2]);});
         var best=null;
         s.lines.forEach(function(l){
           if(Math.hypot(l.x2-l.x1,l.y2-l.y1)<1)return;
-          var th=-Math.atan2(l.y2-l.y1,l.x2-l.x1),c=Math.cos(th),sn=Math.sin(th),x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
-          pts.forEach(function(p){var u=p[0]*c-p[1]*sn,v=p[0]*sn+p[1]*c;x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v);});
-          var cw=x1-x0,ch=y1-y0;
-          if(fit(cw,ch)&&(!best||cw*ch<best.w*best.h-1))best={rot:th,x0:x0,y0:y0,w:cw,h:ch};
+          var th=-Math.atan2(l.y2-l.y1,l.x2-l.x1),rb=_rotBox(s.lines,th);
+          if(fit(rb.w,rb.h)&&(!best||rb.w*rb.h<best.w*best.h-1)){best=rb;best.rot=th;}
         });
         if(best){rot=best.rot;rx0=best.x0;ry0=best.y0;w=best.w;h=best.h;}
       }
@@ -5482,8 +5485,16 @@ function _restoreSavedBoards(saved,items){
       if(p.shapeId!=null)it=take(function(x){return x.shape.id===p.shapeId;});
       else if(p.lineIds&&p.lineIds.length)it=take(function(x){return x.shape.kind==='linegroup'&&p.lineIds.every(function(id){return x.shape.lines.some(function(l){return l.id===id;});});});
       else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
-      if(!it||Math.abs(it.w-_w)>1||Math.abs(it.h-_h)>1){ok=false;return null;} // 크기가 바뀌었으면(돌려서 배치 등) 새로 배치
-      var _it={shape:it.shape,w:_w,h:_h,label:p.label||it.label};if(it.rot){_it.rot=it.rot;_it.rx0=it.rx0;_it.ry0=it.ry0;}
+      if(!it){ok=false;return null;}
+      var _it={shape:it.shape,w:_w,h:_h,label:p.label||it.label};
+      if(p.rot!=null&&it.shape.kind==='linegroup'){ // 사용자가 각도를 지정해 돌린 조각
+        var rb=_rotBox(it.shape.lines,p.rot);
+        if(Math.abs(rb.w-_w)>1||Math.abs(rb.h-_h)>1){ok=false;return null;}
+        if(p.rot){_it.rot=p.rot;_it.rx0=rb.x0;_it.ry0=rb.y0;}
+      } else {
+        if(Math.abs(it.w-_w)>1||Math.abs(it.h-_h)>1){ok=false;return null;} // 크기가 바뀌었으면(돌려서 배치 등) 새로 배치
+        if(it.rot){_it.rot=it.rot;_it.rx0=it.rx0;_it.ry0=it.ry0;}
+      }
       return{item:_it,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false};
     });
   });
@@ -5507,6 +5518,7 @@ function showBoardLayout(){
     var cnt=0;for(var bi=gm.startBi;bi<gm.startBi+gm.count;bi++)cnt+=allBoards[bi].length;
     infoStr+=' | ['+gm.label+'] '+gm.count+'장/'+cnt+'개';
   });
+  infoStr+=' | <span style="color:#78909C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각)</span>';
   infoEl.innerHTML=infoStr;
 
   // 저장된 배치가 있으면 복원
@@ -5667,7 +5679,7 @@ function _bsInitEvents(){
     }
     return -1;
   }
-  // 우클릭: 90° 회전
+  // 우클릭: 90° 회전 / Shift+우클릭: 선 조각은 각도를 입력해서 돌리기
   bcv.oncontextmenu=function(e){
     e.preventDefault();
     if(!_bs)return;
@@ -5676,9 +5688,25 @@ function _bsInitEvents(){
     var hit=_bsHitTest(ex,ey);
     if(!hit)return;
     var p=hit.p;
-    var newPw=p.ph,newPh=p.pw;
-    if(newPw>_bs.ew+0.01||newPh>_bs.eh+0.01)return; // 초과 시 무시
-    p.pw=newPw;p.ph=newPh;p.rotated=!p.rotated;
+    if(e.shiftKey){
+      var sh=p.item&&p.item.shape;
+      if(!sh||sh.kind!=='linegroup'){alert('각도 지정 돌리기는 선으로 그린 조각만 됩니다.\n사각형은 오른쪽 클릭으로 90°씩 돌려 주세요.');return;}
+      // 지금 각도(그린 방향 = 0°, 반시계 +): item.rot(화면 시계 +)과 90° 돌림 합산
+      var cur=-(p.item.rot||0)*180/Math.PI+(p.rotated?90:0);cur=Math.round(((cur%360)+360)%360*10)/10;
+      var ans=prompt('돌릴 각도를 입력하세요 (°)\n그린 방향 = 0°, 반시계 방향 +\n지금: '+cur+'°',String(cur));
+      if(ans==null)return;var deg=parseFloat(ans);if(!isFinite(deg)){alert('숫자로 입력해 주세요.');return;}
+      var th=-deg*Math.PI/180,rb=_rotBox(sh.lines,th);
+      var fitN=rb.w<=_bs.ew+0.01&&rb.h<=_bs.eh+0.01;
+      if(!fitN){alert(deg+'°로 돌리면 '+Math.round(rb.w)+'×'+Math.round(rb.h)+' 이라 온장 유효 영역('+_bs.ew+'×'+_bs.eh+')에 들어가지 않습니다.');return;}
+      if(Math.abs(th)<1e-9){delete p.item.rot;delete p.item.rx0;delete p.item.ry0;}
+      else{p.item.rot=th;p.item.rx0=rb.x0;p.item.ry0=rb.y0;}
+      p.item.w=rb.w;p.item.h=rb.h;p.item.label=Math.round(rb.w)+'×'+Math.round(rb.h);
+      p.rotated=false;p.pw=rb.w;p.ph=rb.h;
+    } else {
+      var newPw=p.ph,newPh=p.pw;
+      if(newPw>_bs.ew+0.01||newPh>_bs.eh+0.01)return; // 초과 시 무시
+      p.pw=newPw;p.ph=newPh;p.rotated=!p.rotated;
+    }
     p.x=Math.max(0,Math.min(_bs.ew-p.pw,p.x));
     p.y=Math.max(0,Math.min(_bs.eh-p.ph,p.y));
     // 충돌 해소
@@ -6061,7 +6089,7 @@ function closeBoardModal(){
         return board.map(function(p){
           var _sh=p.item&&p.item.shape;
           var _rec={shapeId:(_sh&&_sh.id!=null)?_sh.id:null,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false,label:p.item?p.item.label:''};
-          if(_sh&&_sh.kind==='linegroup')_rec.lineIds=_sh.lines.map(function(l){return l.id;}); // 선 절단 피스는 선 id로 복원
+          if(_sh&&_sh.kind==='linegroup'){_rec.lineIds=_sh.lines.map(function(l){return l.id;});_rec.rot=p.item.rot||0;} // 선 절단 피스는 선 id로 복원 + 돌린 각도
           return _rec;
         });
       })
@@ -6696,7 +6724,8 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k){
   }
   // 이름 + 크기 (회전 배치는 ↻)
   var nm=pc?_expPieceName(pc.s):'',sz=p.item.label||(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
-  if(p.rotated)sz+=' ↻';
+  if(rot){var _dg=-rot*180/Math.PI+(p.rotated?90:0);_dg=Math.round(((_dg%360)+360)%360*10)/10;sz+=' ↻'+_dg+'°';}
+  else if(p.rotated)sz+=' ↻';
   var lines=nm?[nm,sz]:[sz],minF=12*k;
   var fs=Math.min(38*k,ph*0.28,pw*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);
   var vertical=false;
