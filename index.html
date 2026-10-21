@@ -5,6 +5,7 @@
 <title>심플 캐드</title>
 <script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
 <script src="dxf-form.js" onerror="window._DXF_DEFAULT_FORM=null"></script>
+<script src="mall-catalog.js" onerror="window._MALL_CATALOG=null"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -145,6 +146,10 @@ canvas{display:block;cursor:crosshair}
 .prod-dd-item:hover{background:#263545}
 .prod-dd-name{color:#CFD8DC;font-size:11px}
 .prod-dd-size{color:#546E7A;font-size:10px}
+.prod-dd-en{color:#78909C;font-size:10px;font-weight:normal}
+.prod-dd-link{color:#64B5F6;text-decoration:none;margin-left:4px}
+.prod-dd-link:hover{text-decoration:underline}
+.wb-prod .prod-dropdown{width:340px;right:auto;max-height:320px}
 .prod-dd-section{padding:2px 6px;font-size:10px;color:#546E7A;background:#0d1822;letter-spacing:0.5px;border-bottom:1px solid #263545}
 /* 출력 */
 #print-modal{display:none;position:fixed;inset:0;z-index:3000;background:#fff;overflow:auto;}
@@ -524,8 +529,16 @@ function setTier(t){
   if(body&&body.style.display==='none'){body.style.display='block';if(arrow)arrow.textContent='▼';}
   calcCost();
 }
-// 제품목록.js 에서 로드된 카탈로그 (BAT 실행 시 세라믹제품목록.xlsx에서 자동 생성)
-var _catalog=window._PRODUCT_CATALOG||[];
+// 제품 검색 목록 = 윤현몰 상품(mall-catalog.js, GitHub Actions가 매일 갱신) + 엑셀 목록(제품목록.js, BAT 실행 때 생성)
+// 같은 이름은 윤현몰 쪽을 씀. 몰 상품은 {name(한글), en(영문), size, price(장당), m2(㎡당), url, id}
+var _catalog=(function(){
+  var out=[],seen={};
+  var mall=(window._MALL_CATALOG&&window._MALL_CATALOG.items)||[];
+  function key(n,s){return(n||'').replace(/\s+/g,'')+'|'+(s||'').replace(/[^\d]/g,'');} // 같은 이름이라도 사이즈(두께)가 다르면 따로
+  mall.forEach(function(m){var k=key(m.name,m.size);if(!m.name||seen[k])return;seen[k]=1;out.push({name:m.name,size:m.size||'',en:m.en||'',price:m.price||0,m2:m.m2||0,url:m.url||'',mall:true});});
+  (window._PRODUCT_CATALOG||[]).forEach(function(c){var k=key(c.name,c.size);if(!c.name||seen[k])return;seen[k]=1;out.push({name:c.name,size:c.size||''});});
+  return out;
+})();
 var _ddResults=[];
 
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -534,10 +547,12 @@ function totalQty(){return Math.max(1,products.reduce(function(t,p){return t+(pa
 function _catalogSearch(q){
   if(!_catalog.length)return[];
   if(!q)return _catalog.slice(0,40);
-  var lq=q.toLowerCase();
+  // 한글·영문 이름, 사이즈에서 찾기 (띄어쓰기·대소문자 무시, 여러 단어면 모두 들어간 것)
+  var words=q.toLowerCase().split(/\s+/).filter(Boolean);
   return _catalog.filter(function(c){
-    return c.name.toLowerCase().indexOf(lq)>=0||c.size.toLowerCase().indexOf(lq)>=0;
-  }).slice(0,40);
+    var hay=(c.name+' '+(c.en||'')+' '+c.size).toLowerCase(),flat=hay.replace(/\s+/g,'');
+    return words.every(function(w){return hay.indexOf(w)>=0||flat.indexOf(w)>=0;});
+  }).slice(0,60);
 }
 
 function _showProdDropdown(i,inputEl){
@@ -549,16 +564,18 @@ function _showProdDropdown(i,inputEl){
   if(!results.length){dd.classList.remove('open');return;}
   _ddResults=results;
   var html='';
-  if(!q)html+='<div class="prod-dd-section">전체목록</div>';
+  if(!q)html+='<div class="prod-dd-section">전체목록'+(window._MALL_CATALOG?' · 윤현몰 '+window._MALL_CATALOG.updated+' 기준':'')+'</div>';
   results.forEach(function(c,ri){
     html+='<div class="prod-dd-item" data-pi="'+i+'" data-ri="'+ri+'">';
-    html+='<span class="prod-dd-name">'+escHtml(c.name)+'</span>';
-    if(c.size)html+='<span class="prod-dd-size">'+escHtml(c.size)+'</span>';
+    html+='<span class="prod-dd-name">'+escHtml(c.name)+(c.en?' <span class="prod-dd-en">'+escHtml(c.en)+'</span>':'')+'</span>';
+    var sub=[c.size,c.price?c.price.toLocaleString()+'원/장':''].filter(Boolean).join(' · ');
+    if(sub||c.url)html+='<span class="prod-dd-size">'+escHtml(sub)+(c.url?' <a class="prod-dd-link" href="'+escHtml(c.url)+'" target="_blank" rel="noopener" title="윤현몰 상품 페이지">몰 ↗</a>':'')+'</span>';
     html+='</div>';
   });
   dd.innerHTML=html;
   // 이벤트 위임
   dd.onmousedown=function(ev){
+    if(ev.target.closest('.prod-dd-link'))return; // "몰 ↗"은 상품 페이지 열기 (선택 아님)
     ev.preventDefault();
     var item=ev.target.closest('.prod-dd-item');
     if(!item)return;
@@ -584,7 +601,7 @@ function _prodRow(i){
   h+='<div class="prod-dot" style="background:'+col+'" title="제품 색 (도형에 붙인 제품 표시와 같음)"></div>';
   if(_catalog.length>0){
     h+='<div class="prod-search-wrap" id="psw-'+i+'">';
-    h+='<input type="text" placeholder="제품명 검색" value="'+escHtml(p.name||'')+'" ';
+    h+='<input type="text" placeholder="제품명 검색 (한글·영문)" value="'+escHtml(p.name||'')+'" ';
     h+='oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';_showProdDropdown('+i+',this);redraw();updatePropsPanel()" ';
     h+='onfocus="_showProdDropdown('+i+',this)" ';
     h+='onblur="setTimeout(function(){var dd=document.querySelector(\'#psw-'+i+' .prod-dropdown\');if(dd)dd.classList.remove(\'open\');},150)">';

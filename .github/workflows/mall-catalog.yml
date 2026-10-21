@@ -1,0 +1,38 @@
+# 윤현몰 상품 목록을 매일 새로 읽어 mall-catalog.js를 갱신 (바뀐 게 있을 때만 커밋)
+# 손으로 돌리려면: GitHub 저장소 → Actions → "윤현몰 제품 목록 갱신" → Run workflow
+name: 윤현몰 제품 목록 갱신
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 매일 03:00 (한국 시간)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mall-catalog
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 쇼핑몰 목록 읽기
+        run: python tools/update_mall_catalog.py
+      - name: 바뀌었으면 커밋
+        run: |
+          if git diff --quiet -- mall-catalog.js; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mall-catalog.js
+          git commit -m "chore: 윤현몰 제품 목록 자동 갱신 ($(TZ=Asia/Seoul date +%Y-%m-%d))"
+          git push

@@ -7,6 +7,14 @@
 - 배포: GitHub Pages — https://js80jjang.github.io/simplecad/ (저장소 `js80jjang/simplecad`, **공개**)
 - 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(엑셀 제품 목록 → `제품목록.js` 생성 후 index.html 열기)
 
+## 윤현몰 제품 목록 (`mall-catalog.js`, 자동 생성 — 직접 고치지 않음)
+- `.github/workflows/mall-catalog.yml`이 매일 03:00(KST) `tools/update_mall_catalog.py` 실행 → 바뀌었으면 봇이 커밋·푸시
+  → 로컬 작업 전 pull 필수(봇 커밋이 생김). 손으로 돌리기: Actions → "윤현몰 제품 목록 갱신" → Run workflow
+- 가져오는 분류: 스크립트의 `CATEGORIES`(지금 `009003` = 두께 12mm). 고도몰 목록 HTML(`item_cont`/`item_name`/`item_name_explain`/`item_price`/`m2`)을 읽음
+  — 쇼핑몰 화면이 바뀌어 10개 미만이면 실패로 끝나고 기존 파일 유지
+- 항목: `{id,name(한글),en,size(1600×3200×12T),price(장당),m2,img,url,cate}`. 앱의 `_catalog` = 몰 + 엑셀(`제품목록.js`), 이름+사이즈로 중복 제거
+  — 검색은 한글·영문·사이즈, 여러 단어는 모두 포함. 고르면 제품명·사이즈 채움
+
 ## 저장소에 없는 파일 (PC마다 따로 복사)
 - `세라믹제품목록.xlsx`, `제품목록.js` — 제품 목록. 공개 저장소라 `.gitignore`로 제외. 다른 PC에는 USB/클라우드로 복사.
 - 고객 도면/견적 파일(.ceramic, .dxf)은 절대 커밋하지 않음.
