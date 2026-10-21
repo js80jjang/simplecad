@@ -56,16 +56,17 @@ body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic
 #board-canvas-wrap{flex:1;overflow:hidden;position:relative}
 #board-cv{display:block;width:100%;height:100%}
 /* 작업 정보 줄 (현장 · 제품 · 출고) */
-#work-bar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-shrink:0;margin-bottom:4px;padding:4px 8px;background:#1a2d3d;border:1px solid #2d4a5a;border-radius:3px;position:relative;z-index:30}
+#work-bar{display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-bottom:4px;padding:5px 8px;background:#1a2d3d;border:1px solid #2d4a5a;border-radius:3px;position:relative;z-index:30}
+.wb-row{display:flex;align-items:center;gap:5px}
+.wb-head{width:40px;flex-shrink:0}
 #work-bar input{background:#263545;border:1px solid #2d4a5a;color:#fff;padding:4px 6px;font-size:12px;border-radius:2px;min-width:0}
 #work-bar input:focus{outline:none;border-color:#1976D2}
 #work-bar input[type=date],#work-bar input[type=time]{color:#9eceff;padding:3px 4px}
-#company-name{width:130px}
-#site-addr{flex:1 1 200px;max-width:380px}
+#company-name{width:180px}
+#site-addr{flex:1 1 260px;max-width:520px}
 #deliv-date{width:92px;color:#9eceff!important}
 #deliv-time{width:62px;color:#9eceff!important}
 .wb-lbl{font-size:11px;color:#78909C;white-space:nowrap}
-.wb-sep{width:1px;align-self:stretch;background:#2d4a5a;margin:0 3px}
 .wb-q{background:#263545;border:1px solid #37474f;color:#9eceff;font-size:11px;padding:3px 6px;border-radius:2px;cursor:pointer}
 .wb-q:hover{background:#2d4a5a;color:#fff}
 #product-list{display:flex;align-items:center;gap:5px;position:relative}
@@ -273,21 +274,23 @@ canvas{display:block;cursor:crosshair}
     </div>
     <span id="canvas-hint">드래그=다중선택 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
-  <!-- 작업 정보(출고 정보): 도면 바로 위 한 줄 — 오른쪽 패널을 접어도 보임 -->
+  <!-- 작업 정보(출고 정보): 도면 바로 위 세 줄 (업체명·주소 / 제품 / 출고) — 오른쪽 패널을 접어도 보임 -->
   <div id="work-bar">
-    <span class="wb-lbl">업체명</span>
-    <input type="text" id="company-name" list="company-history" placeholder="업체명" autocomplete="off" onchange="rememberHist('company',this.value)">
-    <datalist id="company-history"></datalist>
-    <span class="wb-lbl">주소</span>
-    <input type="text" id="site-addr" list="site-history" placeholder="현장 주소" autocomplete="off" onchange="rememberHist('site',this.value)">
-    <datalist id="site-history"></datalist>
-    <span class="wb-sep"></span>
-    <div id="product-list"></div>
-    <span class="wb-sep"></span>
-    <span class="wb-lbl">출고</span>
-    <input type="text" id="deliv-date" placeholder="날짜 (예: 1028)" title="직접 입력: 1028, 10/28, 2026.10.28, 20261028 등 → 2026.10.28로 맞춤" autocomplete="off" onchange="this.value=_normDate(this.value)">
-    <input type="text" id="deliv-time" placeholder="시간 (예: 1400)" title="직접 입력: 14, 1400, 14:00, 오후2시 등 → 14:00으로 맞춤" autocomplete="off" onchange="this.value=_normTime(this.value)">
-    <button class="wb-q" onclick="setDelivIn(0)" title="출고일을 오늘로">오늘</button><button class="wb-q" onclick="setDelivIn(1)" title="출고일을 내일로">내일</button><button class="wb-q" onclick="setDelivIn(3)" title="출고일을 3일 뒤로">+3일</button>
+    <div class="wb-row">
+      <span class="wb-lbl wb-head">업체명</span>
+      <input type="text" id="company-name" list="company-history" placeholder="업체명" autocomplete="off" onchange="rememberHist('company',this.value)">
+      <datalist id="company-history"></datalist>
+      <span class="wb-lbl">주소</span>
+      <input type="text" id="site-addr" list="site-history" placeholder="현장 주소" autocomplete="off" onchange="rememberHist('site',this.value)">
+      <datalist id="site-history"></datalist>
+    </div>
+    <div class="wb-row"><div id="product-list"></div></div>
+    <div class="wb-row">
+      <span class="wb-lbl wb-head">출고</span>
+      <input type="text" id="deliv-date" placeholder="날짜 (예: 1028)" title="직접 입력: 1028, 10/28, 2026.10.28, 20261028 등 → 2026.10.28로 맞춤" autocomplete="off" onchange="this.value=_normDate(this.value)">
+      <input type="text" id="deliv-time" placeholder="시간 (예: 1400)" title="직접 입력: 14, 1400, 14:00, 오후2시 등 → 14:00으로 맞춤" autocomplete="off" onchange="this.value=_normTime(this.value)">
+      <button class="wb-q" onclick="setDelivIn(0)" title="출고일을 오늘로">오늘</button><button class="wb-q" onclick="setDelivIn(1)" title="출고일을 내일로">내일</button><button class="wb-q" onclick="setDelivIn(3)" title="출고일을 3일 뒤로">+3일</button>
+    </div>
   </div>
   <!-- 온장 배치 모달 -->
   <div id="board-modal">
@@ -598,7 +601,7 @@ function _prodRow(i){
 function renderProductList(){
   var container=document.getElementById('product-list');
   if(!container)return;
-  var n=products.length,html='<span class="wb-lbl">제품</span>'+_prodRow(0);
+  var n=products.length,html='<span class="wb-lbl wb-head">제품</span>'+_prodRow(0);
   html+='<button class="wb-more" onclick="'+(n>1?'toggleProdPop()':'addProduct()')+'" title="'+(n>1?'다른 제품 보기/고치기':'제품 하나 더 추가')+'">'+(n>1?'제품 '+n+'개 '+(_prodPopOpen?'▴':'▾'):'+ 제품')+'</button>';
   if(n>1){
     html+='<div id="prod-pop" class="'+(_prodPopOpen?'open':'')+'">';
