@@ -1508,8 +1508,7 @@ function drawJollyMark(s,preview){
     ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   }
   drawStar(pc[0],pc[1],9,preview?'rgba(33,150,243,0.5)':'#2196F3');
-  // length label
-  if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(!printRender){ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+12,44,13);}ctx.fillStyle=printRender?'#1565C0':'#64B5F6';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(dist),pc[0],pc[1]+18);}
+  // 졸리컷은 길이 치수를 표기하지 않음 (편집 화면·도면화 모두) — 길이는 속성 칸에서만 확인
 }
 
 // 고스라 삼각형 방향(꼭지점 = 방향): 사각/선 절단 조각 변 → 바깥에서 조각 안쪽을 향함,
@@ -4968,10 +4967,7 @@ function updatePropsPanel(){
     html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
     html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','깊이',hd['dist'])+'</div>';
   } else if(s.kind==='jollymark'){
-    html+='<div style="color:#2196F3;font-size:11px;padding:4px">졸리컷<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
-    var hd=s.hideDims||{};
-    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
-    html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','길이',hd['dist'])+'</div>';
+    html+='<div style="color:#2196F3;font-size:11px;padding:4px">졸리컷<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm (도면에는 치수 표기 안 함)</small></div>';
   } else if(s.kind==='gosramark'){
     html+='<div style="color:#F44336;font-size:11px;padding:4px">고스라<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
     var hd=s.hideDims||{};
