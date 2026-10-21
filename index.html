@@ -2829,6 +2829,7 @@ function _dxfCollect(H){
     for(var k=0;k<10;k++)solid(L,[cx,cy],pts[k],pts[(k+1)%10]);
   }
   var COLS={'#1565C0':5,'#E53935':1,'#2E7D32':3,'#222222':7};
+  var _pieces=_expCollect(),_holeSet=[];_pieces.forEach(function(p){p.holes.forEach(function(o){if(o.holeType!=='cut')_holeSet.push(o);});});
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       var g0=_expRectGeo(s),w=g0.w/2,h=g0.h/2,c=g0.c,B=-Math.tan(Math.PI/8),pts=[];
@@ -2854,7 +2855,7 @@ function _dxfCollect(H){
         var fr=[0.5,0.35,0.65,0.2,0.8,0.1,0.9],cand=[];
         fr.forEach(function(fx){fr.forEach(function(fy){cand.push([(fx-0.5)*g0.w,(fy-0.5)*g0.h,Math.hypot(fx-0.5,fy-0.5)]);});});
         cand.sort(function(a,b){return a[2]-b[2];});
-        var nh=H*1.6,nw=String(s.pieceName).length*nh*0.95,m=H*0.6;
+        var nh=H*1.6,nw=String(s.pieceName).length*nh*1.05,m=H*1.5;
         var spot=cand.map(function(c){return g0.W(c[0],c[1]);}).filter(function(p){return !occ.some(function(o){return p[0]+nw/2>o.l-m&&p[0]-nw/2<o.r+m&&p[1]+nh/2>o.t-m&&p[1]-nh/2<o.b+m;});})[0]||g0.W(0,0);
         text('SC-NAME',spot[0],spot[1],nh,s.pieceName,0);
       }
@@ -2862,7 +2863,7 @@ function _dxfCollect(H){
     else if(s.kind==='circle'||s.kind==='hole'){
       var piece=s.holeType==='cut'||!inAnyRect(s.cx,s.cy);
       ents.push({t:'CIRCLE',L:piece?'SC-PIECE':'SC-HOLE',c:Q(s.cx,s.cy),r:s.r});
-      text('SC-DIM',s.cx+s.r*0.75+H*1.6,s.cy-s.r*0.75-H*0.6,H,'Φ'+_fmtDim(s.r*2),0);
+      if(_holeSet.indexOf(s)<0)text('SC-DIM',s.cx+s.r*0.75+H*1.6,s.cy-s.r*0.75-H*0.6,H,'Φ'+_fmtDim(s.r*2),0); // 조각 안 타공은 아래 위치 치수에서 지시선으로
       if(piece&&s.pieceName)text('SC-NAME',s.cx,s.cy,H*1.6,s.pieceName,0);
     }
     else if(s.kind==='ellipse'){
@@ -2909,6 +2910,76 @@ function _dxfCollect(H){
       poly('SC-NOTE',ap.slice(0,23),false,col);
       solid('SC-NOTE',e,[e[0]-Math.cos(aa-0.38)*ah2,e[1]-Math.sin(aa-0.38)*ah2],[e[0]-Math.cos(aa+0.38)*ah2,e[1]-Math.sin(aa+0.38)*ah2],col);
     }
+  });
+  // ── 위치 치수·R값 (도면화와 같은 규칙) ──
+  //   싱크볼·쿡탑 → 가까운 좌/우, 위/아래 조각 변까지 / 수전 → 가장 가까운 싱크볼 변까지 / 콘센트 등 → 가장 가까운 선까지
+  //   R·C값 → 코너에서 대각선 지시선 (싱크볼·쿡탑은 안쪽으로, 조각은 바깥으로), 같은 값은 한 번만
+  function rLeader(s,inward){
+    if(s.kind!=='rect')return;
+    var g0=_expRectGeo(s),w=g0.w/2,h=g0.h/2,done={};
+    [['br',1,1],['tr',1,-1],['bl',-1,1],['tl',-1,-1]].forEach(function(k){
+      var ci=g0.c[k[0]];if(!ci||ci.type==='none'||!(ci.r>0))return;
+      var lbl=(ci.type==='chamfer'?'C':'R')+_fmtDim(ci.r);if(done[lbl])return;done[lbl]=1;
+      var dx=k[1]*Math.SQRT1_2,dy=k[2]*Math.SQRT1_2,kk=ci.type==='chamfer'?Math.SQRT1_2:1;
+      var cx=k[1]*(w-ci.r),cy=k[2]*(h-ci.r),pt=g0.W(cx+dx*ci.r*kk,cy+dy*ci.r*kk),sg=inward?-1:1,L=H*2.5;
+      var e1=g0.W(cx+dx*ci.r*kk+sg*dx*L,cy+dy*ci.r*kk+sg*dy*L),right=(e1[0]>=pt[0]),e2=[e1[0]+(right?H*1.2:-H*1.2),e1[1]];
+      line('SC-DIM',pt,e1);line('SC-DIM',e1,e2);
+      text('SC-DIM',e2[0]+(right?1:-1)*lbl.length*H*0.35,e2[1]-H*0.7,H,lbl,0);
+    });
+  }
+  _pieces.forEach(function(p){
+    var ps=(p.s.kind==='rect'&&_rightAngle(p.s.rotation))?_axisBox(p.s):null,PL,PR,PT,PB;
+    if(ps){PL=ps.x;PR=ps.x+Math.abs(ps.w);PT=ps.y;PB=ps.y+Math.abs(ps.h);rLeader(p.s,false);}
+    var boxes=[],sinks=[];
+    p.cutouts.forEach(function(q0){if(q0.kind==='rect'&&_rightAngle(q0.rotation)){var q=_axisBox(q0),bx={L:q.x,T:q.y,R:q.x+Math.abs(q.w),B:q.y+Math.abs(q.h)};boxes.push(bx);var at=_applianceType(q0);if(at==='sink'||(!at&&q0.cornerType==='fillet'))sinks.push(bx);}}); // 라운드여도 쿡탑으로 정한 건 제외
+    // 치수선이 타공을 지나지 않는 자리 (가운데 → 1/4 → 3/4)
+    function clear(a,b,isX){var c=[(a+b)/2,a+(b-a)*0.3,a+(b-a)*0.7,a+(b-a)*0.15,a+(b-a)*0.85];for(var i=0;i<c.length;i++){var v=c[i];if(!p.holes.some(function(o){return Math.abs((isX?o.cx:o.cy)-v)<o.r+H;}))return v;}return c[0];}
+    p.cutouts.forEach(function(q0){
+      if(q0.kind!=='rect'||!_rightAngle(q0.rotation))return;
+      rLeader(q0,true);
+      if(!ps)return;
+      var q=_axisBox(q0),L=q.x,T=q.y,R=q.x+Math.abs(q.w),B=q.y+Math.abs(q.h),yy=clear(T,B,false),xx=clear(L,R,true);
+      if(L-PL<=PR-R){if(L-PL>0.5)dim([PL,yy],[L,yy],[0,-1],0,_fmtDim(L-PL));}else if(PR-R>0.5)dim([R,yy],[PR,yy],[0,-1],0,_fmtDim(PR-R));
+      if(T-PT<=PB-B){if(T-PT>0.5)dim([xx,PT],[xx,T],[-1,0],0,_fmtDim(T-PT));}else if(PB-B>0.5)dim([xx,B],[xx,PB],[-1,0],0,_fmtDim(PB-B));
+    });
+    // 타공: 같은 높이·같은 종류끼리 한 줄 → 기준선→첫 타공, 이후는 타공 사이 간격 / 세로는 기준선에서 먼 끝 타공에서 한 번
+    function near(a,v){return a.reduce(function(m,x){return m===null||Math.abs(x-v)<Math.abs(m-v)?x:m;},null);}
+    function refs(o){
+      var vx=[],hy=[];
+      if(o.holeType==='faucet'&&sinks.length){
+        var best=null,bd=Infinity;sinks.forEach(function(b){var d=Math.hypot(Math.max(b.L-o.cx,0,o.cx-b.R),Math.max(b.T-o.cy,0,o.cy-b.B));if(d<bd){bd=d;best=b;}});
+        vx=[best.L,best.R];hy=[best.T,best.B]; // 싱크볼 변(연장선)
+      } else {
+        if(ps){vx.push(PL,PR);hy.push(PT,PB);}
+        boxes.forEach(function(b){if(o.cy>=b.T&&o.cy<=b.B)vx.push(b.L,b.R);if(o.cx>=b.L&&o.cx<=b.R)hy.push(b.T,b.B);});
+      }
+      return{vx:vx,hy:hy};
+    }
+    var rows=[];
+    p.holes.filter(function(o){return o.holeType!=='cut';}).sort(function(a,b){return a.cy-b.cy||a.cx-b.cx;}).forEach(function(o){
+      var fct=o.holeType==='faucet',row=rows.filter(function(r){return Math.abs(r[0].cy-o.cy)<5&&(r[0].holeType==='faucet')===fct;})[0];
+      if(row)row.push(o);else rows.push([o]);
+    });
+    rows.forEach(function(row){
+      row.sort(function(a,b){return a.cx-b.cx;});
+      var first=row[0],last=row[row.length-1],rmax=Math.max.apply(null,row.map(function(o){return o.r;})),y=first.cy,off=rmax+H*1.2;
+      var rf=refs(first),rl=refs(last),bxL=near(rf.vx,first.cx),bxR=near(rl.vx,last.cx);
+      var dL=bxL===null?Infinity:Math.abs(bxL-first.cx),dR=bxR===null?Infinity:Math.abs(bxR-last.cx),useR=dR<dL;
+      if(!useR&&dL<Infinity&&dL>first.r)dim([bxL,y],[first.cx,y],[0,-1],off,_fmtDim(dL));
+      for(var i=1;i<row.length;i++)dim([row[i-1].cx,y],[row[i].cx,y],[0,-1],off,_fmtDim(row[i].cx-row[i-1].cx));
+      if(useR&&dR>last.r)dim([last.cx,y],[bxR,y],[0,-1],off,_fmtDim(dR));
+      var hRef=useR?bxR:bxL,vo=useR?first:last,ry=near(refs(vo).hy,vo.cy);
+      if(ry!==null&&Math.abs(ry-vo.cy)>vo.r)dim([vo.cx,ry],[vo.cx,vo.cy],[hRef!==null&&hRef<vo.cx?1:-1,0],vo.r+H*1.2,_fmtDim(Math.abs(ry-vo.cy))); // 가로 치수 보조선 반대쪽에
+      // Φ값: 치수가 없는 쪽(가로 기준선 반대, 세로 기준선 반대)으로 대각선 지시선
+      row.forEach(function(o){
+        var oy=near(refs(o).hy,o.cy),sx=(hRef!==null&&hRef<o.cx)?1:-1,sy=(oy!==null&&oy>o.cy)?-1:1;
+        // 여러 개가 한 줄이면 위쪽 간격 치수 줄을 넘어 그 위에 글자
+        var L=row.length>1&&sy<0?(off+H*2.2)*Math.SQRT2:H*1.8;
+        var a=[o.cx+sx*o.r*Math.SQRT1_2,o.cy+sy*o.r*Math.SQRT1_2],e1=[a[0]+sx*L*Math.SQRT1_2,a[1]+sy*L*Math.SQRT1_2],e2=[e1[0]+sx*H*0.8,e1[1]],lbl='Φ'+_fmtDim(o.r*2);
+        line('SC-DIM',a,e1);line('SC-DIM',e1,e2);
+        text('SC-DIM',e2[0]+sx*lbl.length*H*0.38,e2[1],H,lbl,0);
+      });
+    });
   });
   return ents;
 }
