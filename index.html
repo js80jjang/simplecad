@@ -783,7 +783,7 @@ var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
 var _endDrag=null; // 화살표·연결 표시 끝점 끌기 {s, w:1|2}
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
-var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15;
+var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15,dimDragL0=null,dimDragSnap=null;
 var _savedBoardLayout=null; // 마지막 온장 배치 저장
 var _savedBoardImg=null; // 마지막 온장 배치 렌더링 이미지 (도면화용)
 var grind150mode=false;
@@ -3888,6 +3888,9 @@ cv.addEventListener('mousedown',function(e){
       // 클릭=크기편집, 드래그=치수선 위치 이동 (mouseup에서 판단)
       selectedShapes=(dh.shape.groupId&&dh.shape.groupRole==='main')?getGroupShapes(dh.shape):[dh.shape];updatePropsPanel();redraw();
       dimDragInfo=dh;dimDragStartX=e.offsetX;dimDragStartY=e.offsetY;
+      // 실제로 그려진 치수선 위치(px) — 끌 때 이 위치에서 출발해 스냅 (싱크볼은 저장값과 그려진 쪽이 다를 수 있음)
+      var _dl=dh.line||(dimLabels.filter(function(d){return d.line&&d.shape===dh.shape&&d.field===dh.field;})[0]||{}).line;
+      dimDragL0=_dl?(dh.field==='w'?_dl[0][1]:_dl[0][0]):null;
       dimDragOrigW=(dh.shape.dimOffsetW||15);dimDragOrigH=(dh.shape.dimOffsetH||15);
       return;
     }
@@ -4194,9 +4197,27 @@ document.addEventListener('mousemove',function(e){
   if(Math.hypot(_dx,_dy)>3){
     var _ds=dimDragInfo.shape;
     // 끄는 동안에도 자동 배치(autoAdjustDims)가 되돌리지 않게 먼저 "사용자가 옮김" 표시
-    if(dimDragInfo.field==='w'){var _nw=dimDragOrigW+_dy;_ds.dimOffsetW=Math.abs(_nw)<5?(_nw>=0?5:-5):_nw;_ds.dimUserOffsetW=true;}
+    var isW=dimDragInfo.field==='w';dimDragSnap=null;
+    if(!_ds.rotation&&dimDragL0!==null&&(isW||dimDragInfo.field==='h')){
+      // 회전 없는 조각: 치수선 위치(px)를 스냅 → 오프셋으로 환산
+      var c1=toCanvas(_ds.x,_ds.y),c2=toCanvas(_ds.x+_ds.w,_ds.y+_ds.h),lo=isW?c1[1]:c1[0],hi=isW?c2[1]:c2[0];
+      var T=dimDragL0+(isW?_dy:_dx),best=null,bd=8;
+      var cand=function(v){var d=Math.abs(v-T);if(d<bd){bd=d;best=v;}};
+      // ① 다른 조각의 같은 방향 치수선(줄 맞춤) ② 도형의 끝점·중간점·중심 (자기 자신·같은 그룹 제외)
+      dimLabels.forEach(function(d){if(d.line&&d.field===dimDragInfo.field&&d.shape!==_ds)cand(isW?d.line[0][1]:d.line[0][0]);});
+      if(objSnap)snapPoints(getGroupShapes(_ds)).forEach(function(p){var q=toCanvas(p.x,p.y);cand(isW?q[1]:q[0]);});
+      if(best===null&&gridSnap){var mm=((isW?T-offsetY:T-offsetX)/scale),g=Math.round(mm/gridMm)*gridMm,gp=g*scale+(isW?offsetY:offsetX);if(Math.abs(gp-T)<8){best=gp;}}
+      if(best!==null){T=best;dimDragSnap={isW:isW,v:T};}
+      var off=T>=(lo+hi)/2?Math.max(5,T-hi):Math.min(-5,T-lo); // 아래/오른쪽이면 +, 위/왼쪽이면 −
+      if(isW){_ds.dimOffsetW=off;_ds.dimUserOffsetW=true;}else{_ds.dimOffsetH=off;_ds.dimUserOffsetH=true;}
+    }
+    else if(isW){var _nw=dimDragOrigW+_dy;_ds.dimOffsetW=Math.abs(_nw)<5?(_nw>=0?5:-5):_nw;_ds.dimUserOffsetW=true;}
     else if(dimDragInfo.field==='h'){var _nh=dimDragOrigH+_dx;_ds.dimOffsetH=Math.abs(_nh)<5?(_nh>=0?5:-5):_nh;_ds.dimUserOffsetH=true;}
     redraw();
+    // 스냅된 자리 표시: 화면을 가로지르는 점선
+    if(dimDragSnap){ctx.save();ctx.strokeStyle='#00BCD4';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();
+      if(dimDragSnap.isW){ctx.moveTo(0,dimDragSnap.v);ctx.lineTo(cv.width,dimDragSnap.v);}else{ctx.moveTo(dimDragSnap.v,0);ctx.lineTo(dimDragSnap.v,cv.height);}
+      ctx.stroke();ctx.restore();}
   }
 });
 
@@ -4218,7 +4239,7 @@ document.addEventListener('mouseup',function(e){
         else if(dimDragInfo.field==='h')dimDragInfo.shape.dimUserOffsetH=true;
         saveHistory();
       }  // 드래그→위치 저장
-      dimDragInfo=null;return;
+      dimDragInfo=null;dimDragSnap=null;redraw();return;
     }
     if(selBox){
       var selFound=[];
