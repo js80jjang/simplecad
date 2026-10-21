@@ -60,7 +60,10 @@ body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic
 #work-bar input{background:#263545;border:1px solid #2d4a5a;color:#fff;padding:4px 6px;font-size:12px;border-radius:2px;min-width:0}
 #work-bar input:focus{outline:none;border-color:#1976D2}
 #work-bar input[type=date],#work-bar input[type=time]{color:#9eceff;padding:3px 4px}
-#site-addr{flex:1 1 220px;max-width:420px}
+#company-name{width:130px}
+#site-addr{flex:1 1 200px;max-width:380px}
+#deliv-date{width:92px;color:#9eceff!important}
+#deliv-time{width:62px;color:#9eceff!important}
 .wb-lbl{font-size:11px;color:#78909C;white-space:nowrap}
 .wb-sep{width:1px;align-self:stretch;background:#2d4a5a;margin:0 3px}
 .wb-q{background:#263545;border:1px solid #37474f;color:#9eceff;font-size:11px;padding:3px 6px;border-radius:2px;cursor:pointer}
@@ -272,15 +275,18 @@ canvas{display:block;cursor:crosshair}
   </div>
   <!-- 작업 정보(출고 정보): 도면 바로 위 한 줄 — 오른쪽 패널을 접어도 보임 -->
   <div id="work-bar">
-    <span class="wb-lbl">현장</span>
-    <input type="text" id="site-addr" list="site-history" placeholder="현장 주소 (최근 주소는 칸을 누르면 목록)" autocomplete="off" onchange="rememberSite(this.value)">
+    <span class="wb-lbl">업체명</span>
+    <input type="text" id="company-name" list="company-history" placeholder="업체명" autocomplete="off" onchange="rememberHist('company',this.value)">
+    <datalist id="company-history"></datalist>
+    <span class="wb-lbl">주소</span>
+    <input type="text" id="site-addr" list="site-history" placeholder="현장 주소" autocomplete="off" onchange="rememberHist('site',this.value)">
     <datalist id="site-history"></datalist>
     <span class="wb-sep"></span>
     <div id="product-list"></div>
     <span class="wb-sep"></span>
     <span class="wb-lbl">출고</span>
-    <input type="date" id="deliv-date">
-    <input type="time" id="deliv-time">
+    <input type="text" id="deliv-date" placeholder="날짜 (예: 1028)" title="직접 입력: 1028, 10/28, 2026.10.28, 20261028 등 → 2026.10.28로 맞춤" autocomplete="off" onchange="this.value=_normDate(this.value)">
+    <input type="text" id="deliv-time" placeholder="시간 (예: 1400)" title="직접 입력: 14, 1400, 14:00, 오후2시 등 → 14:00으로 맞춤" autocomplete="off" onchange="this.value=_normTime(this.value)">
     <button class="wb-q" onclick="setDelivIn(0)" title="출고일을 오늘로">오늘</button><button class="wb-q" onclick="setDelivIn(1)" title="출고일을 내일로">내일</button><button class="wb-q" onclick="setDelivIn(3)" title="출고일을 3일 뒤로">+3일</button>
   </div>
   <!-- 온장 배치 모달 -->
@@ -620,21 +626,52 @@ document.addEventListener('mousedown',function(e){
   if(!_prodPopOpen)return;var pl=document.getElementById('product-list');
   if(pl&&!pl.contains(e.target)){_prodPopOpen=false;renderProductList();}
 });
+// 출고일·시간: 직접 입력 → 2026.10.28 / 14:00 모양으로 맞춤 (못 알아들으면 입력한 그대로)
+function _ymd(d){return d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');}
+function _normDate(v){
+  v=String(v||'').trim();if(!v)return '';
+  var y=new Date().getFullYear(),m,d,t;
+  if((t=/^(\d{4})[.\-\/\s]?(\d{1,2})[.\-\/\s]?(\d{1,2})$/.exec(v))&&v.replace(/\D/g,'').length>=6){y=+t[1];m=+t[2];d=+t[3];} // 20261028, 2026-10-28, 2026.10.28
+  else if((t=/^(\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/.exec(v))){y=2000+(+t[1]);m=+t[2];d=+t[3];}          // 26.10.28
+  else if((t=/^(\d{1,2})[.\-\/\s월]\s*(\d{1,2})일?$/.exec(v))){m=+t[1];d=+t[2];}                            // 10/28, 10.28, 10월 28일
+  else if((t=/^(\d{2})(\d{2})$/.exec(v))){m=+t[1];d=+t[2];}                                                // 1028
+  else return v;
+  if(!(m>=1&&m<=12&&d>=1&&d<=31))return v;
+  return y+'.'+String(m).padStart(2,'0')+'.'+String(d).padStart(2,'0');
+}
+function _normTime(v){
+  v=String(v||'').trim();if(!v)return '';
+  var pm=/오후|pm/i.test(v),am=/오전|am/i.test(v),t=v.replace(/오전|오후|am|pm|시/gi,' ').replace(/분/,'').replace(/\s+/g,' ').trim(),h,mi=0,m;
+  if((m=/^(\d{1,2})[:.\s](\d{1,2})$/.exec(t))){h=+m[1];mi=+m[2];}
+  else if((m=/^(\d{3,4})$/.exec(t))){h=Math.floor(+m[1]/100);mi=+m[1]%100;}
+  else if((m=/^(\d{1,2})$/.exec(t))){h=+m[1];}
+  else return v;
+  if(pm&&h<12)h+=12;if(am&&h===12)h=0;
+  if(!(h>=0&&h<=23&&mi>=0&&mi<=59))return v;
+  return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+}
 // 출고일 빠른 입력: 오늘 / 내일 / +3일
-function setDelivIn(days){
-  var d=new Date();d.setDate(d.getDate()+days);
-  document.getElementById('deliv-date').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-// 최근 현장 주소 (이 PC 브라우저에 15개까지) → 현장 칸 목록
-function _siteHistory(){try{return JSON.parse(localStorage.getItem('scd_site_history')||'[]');}catch(e){return[];}}
-function renderSiteHistory(){var dl=document.getElementById('site-history');if(dl)dl.innerHTML=_siteHistory().map(function(a){return '<option value="'+escHtml(a)+'">';}).join('');}
-function rememberSite(v){
+function setDelivIn(days){var d=new Date();d.setDate(d.getDate()+days);document.getElementById('deliv-date').value=_ymd(d);}
+// 최근 업체명·주소 (이 PC 브라우저에 15개까지) → 칸을 누르면 목록
+function _wbHist(k){try{return JSON.parse(localStorage.getItem('scd_'+k+'_history')||'[]');}catch(e){return[];}} // (_hist는 되돌리기 기록 이름이라 피함)
+function renderHistories(){['company','site'].forEach(function(k){var dl=document.getElementById(k+'-history');if(dl)dl.innerHTML=_wbHist(k).map(function(a){return '<option value="'+escHtml(a)+'">';}).join('');});}
+function rememberHist(k,v){
   v=(v||'').trim();if(!v)return;
-  var h=_siteHistory().filter(function(a){return a!==v;});h.unshift(v);
-  try{localStorage.setItem('scd_site_history',JSON.stringify(h.slice(0,15)));}catch(e){}
-  renderSiteHistory();
+  var h=_wbHist(k).filter(function(a){return a!==v;});h.unshift(v);
+  try{localStorage.setItem('scd_'+k+'_history',JSON.stringify(h.slice(0,15)));}catch(e){}
+  renderHistories();
 }
-setTimeout(renderSiteHistory,0);
+setTimeout(renderHistories,0);
+// 업체명 + 주소 한 줄 (도면화·DXF 양식용)
+function _companySite(){var c=(document.getElementById('company-name')||{}).value||'',a=(document.getElementById('site-addr')||{}).value||'';c=c.trim();a=a.trim();return c&&a?c+' - '+a:(c||a);}
+// 저장 파일 이름: 업체명-주소-작성일(20261021). 둘 다 비어 있으면 제품명
+function _saveBaseName(){
+  var c=((document.getElementById('company-name')||{}).value||'').trim(),a=((document.getElementById('site-addr')||{}).value||'').trim();
+  var d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  var parts=[c,a].filter(Boolean);if(!parts.length)parts=[((products[0]&&products[0].name)||'도면').trim()||'도면'];
+  parts.push(ds);
+  return parts.join('-').replace(/[\\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim();
+}
 var selectedShapes=[]; // multi-select
 var selBox=null; // {x1mm,y1mm,x2mm,y2mm} rubber-band box
 var filletSel=[]; // for fillet tool: up to 2 dim labels from same rect
@@ -2413,6 +2450,7 @@ function _makeProjectData(){
   return JSON.stringify({
     version:3,
     products:products,
+    company:(document.getElementById('company-name')||{}).value||'',
     siteAddr:(document.getElementById('site-addr')||{}).value||'',
     delivDate:(document.getElementById('deliv-date')||{}).value||'',
     delivTime:(document.getElementById('deliv-time')||{}).value||'',
@@ -2429,15 +2467,16 @@ function _makeProjectData(){
 }
 
 async function saveProject(){
-  var defaultName=((products[0]&&products[0].name)||'도면').trim()||'도면';
+  var defaultName=_saveBaseName(); // 업체명-주소-작성일(20261021)
   var data=_makeProjectData();
+  rememberHist('company',(document.getElementById('company-name')||{}).value);rememberHist('site',(document.getElementById('site-addr')||{}).value);
 
-  // showSaveFilePicker 지원 시: 탐색기 형식 Save As 창 (폴더+파일명 모두 선택 가능)
+  // showSaveFilePicker 지원 시: 탐색기 형식 Save As 창 (기본 위치 = 바탕화면, 폴더+파일명 모두 바꿀 수 있음)
   if(typeof window.showSaveFilePicker==='function'){
     try{
       var fh=await window.showSaveFilePicker({
         suggestedName:defaultName+'.ceramic',
-        startIn:'documents',
+        startIn:'desktop',
         types:[{description:'세라믹 도면 파일',accept:{'application/json':['.ceramic']}}]
       });
       var writable=await fh.createWritable();
@@ -3204,7 +3243,7 @@ function buildDxfInForm(tpl){
   function W2(bx,by){return[Pins[0]+s*(frame.ins[0]+bx*frame.f0),Pins[1]+s*(frame.ins[1]+by*frame.f0)];} // 테두리 블록 좌표 → 최종 좌표
   // 표제란 채우기
   var deliv=(((document.getElementById('deliv-date')||{}).value||'').replace(/-/g,'.')+' '+((document.getElementById('deliv-time')||{}).value||'')).trim();
-  var vals={'도면명':((products[0]&&products[0].name)||'').trim(),'축척':'A3  1/'+Nsc,'납품일정':deliv,'납품장소':((document.getElementById('site-addr')||{}).value||'').trim()};
+  var vals={'도면명':((products[0]&&products[0].name)||'').trim(),'축척':'A3  1/'+Nsc,'납품일정':deliv,'납품장소':_companySite()};
   Object.keys(vals).forEach(function(k){
     var lb=frame.labels[k],v=vals[k];if(!lb||!v)return;
     var th=lb.h*0.75,perLine=Math.max(6,Math.floor((frame.colR-lb.x-lb.h*1.5)/(th*1.1))); // 한글 한 글자 ≈ 글자 높이
@@ -3217,7 +3256,7 @@ function buildDxfInForm(tpl){
   var dl=frame.labels['DRAWN/DATE'];
   if(dl)ents2.push({t:'TEXT',L:'SC-TITLE',p:W2(dl.x+(frame.colR-dl.x)/2,dl.y-dl.h*3.8),h:dl.h*1.5*f,s:dstr,deg:0,align:'c'});
   // 양식 안 값 자리 채우기
-  var p0=products[0]||{},pname=(p0.name||'').trim(),psize=(p0.size||'').trim(),pqty=p0.qty||'',site=((document.getElementById('site-addr')||{}).value||'').trim();
+  var p0=products[0]||{},pname=(p0.name||'').trim(),psize=(p0.size||'').trim(),pqty=p0.qty||'',site=_companySite(); // "업체명 - 주소"
   function attVal(prompt,tag){var k=key(prompt||'');if(/도면명/.test(k))return pname||tag;if(/축척/.test(k))return '1/'+Nsc;return tag;}
   function mtextOf(en){var s='';for(var i=en.s+1;i<en.e;i++)if(P[i][0]==='3'||P[i][0]==='1')s+=P[i][1];return s;}
   var holder=msEnts.filter(function(en){var t=mtextOf(en);return en.type==='MTEXT'&&/업체명/.test(t)&&/현장주소/.test(t);})[0];
@@ -3380,6 +3419,11 @@ function loadProject(){
         if(data.scale&&data.scale>0)scale=data.scale;
         if(data.products&&data.products.length)products=data.products;
         else if(data.product)products=[{name:data.product,size:data.size||'',qty:parseInt(data.qty)||1}];
+        // 작업 정보(업체명·주소·출고일) 복원
+        document.getElementById('company-name').value=data.company||'';
+        document.getElementById('site-addr').value=data.siteAddr||'';
+        document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
+        document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
         // 저장해 둔 온장 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
         _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;
         // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
@@ -6478,7 +6522,7 @@ function exportDrawingA4(){
   tmpCtx.drawImage(mainCv,0,0);
   // 좌상단 현장주소 / 제품명 정보 오버레이
   {
-    var _sa2=(document.getElementById('site-addr')||{}).value||'';
+    var _sa2=_companySite(); // 업체명 - 주소
     var _p1a=(products&&products[0])||{};
     var _p1ln=[_p1a.name,_p1a.size,(_p1a.qty&&_p1a.qty>1)?_p1a.qty+'장':''].filter(Boolean).join(' ');
     if(_sa2||_p1ln){
