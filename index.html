@@ -3681,15 +3681,28 @@ function doTrim(mx,my){
 
 // ═══ 선 절단: 오토캐드 LINE 방식 ═══
 // 클릭으로 시작점 → 클릭/숫자 입력으로 다음 점, 끝점에서 계속 이어서. drawStart = 지금 점(직교·스냅 기준)
-var lineChain=null; // {first:[x,y] 시작점, segs:[이번에 그은 선들], buf:'입력 중인 글자'}
+var lineChain=null; // {first:[x,y] 시작점, segs:[이번에 그은 선들], buf:'입력 중인 글자', dir:[ux,uy] 드래그로 정한 방향}
+var lineDown=null;  // 누른 순간 {px:[화면], pt:[mm], isNew:시작점을 찍은 누름인지}
 function _lineAddTo(x,y){
   if(!lineChain||!drawStart)return;
   if(Math.hypot(x-drawStart[0],y-drawStart[1])<0.01)return;
   saveHistory();
   var s=makeShape('line',{x1:drawStart[0],y1:drawStart[1],x2:x,y2:y});
-  shapes.push(s);lineChain.segs.push(s);lineChain.buf='';
+  shapes.push(s);lineChain.segs.push(s);lineChain.buf='';lineChain.dir=null; // 다음 선은 다시 드래그로 방향
   drawStart=[x,y];_savedBoardLayout=null;_savedBoardImg=null;
   calcCost();_lineRedraw();
+}
+// 놓았을 때: 드래그였으면 방향 고정(지금 점 → 놓은 점, 직교 적용됨), 그냥 클릭이면 그 점까지 선 (시작점 찍은 클릭은 제외)
+function _lineMouseUp(e){
+  var d=lineDown;lineDown=null;if(!d||!lineChain||!drawStart)return;
+  var moved=Math.hypot(e.offsetX-d.px[0],e.offsetY-d.px[1])>6;
+  if(moved){
+    var ex=lastMx,ey=lastMy,dx=ex-drawStart[0],dy=ey-drawStart[1],L=Math.hypot(dx,dy);
+    if(L>1e-6){lineChain.dir=[dx/L,dy/L];lineChain.buf='';}
+    _lineRedraw();
+  } else if(!d.isNew){
+    _lineAddTo(d.pt[0],d.pt[1]);
+  }
 }
 function _lineEnd(){if(!lineChain)return;lineChain=null;drawStart=null;redraw();calcCost();}
 function _lineUndo(){
@@ -3704,6 +3717,7 @@ function _lineTarget(buf){
   if((m=/^(-?\d*\.?\d+)\s*<\s*(-?\d*\.?\d+)$/.exec(t))){var L=+m[1],a=+m[2]*Math.PI/180;return[x0+L*Math.cos(a),y0-L*Math.sin(a)];}
   if((m=/^(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)$/.exec(t)))return[x0+(+m[1]),y0-(+m[2])];
   if((m=/^(\d*\.?\d+)$/.exec(t))){
+    if(lineChain&&lineChain.dir)return[x0+lineChain.dir[0]*(+m[1]),y0+lineChain.dir[1]*(+m[1])]; // 드래그로 정한 방향
     var L2=+m[1],dx=(lastMx==null?x0+1:lastMx)-x0,dy=(lastMy==null?y0:lastMy)-y0,d=Math.hypot(dx,dy);
     if(d<1e-6){dx=1;dy=0;d=1;} // 마우스가 그 자리면 오른쪽으로
     return[x0+dx/d*L2,y0+dy/d*L2];
@@ -3728,17 +3742,21 @@ function _lineKey(e){
 // 지금 점 → 마우스(또는 입력값) 미리보기 선 + 커서 옆 입력 상자
 function _lineOverlay(){
   if(!lineChain||!drawStart)return;
-  var tgt=lineChain.buf?_lineTarget(lineChain.buf):null,ex=tgt?tgt[0]:lastMx,ey=tgt?tgt[1]:lastMy;
+  var c=lineChain,dir=(!lineDown&&c.dir)?c.dir:null,tgt=c.buf?_lineTarget(c.buf):null,ex,ey;
+  if(tgt){ex=tgt[0];ey=tgt[1];}
+  else if(dir&&lastMx!=null){var tp=Math.max(0,(lastMx-drawStart[0])*dir[0]+(lastMy-drawStart[1])*dir[1]);ex=drawStart[0]+dir[0]*tp;ey=drawStart[1]+dir[1]*tp;} // 고정한 방향 위로
+  else{ex=lastMx;ey=lastMy;}
   if(ex==null)return;
   ctx.globalAlpha=0.8;drawShape({kind:'line',x1:drawStart[0],y1:drawStart[1],x2:ex,y2:ey,ops:[]},true);ctx.globalAlpha=1;
   var p=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy),len=Math.hypot(ex-drawStart[0],ey-drawStart[1]);
-  var l1=lineChain.buf?('입력: '+lineChain.buf+'▏'):('길이 '+_fmtD(len)+'  (숫자 입력)'),l2=lineChain.segs.length?'Enter 그리기 · 빈 Enter/Esc 끝 · C 닫기 · U 취소':'숫자 + Enter = 그 길이로 · 클릭 = 그 점까지';
+  var l1=c.buf?('입력: '+c.buf+'▏'):(dir?'방향 고정 → 길이를 입력하세요':(lineDown?'놓으면 이 방향으로 고정':'길이 '+_fmtD(len)));
+  var l2=(dir||c.buf)?'숫자 + Enter = 그리기 · 다시 드래그 = 방향 바꾸기':(c.segs.length?'끝점에서 드래그로 방향 · 빈 Enter/Esc 끝 · C 닫기 · U 취소':'드래그로 방향 정하기 (클릭 = 그 점까지)');
   ctx.save();
   ctx.font='bold 12px Consolas, "Malgun Gothic"';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic"';var w=Math.max(w1,ctx.measureText(l2).width)+12;
   var bx=p[0]+16,by=p[1]+14;if(bx+w>cv.width)bx=p[0]-16-w;if(by+38>cv.height)by=p[1]-52;
-  ctx.fillStyle='rgba(13,24,34,0.92)';ctx.strokeStyle=lineChain.buf?'#FFD740':'#1976D2';ctx.lineWidth=1;ctx.fillRect(bx,by,w,36);ctx.strokeRect(bx,by,w,36);
+  ctx.fillStyle='rgba(13,24,34,0.92)';ctx.strokeStyle=(c.buf||dir)?'#FFD740':'#1976D2';ctx.lineWidth=1;ctx.fillRect(bx,by,w,36);ctx.strokeRect(bx,by,w,36);
   ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.font='bold 12px Consolas, "Malgun Gothic"';ctx.fillStyle=lineChain.buf?'#FFD740':'#E3F2FD';ctx.fillText(l1,bx+6,by+11);
+  ctx.font='bold 12px Consolas, "Malgun Gothic"';ctx.fillStyle=(c.buf||dir)?'#FFD740':'#E3F2FD';ctx.fillText(l1,bx+6,by+11);
   ctx.font='11px "Malgun Gothic"';ctx.fillStyle='#78909C';ctx.fillText(l2,bx+6,by+27);
   ctx.restore();
 }
@@ -4216,11 +4234,14 @@ cv.addEventListener('mousedown',function(e){
     cv.focus();doTrim(mx,my);
 
   } else if(tool==='line'){
-    // 선 절단(오토캐드 LINE처럼): 첫 클릭 = 시작점, 다음 클릭마다 그 점까지 선을 긋고 이어감
-    //   숫자 입력 + Enter = 마우스 방향으로 그 길이만큼 / 빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
+    // 선 절단: 시작점에서 누르고 방향으로 드래그 → 놓으면 방향 고정 → 숫자 입력 + Enter = 그 방향으로 그 길이
+    //   끝점에서 다시 드래그해 다음 방향 → 숫자 … (이어 그리기) / 드래그 없이 클릭 = 그 점까지 바로
+    //   빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
     cv.focus();
-    if(!lineChain){lineChain={first:[mx,my],segs:[],buf:''};drawStart=[mx,my];lastMx=mx;lastMy=my;_lineRedraw();}
-    else _lineAddTo(mx,my);
+    var _new=!lineChain;
+    if(_new){lineChain={first:[mx,my],segs:[],buf:'',dir:null};drawStart=[mx,my];lastMx=mx;lastMy=my;}
+    lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new};
+    _lineRedraw();
   } else {
     cv.focus();
     // R/Φ 치수선: 원 클릭 감지
@@ -4263,7 +4284,8 @@ cv.addEventListener('pointerdown',function(e){
 cv.addEventListener('pointerup',function(e){
   if(e.button!==0)return;
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
-  if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim'||tool==='line')return; // 선 절단은 클릭으로 점을 이어감(오토캐드식)
+  if(tool==='line'){_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지
+  if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
   if(!drawStart)return;
   finalizeShape(lastMx,lastMy);
 });
