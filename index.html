@@ -3823,6 +3823,7 @@ function _lineMouseUp(e){
   var d=lineDown;lineDown=null;if(!d||!lineChain||!drawStart)return;
   var moved=Math.hypot(e.offsetX-d.px[0],e.offsetY-d.px[1])>6;
   if(!moved&&d.isNew){_lineRedraw();return;}
+  if(!moved&&d.snap){_lineAddTo(d.pt[0],d.pt[1]);return;} // 스냅점 클릭 = 그 점까지 바로 (길이·각도 입력 없이)
   var ex=moved?lastMx:d.pt[0],ey=moved?lastMy:d.pt[1],dx=ex-drawStart[0],dy=ey-drawStart[1],L=Math.hypot(dx,dy);
   if(L>1e-6){lineChain.dir=[dx/L,dy/L];lineChain.buf='';_linePopShow(e.offsetX,e.offsetY);}
   _lineRedraw();
@@ -4361,13 +4362,13 @@ cv.addEventListener('mousedown',function(e){
 
   } else if(tool==='line'){
     // 선 절단: 시작점에서 누르고 방향으로 드래그 → 놓으면 방향 고정 → 숫자 입력 + Enter = 그 방향으로 그 길이
-    //   끝점에서 다시 드래그해 다음 방향 → 숫자 … (이어 그리기) / 드래그 없이 클릭 = 그 점까지 바로
+    //   다음 선: 방향 쪽을 클릭 → 숫자 … (이어 그리기) / 다른 선의 스냅점(끝점·중간점·교차점 등)을 클릭 = 그 점까지 바로
     //   빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
     _linePopHide();cv.focus();
     var _new=!lineChain||!drawStart;
     if(_new){lineChain={first:[mx,my],segs:[],buf:'',dir:null};drawStart=[mx,my];}
     lastMx=mx;lastMy=my; // 움직이지 않고 클릭해도 미리보기가 그 점 기준
-    lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new};
+    lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new,snap:!!snapKind&&snapKind!=='grid'};
     _lineRedraw();
   } else {
     cv.focus();
