@@ -2458,22 +2458,21 @@ function clearAll(){
   redraw();updateCost();updatePropsPanel();
 }
 
+// 뷰 맞춤: 모든 도형이 화면 가운데에 들어오게 확대·이동 (치수 글자 자리만큼 여백)
 function fitView(){
-  if(!shapes.length){offsetX=0;offsetY=0;scale=1;redraw();return;}
-  var xs=[],ys=[];
+  if(!shapes.length){offsetX=60;offsetY=60;redraw();return;}
+  var l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
+  function add(x,y){if(isFinite(x)&&isFinite(y)){l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}}
   shapes.forEach(function(s){
-    if(s.type==='rect'||s.type==='step'||s.type==='polygon'){
-      if(s.pts){s.pts.forEach(function(p){xs.push(p[0]);ys.push(p[1]);});}
-      else{xs.push(s.x,s.x+s.w);ys.push(s.y,s.y+s.h);}
-    }else if(s.type==='circle'){xs.push(s.cx-s.r,s.cx+s.r);ys.push(s.cy-s.r,s.cy+s.r);}
-    else if(s.type==='line'||s.type==='dim'){xs.push(s.x1,s.x2);ys.push(s.y1,s.y2);}
+    var bb=getBBoxAny(s);
+    if(bb){add(bb.l,bb.t);add(bb.r,bb.b);}
+    else if(s.x1!==undefined){add(s.x1,s.y1);add(s.x2,s.y2);} // 치수선·밑면연마·고스라 등
   });
-  if(!xs.length)return;
-  var pad=60,mnx=Math.min.apply(null,xs),mxx=Math.max.apply(null,xs),mny=Math.min.apply(null,ys),mxy=Math.max.apply(null,ys);
-  var cw=cv.width-pad*2,ch=cv.height-pad*2;
-  var sw=mxx-mnx||1,sh=mxy-mny||1;
-  scale=Math.min(cw/sw,ch/sh);
-  offsetX=pad-mnx*scale;offsetY=pad-mny*scale;
+  if(l===Infinity)return;
+  var pad=70,cw=Math.max(50,cv.width-pad*2),ch=Math.max(50,cv.height-pad*2);
+  var sw=(r-l)||1,sh=(b-t)||1;
+  scale=Math.min(cw/sw,ch/sh,20);
+  offsetX=cv.width/2-(l+r)/2*scale;offsetY=cv.height/2-(t+b)/2*scale;
   redraw();
 }
 
