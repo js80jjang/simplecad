@@ -2997,7 +2997,7 @@ var _DXF_LAYERS=[['SC-PIECE',7],['SC-CUTOUT',4],['SC-HOLE',4],['SC-GRIND',2],['S
 var _DXF_FONT='malgun.ttf'; // 한글이 보이는 글꼴 (글자 스타일 SC-KOR)
 function _dxfText(t){
   // Φ → 오토캐드 지름 기호, 한글 등 ASCII 밖 글자 → \U+XXXX (파일 인코딩과 무관하게 안전)
-  return String(t).replace(/Φ|Ø|φ/g,'%%c').replace(/[^\x20-\x7E]/g,function(c){return '\\U+'+('000'+c.charCodeAt(0).toString(16).toUpperCase()).slice(-4);});
+  return String(t).replace(/Φ|Ø|φ/g,'%%c').replace(/°/g,'%%d').replace(/[^\x20-\x7E]/g,function(c){return '\\U+'+('000'+c.charCodeAt(0).toString(16).toUpperCase()).slice(-4);});
 }
 function _dxfN(v){return(Math.round(v*1000)/1000).toString();}
 // 도형 전체 범위(편집 좌표, mm)
@@ -3121,6 +3121,15 @@ function _dxfCollect(H){
       solid('SC-NOTE',e,[e[0]-Math.cos(aa-0.38)*ah2,e[1]-Math.sin(aa-0.38)*ah2],[e[0]-Math.cos(aa+0.38)*ah2,e[1]-Math.sin(aa+0.38)*ah2],col);
     }
     else if(s.kind==='linkmark'){var lc=COLS[s.color]||5;_linkWaves(s,32).forEach(function(w){poly('SC-NOTE',w,false,lc);});}
+  });
+  // ── 선 각도 (편집 화면·도면화와 같은 자리): 사잇각 호 + 값, 혼자 있는 사선은 수평 기준선
+  //    편집 좌표(아래가 +)의 a0→a0+sweep(시계)은 DXF에서 -(a0+sweep)→-a0(반시계)
+  _lineAngleMarks().forEach(function(m){
+    var r=Math.min(H*3,m.len*0.45);if(r<H*0.5)return;
+    if(m.ref!==undefined)line('SC-DIM',[m.x,m.y],[m.x+Math.cos(m.ref)*r*1.5,m.y]);
+    ents.push({t:'ARC',L:'SC-DIM',c:Q(m.x,m.y),r:r,a0:-(m.a0+m.sweep)*180/Math.PI,a1:-m.a0*180/Math.PI});
+    var bis=m.a0+m.sweep/2,lbl=_fmtAng(m.deg),dd=r+H*0.6+lbl.length*H*0.3;
+    text('SC-DIM',m.x+Math.cos(bis)*dd,m.y+Math.sin(bis)*dd,H,lbl,0);
   });
   // ── 위치 치수·R값 (도면화와 같은 규칙) ──
   //   싱크볼·쿡탑 → 가까운 좌/우, 위/아래 조각 변까지 / 수전 → 가장 가까운 싱크볼 변까지 / 콘센트 등 → 가장 가까운 선까지
