@@ -349,7 +349,9 @@ canvas{display:block;cursor:crosshair}
     <!-- 선 절단: 드래그로 방향을 정하고 놓으면 나오는 길이 입력란 -->
     <div id="line-pop" style="position:absolute;display:none;z-index:22;background:#0d1822;border:1px solid #FFD740;border-radius:3px;padding:3px 5px;font:11px 'Malgun Gothic';color:#78909C;box-shadow:0 2px 8px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;gap:4px"><span style="color:#FFD740;font-weight:bold">길이</span><input id="line-inp" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#06101a;border:1px solid #2d4a5a;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>mm</span></div>
-      <div style="margin-top:2px">Enter = 그리기 · Esc = 취소</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="color:#FFD740;font-weight:bold">각도</span><input id="line-ang" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#06101a;border:1px solid #2d4a5a;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>°</span></div>
+      <div style="margin-top:2px">Enter = 그리기 · Tab = 칸 이동 · Esc = 취소</div>
+      <div>각도: 0°=오른쪽, 90°=위 (반시계)</div>
     </div>
   </div>
   <div id="statusbar">
@@ -3704,28 +3706,39 @@ function _linePopShow(px,py){
   var ww=wrap.clientWidth,wh=wrap.clientHeight,pw=pop.offsetWidth,ph=pop.offsetHeight;
   var l=px+14,t=py+12;if(l+pw>ww-2)l=px-14-pw;if(t+ph>wh-2)t=py-12-ph;
   pop.style.left=Math.max(2,l)+'px';pop.style.top=Math.max(2,t)+'px';
-  inp.value=lineChain?lineChain.buf:'';inp.focus();inp.select();
+  inp.value=lineChain?lineChain.buf:'';
+  var d=lineChain&&lineChain.dir,ang=d?Math.atan2(-d[1],d[0])*180/Math.PI:0;if(ang<0)ang+=360;
+  document.getElementById('line-ang').value=String(Math.round(ang*10)/10%360);
+  inp.focus();inp.select();
 }
 function _linePopHide(){
   var pop=document.getElementById('line-pop');if(!pop||pop.style.display==='none')return;
-  pop.style.display='none';if(document.activeElement===document.getElementById('line-inp'))cv.focus();
+  pop.style.display='none';if(pop.contains(document.activeElement))cv.focus();
 }
 function _linePopOpen(){var p=document.getElementById('line-pop');return !!p&&p.style.display!=='none';}
 (function(){
-  var inp=document.getElementById('line-inp');
+  var inp=document.getElementById('line-inp'),angInp=document.getElementById('line-ang');
   inp.addEventListener('input',function(){if(!lineChain)return;lineChain.buf=inp.value.trim();_lineRedraw();});
-  inp.addEventListener('keydown',function(e){
+  // 각도 입력 → 방향 바꿈 (0°=오른쪽, 반시계 +)
+  angInp.addEventListener('input',function(){
+    if(!lineChain)return;var a=parseFloat(angInp.value);if(!isFinite(a))return;
+    a=a*Math.PI/180;lineChain.dir=[Math.cos(a),-Math.sin(a)];_lineRedraw();
+  });
+  function onKey(e){
     e.stopPropagation(); // 전역 단축키(Esc=선택 도구 등)로 안 넘어가게
     if(!lineChain){_linePopHide();return;}
     var c=lineChain;
     if(e.key==='Enter'){
       e.preventDefault();c.buf=inp.value.trim();
       if(!c.buf){_linePopHide();c.dir=null;_lineRedraw();return;}
-      var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{inp.select();}
+      var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{inp.focus();inp.select();}
     } else if(e.key==='Escape'){
       e.preventDefault();c.buf='';c.dir=null;_linePopHide();_lineRedraw(); // 방향 취소 (선 절단은 계속)
+    } else if(e.key==='Tab'){
+      e.preventDefault();var o=(e.target===inp)?angInp:inp;o.focus();o.select();
     }
-  });
+  }
+  inp.addEventListener('keydown',onKey);angInp.addEventListener('keydown',onKey);
 })();
 // 놓았을 때: 드래그였으면 방향 고정(지금 점 → 놓은 점, 직교 적용됨) + 길이 입력란, 그냥 클릭이면 그 점까지 선 (시작점 찍은 클릭은 제외)
 function _lineMouseUp(e){
