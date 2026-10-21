@@ -12,8 +12,8 @@ import time
 import urllib.request
 
 BASE = 'https://www.younhyunmall.com/goods/goods_list.php'
-# 가져올 분류 (cateCd). 009003 = 세라믹 빅슬랩 두께 12mm. 다른 분류도 넣으려면 여기에 추가
-CATEGORIES = ['009003']
+# 가져올 분류 (cateCd). 세라믹 빅슬랩 009001 = 두께 6mm, 009003 = 두께 12mm (009004 = 6mm+12mm 묶음). 다른 분류는 여기에 추가
+CATEGORIES = ['009003', '009001']
 PAGE_SIZE = 100
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'mall-catalog.js')
 UA = 'Mozilla/5.0 (simplecad catalog updater; +https://github.com/js80jjang/simplecad)'

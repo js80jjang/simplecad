@@ -590,6 +590,7 @@ function _showProdDropdown(i,inputEl){
 function _selectCatalogItem(i,name,size){
   products[i].name=name;
   products[i].size=size;
+  _setBoardFromSize(size);
   renderProductList();
   redraw();updatePropsPanel();calcCost();
 }
@@ -614,6 +615,17 @@ function _prodRow(i){
   h+='<input type="number" value="'+(p.qty||1)+'" min="1" oninput="products['+i+'].qty=parseInt(this.value)||1;calcCost()"><button onclick="changeQty('+i+',1)" title="한 장 더하기">+</button></span>';
   if(products.length>1)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="이 제품 빼기">✕</button>';
   return h+'</div>';
+}
+// 제품을 고르면 온장 사이즈도 그 제품 크기로 (예: 1600×3200×12T → 온장 3200 × 1600, 긴 쪽이 가로)
+function _setBoardFromSize(size){
+  var m=/(\d{3,4})\s*[x×X*]\s*(\d{3,4})/.exec(size||'');if(!m)return;
+  var a=+m[1],b=+m[2],bw=document.getElementById('board-w'),bh=document.getElementById('board-h');
+  if(!bw||!bh)return;
+  var w=Math.max(a,b),h=Math.min(a,b);
+  if(+bw.value===w&&+bh.value===h)return;
+  bw.value=w;bh.value=h;
+  [bw,bh].forEach(function(el){el.style.transition='background .6s';el.style.background='#1565C0';setTimeout(function(){el.style.background='';},700);}); // 바뀐 걸 잠깐 표시
+  calcCost();
 }
 function renderProductList(){
   var container=document.getElementById('product-list');
