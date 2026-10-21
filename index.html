@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>심플 캐드</title>
 <script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
+<script src="dxf-form.js" onerror="window._DXF_DEFAULT_FORM=null"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -3207,9 +3208,12 @@ function buildDxfInForm(tpl){
   return{text:lines.join('\r\n')+'\r\n',scale:Nsc};
 }
 var _DXF_TPL_KEY='scd_dxf_template';
-function _dxfTemplate(){try{return localStorage.getItem(_DXF_TPL_KEY);}catch(e){return null;}}
-function _dxfTemplateName(){try{return localStorage.getItem(_DXF_TPL_KEY+'_name')||'';}catch(e){return '';}}
-// 양식 DXF 고르기 → 이 PC 브라우저에 저장 (공개 저장소에 회사 양식을 올리지 않으려고 파일로 두지 않음)
+// 양식: ⚙에서 이 PC에 따로 고른 양식이 있으면 그것, 없으면 앱에 들어 있는 기본 양식(dxf-form.js = 윤현상재 가공의뢰서)
+function _dxfCustomTemplate(){try{return localStorage.getItem(_DXF_TPL_KEY);}catch(e){return null;}}
+function _dxfTemplate(){return _dxfCustomTemplate()||(window._DXF_DEFAULT_FORM&&window._DXF_DEFAULT_FORM.text)||null;}
+function _dxfTemplateName(){var n='';try{if(_dxfCustomTemplate())n=localStorage.getItem(_DXF_TPL_KEY+'_name')||'';}catch(e){}return n||(window._DXF_DEFAULT_FORM?window._DXF_DEFAULT_FORM.name+' (기본)':'');}
+function resetDxfTemplate(){try{localStorage.removeItem(_DXF_TPL_KEY);localStorage.removeItem(_DXF_TPL_KEY+'_name');}catch(e){}}
+// 양식 DXF 고르기 → 이 PC 브라우저에 저장 (기본 양식 대신 쓸 다른 양식)
 function pickDxfTemplate(then){
   var inp=document.createElement('input');inp.type='file';inp.accept='.dxf';
   inp.onchange=function(){var f=inp.files[0];if(!f)return;var rd=new FileReader();
@@ -3259,8 +3263,9 @@ function dxfFormSettings(){
     +'<div style="font-size:13px;font-weight:bold;color:#A5D6A7;margin-bottom:10px">⚙ DXF 양식 설정</div>'
     +'<div style="font-size:11px;color:#90CAF9">기본 양식: '+(tn?escHtml(tn):'<span style="color:#FFB74D">아직 없음 (DXF 내보내기를 누르면 처음 한 번 고릅니다)</span>')+'</div>'
     +'<button onclick="document.getElementById(\'dxf-modal\').remove();pickDxfTemplate()" style="'+B+'background:#1565C0;border:none;color:#fff;font-weight:bold">'+(tn?'기본 양식 바꾸기':'기본 양식 고르기')+'</button>'
+    +(_dxfCustomTemplate()&&window._DXF_DEFAULT_FORM?'<button onclick="resetDxfTemplate();document.getElementById(\'dxf-modal\').remove()" style="'+B+'background:none;border:1px dashed #546E7A;color:#90CAF9">앱 기본 양식(가공의뢰서)으로 되돌리기</button>':'')
     +'<button onclick="_doExportDxf(false)" style="'+B+'background:#263545;border:1px solid #37474f;color:#90CAF9">이번만 양식 없이 도면만 내보내기</button>'
-    +'<div style="font-size:10px;color:#546E7A;margin-top:8px;line-height:1.5">도면은 실제 크기(mm)로 들어가고, 양식이 도면 크기에 맞춰 축척(1/20, 1/30 …)으로 커집니다. 양식은 이 PC의 브라우저에 저장됩니다.</div>'
+    +'<div style="font-size:10px;color:#546E7A;margin-top:8px;line-height:1.5">도면은 실제 크기(mm)로 들어가고, 양식이 도면 크기에 맞춰 축척(1/20, 1/30 …)으로 커집니다. 기본은 앱에 들어 있는 가공의뢰서 양식이고, 바꾼 양식은 이 PC의 브라우저에만 저장됩니다.</div>'
     +'<button onclick="document.getElementById(\'dxf-modal\').remove()" style="'+B+'background:#37474f;border:none;color:#ccc">취소</button>'
     +'</div>';
   document.body.appendChild(md);

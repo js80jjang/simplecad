@@ -3,7 +3,7 @@
 세라믹 상판 도면을 그리고 가공비 견적·도면(PDF)·온장 배치를 만드는 **단일 파일 웹 앱**.
 사용자와의 대화·커밋 메시지는 **한국어**.
 
-- 앱: `index.html` 하나(HTML/CSS/JS 모두 인라인, 빌드 없음, 외부 라이브러리 없음)
+- 앱: `index.html` 하나(HTML/CSS/JS 모두 인라인, 빌드 없음, 외부 라이브러리 없음) + `dxf-form.js`(DXF 기본 양식 데이터)
 - 배포: GitHub Pages — https://js80jjang.github.io/simplecad/ (저장소 `js80jjang/simplecad`, **공개**)
 - 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(엑셀 제품 목록 → `제품목록.js` 생성 후 index.html 열기)
 
@@ -55,8 +55,10 @@
 ## DXF 내보내기 (`exportDxf` 창 → `buildDxf` / `buildDxfInForm`, 상단 "DXF 내보내기" 버튼)
 - 도형 → 추상 엔티티 `_dxfCollect(H)` → `_dxfWriteEnts`(R12 또는 R2000+ 핸들 형식). mm, Y 뒤집기, 한글 `\U+XXXX`, Φ `%%c`, 글자 스타일 `SC-KOR`(malgun.ttf)
 - 양식 없이: R12(AC1009) ASCII
-- 양식에 넣어서(`buildDxfInForm`): 사용자가 고른 양식 DXF(R2000+, `$HANDSEED` 필요)를 **이 PC 브라우저 localStorage**(`scd_dxf_template`)에 저장해 둠
-  (회사 양식·로고 경로가 공개 저장소에 올라가지 않게 파일로 커밋하지 않음)
+- "DXF 내보내기" 버튼 = 묻지 않고 양식에 넣어서(`buildDxfInForm`). 옆 ⚙ = 양식 바꾸기 / 기본으로 되돌리기 / 양식 없이
+- 기본 양식: `dxf-form.js`(`window._DXF_DEFAULT_FORM`) = (주)윤현상재 가공의뢰서 DXF (사용자 승인으로 공개 저장소에 포함,
+  IMAGEDEF 그림 경로는 파일 이름만). 원본 `윤현상재_가공의뢰서.dxf`가 바뀌면 다시 만들어야 함
+  — ⚙로 고른 다른 양식(R2000+, `$HANDSEED` 필요)은 이 PC 브라우저 localStorage(`scd_dxf_template`)에만 저장되고 기본보다 우선
   - 양식의 모형 공간 내용 전체를 블록 `SC_FORM`으로 옮기고(소유자 330만 교체) INSERT로 축척만큼 키움 → 도면은 1:1 mm
   - 테두리 블록 = 표제란 글자(도면명·축척·납품일정·납품장소…)가 든 블록. 굵은 폴리선으로 안쪽 테두리·표제란 경계를 찾음
   - 축척: 테두리 폭=A3 420mm 기준, 1/5·1/10·1/15·1/20… 중 치수 포함 도면이 들어가는 가장 작은 값. 치수 글자 = 범례 글자(40)×배율
