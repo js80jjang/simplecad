@@ -3008,7 +3008,7 @@ function _dxfShapesBox(){
 }
 // 도형 → 추상 엔티티 목록 (DXF 좌표: 위가 +Y). H = 치수 글자 높이(mm)
 function _dxfCollect(H){
-  var ents=[],AH=H*0.8;
+  var ents=[],AH=H*0.8;_lgFrameGroups=null; // 선 바깥쪽 판정용 그룹 새로
   function Q(x,y){return[x,-y];}
   function line(L,a,b,col){ents.push({t:'LINE',L:L,col:col,a:Q(a[0],a[1]),b:Q(b[0],b[1])});}
   function poly(L,pts,closed,col){ents.push({t:'POLY',L:L,col:col,closed:closed,pts:pts.map(function(p){return[p[0],-p[1],p[2]||0];})});}
@@ -3080,7 +3080,16 @@ function _dxfCollect(H){
       var ep=[];for(var i=0;i<72;i++){var t=i/72*2*Math.PI,ex=s.rx*Math.cos(t),ey=s.ry*Math.sin(t),ro=s.rotation||0;ep.push([s.cx+ex*Math.cos(ro)-ey*Math.sin(ro),s.cy+ex*Math.sin(ro)+ey*Math.cos(ro)]);}
       poly(inAnyRect(s.cx,s.cy)?'SC-CUTOUT':'SC-PIECE',ep,true);
     }
-    else if(s.kind==='line'){line('SC-PIECE',[s.x1,s.y1],[s.x2,s.y2]);if(s.pieceName)text('SC-NAME',(s.x1+s.x2)/2,(s.y1+s.y2)/2-H*2,H*1.6,s.pieceName,0);}
+    else if(s.kind==='line'){
+      line('SC-PIECE',[s.x1,s.y1],[s.x2,s.y2]);if(s.pieceName)text('SC-NAME',(s.x1+s.x2)/2,(s.y1+s.y2)/2-H*2,H*1.6,s.pieceName,0);
+      // 길이 치수: 편집 화면처럼 상판 바깥쪽에 (곡선 근사 선분은 가운데 하나에만 R값)
+      var ll=Math.hypot(s.x2-s.x1,s.y2-s.y1);
+      if(ll>=1){
+        var ln=[(s.y2-s.y1)/ll,-(s.x2-s.x1)/ll];if(_lineOutwardSide(s)<0)ln=[-ln[0],-ln[1]];
+        if(s.arcR!==undefined){if(s.arcMid)text('SC-DIM',(s.x1+s.x2)/2+ln[0]*H*1.5,(s.y1+s.y2)/2+ln[1]*H*1.5,H,'R'+_fmtDim(s.arcR),0);}
+        else dim([s.x1,s.y1],[s.x2,s.y2],ln,H*2,_fmtDim(ll));
+      }
+    }
     else if(s.kind==='arc'){
       // 편집 좌표(아래가 +)의 a0→a1(시계)은 DXF에서 -a1→-a0(반시계)
       ents.push({t:'ARC',L:'SC-PIECE',c:Q(s.cx,s.cy),r:s.r,a0:-s.a1*180/Math.PI,a1:-s.a0*180/Math.PI});
