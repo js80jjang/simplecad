@@ -50,3 +50,10 @@
 - 조각 안 사각형: 라운드 → 싱크볼, 직각 → 쿡탑 / φ45 이하 원 → 수전 타공
 - **해치 = 밑면연마**, **"OPEN" 글자 = 그 변에 밑면연마 + 고스라**
 - 조각 이름: 조각 안(없으면 300mm 이내) 짧은 글자
+- 닫힌 폴리선 사각형은 코너마다 라운드/모따기가 달라도 사각 조각(`corners`)으로
+
+## DXF 내보내기 (`buildDxf` / `exportDxf`, 상단 "DXF 내보내기" 버튼)
+- 오토캐드 R12(AC1009) ASCII, mm(`$INSUNITS`=4), Y 뒤집기, 한글은 `\U+XXXX`, Φ는 `%%c`
+- 레이어: `SC-PIECE` 조각 / `SC-CUTOUT` 싱크볼·쿡탑 / `SC-HOLE` 타공 / `SC-GRIND` 밑면연마 띠 / `SC-GOSRA` 고스라 ▲(SOLID)
+  / `SC-DIM` 치수(선+화살촉+글자) / `SC-NAME` 조각 이름 / `SC-NOTE` 도면 글자·화살표 / `SC-JOLLY` 졸리컷
+- 다시 불러오기 호환: `SC-DIM/NOTE/GOSRA/JOLLY`는 무시, `SC-GRIND` 띠는 해치처럼(밑면연마+고스라) 해석

@@ -228,6 +228,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" style="background:#1565C0;color:#fff" onclick="saveProject()">💾 저장</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
+    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="오토캐드 등 캐드 프로그램에서 여는 DXF 파일로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
     <div id="board-panel">
       <label>온장</label>
@@ -2479,17 +2480,25 @@ function _dxfPolyAsRect(verts,closed){
     var corner=verts.every(function(v){return(Math.abs(v.x-l)<tol||Math.abs(v.x-r)<tol)&&(Math.abs(v.y-t)<tol||Math.abs(v.y-b)<tol);});
     return corner?{x:l,y:t,w:w,h:h,cornerType:'none',cornerSize:0}:null;
   }
-  if(n!==8)return null;
-  // 모깎기: 직선/호(90°) 번갈아, 반지름 동일 / 모따기: 직선/45° 사선 번갈아, 길이 동일
-  var sizes=[],type=null;
-  for(var i=0;i<8;i++){
-    var a=verts[i],c=verts[(i+1)%8],dx=Math.abs(c.x-a.x),dy=Math.abs(c.y-a.y),axis=dx<tol||dy<tol;
+  if(n<5||n>8)return null;
+  // 코너마다: 꼭지점 그대로(없음) / 직선·호(90°) → 모깎기 / 45° 사선 → 모따기. 코너별로 달라도 됨
+  // DXF는 위가 +Y → (l,t)=왼쪽 아래(bl), (l,b)=왼쪽 위(tl)
+  function ck(x,y){return(Math.abs(y-b)<Math.abs(y-t)?'t':'b')+(Math.abs(x-l)<Math.abs(x-r)?'l':'r');}
+  var corners={},cnt=0;
+  for(var i=0;i<n;i++){
+    var a=verts[i],c=verts[(i+1)%n],dx=Math.abs(c.x-a.x),dy=Math.abs(c.y-a.y),axis=dx<tol||dy<tol;
     if(axis){if(a.b)return null;continue;}
-    if(a.b){if(Math.abs(Math.abs(a.b)-Math.tan(Math.PI/8))>1e-3||Math.abs(dx-dy)>tol)return null;type=type||'fillet';if(type!=='fillet')return null;sizes.push(dx);}
-    else{if(Math.abs(dx-dy)>tol)return null;type=type||'chamfer';if(type!=='chamfer')return null;sizes.push(dx);}
+    if(Math.abs(dx-dy)>tol)return null;
+    var key=ck((a.x+c.x)/2,(a.y+c.y)/2);if(corners[key])return null;
+    if(a.b){if(Math.abs(Math.abs(a.b)-Math.tan(Math.PI/8))>1e-3)return null;corners[key]={type:'fillet',r:dx};}
+    else corners[key]={type:'chamfer',r:dx};
+    cnt++;
   }
-  if(sizes.length!==4||sizes.some(function(s){return Math.abs(s-sizes[0])>tol;}))return null;
-  return{x:l,y:t,w:w,h:h,cornerType:type,cornerSize:sizes[0]};
+  if(n-cnt!==4)return null; // 꼭지점 4개 + 깎인 코너마다 1개
+  var ks=Object.keys(corners);
+  if(ks.length===4&&ks.every(function(k){return corners[k].type===corners.tl.type&&Math.abs(corners[k].r-corners.tl.r)<tol;}))
+    return{x:l,y:t,w:w,h:h,cornerType:corners.tl.type,cornerSize:corners.tl.r};
+  return{x:l,y:t,w:w,h:h,cornerType:'none',cornerSize:0,corners:corners};
 }
 // MTEXT 서식 코드 제거: {\f글꼴|...;} \P(줄바꿈) \U+XXXX 등
 function _dxfCleanText(s){
@@ -2508,6 +2517,18 @@ function importDxf(text){
   parsed.ents.forEach(function(e,ei){
     if(_dxfGet(e,67,'0')==='1')return; // 배치(종이) 공간
     if((_dxfGet(e,8,'')||'').toLowerCase()==='defpoints')return; // 비출력 레이어
+    // 심플캐드에서 내보낸 DXF: 치수·글자·화살표·고스라·졸리컷 레이어는 도형이 아님, 밑면연마 띠는 해치처럼
+    var _lay=(_dxfGet(e,8,'')||'').toUpperCase();
+    if(/^SC-(DIM|NOTE|GOSRA|JOLLY)$/.test(_lay))return;
+    if(_lay==='SC-GRIND'){
+      if(e.type!=='POLYLINE'&&e.type!=='LWPOLYLINE')return;
+      var gb={l:Infinity,r:-Infinity,b:Infinity,t:-Infinity};
+      var _gAdd=function(x,y){gb.l=Math.min(gb.l,x);gb.r=Math.max(gb.r,x);gb.b=Math.min(gb.b,y);gb.t=Math.max(gb.t,y);};
+      if(e.type==='LWPOLYLINE'){var _gx=null;e.p.forEach(function(pr){if(pr[0]===10)_gx=parseFloat(pr[1]);else if(pr[0]===20&&_gx!==null)_gAdd(_gx,parseFloat(pr[1]));});}
+      else for(var _k=ei+1;_k<parsed.ents.length&&parsed.ents[_k].type==='VERTEX';_k++)_gAdd(_dxfNum(parsed.ents[_k],10,0),_dxfNum(parsed.ents[_k],20,0));
+      if(gb.r>gb.l)hatchBoxes.push(gb);
+      return;
+    }
     if(e.type==='LINE'){segs.push({x1:_dxfNum(e,10,0),y1:_dxfNum(e,20,0),x2:_dxfNum(e,11,0),y2:_dxfNum(e,21,0)});}
     else if(e.type==='LWPOLYLINE'||e.type==='POLYLINE'){
       // 선 두께(전역 폭)가 있는 폴리선 = 도면 테두리/주석 박스 (절단선은 폭 0)
@@ -2613,7 +2634,7 @@ function importDxf(text){
       var s=segs[si];if(s.arcR!==undefined)continue;
       var horiz=Math.abs(s.y1-s.y2)<tolE,vert=Math.abs(s.x1-s.x2)<tolE;if(!horiz&&!vert)continue;
       for(var ri=0;ri<rects.length;ri++){
-        var q=rects[ri];if(q.cornerType!=='none')continue;
+        var q=rects[ri];if(q.cornerType!=='none'||q.corners)continue;
         if(horiz){
           var yy=s.y1,xa=Math.min(s.x1,s.x2),xb=Math.max(s.x1,s.x2);
           if(Math.abs(xa-q.x)<tolE&&Math.abs(xb-(q.x+q.w))<tolE&&yy>q.y+BAND&&yy<q.y+q.h-BAND){
@@ -2721,7 +2742,9 @@ function importDxf(text){
     } else if(q.cutout==='cook'){
       nCook++;shapes.push(makeShape('rect',{x:rx,y:ry,w:rw,h:rh,cornerType:'none',cornerSize:0,groupId:'grp'+nextId,groupRole:'main',applianceType:'cook'}));
     } else {
-      nPiece++;var rp={x:rx,y:ry,w:rw,h:rh,cornerType:q.cornerType,cornerSize:q.cornerSize*uMul,dimOffsetW:15,dimOffsetH:15};if(q.name)rp.pieceName=q.name;shapes.push(makeShape('rect',rp));
+      nPiece++;var rp={x:rx,y:ry,w:rw,h:rh,cornerType:q.cornerType,cornerSize:q.cornerSize*uMul,dimOffsetW:15,dimOffsetH:15};if(q.name)rp.pieceName=q.name;
+      if(q.corners){rp.corners={};Object.keys(q.corners).forEach(function(k){rp.corners[k]={type:q.corners[k].type,r:q.corners[k].r*uMul};});} // 코너마다 다른 라운드/모따기
+      shapes.push(makeShape('rect',rp));
     }
     count++;
   });
@@ -2752,6 +2775,154 @@ function importDxf(text){
   if(sk.length)msg+='\n\n불러오지 않은 항목: '+sk.map(function(k){return k+' '+skipped[k];}).join(', ');
   if(skipped.INSERT)msg+='\n(블록(INSERT) 안의 도형이 필요하면 오토캐드에서 분해(EXPLODE) 후 저장하세요. 도면 테두리 블록은 그대로 두면 됩니다)';
   alert(msg);
+}
+// ═══ DXF 내보내기 (오토캐드 R12 ASCII — 어떤 캐드에서도 열림) ═══
+// 레이어: SC-PIECE 조각 외곽 / SC-CUTOUT 싱크볼·쿡탑 / SC-HOLE 타공 / SC-GRIND 밑면연마 띠 / SC-GOSRA 고스라 ▲
+//         SC-DIM 치수 / SC-NAME 조각 이름 / SC-NOTE 도면 글자·화살표 / SC-JOLLY 졸리컷
+// 좌표는 mm, DXF는 위쪽이 +Y라 Y를 뒤집음. 다시 불러오면(importDxf) 조각·싱크볼·타공·밑면연마·이름이 복원됨.
+var _DXF_LAYERS=[['SC-PIECE',7],['SC-CUTOUT',4],['SC-HOLE',4],['SC-GRIND',2],['SC-GOSRA',1],['SC-DIM',1],['SC-NAME',7],['SC-NOTE',5],['SC-JOLLY',5]];
+function _dxfText(t){
+  // Φ → 오토캐드 지름 기호, 한글 등 ASCII 밖 글자 → \U+XXXX (파일은 순수 ASCII)
+  return String(t).replace(/Φ|Ø|φ/g,'%%c').replace(/[^\x20-\x7E]/g,function(c){return '\\U+'+('000'+c.charCodeAt(0).toString(16).toUpperCase()).slice(-4);});
+}
+function buildDxf(){
+  var out=[],ext={l:Infinity,t:Infinity,r:-Infinity,b:-Infinity};
+  function g(c,v){out.push(String(c),String(v));}
+  function n(v){return(Math.round(v*1000)/1000).toString();}
+  function P(c,x,y){ext.l=Math.min(ext.l,x);ext.r=Math.max(ext.r,x);ext.t=Math.min(ext.t,y);ext.b=Math.max(ext.b,y);g(c,n(x));g(c+10,n(-y));} // (x,y)=편집 좌표(mm, 아래가 +)
+  function ent(type,layer,col){g(0,type);g(8,layer);if(col)g(62,col);}
+  function line(L,a,b,col){ent('LINE',L,col);P(10,a[0],a[1]);g(30,0);P(11,b[0],b[1]);g(31,0);}
+  function circle(L,cx,cy,r){ent('CIRCLE',L);P(10,cx,cy);g(30,0);g(40,n(r));}
+  function poly(L,pts,closed,col){ // pts: [[x,y,bulge?],...] — 편집 좌표계의 시계방향이 DXF에서도 시계방향(볼록은 -)
+    ent('POLYLINE',L,col);g(66,1);g(10,0);g(20,0);g(30,0);g(70,closed?1:0);
+    pts.forEach(function(p){ent('VERTEX',L,col);P(10,p[0],p[1]);g(30,0);if(p[2])g(42,n(p[2]));});
+    ent('SEQEND',L,col);
+  }
+  function solid(L,a,b,c,col){ent('SOLID',L,col);P(10,a[0],a[1]);g(30,0);P(11,b[0],b[1]);g(31,0);P(12,c[0],c[1]);g(32,0);P(13,c[0],c[1]);g(33,0);}
+  function text(L,x,y,h,s,angRad,col){ // 가운데 정렬. angRad: 편집 좌표계 각도
+    var deg=-angRad*180/Math.PI;deg=((deg%360)+360)%360;if(deg>90.01&&deg<=270.01)deg-=180; // 글자는 바로 서게
+    ent('TEXT',L,col);P(10,x,y);g(30,0);g(40,n(h));g(1,_dxfText(s));if(deg)g(50,n(deg));g(72,1);g(73,2);P(11,x,y);g(31,0);
+  }
+  var rects=shapes.filter(function(s){return s.kind==='rect';});
+  function isCut(s){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
+  function inAnyRect(x,y){return rects.some(function(o){return !isCut(o)&&x>=Math.min(o.x,o.x+o.w)&&x<=Math.max(o.x,o.x+o.w)&&y>=Math.min(o.y,o.y+o.h)&&y<=Math.max(o.y,o.y+o.h);});}
+  // 글자/화살촉 크기: 도면 전체 크기에 맞춰
+  var all=null;shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!all)all={l:bb.l,t:bb.t,r:bb.r,b:bb.b};else{all.l=Math.min(all.l,bb.l);all.t=Math.min(all.t,bb.t);all.r=Math.max(all.r,bb.r);all.b=Math.max(all.b,bb.b);}});
+  if(!all)return null;
+  var H=Math.max(20,Math.min(150,Math.round(Math.max(all.r-all.l,all.b-all.t)/60))),AH=H*0.8;
+  // 치수: p1→p2, nrm(단위 법선) 방향으로 off 떨어진 치수선 + 보조선 + 양 화살촉 + 글자
+  function dim(p1,p2,nrm,off,label){
+    var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<1)return;
+    var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L;
+    var a1=[p1[0]+nrm[0]*off,p1[1]+nrm[1]*off],a2=[p2[0]+nrm[0]*off,p2[1]+nrm[1]*off],gap=H*0.3,ov=H*0.4;
+    line('SC-DIM',[p1[0]+nrm[0]*gap,p1[1]+nrm[1]*gap],[a1[0]+nrm[0]*ov,a1[1]+nrm[1]*ov]);
+    line('SC-DIM',[p2[0]+nrm[0]*gap,p2[1]+nrm[1]*gap],[a2[0]+nrm[0]*ov,a2[1]+nrm[1]*ov]);
+    line('SC-DIM',a1,a2);
+    var ah=Math.min(AH,L/3),hw=ah*0.3;
+    solid('SC-DIM',a1,[a1[0]+ux*ah-uy*hw,a1[1]+uy*ah+ux*hw],[a1[0]+ux*ah+uy*hw,a1[1]+uy*ah-ux*hw]);
+    solid('SC-DIM',a2,[a2[0]-ux*ah-uy*hw,a2[1]-uy*ah+ux*hw],[a2[0]-ux*ah+uy*hw,a2[1]-uy*ah-ux*hw]);
+    var tg=H*0.8;text('SC-DIM',(a1[0]+a2[0])/2+nrm[0]*tg,(a1[1]+a2[1])/2+nrm[1]*tg,H,label,Math.atan2(uy,ux));
+  }
+  var COLS={'#1565C0':5,'#E53935':1,'#2E7D32':3,'#222222':7};
+  shapes.forEach(function(s){
+    if(s.kind==='rect'){
+      var g0=_expRectGeo(s),w=g0.w/2,h=g0.h/2,c=g0.c,B=-Math.tan(Math.PI/8),pts=[];
+      // 코너별 [들어가는 점, 나가는 점] (로컬, tl→tr→br→bl 순 = 화면에서 시계방향)
+      [['tl',[-w,-h+c.tl.r],[-w+c.tl.r,-h],[-w,-h]],['tr',[w-c.tr.r,-h],[w,-h+c.tr.r],[w,-h]],['br',[w,h-c.br.r],[w-c.br.r,h],[w,h]],['bl',[-w+c.bl.r,h],[-w,h-c.bl.r],[-w,h]]].forEach(function(k){
+        var ci=c[k[0]];
+        if(ci.type==='none'||ci.r<=0){var q=g0.W(k[3][0],k[3][1]);pts.push([q[0],q[1]]);return;}
+        var a=g0.W(k[1][0],k[1][1]),b=g0.W(k[2][0],k[2][1]);
+        pts.push([a[0],a[1],ci.type==='fillet'?B:0],[b[0],b[1]]);
+      });
+      var cut=isCut(s);poly(cut?'SC-CUTOUT':'SC-PIECE',pts,true);
+      // 치수 (회전이 90° 배수일 때만): 조각은 위/왼쪽 바깥, 싱크볼·쿡탑은 안쪽 위/왼쪽
+      if(_rightAngle(s.rotation)){
+        var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),Bt=q.y+Math.abs(q.h),hd=s.hideDims||{};
+        if(cut){if(!hd.w)dim([L,T],[R,T],[0,1],H*2.2,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[1,0],H*2.2,_fmtDim(Bt-T));}
+        else{if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T));}
+      }
+      if(!cut&&s.pieceName){
+        // 이름은 싱크볼·쿡탑·타공을 피한 자리 중 가운데에 가까운 곳 (타공부 안에 있으면 다시 불러올 때 이름으로 안 잡힘)
+        var occ=shapes.filter(function(o){return o!==s&&(o.kind==='rect'||o.kind==='circle'||o.kind==='hole')&&isInsideRect(o,s);}).map(function(o){
+          var bb=getBBox(o);if(bb&&o.kind!=='rect')bb={l:bb.l,t:bb.t-H*2,r:bb.r+H*6,b:bb.b}; // 타공은 오른쪽 위 Φ 글자 자리까지
+          return bb;}).filter(Boolean);
+        var fr=[0.5,0.35,0.65,0.2,0.8,0.1,0.9],cand=[];
+        fr.forEach(function(fx){fr.forEach(function(fy){cand.push([(fx-0.5)*g0.w,(fy-0.5)*g0.h,Math.hypot(fx-0.5,fy-0.5)]);});});
+        cand.sort(function(a,b){return a[2]-b[2];});
+        // 이름 글자 상자(대략: 한 글자 ≈ 글자 높이)가 겹치지 않는 자리
+        var nh=H*1.6,nw=String(s.pieceName).length*nh*0.95,m=H*0.6;
+        var spot=cand.map(function(c){return g0.W(c[0],c[1]);}).filter(function(p){return !occ.some(function(o){return p[0]+nw/2>o.l-m&&p[0]-nw/2<o.r+m&&p[1]+nh/2>o.t-m&&p[1]-nh/2<o.b+m;});})[0]||g0.W(0,0);
+        text('SC-NAME',spot[0],spot[1],H*1.6,s.pieceName,0);
+      }
+    }
+    else if(s.kind==='circle'||s.kind==='hole'){
+      var piece=s.holeType==='cut'||!inAnyRect(s.cx,s.cy);
+      circle(piece?'SC-PIECE':'SC-HOLE',s.cx,s.cy,s.r);
+      text('SC-DIM',s.cx+s.r*0.75+H*1.6,s.cy-s.r*0.75-H*0.6,H,'Φ'+_fmtDim(s.r*2),0);
+      if(piece&&s.pieceName)text('SC-NAME',s.cx,s.cy,H*1.6,s.pieceName,0);
+    }
+    else if(s.kind==='ellipse'){
+      var ep=[];for(var i=0;i<72;i++){var t=i/72*2*Math.PI,ex=s.rx*Math.cos(t),ey=s.ry*Math.sin(t),ro=s.rotation||0;ep.push([s.cx+ex*Math.cos(ro)-ey*Math.sin(ro),s.cy+ex*Math.sin(ro)+ey*Math.cos(ro)]);}
+      poly(inAnyRect(s.cx,s.cy)?'SC-CUTOUT':'SC-PIECE',ep,true);
+    }
+    else if(s.kind==='line'){line('SC-PIECE',[s.x1,s.y1],[s.x2,s.y2]);if(s.pieceName)text('SC-NAME',(s.x1+s.x2)/2,(s.y1+s.y2)/2-H*2,H*1.6,s.pieceName,0);}
+    else if(s.kind==='arc'){
+      // 편집 좌표(아래가 +)의 a0→a1(시계)은 DXF에서 -a1→-a0(반시계)
+      ent('ARC','SC-PIECE');P(10,s.cx,s.cy);g(30,0);g(40,n(s.r));g(50,n(-s.a1*180/Math.PI));g(51,n(-s.a0*180/Math.PI));
+    }
+    else if(s.kind==='grindregion'){
+      // 연마 띠: 변에서 재료 쪽(고스라 판정과 같은 방향)으로 깊이만큼
+      var gd=_gosraDir(s),dp=s.depth||30;if(!gd)return;
+      poly('SC-GRIND',[[s.x1,s.y1],[s.x2,s.y2],[s.x2+gd.dx*dp,s.y2+gd.dy*dp],[s.x1+gd.dx*dp,s.y1+gd.dy*dp]],true);
+    }
+    else if(s.kind==='gosramark'){
+      var gm=_gosraDir(s);if(!gm)return;var sz=s.groupId?H*0.7:H;
+      var cx=gm.mx-gm.dx*sz,cy=gm.my-gm.dy*sz,an=Math.atan2(gm.dy,gm.dx);
+      solid('SC-GOSRA',[gm.mx,gm.my],[cx+Math.cos(an+2.094)*sz,cy+Math.sin(an+2.094)*sz],[cx+Math.cos(an-2.094)*sz,cy+Math.sin(an-2.094)*sz]);
+    }
+    else if(s.kind==='jollymark'){line('SC-JOLLY',[s.x1,s.y1],[s.x2,s.y2]);}
+    else if(s.kind==='dimline'){
+      var an2=Math.atan2(s.y2-s.y1,s.x2-s.x1),pp=an2-Math.PI/2,d=Math.hypot(s.x2-s.x1,s.y2-s.y1),lt=s.labelType||'dist';
+      dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm||15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d));
+    }
+    else if(s.kind==='note'){
+      var ls=String(s.text||'').split('\n'),th=H*1.3*((s.fs||32)/32),lh=th*1.5,y0=s.y-(ls.length-1)*lh/2;
+      ls.forEach(function(t,i){if(t.trim())text('SC-NOTE',s.x,y0+i*lh,th,t,0,COLS[s.color]||5);});
+    }
+    else if(s.kind==='arrow'){
+      var c0=_arrowCtrl(s),ap=[];for(var k=0;k<=24;k++){var tt=k/24,u=1-tt;ap.push([u*u*s.x1+2*u*tt*c0[0]+tt*tt*s.x2,u*u*s.y1+2*u*tt*c0[1]+tt*tt*s.y2]);}
+      var e=ap[24],qq=ap[22],aa=Math.atan2(e[1]-qq[1],e[0]-qq[0]),ah2=AH*1.4,col=COLS[s.color]||5;
+      poly('SC-NOTE',ap.slice(0,23),false,col);
+      solid('SC-NOTE',e,[e[0]-Math.cos(aa-0.38)*ah2,e[1]-Math.sin(aa-0.38)*ah2],[e[0]-Math.cos(aa+0.38)*ah2,e[1]-Math.sin(aa+0.38)*ah2],col);
+    }
+  });
+  var body=out;out=[];
+  // 머리말(단위 mm, 범위) + 레이어 표
+  g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSUNITS');g(70,4);g(9,'$MEASUREMENT');g(70,1);
+  g(9,'$EXTMIN');g(10,n(ext.l));g(20,n(-ext.b));g(30,0);g(9,'$EXTMAX');g(10,n(ext.r));g(20,n(-ext.t));g(30,0);g(0,'ENDSEC');
+  g(0,'SECTION');g(2,'TABLES');
+  g(0,'TABLE');g(2,'LTYPE');g(70,1);g(0,'LTYPE');g(2,'CONTINUOUS');g(70,0);g(3,'Solid line');g(72,65);g(73,0);g(40,0);g(0,'ENDTAB');
+  g(0,'TABLE');g(2,'LAYER');g(70,_DXF_LAYERS.length);
+  _DXF_LAYERS.forEach(function(l){g(0,'LAYER');g(2,l[0]);g(70,0);g(62,l[1]);g(6,'CONTINUOUS');});
+  g(0,'ENDTAB');g(0,'ENDSEC');
+  g(0,'SECTION');g(2,'ENTITIES');out=out.concat(body);g(0,'ENDSEC');g(0,'EOF');
+  return out.join('\r\n')+'\r\n';
+}
+async function exportDxf(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  var data=buildDxf();if(!data){alert('내보낼 도형이 없습니다.');return;}
+  var name=((products[0]&&products[0].name)||'도면').trim()||'도면';
+  if(typeof window.showSaveFilePicker==='function'){
+    try{
+      var fh=await window.showSaveFilePicker({suggestedName:name+'.dxf',startIn:'documents',types:[{description:'오토캐드 DXF',accept:{'application/dxf':['.dxf']}}]});
+      var wr=await fh.createWritable();await wr.write(data);await wr.close();
+      var btn=document.querySelector('[onclick="exportDxf()"]');
+      if(btn){var orig=btn.textContent;btn.textContent='✓ 내보냄';setTimeout(function(){btn.textContent=orig;},1500);}
+      return;
+    }catch(err){if(err.name==='AbortError')return;}
+  }
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/dxf'}));a.download=name+'.dxf';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
 }
 function loadProject(){
   var inp=document.createElement('input');
