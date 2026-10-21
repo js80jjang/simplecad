@@ -346,6 +346,11 @@ canvas{display:block;cursor:crosshair}
       <input type="number" id="dim-inline" step="0.1" style="position:static;display:block;border:none;border-right:1px solid #2d4a5a;border-radius:3px 0 0 3px;margin:0">
       <button id="dim-hide-btn" title="이 치수 숨기기" style="background:none;border:none;color:#E53935;font-size:14px;padding:2px 6px;cursor:pointer;line-height:1;flex-shrink:0">×</button>
     </div>
+    <!-- 선 절단: 드래그로 방향을 정하고 놓으면 나오는 길이 입력란 -->
+    <div id="line-pop" style="position:absolute;display:none;z-index:22;background:#0d1822;border:1px solid #FFD740;border-radius:3px;padding:3px 5px;font:11px 'Malgun Gothic';color:#78909C;box-shadow:0 2px 8px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;gap:4px"><span style="color:#FFD740;font-weight:bold">길이</span><input id="line-inp" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#06101a;border:1px solid #2d4a5a;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>mm</span></div>
+      <div style="margin-top:2px">Enter = 그리기 · Esc = 취소</div>
+    </div>
   </div>
   <div id="statusbar">
     <span id="coord-lbl">X: 0.000  Y: 0.000</span>
@@ -3690,24 +3695,55 @@ function _lineAddTo(x,y){
   var s=makeShape('line',{x1:drawStart[0],y1:drawStart[1],x2:x,y2:y});
   shapes.push(s);lineChain.segs.push(s);lineChain.buf='';lineChain.dir=null; // 다음 선은 다시 드래그로 방향
   drawStart=[x,y];_savedBoardLayout=null;_savedBoardImg=null;
-  calcCost();_lineRedraw();
+  _linePopHide();calcCost();_lineRedraw();
 }
-// 놓았을 때: 드래그였으면 방향 고정(지금 점 → 놓은 점, 직교 적용됨), 그냥 클릭이면 그 점까지 선 (시작점 찍은 클릭은 제외)
+// 길이 입력란 (방향을 고정하면 놓은 자리에 나옴)
+function _linePopShow(px,py){
+  var pop=document.getElementById('line-pop'),inp=document.getElementById('line-inp'),wrap=document.getElementById('canvas-wrap');
+  pop.style.display='block';
+  var ww=wrap.clientWidth,wh=wrap.clientHeight,pw=pop.offsetWidth,ph=pop.offsetHeight;
+  var l=px+14,t=py+12;if(l+pw>ww-2)l=px-14-pw;if(t+ph>wh-2)t=py-12-ph;
+  pop.style.left=Math.max(2,l)+'px';pop.style.top=Math.max(2,t)+'px';
+  inp.value=lineChain?lineChain.buf:'';inp.focus();inp.select();
+}
+function _linePopHide(){
+  var pop=document.getElementById('line-pop');if(!pop||pop.style.display==='none')return;
+  pop.style.display='none';if(document.activeElement===document.getElementById('line-inp'))cv.focus();
+}
+function _linePopOpen(){var p=document.getElementById('line-pop');return !!p&&p.style.display!=='none';}
+(function(){
+  var inp=document.getElementById('line-inp');
+  inp.addEventListener('input',function(){if(!lineChain)return;lineChain.buf=inp.value.trim();_lineRedraw();});
+  inp.addEventListener('keydown',function(e){
+    e.stopPropagation(); // 전역 단축키(Esc=선택 도구 등)로 안 넘어가게
+    if(!lineChain){_linePopHide();return;}
+    var c=lineChain;
+    if(e.key==='Enter'){
+      e.preventDefault();c.buf=inp.value.trim();
+      if(!c.buf){_linePopHide();c.dir=null;_lineRedraw();return;}
+      var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{inp.select();}
+    } else if(e.key==='Escape'){
+      e.preventDefault();c.buf='';c.dir=null;_linePopHide();_lineRedraw(); // 방향 취소 (선 절단은 계속)
+    }
+  });
+})();
+// 놓았을 때: 드래그였으면 방향 고정(지금 점 → 놓은 점, 직교 적용됨) + 길이 입력란, 그냥 클릭이면 그 점까지 선 (시작점 찍은 클릭은 제외)
 function _lineMouseUp(e){
   var d=lineDown;lineDown=null;if(!d||!lineChain||!drawStart)return;
   var moved=Math.hypot(e.offsetX-d.px[0],e.offsetY-d.px[1])>6;
   if(moved){
     var ex=lastMx,ey=lastMy,dx=ex-drawStart[0],dy=ey-drawStart[1],L=Math.hypot(dx,dy);
-    if(L>1e-6){lineChain.dir=[dx/L,dy/L];lineChain.buf='';}
-    _lineRedraw();
+    if(L>1e-6){lineChain.dir=[dx/L,dy/L];lineChain.buf='';_linePopShow(e.offsetX,e.offsetY);_lineRedraw();}
+    else _lineRedraw();
   } else if(!d.isNew){
     _lineAddTo(d.pt[0],d.pt[1]);
   }
 }
-function _lineEnd(){if(!lineChain)return;lineChain=null;drawStart=null;redraw();calcCost();}
+function _lineEnd(){if(!lineChain)return;_linePopHide();lineChain=null;drawStart=null;redraw();calcCost();}
 function _lineUndo(){
   var c=lineChain;if(!c||!c.segs.length){_lineEnd();return;}
   var s=c.segs.pop(),i=shapes.indexOf(s);if(i>=0)shapes.splice(i,1);
+  c.dir=null;c.buf='';_linePopHide();
   drawStart=[s.x1,s.y1];calcCost();_lineRedraw();
 }
 // 입력한 글자 → 다음 점 (y는 화면 아래가 +라서 위쪽 + 입력은 뒤집음)
@@ -3748,6 +3784,7 @@ function _lineOverlay(){
   else{ex=lastMx;ey=lastMy;}
   if(ex==null)return;
   ctx.globalAlpha=0.8;drawShape({kind:'line',x1:drawStart[0],y1:drawStart[1],x2:ex,y2:ey,ops:[]},true);ctx.globalAlpha=1;
+  if(_linePopOpen())return; // 길이 입력란이 떠 있으면 안내 상자는 생략
   var p=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy),len=Math.hypot(ex-drawStart[0],ey-drawStart[1]);
   var l1=c.buf?('입력: '+c.buf+'▏'):(dir?'방향 고정 → 길이를 입력하세요':(lineDown?'놓으면 이 방향으로 고정':'길이 '+_fmtD(len)));
   var l2=(dir||c.buf)?'숫자 + Enter = 그리기 · 다시 드래그 = 방향 바꾸기':(c.segs.length?'끝점에서 드래그로 방향 · 빈 Enter/Esc 끝 · C 닫기 · U 취소':'드래그로 방향 정하기 (클릭 = 그 점까지)');
@@ -4237,8 +4274,8 @@ cv.addEventListener('mousedown',function(e){
     // 선 절단: 시작점에서 누르고 방향으로 드래그 → 놓으면 방향 고정 → 숫자 입력 + Enter = 그 방향으로 그 길이
     //   끝점에서 다시 드래그해 다음 방향 → 숫자 … (이어 그리기) / 드래그 없이 클릭 = 그 점까지 바로
     //   빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
-    cv.focus();
-    var _new=!lineChain;
+    _linePopHide();cv.focus();
+    var _new=!lineChain||!drawStart;
     if(_new){lineChain={first:[mx,my],segs:[],buf:'',dir:null};drawStart=[mx,my];lastMx=mx;lastMy=my;}
     lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new};
     _lineRedraw();
@@ -4525,7 +4562,7 @@ document.addEventListener('mouseup',function(e){
     return;
   }
 
-  if(tool==='fillet')return;
+  if(tool==='fillet'||tool==='line')return; // 선 절단은 _lineMouseUp이 처리 (놓을 때 그리지 않음)
   if(!drawStart){return;}
   finalizeShape(lastMx,lastMy);
 });
