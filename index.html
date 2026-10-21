@@ -350,7 +350,8 @@ canvas{display:block;cursor:crosshair}
     <div id="line-pop" style="position:absolute;display:none;z-index:22;background:#0d1822;border:1px solid #FFD740;border-radius:3px;padding:3px 5px;font:11px 'Malgun Gothic';color:#78909C;box-shadow:0 2px 8px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;gap:4px"><span style="color:#FFD740;font-weight:bold">길이</span><input id="line-inp" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#06101a;border:1px solid #2d4a5a;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>mm</span></div>
       <div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="color:#FFD740;font-weight:bold">각도</span><input id="line-ang" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#06101a;border:1px solid #2d4a5a;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>°</span></div>
-      <div style="margin-top:2px">Enter = 그리기 · Tab = 칸 이동 · Esc = 취소</div>
+      <div style="margin-top:2px">Enter = 그리기 · 빈 Enter = 끝 · Tab = 칸 이동 · Esc = 취소</div>
+      <div>C = 닫기 · U = 마지막 선 취소 · 드래그 = 방향 다시</div>
       <div>각도: 0°=오른쪽, 90°=위 (반시계)</div>
     </div>
   </div>
@@ -3768,9 +3769,11 @@ function _lineAddTo(x,y){
   if(Math.hypot(x-drawStart[0],y-drawStart[1])<0.01)return;
   saveHistory();
   var s=makeShape('line',{x1:drawStart[0],y1:drawStart[1],x2:x,y2:y});
-  shapes.push(s);lineChain.segs.push(s);lineChain.buf='';lineChain.dir=null; // 다음 선은 다시 드래그로 방향
+  // 다음 선도 바로 길이·각도 입력 (각도는 방금 그은 방향으로 미리 채움, 드래그하면 그 방향으로 바뀜)
+  var sl=Math.hypot(x-drawStart[0],y-drawStart[1]);
+  shapes.push(s);lineChain.segs.push(s);lineChain.buf='';lineChain.dir=[(x-drawStart[0])/sl,(y-drawStart[1])/sl];
   drawStart=[x,y];_savedBoardLayout=null;_savedBoardImg=null;
-  _linePopHide();calcCost();_lineRedraw();
+  calcCost();var ep=toCanvas(x,y);_linePopShow(ep[0],ep[1]);_lineRedraw();
 }
 // 길이 입력란 (방향을 고정하면 놓은 자리에 나옴)
 function _linePopShow(px,py){
@@ -3803,12 +3806,15 @@ function _linePopOpen(){var p=document.getElementById('line-pop');return !!p&&p.
     var c=lineChain;
     if(e.key==='Enter'){
       e.preventDefault();c.buf=inp.value.trim();
-      if(!c.buf){_linePopHide();c.dir=null;_lineRedraw();return;}
+      if(!c.buf){_lineEnd();return;} // 빈 Enter = 끝 (선 절단 도구는 그대로)
       var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{inp.focus();inp.select();}
     } else if(e.key==='Escape'){
       e.preventDefault();c.buf='';c.dir=null;_linePopHide();_lineRedraw(); // 방향 취소 (선 절단은 계속)
     } else if(e.key==='Tab'){
       e.preventDefault();var o=(e.target===inp)?angInp:inp;o.focus();o.select();
+    } else if(e.target===inp&&!inp.value&&/^[cCuU]$/.test(e.key)){ // 빈 칸에서 C=닫기, U=마지막 선 취소
+      e.preventDefault();
+      if(/c/i.test(e.key)){if(c.segs.length>=2)_lineAddTo(c.first[0],c.first[1]);_lineEnd();}else _lineUndo();
     }
   }
   inp.addEventListener('keydown',onKey);angInp.addEventListener('keydown',onKey);
