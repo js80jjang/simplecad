@@ -3108,16 +3108,19 @@ function buildDxfInForm(tpl){
   var ents=entsIn(sec.ENTITIES.s,sec.ENTITIES.e);
   var msEnts=ents.filter(function(en){return owner(en)===msBR&&code(en,'67')!=='1';});
   function key(t){return String(t||'').replace(/\s+/g,'');}
-  var FIELDS=['도면명','도면번호','축척','납품일정','납품장소','담당자'];
+  // 표제란 글자: 옛 양식(한글 칸 이름) + 새 양식(영문 칸 이름)
+  var FIELDS=['도면명','도면번호','축척','납품일정','납품장소','담당자','PROJECTTITLE','DRAWINGTITLE','SCALE','DRAWINGNO.','DRAWN/DATE','*NOTE','NOTE'];
   var frame=null;
   msEnts.forEach(function(en){
     if(en.type!=='INSERT'||frame)return;var bn=code(en,'2'),be=blockEnts[bn];if(!be)return;
-    var labels={};be.forEach(function(b){if(b.type==='TEXT'){var k=key(code(b,'1'));if(FIELDS.indexOf(k)>=0)labels[k]={x:parseFloat(code(b,'10')),y:parseFloat(code(b,'20')),h:parseFloat(code(b,'40'))};}});
+    var labels={};be.forEach(function(b){if(b.type==='TEXT'){var k=key(code(b,'1')).toUpperCase();if(FIELDS.indexOf(k)>=0)labels[k]={x:parseFloat(code(b,'10')),y:parseFloat(code(b,'20')),h:parseFloat(code(b,'40'))};}});
     if(!Object.keys(labels).length)return;
-    // 굵은 선(폭 있는 폴리선) = 안쪽 테두리 + 표제란 경계
+    // 굵은 선(폭 있는 폴리선) = 안쪽 테두리 + 표제란 경계. 닫힌 굵은 사각형(안쪽 테두리 통째)은 네 변 모두
     var vx=[],hy=[];
     be.forEach(function(b){if(b.type!=='LWPOLYLINE'||!(parseFloat(code(b,'43')||'0')>0))return;var xs=codes(b,'10'),ys=codes(b,'20');
-      if(Math.max.apply(null,xs)-Math.min.apply(null,xs)<1)vx.push(xs[0]);else if(Math.max.apply(null,ys)-Math.min.apply(null,ys)<1)hy.push(ys[0]);});
+      var wx=Math.max.apply(null,xs)-Math.min.apply(null,xs),wy=Math.max.apply(null,ys)-Math.min.apply(null,ys);
+      if(wx<1)vx.push(xs[0]);else if(wy<1)hy.push(ys[0]);
+      else{vx.push(Math.min.apply(null,xs),Math.max.apply(null,xs));hy.push(Math.min.apply(null,ys),Math.max.apply(null,ys));}});
     var all=[];be.forEach(function(b){if(b.type==='LWPOLYLINE'){codes(b,'10').forEach(function(x,i){all.push([x,codes(b,'20')[i]]);});}});
     var fx=all.map(function(p){return p[0];}),fy=all.map(function(p){return p[1];});
     vx.sort(function(a,b){return a-b;});
@@ -3129,10 +3132,16 @@ function buildDxfInForm(tpl){
   });
   if(!frame)throw new Error('양식에서 표제란(도면명·축척 등)이 있는 테두리 블록을 찾지 못했습니다.');
   function toB(x,y){return[(x-frame.ins[0])/frame.f0,(y-frame.ins[1])/frame.f0];} // 모형 좌표 → 테두리 블록 좌표
-  // 도면 영역 아래쪽에 있는 양식 글자/표시(예: "평 면 도" 제목)는 피함
-  var areaB=frame.area,bottom=areaB.b;
-  msEnts.forEach(function(en){if(en.type==='INSERT')return;var xs=codes(en,'10'),ys=codes(en,'20');xs.forEach(function(x,i){var b=toB(x,ys[i]||0);if(b[0]>areaB.l&&b[0]<areaB.r&&b[1]>areaB.b&&b[1]<areaB.b+(areaB.t-areaB.b)*0.3)bottom=Math.max(bottom,b[1]+(en.type==='TEXT'?parseFloat(code(en,'40')||'0')/frame.f0:0));});});
-  var pad=(areaB.t-areaB.b)*0.03,aw=areaB.r-areaB.l-2*pad,ah=areaB.t-bottom-2*pad;
+  // 도면 영역 아래쪽(예: "평 면 도" 제목)·위쪽(예: 왼쪽 위 "업체명 - 현장주소" 글자)에 있는 양식 글자/표시는 피함
+  var areaB=frame.area,bottom=areaB.b,top=areaB.t,AH0=areaB.t-areaB.b;
+  msEnts.forEach(function(en){
+    if(en.type==='INSERT')return;var xs=codes(en,'10'),ys=codes(en,'20'),th=parseFloat(code(en,'40')||'0')/frame.f0;
+    var nl=en.type==='MTEXT'?((function(){var s='';for(var i=en.s+1;i<en.e;i++)if(P[i][0]==='1'||P[i][0]==='3')s+=P[i][1];return s.split('\\P').length;})()):1;
+    xs.forEach(function(x,i){var b=toB(x,ys[i]||0);if(!(b[0]>areaB.l&&b[0]<areaB.r))return;
+      if(b[1]>areaB.b&&b[1]<areaB.b+AH0*0.3)bottom=Math.max(bottom,b[1]+(en.type==='TEXT'?th:0));
+      else if(b[1]<areaB.t&&b[1]>areaB.t-AH0*0.3)top=Math.min(top,b[1]-(en.type==='MTEXT'?th*nl*1.7:th*0.5));});
+  });
+  var pad=AH0*0.03,aw=areaB.r-areaB.l-2*pad,ah=top-bottom-2*pad;
   // 축척: 테두리 폭 = A3(420mm). 치수 글자 = 범례 글자(40)와 같은 비율 → 여백 약 5×글자
   var paperW=frame.outer.r-frame.outer.l,W=box.r-box.l,Hh=box.b-box.t,TXT=40;
   // 작은 축척부터 실제로 그려 보고(치수·글자 포함) 영역에 들어가는 첫 축척
@@ -3145,7 +3154,7 @@ function buildDxfInForm(tpl){
   }
   if(!ents2){ents2=_dxfCollect(H);eb=_dxfEntsBox(ents2);} // 아주 큰 도면: 가장 큰 축척으로
   // 도면 가운데를 영역 가운데에
-  var cB=[(areaB.l+areaB.r)/2,(bottom+areaB.t)/2],cM=[frame.ins[0]+cB[0]*frame.f0,frame.ins[1]+cB[1]*frame.f0];
+  var cB=[(areaB.l+areaB.r)/2,(bottom+top)/2],cM=[frame.ins[0]+cB[0]*frame.f0,frame.ins[1]+cB[1]*frame.f0];
   var Dc=[(eb.l+eb.r)/2,(eb.b+eb.t)/2],Pins=[Dc[0]-s*cM[0],Dc[1]-s*cM[1]];
   function W2(bx,by){return[Pins[0]+s*(frame.ins[0]+bx*frame.f0),Pins[1]+s*(frame.ins[1]+by*frame.f0)];} // 테두리 블록 좌표 → 최종 좌표
   // 표제란 채우기
@@ -3158,6 +3167,42 @@ function buildDxfInForm(tpl){
     if(k!=='납품장소')lines=lines.slice(0,1);else lines=lines.slice(0,4);
     lines.forEach(function(t,i){var p=W2(lb.x+lb.h*0.5,lb.y-lb.h*1.5-i*th*1.5);ents2.push({t:'TEXT',L:'SC-TITLE',p:p,h:th*f,s:t,deg:0,align:'l'});});
   });
+  // 새 양식(영문 표제란): DRAWN / DATE 칸에 오늘 날짜
+  var td=new Date(),dstr=td.getFullYear()+'.'+String(td.getMonth()+1).padStart(2,'0')+'.'+String(td.getDate()).padStart(2,'0');
+  var dl=frame.labels['DRAWN/DATE'];
+  if(dl)ents2.push({t:'TEXT',L:'SC-TITLE',p:W2(dl.x+(frame.colR-dl.x)/2,dl.y-dl.h*3.8),h:dl.h*1.5*f,s:dstr,deg:0,align:'c'});
+  // 양식 안 값 자리 채우기
+  var p0=products[0]||{},pname=(p0.name||'').trim(),psize=(p0.size||'').trim(),pqty=p0.qty||'',site=((document.getElementById('site-addr')||{}).value||'').trim();
+  function attVal(prompt,tag){var k=key(prompt||'');if(/도면명/.test(k))return pname||tag;if(/축척/.test(k))return '1/'+Nsc;return tag;}
+  function mtextOf(en){var s='';for(var i=en.s+1;i<en.e;i++)if(P[i][0]==='3'||P[i][0]==='1')s+=P[i][1];return s;}
+  var holder=msEnts.filter(function(en){var t=mtextOf(en);return en.type==='MTEXT'&&/업체명/.test(t)&&/현장주소/.test(t);})[0];
+  var holderLines=[site,pname?pname+(pqty?' - '+pqty+'장':''):'',psize];
+  // 양식의 모형 공간 내용을 SC_FORM 블록 안으로: 소유자만 바꿔서 그대로. 단,
+  //  · 모형 공간에 놓인 속성 정의(ATTDEF, 예: 도면명·축척·도면번호 자리) → 블록 안에서는 안 보이므로 글자(TEXT)로 바꾸고 값 채움
+  //  · 왼쪽 위 "업체명 - 현장주소 / 제품명 - 장수 / 사이즈" 글자 → 현장 주소·제품명·장수·사이즈로
+  function writeFormEnt(en){
+    var oi=ownerIdx(en),i;
+    if(en.type==='ATTDEF'){
+      var cut=-1,v74=null;for(i=en.s+1;i<en.e;i++)if(P[i][0]==='100'&&val(i)==='AcDbAttributeDefinition'){cut=i;break;}
+      for(i=(cut<0?en.s:cut);i<en.e;i++)if(P[i][0]==='74')v74=val(i);
+      var vtxt=attVal(code(en,'3'),code(en,'2'));
+      out.push('0','TEXT');
+      for(i=en.s+1;i<(cut<0?en.e:cut);i++){if(i===oi)out.push(P[i][0],formBR);else if(P[i][0]==='1')out.push(P[i][0],vtxt);else out.push(P[i][0],P[i][1]);}
+      out.push('100','AcDbText');if(v74!==null)out.push('73',v74);
+      return;
+    }
+    if(en===holder&&holderLines.some(Boolean)){
+      var done=false;
+      for(i=en.s;i<en.e;i++){
+        if(i===oi){out.push(P[i][0],formBR);continue;}
+        if(P[i][0]==='3')continue;
+        if(P[i][0]==='1'){if(!done){out.push('1','{\\fGulim|b0|i0|c129|p50;'+holderLines.join('\\P')+'}');done=true;}continue;}
+        out.push(P[i][0],P[i][1]);
+      }
+      return;
+    }
+    for(i=en.s;i<en.e;i++){if(i===oi)out.push(P[i][0],formBR);else out.push(P[i][0],P[i][1]);}
+  }
   // ── 파일 조립 ──
   var out=[];function g(c,v){out.push(String(c),String(v));}
   function copy(a,b){for(var i=a;i<b;i++)out.push(P[i][0],P[i][1]);} // 원래 줄 그대로
@@ -3177,7 +3222,7 @@ function buildDxfInForm(tpl){
   // BLOCKS: 맨 끝에 SC_FORM 블록 (원래 모형 공간 내용, 소유자만 바꿔서)
   copy(sec.BLOCKS.s,sec.BLOCKS.e);
   g(0,'BLOCK');g(5,formBlk);g(330,formBR);g(100,'AcDbEntity');g(8,'0');g(100,'AcDbBlockBegin');g(2,'SC_FORM');g(70,0);g(10,0);g(20,0);g(30,0);g(3,'SC_FORM');g(1,'');
-  msEnts.forEach(function(en){var oi=ownerIdx(en);for(var i=en.s;i<en.e;i++){if(i===oi)out.push(P[i][0],formBR);else out.push(P[i][0],P[i][1]);}});
+  msEnts.forEach(writeFormEnt);
   g(0,'ENDBLK');g(5,formEnd);g(330,formBR);g(100,'AcDbEntity');g(8,'0');g(100,'AcDbBlockEnd');
   out.push(P[sec.BLOCKS.e][0],P[sec.BLOCKS.e][1]); // ENDSEC
   // 블록과 엔티티 사이 구역(있으면) 그대로
