@@ -1743,6 +1743,7 @@ function _uprightAng(rot,local){
   var t=(rot||0)+local,c=Math.cos(t),s=Math.sin(t);
   return(c<-1e-3||(Math.abs(c)<=1e-3&&s<0))?local+Math.PI:local;
 }
+function _DIM_AH(){return printRender?18:8;} // 조각 가로/세로 치수 화살촉 크기(px)
 function drawDims(s,col){
   // 도면화 모드: 싱크볼/쿡탑 → 도형 내부 중앙에 치수 텍스트 표시
   if(_exportLegend!==null&&s.groupId&&s.groupRole==='main'){
@@ -1815,6 +1816,9 @@ function drawDims(s,col){
     ctx.beginPath();ctx.moveTo(x2c,y1c);ctx.lineTo(x2c,wy-4);ctx.stroke();
   }
   ctx.beginPath();ctx.moveTo(x1c,wy);ctx.lineTo(x2c,wy);ctx.stroke();
+  // 양 끝 화살촉 + 치수선 자체도 잡아서 옮길 수 있게 등록
+  if(x2c-x1c>3*_DIM_AH()){arrowHead(x1c,wy,Math.PI,_DIM_AH(),'#E53935');arrowHead(x2c,wy,0,_DIM_AH(),'#E53935');}
+  dimLabels.push({shape:s,field:'w',px:NaN,py:NaN,line:[l2c(x1c,wy),l2c(x2c,wy)]});
   var wlpy=offW>=0?wy+(printRender?35:9):wy-(printRender?40:4);
   if(filletH1){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
@@ -1835,6 +1839,8 @@ function drawDims(s,col){
     ctx.beginPath();ctx.moveTo(x1c,y2c);ctx.lineTo(hx-4,y2c);ctx.stroke();
   }
   ctx.beginPath();ctx.moveTo(hx,y1c);ctx.lineTo(hx,y2c);ctx.stroke();
+  if(y2c-y1c>3*_DIM_AH()){arrowHead(hx,y1c,-Math.PI/2,_DIM_AH(),'#E53935');arrowHead(hx,y2c,Math.PI/2,_DIM_AH(),'#E53935');}
+  dimLabels.push({shape:s,field:'h',px:NaN,py:NaN,line:[l2c(hx,y1c),l2c(hx,y2c)]});
   var hlpx=offH>=0?hx+(printRender?40:13):hx-(printRender?40:13);
   // H 텍스트는 세로(90° 회전)로 그리므로 음영도 텍스트 중심(hlpx,my2) 기준 세로 박스
   if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hlpx-9,my2-38,18,76);}
@@ -3832,7 +3838,12 @@ function hitTestAll(mx,my){
 }
 var _cycleHitMx=null,_cycleHitMy=null,_cycleIdx=0;
 function ptLD(px,py,x1,y1,x2,y2){var dx2=x2-x1,dy2=y2-y1;if(!dx2&&!dy2)return Math.hypot(px-x1,py-y1);var t=Math.max(0,Math.min(1,((px-x1)*dx2+(py-y1)*dy2)/(dx2*dx2+dy2*dy2)));return Math.hypot(px-(x1+t*dx2),py-(y1+t*dy2));}
-function hitDim(ex,ey){for(var i=0;i<dimLabels.length;i++){var d=dimLabels[i];if(Math.abs(ex-d.px)<=36&&Math.abs(ey-d.py)<=14)return d;}return null;}
+function hitDim(ex,ey){
+  for(var i=0;i<dimLabels.length;i++){var d=dimLabels[i];if(Math.abs(ex-d.px)<=36&&Math.abs(ey-d.py)<=14)return d;}
+  // 치수 글자가 아니면 치수선 자체(5px 이내) — 끌어서 위치만 옮김
+  for(var j=0;j<dimLabels.length;j++){var l=dimLabels[j].line;if(l&&ptLD(ex,ey,l[0][0],l[0][1],l[1][0],l[1][1])<=5)return dimLabels[j];}
+  return null;
+}
 function shapeInBox(s,bx1,by1,bx2,by2){
   var l=Math.min(bx1,bx2),r=Math.max(bx1,bx2),t=Math.min(by1,by2),b=Math.max(by1,by2);
   if(s.kind==='note')return s.x>=l&&s.x<=r&&s.y>=t&&s.y<=b;
@@ -4182,8 +4193,9 @@ document.addEventListener('mousemove',function(e){
   var _dx=ex-dimDragStartX,_dy=ey-dimDragStartY;
   if(Math.hypot(_dx,_dy)>3){
     var _ds=dimDragInfo.shape;
-    if(dimDragInfo.field==='w'){var _nw=dimDragOrigW+_dy;_ds.dimOffsetW=Math.abs(_nw)<5?(_nw>=0?5:-5):_nw;}
-    else if(dimDragInfo.field==='h'){var _nh=dimDragOrigH+_dx;_ds.dimOffsetH=Math.abs(_nh)<5?(_nh>=0?5:-5):_nh;}
+    // 끄는 동안에도 자동 배치(autoAdjustDims)가 되돌리지 않게 먼저 "사용자가 옮김" 표시
+    if(dimDragInfo.field==='w'){var _nw=dimDragOrigW+_dy;_ds.dimOffsetW=Math.abs(_nw)<5?(_nw>=0?5:-5):_nw;_ds.dimUserOffsetW=true;}
+    else if(dimDragInfo.field==='h'){var _nh=dimDragOrigH+_dx;_ds.dimOffsetH=Math.abs(_nh)<5?(_nh>=0?5:-5):_nh;_ds.dimUserOffsetH=true;}
     redraw();
   }
 });
@@ -4200,7 +4212,7 @@ document.addEventListener('mouseup',function(e){
     // 자동 치수선 드래그 종료
     if(dimDragInfo){
       var _dx2=e.offsetX-dimDragStartX,_dy2=e.offsetY-dimDragStartY;
-      if(Math.hypot(_dx2,_dy2)<=3){showDimInput(dimDragInfo);}  // 클릭→크기 편집
+      if(Math.hypot(_dx2,_dy2)<=3){if(!dimDragInfo.line)showDimInput(dimDragInfo);}  // 글자 클릭→크기 편집 (치수선 클릭은 선택만)
       else{
         if(dimDragInfo.field==='w')dimDragInfo.shape.dimUserOffsetW=true;
         else if(dimDragInfo.field==='h')dimDragInfo.shape.dimUserOffsetH=true;
