@@ -1459,16 +1459,13 @@ function drawGosraMark(s,preview){
 }
 
 // ═══ 도면 주석: 글자(note) · 화살표(arrow) — 편집 화면과 도면화에 같이 표시 ═══
-// note: {x,y,text,fs(도면화 글자 px),color} / arrow: {x1,y1,x2,y2(촉),bend(휨: 0=직선, ±0.3),size(굵기·촉 배율),color}
+// note: {x,y,text,fs(도면화 글자 px),color} / arrow: {x1,y1,x2,y2(촉),bend(휨: 0=직선, ±0.3),color}
 // linkmark(연결 표시): {x1,y1,x2,y2,color} — 드래그한 선을 따라 나란한 물결선 2줄 (패턴·결이 이어진다는 표시)
 var ANN_COLS=[['#1565C0','파랑'],['#E53935','빨강'],['#2E7D32','초록'],['#222222','검정']];
-var ARROW_SIZES=[[0.6,'작게'],[1,'보통'],[1.5,'크게'],[2.2,'아주 크게']];
-var annColor='#1565C0',arrowBend=0.3,arrowSize=1;
+var annColor='#1565C0',arrowBend=0.3;
 function _annColBtns(cur,fn){return ANN_COLS.map(function(c){return '<button title="'+c[1]+'" onclick="'+fn+'(\''+c[0]+'\')" style="flex:1;height:18px;border-radius:3px;cursor:pointer;background:'+c[0]+';border:2px solid '+(cur===c[0]?'#FFD740':'#546E7A')+'"></button>';}).join('');}
-function _renderAnnCols(){['note','arrow','link'].forEach(function(k){var el=document.getElementById('ann-cols-'+k);if(el)el.innerHTML=_annColBtns(annColor,'setAnnColor');});
-  var sz=document.getElementById('arrow-sizes');if(sz)sz.innerHTML=ARROW_SIZES.map(function(o){var on=o[0]===arrowSize;return '<button onclick="setArrowSize('+o[0]+')" style="flex:1;padding:3px 0;font-size:10px;border-radius:3px;cursor:pointer;color:#fff;background:'+(on?'#1565C0':'#37474F')+';border:1px solid '+(on?'#1976D2':'#546E7A')+'">'+o[1]+'</button>';}).join('');}
+function _renderAnnCols(){['note','arrow','link'].forEach(function(k){var el=document.getElementById('ann-cols-'+k);if(el)el.innerHTML=_annColBtns(annColor,'setAnnColor');});}
 function setAnnColor(c){annColor=c;_renderAnnCols();}
-function setArrowSize(v){arrowSize=v;_renderAnnCols();}
 function setArrowBend(b){arrowBend=b;[0,0.3,-0.3].forEach(function(v,i){var el=document.getElementById('ab-'+i);if(el){el.style.background=v===b?'#1565C0':'#37474F';el.style.borderColor=v===b?'#1976D2':'#546E7A';}});}
 // 연결 표시: 물결 2줄의 점들(world mm). 한 주기 사인(왼쪽 가운데→위→아래→오른쪽 가운데), 진폭·간격은 길이에 비례
 function _linkWaves(s,n){
@@ -1514,7 +1511,7 @@ function _arrowPts(s,n){
 }
 function drawArrowMark(s,preview){
   var pts=_arrowPts(s,24),col=s.color||'#1565C0',sel=!printRender&&!preview&&isSelected(s);
-  var k=s.size||1,lw=(printRender?6:2.5)*k,ah=(printRender?32:13)*k,e=pts[pts.length-1],q=pts[pts.length-3],ang=Math.atan2(e[1]-q[1],e[0]-q[0]);
+  var lw=printRender?6:2.5,ah=printRender?32:13,e=pts[pts.length-1],q=pts[pts.length-3],ang=Math.atan2(e[1]-q[1],e[0]-q[0]);
   ctx.save();ctx.setLineDash([]);ctx.lineCap='round';ctx.lineJoin='round';
   function stroke(){ctx.beginPath();pts.forEach(function(p,i){if(i)ctx.lineTo(p[0],p[1]);else ctx.moveTo(p[0],p[1]);});ctx.stroke();}
   // 촉 끝이 선 굵기로 뭉툭해지지 않게 마지막 조금은 촉만
@@ -2936,7 +2933,7 @@ function _dxfCollect(H){
     }
     else if(s.kind==='arrow'){
       var c0=_arrowCtrl(s),ap=[];for(var k=0;k<=24;k++){var tt=k/24,u=1-tt;ap.push([u*u*s.x1+2*u*tt*c0[0]+tt*tt*s.x2,u*u*s.y1+2*u*tt*c0[1]+tt*tt*s.y2]);}
-      var e=ap[24],qq=ap[22],aa=Math.atan2(e[1]-qq[1],e[0]-qq[0]),ah2=AH*1.4*(s.size||1),col=COLS[s.color]||5;
+      var e=ap[24],qq=ap[22],aa=Math.atan2(e[1]-qq[1],e[0]-qq[0]),ah2=AH*1.4,col=COLS[s.color]||5;
       poly('SC-NOTE',ap.slice(0,23),false,col);
       solid('SC-NOTE',e,[e[0]-Math.cos(aa-0.38)*ah2,e[1]-Math.sin(aa-0.38)*ah2],[e[0]-Math.cos(aa+0.38)*ah2,e[1]-Math.sin(aa+0.38)*ah2],col);
     }
@@ -3526,7 +3523,7 @@ function finalizeShape(fmx,fmy){
   }
   else if(tool==='grind'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec=findEdgeContext(x0,y0,mx,my);var gd=parseFloat(document.getElementById('grind-depth').value)||30;var _gOpts={x1:x0,y1:y0,x2:mx,y2:my,inward:ec.inward,depth:gd};if(ec.groupId&&ec.edge!=='unknown'){_gOpts.groupId=ec.groupId;_gOpts.groupRole='grind-'+ec.edge;}s=makeShape('grindregion',_gOpts);}
   else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});}
-  else if(tool==='arrow'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('arrow',{x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,size:arrowSize,color:annColor});}
+  else if(tool==='arrow'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('arrow',{x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,color:annColor});}
   else if(tool==='linkmark'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('linkmark',{x1:x0,y1:y0,x2:mx,y2:my,color:annColor});}
   else if(tool==='note'){
     drawStart=null;
@@ -4168,7 +4165,7 @@ cv.addEventListener('mousemove',function(e){
     }
     else if(tool==='grind'){var ctx2=findEdgeContext(x0,y0,mx,my);ps={kind:'grindregion',x1:x0,y1:y0,x2:mx,y2:my,inward:ctx2.inward,ops:[]};}
     else if(tool==='jollycut'){ps={kind:'jollymark',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
-    else if(tool==='arrow'){ps={kind:'arrow',x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,size:arrowSize,color:annColor,ops:[]};}
+    else if(tool==='arrow'){ps={kind:'arrow',x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,color:annColor,ops:[]};}
     else if(tool==='linkmark'){ps={kind:'linkmark',x1:x0,y1:y0,x2:mx,y2:my,color:annColor,ops:[]};}
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
@@ -4857,11 +4854,9 @@ function _annPropsHtml(s){
     h+='<div style="font-size:10px;color:#546E7A;padding:0 4px 2px">양 끝 주황 점을 끌면 길이·방향이 바뀝니다</div>';
   }
   if(s.kind==='arrow'){
-    var b=s.bend||0,sz=s.size||1;
+    var b=s.bend||0;
     h+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">모양</div><div style="display:flex;gap:3px">';
     h+=btn(b===0,'직선','setAnnProp(\'bend\',0)')+btn(b>0,'곡선 ⤴','setAnnProp(\'bend\',0.3)')+btn(b<0,'곡선 ⤵','setAnnProp(\'bend\',-0.3)');
-    h+='</div><div style="font-size:10px;color:#546E7A;margin:4px 0 2px">굵기 (선·화살촉)</div><div style="display:flex;gap:3px">';
-    ARROW_SIZES.forEach(function(o){h+=btn(sz===o[0],o[1],'setAnnProp(\'size\','+o[0]+')');});
     h+='</div><button onclick="flipArrow()" style="width:100%;margin-top:4px;background:#263545;border:1px solid #546E7A;color:#64B5F6;padding:4px 0;border-radius:3px;font-size:11px;cursor:pointer">⇄ 화살촉 방향 바꾸기</button>';
   }
   h+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">색</div><div style="display:flex;gap:3px">'+_annColBtns(s.color||'#1565C0','setAnnPropColor')+'</div>';
