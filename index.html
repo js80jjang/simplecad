@@ -701,10 +701,11 @@ function _prodRow(i){
   } else {
     h+='<input type="text" class="wb-name" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="_setProdName('+i+',this.value);redraw();updatePropsPanel()">';
   }
+  // 제품명 바로 옆 ✕: 제품이 여러 개면 그 줄 빼기, 하나뿐이면 제품명·사이즈 비우기
+  if(products.length>1||p.name||p.size)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="'+(products.length>1?'이 제품 빼기':'제품명·사이즈 지우기')+'">✕</button>';
   h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value">';
   h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="온장 배치 장수 (도형에 따라 자동)">';
   h+='<input type="text" id="pq-'+i+'" value="'+(p.qty||0)+'" readonly tabindex="-1" style="width:34px;border-radius:2px!important;cursor:default"><span class="wb-lbl" style="margin-left:3px">장</span></span>';
-  if(products.length>1)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="이 제품 빼기">✕</button>';
   return h+'</div>';
 }
 // 제품을 고르면 온장 사이즈도 그 제품 크기로 (예: 1600×3200×12T → 온장 3200 × 1600, 긴 쪽이 가로)
@@ -737,9 +738,9 @@ function addProduct(){
   var rows=document.querySelectorAll('#product-list .wb-prod');if(rows.length){var inp=rows[rows.length-1].querySelector('input[type=text]');if(inp)inp.focus();} // 새 제품 이름 칸으로
 }
 function removeProduct(i){
-  if(products.length<=1)return;
   var gone=(products[i].name||'').trim();
-  products.splice(i,1);
+  if(products.length<=1)products[0]={name:'',size:'',qty:products[0].qty||0}; // 하나뿐이면 비우기
+  else products.splice(i,1);
   if(gone&&_prodNames().indexOf(gone)<0){shapes.forEach(function(s){if(s.label===gone)delete s.label;});_savedBoardLayout=null;_savedBoardImg=null;} // 그 제품 도형은 첫 제품으로
   renderProductList();redraw();
   calcCost();
