@@ -42,8 +42,12 @@
 
 ## 코드 구조 (index.html 안 주요 함수)
 - 상태: `shapes`(도형 배열), `nextId`, `products`, 단가 입력칸(`su-/du-/ru-/cu-/xt-` + `TIER_KEYS`)
+- 제품: 작업 정보 줄에 제품마다 한 줄씩 아래로(`renderProductList`, 마지막 줄 "+ 제품"). 도형 속성의 제품 선택은 없앰(옛 파일의 `shape.label`은 첫 배치 때 장 제품으로만 씀)
+  - **제품은 온장(장)마다**: `board.prod`(배열 속성) → `_boardLabel(board)`(없으면 옛 label → 첫 제품), 머리글 `_boardTitle`="온장 N · 제품명",
+    배치 창에서 머리글 클릭(`_bs.titleBoxes` → `_bsPickProd`)으로 고름, 새 장은 원래 장 제품을 따름, 저장 배치에 `boardProds`.
+    온장 사진·도면화 2쪽 머리글도 장 제품으로. 도면화 1쪽 왼쪽 위·DXF 양식 글자는 제품마다 한 줄
 - 제품 수량 = 온장 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
-  손으로 고친 배치(`_savedBoardLayout`)나 자동 배치 장수를 제품 이름(배치 그룹)별로 채움. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
+  손으로 고친 배치(`_savedBoardLayout`)나 자동 배치에서 장마다 고른 제품별로 셈. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
 - 작업 정보 줄(도면 위 `#work-bar`): `site-info` 한 칸 "업체명/현장주소"(첫 '/' 앞=업체명, 뒤=주소, `_syncSiteInfo`/`_setSiteInfo`) →
   숨은 `company-name`(업체명)·`site-addr`(주소)에 나눠 넣음(저장 파일 company/siteAddr 그대로), 최근 목록 `scd_siteinfo_history`, 제품(`renderProductList`, 2개부터 `#prod-pop`),
   `deliv-date`/`deliv-time`(직접 입력 → `_normDate` 2026.10.28 / `_normTime` 14:00). 업체명·주소 최근 15개는 localStorage
