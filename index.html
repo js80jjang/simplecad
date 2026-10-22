@@ -6798,6 +6798,9 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   if(sh.kind==='linegroup'&&pc){ // ㄱ자 등: 상자 가운데가 빈 곳일 수 있어 도형 면적 중심에
     var cpt=_expLabelPoint(pc),wpt=[(cpt[0]-offsetX)/scale,(cpt[1]-offsetY)/scale],mp=M(wpt[0],wpt[1]);lx=mp[0];ly=mp[1];
   }
+  // 조각 번호 (번호 표시가 켜져 있을 때)
+  var _pn=null;
+  if(auto){_pn=keyOf(sh).shapeNum||auto[shapes.indexOf(keyOf(sh))];if(sh.kind==='linegroup')for(var _li=0;_li<sh.lines.length&&!_pn;_li++)_pn=auto[shapes.indexOf(sh.lines[_li])];}
   if(fs>=minF){
     g.save();g.translate(lx,ly);if(vertical)g.rotate(-Math.PI/2);
     g.textAlign='center';g.textBaseline='middle';
@@ -6812,8 +6815,11 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     // 너무 작아 안에 글자가 안 들어가면: 가까운 빈 곳에 글자 + 화살표로 조각을 가리킴
     //   온장 안에서 다른 조각·다른 바깥 글자와 안 겹치고 조각에서 알맞게 떨어진 자리를 찾음.
     //   온장이 꽉 차면 온장 밖(캔버스 안, 잘리지 않는 곳)에서 찾음
-    var t1=lines.join(' '),f1=Math.round(Math.max(11,18*k));g.font='bold '+f1+'px '+FONT;
-    var tw=g.measureText(t1).width,hw=tw/2+4,hh=(f1+6*k)/2,gp=Math.max(20*k,f1*1.8),pad=3;
+    //   조각이 작아 번호 칸도 안 들어가면 글자 앞에 번호 칸을 같이 붙임
+    var t1=lines.join(' '),f1=Math.round(Math.max(11,18*k)),nb=(_pn&&!(pw>30*k&&ph>24*k))?String(_pn):'';
+    g.font='bold '+f1+'px Arial';var nbw=nb?Math.max(f1*1.3,g.measureText(nb).width+10*k):0,nbg=nb?5*k:0;
+    g.font='bold '+f1+'px '+FONT;var tw0=g.measureText(t1).width,tw=tw0+nbw+nbg;
+    var hw=tw/2+4,hh=(f1+6*k)/2,gp=Math.max(20*k,f1*1.8),pad=3;
     var b0x=ox-p.x*sc,b0y=oy-p.y*sc;
     var others=(tex.board||[]).filter(function(o){return o!==p;}).map(function(o){return[b0x+o.x*sc,b0y+o.y*sc,b0x+(o.x+o.pw)*sc,b0y+(o.y+o.ph)*sc];});
     tex._used=tex._used||[];var occ=others.concat(tex._used,[[ox,oy,ox+pw,oy+ph]]);
@@ -6844,16 +6850,21 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     g.save();g.strokeStyle=cc[0];g.fillStyle=cc[0];g.lineWidth=Math.max(1.5,2*k);g.setLineDash([]);
     g.beginPath();g.moveTo(pick.sx,pick.sy);g.lineTo(pick.ax,pick.ay);g.stroke();
     g.beginPath();g.moveTo(pick.ax,pick.ay);g.lineTo(pick.ax-Math.cos(an-0.4)*ah,pick.ay-Math.sin(an-0.4)*ah);g.lineTo(pick.ax-Math.cos(an+0.4)*ah,pick.ay-Math.sin(an+0.4)*ah);g.closePath();g.fill();
-    g.font='bold '+f1+'px '+FONT;g.textAlign='center';g.textBaseline='middle';
-    g.lineWidth=5*k;g.strokeStyle='rgba(255,255,255,0.9)';g.lineJoin='round';g.strokeText(t1,pick.x,pick.y);
-    g.fillStyle=cc[0];g.fillText(t1,pick.x,pick.y);
+    var x0=pick.x-tw/2;
+    if(nb){ // 번호 칸 (조각 안 번호와 같은 모양)
+      g.fillStyle=cc[0];g.fillRect(x0,pick.y-hh+1,nbw,hh*2-2);
+      g.font='bold '+f1+'px Arial';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(nb,x0+nbw/2,pick.y+1);
+    }
+    g.font='bold '+f1+'px '+FONT;g.textAlign='left';g.textBaseline='middle';
+    var tx=x0+nbw+nbg;
+    g.lineWidth=5*k;g.strokeStyle='rgba(255,255,255,0.9)';g.lineJoin='round';g.strokeText(t1,tx,pick.y);
+    g.fillStyle=cc[0];g.fillText(t1,tx,pick.y);
     g.restore();
   }
-  // 조각 번호
-  if(auto){
-    var key=keyOf(sh),num=key.shapeNum||auto[shapes.indexOf(key)];
-    if(sh.kind==='linegroup')for(var i=0;i<sh.lines.length&&!num;i++)num=auto[shapes.indexOf(sh.lines[i])];
-    if(num&&pw>30*k&&ph>24*k){var t=String(num);g.font='bold '+Math.round(20*k)+'px Arial';var bwN=Math.max(30*k,g.measureText(t).width+14*k);g.fillStyle=cc[0];g.fillRect(ox+4*k,oy+4*k,bwN,28*k);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,ox+4*k+bwN/2,oy+18*k);}
+  // 조각 번호 (작아서 칸이 안 들어가면 위의 바깥 글자 앞에 붙음)
+  if(_pn){
+    var num=_pn;
+    if(pw>30*k&&ph>24*k){var t=String(num);g.font='bold '+Math.round(20*k)+'px Arial';var bwN=Math.max(30*k,g.measureText(t).width+14*k);g.fillStyle=cc[0];g.fillRect(ox+4*k,oy+4*k,bwN,28*k);g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,ox+4*k+bwN/2,oy+18*k);}
   }
 }
 // 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (온장 배치용)
