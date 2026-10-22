@@ -19,9 +19,10 @@ from PIL import Image
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CATALOG = os.path.join(ROOT, 'mall-catalog.js')
 OUT = os.path.join(ROOT, 'mall-img')
-MANIFEST = os.path.join(OUT, 'manifest.json')  # {상품번호: 원본 이미지 주소} — 주소가 같으면 다시 받지 않음
-MAX_W = 640      # 긴 쪽 픽셀 (온장 배치 화면·도면화에 충분, 파일 하나 ≈ 40KB)
-QUALITY = 72
+MANIFEST = os.path.join(OUT, 'manifest.json')  # {상품번호: 원본 주소|SPEC} — 같으면 다시 받지 않음 (SPEC가 바뀌면 전부 다시)
+MAX_W = 1150     # 긴 쪽 픽셀. 쇼핑몰 온장 사진 원본이 1150×576이라 줄이지 않음 (파일 하나 ≈ 60KB)
+QUALITY = 86
+SPEC = 'w%d-q%d' % (MAX_W, QUALITY)
 UA = 'Mozilla/5.0 (simplecad image updater; +https://github.com/js80jjang/simplecad)'
 
 
@@ -54,7 +55,7 @@ def main():
         gid, src = str(it['id']), it['img']
         path = os.path.join(OUT, gid + '.js')
         keep.add(gid)
-        if manifest.get(gid) == src and os.path.exists(path):
+        if manifest.get(gid) == src + '|' + SPEC and os.path.exists(path):
             continue
         try:
             b64 = base64.b64encode(shrink(fetch(src))).decode('ascii')
@@ -65,7 +66,7 @@ def main():
         with open(path, 'w', encoding='utf-8', newline='\n') as f:
             f.write('// 자동 생성 — tools/update_mall_images.py\n'
                     'window._MALL_IMG=window._MALL_IMG||{};window._MALL_IMG["%s"]="data:image/jpeg;base64,%s";\n' % (gid, b64))
-        manifest[gid] = src
+        manifest[gid] = src + '|' + SPEC
         done += 1
         time.sleep(0.3)  # 쇼핑몰에 부담 주지 않게
     # 목록에서 빠진 제품 이미지는 지움

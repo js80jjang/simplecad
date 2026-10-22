@@ -588,6 +588,7 @@ function _boardLabel(board){
 }
 // 온장 무늬: 가로로 긴 온장 사진을 온장 상자(bx,by,w,h px)에 맞춤 — 온장이 세로면 90° 돌려서
 function _drawSlab(g,img,bx,by,w,h){
+  g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high'; // 줄이거나 키울 때 뭉개짐 덜하게
   if((w>=h)===(img.width>=img.height)){g.drawImage(img,bx,by,w,h);return;}
   g.save();g.translate(bx+w,by);g.rotate(Math.PI/2);g.drawImage(img,0,0,h,w);g.restore();
 }
