@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>심플 캐드</title>
+<!-- 앱 설치(PWA): manifest + 서비스 워커(sw.js). http(s)에서만 동작 (PC에서 바로 연 파일은 그대로 일반 웹페이지) -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d47a1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
 <script src="dxf-form.js" onerror="window._DXF_DEFAULT_FORM=null"></script>
 <script src="mall-catalog.js" onerror="window._MALL_CATALOG=null"></script>
@@ -269,6 +275,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="기본 양식(가공의뢰서)에 넣어 DXF로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button><button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7;padding-left:6px;padding-right:6px;margin-left:-4px" onclick="dxfFormSettings()" title="DXF 양식 설정: 기본 양식 바꾸기 / 양식 없이 내보내기">⚙</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
+    <button class="canvas-btn" id="btn-install" style="display:none;background:#2E7D32;color:#fff" onclick="installApp()" title="바탕화면·시작 메뉴에 앱으로 설치 (별도 창으로 실행)">⬇ 앱 설치</button>
     <div id="board-panel">
       <label>온장</label>
       <input type="number" id="board-w" value="3200" min="100" step="10" title="온장 폭(mm)" oninput="_scheduleBoardQty()"> <label>×</label>
@@ -7086,6 +7093,23 @@ document.addEventListener('keydown',function(e){
 
   }
 });
+
+// ═══ 앱 설치 (PWA) ═══
+// 서비스 워커(sw.js)는 http(s)에서만 — GitHub Pages 주소에서 열면 크롬/엣지가 "앱 설치"를 띄울 수 있음
+var _installEvt=null;
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();_installEvt=e; // 설치 가능할 때만 버튼 보이기 (이미 설치했거나 앱 창에서 실행 중이면 안 뜸)
+  var b=document.getElementById('btn-install');if(b)b.style.display='';
+});
+window.addEventListener('appinstalled',function(){_installEvt=null;var b=document.getElementById('btn-install');if(b)b.style.display='none';});
+function installApp(){
+  if(!_installEvt){alert('브라우저 주소창 오른쪽의 설치 아이콘(⊕)이나 메뉴 → "앱 설치"로 설치할 수 있습니다.');return;}
+  _installEvt.prompt();
+  _installEvt.userChoice.then(function(){_installEvt=null;var b=document.getElementById('btn-install');if(b)b.style.display='none';});
+}
 </script>
 </body>
 </html>
