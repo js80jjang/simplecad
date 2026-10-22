@@ -42,10 +42,12 @@
 
 ## 코드 구조 (index.html 안 주요 함수)
 - 상태: `shapes`(도형 배열), `nextId`, `products`, 단가 입력칸(`su-/du-/ru-/cu-/xt-` + `TIER_KEYS`)
-- 제품: 작업 정보 줄에 제품마다 한 줄씩 아래로(`renderProductList`, 마지막 줄 "+ 제품"). 도형 속성의 제품 선택은 없앰(옛 파일의 `shape.label`은 첫 배치 때 장 제품으로만 씀)
-  - **제품은 온장(장)마다**: `board.prod`(배열 속성) → `_boardLabel(board)`(없으면 옛 label → 첫 제품), 머리글 `_boardTitle`="온장 N · 제품명",
-    배치 창에서 머리글 클릭(`_bs.titleBoxes` → `_bsPickProd`)으로 고름, 새 장은 원래 장 제품을 따름, 저장 배치에 `boardProds`.
-    온장 사진·도면화 2쪽 머리글도 장 제품으로. 도면화 1쪽 왼쪽 위·DXF 양식 글자는 제품마다 한 줄
+- 제품: 작업 정보 줄에 제품마다 한 줄씩 아래로(`renderProductList`, 마지막 줄 "+ 제품"). 제품 색 = 순서대로 `_prodColor(i)`(`_PCOLS`)
+  - **도형마다 제품**(`s.label`=제품 이름, 안 정하면 첫 제품 — `_shapeProdIdx`/`_itemProd`): 도형 선택 → 제품 줄 앞 ●(`assignProduct`).
+    그룹(싱크볼 등)·이어진 선 조각 전체가 같이 바뀜, 지정하면 저장된 온장 배치는 초기화. 제품 이름 바꾸면 도형도 따라감(`_setProdName`), 제품 빼면 첫 제품으로
+  - 편집 화면: 제품 2개 이상이면 조각을 제품 색으로 옅게 + 왼쪽 아래 제품명(`_drawProdTints`), ●에 마우스 올리면 그 제품만 진하게(`_hoverProd`). 도형 속성창의 제품 선택은 없앰
+  - 온장 배치: 제품별로 장을 따로(`_packBoardItems` 그룹 = `_itemProd`), 장 머리글 `_boardTitle`="온장 N · 제품명", 온장 사진도 그 제품(`_boardLabel`).
+    도면화 1쪽 왼쪽 위·DXF 양식 글자는 제품마다 한 줄
 - 제품 수량 = 온장 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
   손으로 고친 배치(`_savedBoardLayout`)나 자동 배치에서 장마다 고른 제품별로 셈. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
 - 작업 정보 줄(도면 위 `#work-bar`): `site-info` 한 칸 "업체명/현장주소"(첫 '/' 앞=업체명, 뒤=주소, `_syncSiteInfo`/`_setSiteInfo`) →

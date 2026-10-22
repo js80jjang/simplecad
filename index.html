@@ -138,7 +138,8 @@ canvas{display:block;cursor:crosshair}
 .prod-item .p-row2{display:flex;align-items:center;gap:4px}
 .prod-item input[type=text]{flex:1;background:#263545;border:none;color:#fff;padding:3px 5px;font-size:11px;border-radius:2px;min-width:0}
 .prod-item input[type=number]{width:38px;background:#263545;border:none;color:#fff;padding:3px 4px;font-size:11px;border-radius:2px;text-align:center}
-.prod-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.prod-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;cursor:pointer;box-shadow:0 0 0 2px rgba(255,255,255,.15)}
+.prod-dot:hover{box-shadow:0 0 0 2px #fff}
 .prod-del{background:none;border:none;color:#546E7A;cursor:pointer;font-size:15px;padding:0 2px;line-height:1}
 .prod-del:hover{color:#E53935}
 .prod-label{font-size:10px;color:#546E7A;flex-shrink:0}
@@ -580,11 +581,11 @@ function _slabImgFor(label){
   document.head.appendChild(sc);
   return null;
 }
-// 장 하나의 제품 이름: 온장 배치에서 장마다 고른 제품(board.prod) → 예전 파일의 조각 제품표시(label) → 첫 제품
+// 장 하나의 제품 이름: 그 장 조각들의 제품(도형에 정한 제품, _itemProd) → 배치 때 정한 board.prod → 첫 제품
 function _boardLabel(board){
   var names=products.map(function(p){return (p.name||'').trim();}).filter(Boolean);
+  for(var i=0;i<board.length;i++){var sh=board[i].item&&board[i].item.shape;if(sh)return _itemProd(sh);}
   if(board.prod&&names.indexOf(board.prod)>=0)return board.prod;
-  for(var i=0;i<board.length;i++){var sh=board[i].item&&board[i].item.shape;if(!sh)continue;var l=sh.kind==='linegroup'?(sh.lines[0]&&sh.lines[0].label):sh.label;if(l&&names.indexOf(l)>=0)return l;}
   return names[0]||'';
 }
 // 장 머리글: 온장 N · 제품명
@@ -642,27 +643,63 @@ function _showProdDropdown(i,inputEl){
 }
 
 function _selectCatalogItem(i,name,size){
-  products[i].name=name;
+  _setProdName(i,name);
   products[i].size=size;
   _setBoardFromSize(size);
   renderProductList();
   redraw();updatePropsPanel();calcCost();
 }
 
+// ── 도형의 제품 ──
+// 도형마다 s.label = 제품 이름. 안 정한 도형(또는 없는 제품 이름)은 첫 제품. 지정: 도형 선택 → 제품 줄 앞 ● 누름(assignProduct)
+// 제품 색은 제품 순서대로(같은 색 겹치지 않게): 편집 화면 도형 칠·● 색이 같음
+var _prodPopOpen=false,_hoverProd=-1;
+function _prodNames(){return products.map(function(p){return (p.name||'').trim();});}
+var _PCOLS=['#1565C0','#2E7D32','#6A1B9A','#D84315','#00838F','#AD1457','#4527A0','#827717'];
+function _prodColor(i){return _PCOLS[i%_PCOLS.length];}
+function _shapeProdIdx(s){var n=_prodNames(),i=s&&s.label?n.indexOf(s.label):-1;if(i>=0)return i;for(var k=0;k<n.length;k++)if(n[k])return k;return 0;}
+// 온장 배치 조각(it.shape: rect/circle/ellipse/linegroup)의 제품 이름
+function _itemProd(sh){
+  var n=_prodNames();
+  if(sh.kind==='linegroup'){for(var i=0;i<sh.lines.length;i++){var l=sh.lines[i].label;if(l&&n.indexOf(l)>=0)return l;}return n[_shapeProdIdx(null)]||'';}
+  return n[_shapeProdIdx(sh)]||'';
+}
+function assignProduct(i){
+  var name=(products[i].name||'').trim();
+  if(!name){alert('이 줄에 제품명을 먼저 넣어 주세요.');return;}
+  if(!selectedShapes.length){alert('제품을 정할 도형을 먼저 선택하세요.\n(클릭 · Shift+클릭 · 드래그로 여러 개)\n그다음 이 제품 앞의 ● 을 누르면 지정됩니다.');return;}
+  saveHistory();
+  var set=new Set();
+  selectedShapes.forEach(function(s){
+    set.add(s);
+    shapes.forEach(function(sh){if((s.groupId&&sh.groupId===s.groupId)||(s.userGroupId&&sh.userGroupId===s.userGroupId))set.add(sh);});
+  });
+  // 선 조각은 이어진 선 전체를 같은 제품으로
+  _collectBoardItems().forEach(function(it){var sh=it.shape;if(sh.kind==='linegroup'&&sh.lines.some(function(l){return set.has(l);}))sh.lines.forEach(function(l){set.add(l);});});
+  set.forEach(function(s){s.label=name;});
+  _savedBoardLayout=null;_savedBoardImg=null; // 제품이 바뀌면 온장 배치는 새로
+  redraw();calcCost();
+}
+// 제품 이름을 고치면 그 제품으로 정한 도형도 따라감
+function _setProdName(i,v){
+  var old=(products[i].name||'').trim(),nv=(v||'').trim();
+  if(old&&old!==nv)shapes.forEach(function(s){if(s.label===old){if(nv)s.label=nv;else delete s.label;}});
+  if(old&&old!==nv&&_savedBoardLayout&&_savedBoardLayout.boardProds)_savedBoardLayout.boardProds=_savedBoardLayout.boardProds.map(function(b){return b===old?nv:b;});
+  products[i].name=v;
+}
 // 작업 정보 줄의 제품 한 줄 (제품마다 한 줄씩 아래로, renderProductList)
-var _prodPopOpen=false;
 function _prodRow(i){
-  var p=products[i],col=p.name?_labelColor(p.name):'#37474F',h='<div class="wb-prod">';
-  h+='<div class="prod-dot" style="background:'+col+'" title="제품 색 (도형에 붙인 제품 표시와 같음)"></div>';
+  var p=products[i],col=_prodColor(i),h='<div class="wb-prod">';
+  h+='<div class="prod-dot" style="background:'+col+'" onclick="assignProduct('+i+')" onmouseenter="_hoverProd='+i+';redraw()" onmouseleave="_hoverProd=-1;redraw()" title="선택한 도형을 이 제품으로 지정 (도형이 이 색으로 칠해짐)"></div>';
   if(_catalog.length>0){
     h+='<div class="prod-search-wrap" id="psw-'+i+'">';
     h+='<input type="text" placeholder="제품명 검색 (한글·영문)" value="'+escHtml(p.name||'')+'" ';
-    h+='oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';_showProdDropdown('+i+',this);redraw();updatePropsPanel()" ';
+    h+='oninput="_setProdName('+i+',this.value);_showProdDropdown('+i+',this);redraw();updatePropsPanel()" ';
     h+='onfocus="_showProdDropdown('+i+',this)" ';
     h+='onblur="setTimeout(function(){var dd=document.querySelector(\'#psw-'+i+' .prod-dropdown\');if(dd)dd.classList.remove(\'open\');},150)">';
     h+='<div class="prod-dropdown" id="pdd-'+i+'"></div></div>';
   } else {
-    h+='<input type="text" class="wb-name" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';redraw();updatePropsPanel()">';
+    h+='<input type="text" class="wb-name" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="_setProdName('+i+',this.value);redraw();updatePropsPanel()">';
   }
   h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value">';
   h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="온장 배치 장수 (도형에 따라 자동)">';
@@ -701,8 +738,10 @@ function addProduct(){
 }
 function removeProduct(i){
   if(products.length<=1)return;
+  var gone=(products[i].name||'').trim();
   products.splice(i,1);
-  renderProductList();
+  if(gone&&_prodNames().indexOf(gone)<0){shapes.forEach(function(s){if(s.label===gone)delete s.label;});_savedBoardLayout=null;_savedBoardImg=null;} // 그 제품 도형은 첫 제품으로
+  renderProductList();redraw();
   calcCost();
 }
 // 출고일·시간: 직접 입력 → 2026.10.28 / 14:00 모양으로 맞춤 (못 알아들으면 입력한 그대로)
@@ -4113,6 +4152,34 @@ function toggleShapeNumbers(){
   if(btn){btn.style.background=showShapeNumbers?'#1565C0':'#263545';btn.style.color=showShapeNumbers?'#fff':'#90CAF9';}
   redraw();
 }
+// 제품이 2개 이상이면 조각마다 제품 색으로 옅게 칠하고 왼쪽 아래에 제품명 (제품 줄 ●에 마우스를 올리면 그 제품만 진하게)
+function _drawProdTints(){
+  var n=_prodNames();if(n.filter(Boolean).length<2)return;
+  _collectBoardItems().forEach(function(it){
+    var sh=it.shape,nm=_itemProd(sh),pi=n.indexOf(nm);if(pi<0)return;
+    var col=_prodColor(pi),hot=_hoverProd===pi,dim=_hoverProd>=0&&!hot;
+    ctx.save();
+    if(sh.kind==='rect')_expFillPath(_expRectPath(_expRectGeo(sh)));
+    else if(sh.kind==='circle'||sh.kind==='hole'){var c=toCanvas(sh.cx,sh.cy);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(sh.r),0,2*Math.PI);}
+    else if(sh.kind==='ellipse'){var e=toCanvas(sh.cx,sh.cy);ctx.beginPath();ctx.ellipse(e[0],e[1],mm2px(sh.rx),mm2px(sh.ry),0,0,2*Math.PI);}
+    else if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(!loop){ctx.restore();return;}_expFillPath(loop);}
+    else{ctx.restore();return;}
+    ctx.fillStyle=_hexA(col,hot?0.45:(dim?0.08:0.22));ctx.fill();
+    if(hot){ctx.strokeStyle=col;ctx.lineWidth=3;ctx.stroke();}
+    // 제품명 (조각 왼쪽 아래 안쪽)
+    var bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);
+    if(bb){
+      var p=toCanvas(bb.l,bb.b),wpx=(bb.r-bb.l)*scale;
+      ctx.font='bold 11px "Malgun Gothic",sans-serif';var t=nm,tw=ctx.measureText(t).width;
+      if(tw+12>wpx){while(t.length>2&&ctx.measureText(t+'…').width+12>wpx)t=t.slice(0,-1);t+='…';tw=ctx.measureText(t).width;}
+      if(wpx>30&&(bb.b-bb.t)*scale>22){
+        ctx.fillStyle=col;ctx.fillRect(p[0]+3,p[1]-19,tw+10,16);
+        ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,p[0]+8,p[1]-11);
+      }
+    }
+    ctx.restore();
+  });
+}
 function drawUserGroups(){
   if(printRender)return;
   var seen={};
@@ -4163,6 +4230,7 @@ function redraw(){
   if(printRender)_pdr=[];
   _lgFrameGroups=null; // 선 그룹 캐시는 매 프레임 새로 계산
   drawGrid();dimLabels=[];autoAdjustDims();
+  if(!printRender)_drawProdTints();
   shapes.forEach(function(s){drawShape(s);});
   drawUserGroups();
   _drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1565C0';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});
@@ -5467,7 +5535,7 @@ function _collectBoardItems(){
 function _packBoardItems(items,ew,eh,gap){
   var _grpMap={},_grpOrder=[];
   items.forEach(function(it){
-    var lbl=(it.shape.label||'').trim()||'미지정';
+    var lbl=_itemProd(it.shape)||'미지정'; // 도형에 정한 제품별로 장을 따로
     if(!_grpMap[lbl]){_grpMap[lbl]=[];_grpOrder.push(lbl);}
     _grpMap[lbl].push(it);
   });
@@ -5477,7 +5545,7 @@ function _packBoardItems(items,ew,eh,gap){
     var grpItems=_grpMap[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});
     var grpBoards=packBoards(grpItems,ew,eh,gap);
     var startBi=allBoards.length;
-    grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;allBoards.push(b);}); // 예전 파일의 조각 제품표시 → 장 제품
+    grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;allBoards.push(b);}); // 장 제품 = 그 장 조각들의 제품
     groupMeta.push({label:lbl,color:_grpCols[gi%_grpCols.length],startBi:startBi,count:grpBoards.length});
   });
   return{boards:allBoards,groups:groupMeta};
@@ -5526,8 +5594,7 @@ function showBoardLayout(){
   var totalPlaced=allBoards.reduce(function(a,b){return a+b.length;},0);
   var infoEl=document.getElementById('board-modal-info');
   var infoStr='온장 '+bw+'×'+bh+' (유효 '+ew+'×'+eh+') mm | '+allBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
-  var _np=products.filter(function(p){return (p.name||'').trim();}).length;
-  infoStr+=' | <span style="color:#78909C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각)'+(_np>1?' · 장 머리글 클릭 = 그 장의 제품 고르기':'')+'</span>';
+  infoStr+=' | <span style="color:#78909C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
   infoEl.innerHTML=infoStr;
 
   // 저장된 배치가 있으면 복원
@@ -5644,9 +5711,6 @@ function _bsInitEvents(){
     if(!_bs)return;
     var r=bcv.getBoundingClientRect();
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
-    // 장 머리글 누름 → 이 장의 제품 고르기
-    var tbx=_bs.titleBoxes||[];
-    for(var ti=0;ti<tbx.length;ti++){var tb=tbx[ti];if(tb&&ex>=tb.x&&ex<=tb.x+tb.w&&ey>=tb.y&&ey<=tb.y+tb.h){_bsPickProd(ti,tb.x,tb.y+tb.h);return;}}
     var hit=_bsHitTest(ex,ey);
     _bs.dragStartX=ex;_bs.dragStartY=ey;_bs.dragMoved=false;
     if(hit){
@@ -5822,8 +5886,7 @@ function _bsInitEvents(){
       _bs.snapState={active:xSnap||ySnap,bi:hit.bi,p:p,xNb:snapNbX,yNb:snapNbY,xSnap:xSnap,ySnap:ySnap};
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
     } else {
-      var _onTitle=(_bs.titleBoxes||[]).some(function(tb){return tb&&ex>=tb.x&&ex<=tb.x+tb.w&&ey>=tb.y&&ey<=tb.y+tb.h;});
-      bcv.style.cursor=_bsHitTest(ex,ey)?'grab':(_onTitle&&products.filter(function(p){return (p.name||'').trim();}).length>1?'pointer':'default');
+      bcv.style.cursor=_bsHitTest(ex,ey)?'grab':'default';
     }
   };
   bcv.onmouseup=function(){
@@ -5987,7 +6050,6 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   }
 
   var ref=_boardDrawRef(),k=Math.max(0.45,Math.min(1,boardPxW/1400)); // 글자·선 크기: 도면화(k=1) 비율로 축소
-  if(!targetCanvas&&_bs)_bs.titleBoxes=[]; // 머리글(제품 고르기) 누를 자리 — 이번 화면 것만
 
   boards.forEach(function(placed,bi){
     var off=boardOffsets[bi]||{ox:pad,oy:pad+TH};
@@ -5996,10 +6058,8 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     var mg=margin*sc;
 
     // 장 머리글 + 온장
-    // 머리글 "온장 N · 제품명" — 제품이 2개 이상이면 머리글을 눌러 이 장의 제품을 고름 (▾)
-    var _multiProd=products.filter(function(p){return (p.name||'').trim();}).length>1;
-    var _biLbl=_boardTitle(placed,bi)+(!targetCanvas&&_multiProd?' ▾':'');
-    if(!targetCanvas&&_bs){(_bs.titleBoxes=_bs.titleBoxes||[])[bi]={x:ox,y:oy-TH,w:bw*sc,h:TH};}
+    // 머리글 "온장 N · 제품명" (제품은 도형에 정한 제품)
+    var _biLbl=_boardTitle(placed,bi);
     var _img=_slabImgFor(_boardLabel(placed)),_tex={img:_img,bx:ox,by:oy,w:bw*sc,h:bh*sc,board:placed};
     _boardFrame(bctx,ox,oy,_biLbl,placed,bw,bh,sc,k,_img);
 
@@ -6053,19 +6113,6 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   });
 }
 
-// 장(bi)의 제품 고르기: 머리글 아래에 제품 목록 → 누르면 그 장의 제품(온장 사진·머리글·수량)이 바뀜
-function _bsPickProd(bi,x,y){
-  var names=products.map(function(p){return (p.name||'').trim();}).filter(Boolean);if(names.length<2||!_bs.boards[bi])return;
-  var wrap=document.getElementById('board-canvas-wrap'),old=document.getElementById('bs-prod-sel');if(old)old.remove();
-  var s=document.createElement('select');s.id='bs-prod-sel';s.size=Math.min(Math.max(names.length,2),8);
-  s.style.cssText='position:absolute;left:'+Math.round(x)+'px;top:'+Math.round(y)+'px;z-index:5;font-size:13px;min-width:240px;background:#fff;color:#222;border:1px solid #1565C0;border-radius:3px;box-shadow:0 4px 12px rgba(0,0,0,.3)';
-  var cur=_boardLabel(_bs.boards[bi]);
-  names.forEach(function(n){var o=document.createElement('option');o.value=n;o.textContent=n;if(n===cur)o.selected=true;s.appendChild(o);});
-  s.onclick=function(){if(!s.value)return;_bs.boards[bi].prod=s.value;s.remove();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);};
-  s.onblur=function(){setTimeout(function(){if(s.parentNode)s.remove();},200);};
-  s.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape')s.remove();else if(e.key==='Enter')s.onclick();};
-  wrap.appendChild(s);s.focus();
-}
 function updateBoardMoveButtons(){
   var nav=document.getElementById('board-move-nav');
   if(!nav||!_bs)return;
