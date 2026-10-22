@@ -285,7 +285,7 @@ canvas{display:block;cursor:crosshair}
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
       <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
     </div>
-    <span id="canvas-hint">드래그=다중선택 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
+    <span id="canvas-hint">드래그=다중선택 / Ctrl+클릭·드래그=선택 추가 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
   <!-- 작업 정보(출고 정보): 도면 바로 위 세 줄 (업체명·주소 / 제품 / 출고) — 오른쪽 패널을 접어도 보임 -->
   <div id="work-bar">
@@ -667,7 +667,7 @@ function _itemProd(sh){
 function assignProduct(i){
   var name=(products[i].name||'').trim();
   if(!name){alert('이 줄에 제품명을 먼저 넣어 주세요.');return;}
-  if(!selectedShapes.length){alert('제품을 정할 도형을 먼저 선택하세요.\n(클릭 · Shift+클릭 · 드래그로 여러 개)\n그다음 이 제품 앞의 ● 을 누르면 지정됩니다.');return;}
+  if(!selectedShapes.length){alert('제품을 정할 도형을 먼저 선택하세요.\n(클릭 · Ctrl+클릭 · 드래그 · Ctrl+드래그로 여러 개)\n그다음 이 제품 앞의 ● 을 누르면 지정됩니다.');return;}
   saveHistory();
   var set=new Set();
   selectedShapes.forEach(function(s){
@@ -4370,21 +4370,17 @@ cv.addEventListener('mousedown',function(e){
     var hit=null;
     if(hits.length>0){
       var ct=8/scale;
-      if(!e.shiftKey&&_cycleHitMx!==null&&Math.abs(mx-_cycleHitMx)<ct&&Math.abs(my-_cycleHitMy)<ct&&hits.length>1){
+      if(!(e.ctrlKey||e.metaKey)&&_cycleHitMx!==null&&Math.abs(mx-_cycleHitMx)<ct&&Math.abs(my-_cycleHitMy)<ct&&hits.length>1){
         _cycleIdx=(_cycleIdx+1)%hits.length;
       } else {_cycleIdx=0;}
       _cycleHitMx=mx;_cycleHitMy=my;
       hit=hits[_cycleIdx];
     } else {_cycleHitMx=null;_cycleHitMy=null;_cycleIdx=0;}
-    if(hit){
-      if(e.shiftKey){
-        var grpSh=getGroupShapes(hit);
-        var alreadyIn=selectedShapes.indexOf(hit)>=0;
-        if(alreadyIn){grpSh.forEach(function(gs){var ii=selectedShapes.indexOf(gs);if(ii>=0)selectedShapes.splice(ii,1);});}
-        else{grpSh.forEach(function(gs){if(selectedShapes.indexOf(gs)<0)selectedShapes.push(gs);});}
-      } else {
-        if(selectedShapes.indexOf(hit)<0){if(hit.groupId&&hit.groupRole&&hit.groupRole!=='main'){selectedShapes=[hit];}else{selectedShapes=getGroupShapes(hit);}}
-      }
+    if(e.ctrlKey||e.metaKey){
+      // Ctrl: 클릭 = 그 도형 넣기/빼기, 드래그 = 상자 안 도형을 지금 선택에 더하기 (도형 위에서 시작해도 상자)
+      selBox={x1:mx,y1:my,x2:mx,y2:my,add:true,hit:hit,px:e.offsetX,py:e.offsetY};
+    } else if(hit){
+      if(selectedShapes.indexOf(hit)<0){if(hit.groupId&&hit.groupRole&&hit.groupRole!=='main'){selectedShapes=[hit];}else{selectedShapes=getGroupShapes(hit);}}
       _hoverSelected=false;
       dragStart=[mx,my];
       dragOriginals={};
@@ -4395,7 +4391,7 @@ cv.addEventListener('mousedown',function(e){
         else if(s.x1!==undefined)dragOriginals[s.id]={x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2};
       });
     } else {
-      if(!e.shiftKey)selectedShapes=[];
+      selectedShapes=[];
       selBox={x1:mx,y1:my,x2:mx,y2:my};
     }
     magnetLineX=null;magnetLineY=null;updatePropsPanel();redraw();
@@ -4723,10 +4719,19 @@ document.addEventListener('mouseup',function(e){
       dimDragInfo=null;dimDragSnap=null;redraw();return;
     }
     if(selBox){
+      if(selBox.add&&Math.hypot(e.offsetX-selBox.px,e.offsetY-selBox.py)<=4){
+        // Ctrl+클릭: 그 도형(그룹 전체) 넣기/빼기
+        if(selBox.hit){
+          var grpSh=getGroupShapes(selBox.hit);
+          if(selectedShapes.indexOf(selBox.hit)>=0)grpSh.forEach(function(gs){var ii=selectedShapes.indexOf(gs);if(ii>=0)selectedShapes.splice(ii,1);});
+          else grpSh.forEach(function(gs){if(selectedShapes.indexOf(gs)<0)selectedShapes.push(gs);});
+        }
+        selBox=null;updatePropsPanel();redraw();return;
+      }
       var selFound=[];
       shapes.forEach(function(s){if(shapeInBox(s,selBox.x1,selBox.y1,selBox.x2,selBox.y2)){if(selFound.indexOf(s)<0)selFound.push(s);}});
-      // 박스 선택된 도형의 그룹 전체 포함
-      var withGroups=[];
+      // 박스 선택된 도형의 그룹 전체 포함 (Ctrl+드래그면 지금 선택에 더함)
+      var withGroups=selBox.add?selectedShapes.slice():[];
       selFound.forEach(function(s){getGroupShapes(s).forEach(function(gs){if(withGroups.indexOf(gs)<0)withGroups.push(gs);});});
       selectedShapes=withGroups;
       selBox=null;updatePropsPanel();redraw();
