@@ -30,6 +30,8 @@
 
 ## 코드 구조 (index.html 안 주요 함수)
 - 상태: `shapes`(도형 배열), `nextId`, `products`, 단가 입력칸(`su-/du-/ru-/cu-/xt-` + `TIER_KEYS`)
+- 제품 수량 = 온장 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
+  손으로 고친 배치(`_savedBoardLayout`)나 자동 배치 장수를 제품 이름(배치 그룹)별로 채움. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
 - 작업 정보 줄(도면 위 `#work-bar`): `company-name`(업체명), `site-addr`(주소), 제품(`renderProductList`, 2개부터 `#prod-pop`),
   `deliv-date`/`deliv-time`(직접 입력 → `_normDate` 2026.10.28 / `_normTime` 14:00). 업체명·주소 최근 15개는 localStorage
   — 도면화·DXF에는 `_companySite()`("업체명 - 주소"), 저장 파일 이름은 `_saveBaseName()`(업체명-주소-20261021), 기본 위치 바탕화면

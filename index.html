@@ -271,8 +271,8 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
     <div id="board-panel">
       <label>온장</label>
-      <input type="number" id="board-w" value="3200" min="100" step="10" title="온장 폭(mm)"> <label>×</label>
-      <input type="number" id="board-h" value="1600" min="100" step="10" title="온장 높이(mm)">
+      <input type="number" id="board-w" value="3200" min="100" step="10" title="온장 폭(mm)" oninput="_scheduleBoardQty()"> <label>×</label>
+      <input type="number" id="board-h" value="1600" min="100" step="10" title="온장 높이(mm)" oninput="_scheduleBoardQty()">
       <label style="color:#546E7A">mm</label>
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
       <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
@@ -550,7 +550,6 @@ var _catalog=(function(){
 var _ddResults=[];
 
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function totalQty(){return Math.max(1,products.reduce(function(t,p){return t+(parseInt(p.qty)||1);},0));}
 
 function _catalogSearch(q){
   if(!_catalog.length)return[];
@@ -619,8 +618,8 @@ function _prodRow(i){
     h+='<input type="text" class="wb-name" placeholder="제품명" value="'+escHtml(p.name||'')+'" oninput="products['+i+'].name=this.value;var d=this.closest(\'.wb-prod\').querySelector(\'.prod-dot\');if(d)d.style.background=this.value?_labelColor(this.value):\'#37474F\';redraw();updatePropsPanel()">';
   }
   h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value">';
-  h+='<span class="wb-lbl">수량</span><span class="wb-qty"><button onclick="changeQty('+i+',-1)" title="한 장 빼기">−</button>';
-  h+='<input type="number" value="'+(p.qty||1)+'" min="1" oninput="products['+i+'].qty=parseInt(this.value)||1;calcCost()"><button onclick="changeQty('+i+',1)" title="한 장 더하기">+</button></span>';
+  h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="온장 배치 장수 (도형에 따라 자동)">';
+  h+='<input type="text" id="pq-'+i+'" value="'+(p.qty||0)+'" readonly tabindex="-1" style="width:34px;border-radius:2px!important;cursor:default"><span class="wb-lbl" style="margin-left:3px">장</span></span>';
   if(products.length>1)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="이 제품 빼기">✕</button>';
   return h+'</div>';
 }
@@ -648,7 +647,6 @@ function renderProductList(){
   container.innerHTML=html;
 }
 function toggleProdPop(){_prodPopOpen=!_prodPopOpen;renderProductList();}
-function changeQty(i,d){products[i].qty=Math.max(1,(parseInt(products[i].qty)||1)+d);renderProductList();calcCost();}
 function addProduct(){
   products.push({name:'',size:'',qty:1});
   _prodPopOpen=true;renderProductList();
@@ -4907,7 +4905,7 @@ function calcCost(){
       lenMm.gosra+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     }
   });
-  var qty=totalQty();
+  var qty=1; // 수량은 온장 장수(_updateBoardQty)일 뿐, 가공을 여러 번 하는 게 아니라서 가공비에 곱하지 않음
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
   function gta(k){
     var pfx=TIER_PREFIX[_tier]||'su-';
@@ -4957,6 +4955,25 @@ function calcCost(){
   if(sa)sa.textContent=totalAdd>0?Math.round(totalAdd).toLocaleString():'-';
   if(so)so.textContent=totalOther>0?Math.round(totalOther).toLocaleString():'-';
   if(st)st.textContent=Math.round(grand).toLocaleString();
+  _scheduleBoardQty();
+}
+// 제품 수량 = 온장 배치 장수 (자동). 손으로 고친 배치가 남아 있으면 그 장수, 없으면 자동 배치로 계산
+//   여러 제품이면 도형에 붙인 제품 이름(배치 그룹)별로, 제품이 안 붙은 조각의 장수는 첫 제품에
+var _bqTimer=null;
+function _scheduleBoardQty(){clearTimeout(_bqTimer);_bqTimer=setTimeout(_updateBoardQty,120);}
+function _updateBoardQty(){
+  var bw=parseFloat(document.getElementById('board-w').value)||1600,bh=parseFloat(document.getElementById('board-h').value)||3200;
+  var items=_collectBoardItems(),boards=[],groups=null;
+  if(items.length){
+    var saved=(_savedBoardLayout&&_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh)?_restoreSavedBoards(_savedBoardLayout,items):null;
+    if(saved){boards=saved;groups=_savedBoardLayout.groups||null;}
+    else{var pk=_packBoardItems(items,bw-20,bh-20,3);boards=pk.boards;groups=pk.groups;}
+  }
+  products.forEach(function(p){p.qty=0;});
+  function add(label,n){var i=-1;products.forEach(function(p,k){if(i<0&&(p.name||'').trim()&&(p.name||'').trim()===label)i=k;});products[Math.max(0,i)].qty+=n;}
+  if(groups&&groups.length)groups.forEach(function(gm){var n=0;for(var b=gm.startBi;b<gm.startBi+gm.count;b++)if(boards[b]&&boards[b].length)n++;add(gm.label,n);});
+  else add('',boards.filter(function(b){return b.length;}).length);
+  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;});
 }
 function deleteSelected(){
   if(!selectedShapes.length)return;
@@ -6107,6 +6124,7 @@ function closeBoardModal(){
     }catch(e){printRender=false;_savedBoardImg=null;}
   }
   document.getElementById('board-modal').classList.remove('show');
+  _updateBoardQty(); // 손으로 고친 배치 장수를 수량에
 }
 function resetBoardLayout(){
   _savedBoardLayout=null;_savedBoardImg=null;
@@ -6834,7 +6852,7 @@ function exportDrawingA4(){
   {
     var _sa2=_companySite(); // 업체명 - 주소
     var _p1a=(products&&products[0])||{};
-    var _p1ln=[_p1a.name,_p1a.size,(_p1a.qty&&_p1a.qty>1)?_p1a.qty+'장':''].filter(Boolean).join(' ');
+    var _p1ln=[_p1a.name,_p1a.size,_p1a.qty>0?_p1a.qty+'장':''].filter(Boolean).join(' ');
     if(_sa2||_p1ln){
       tmpCtx.save();
       var _tfs2=26,_lpad=24,_ly2=_lpad+_tfs2*0.5;
