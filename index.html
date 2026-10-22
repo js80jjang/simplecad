@@ -6753,7 +6753,8 @@ function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
   g.font=Math.round(24*k)+'px '+FONT;g.fillStyle='#666';
   g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18*k,by-22*k);
   g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
-  if(img){g.save();g.globalAlpha=0.35;_drawSlab(g,img,bx,by,bw*sc,bh*sc);g.restore();}
+  // 온장 사진은 실제 밝기 그대로, 남는 부분만 살짝 어둡게 (조각이 실제 색으로 도드라지게)
+  if(img){_drawSlab(g,img,bx,by,bw*sc,bh*sc);g.fillStyle='rgba(0,0,0,0.32)';g.fillRect(bx,by,bw*sc,bh*sc);}
   g.strokeStyle='#555';g.lineWidth=3*k;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
 }
 // 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
@@ -6775,8 +6776,8 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
   else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
   else{g.beginPath();g.rect(ox,oy,pw,ph);}
-  // 온장 사진이 있으면 조각 자리의 무늬를 그대로(배치된 자리에서 잘라낸 모습) + 조각 색은 아주 옅게
-  if(tex&&tex.img){g.save();g.clip();_drawSlab(g,tex.img,tex.bx,tex.by,tex.w,tex.h);g.fillStyle=_hexA(cc[0],0.12);g.fill();g.restore();}
+  // 온장 사진이 있으면 조각 자리의 무늬를 실제 밝기 그대로(배치된 자리에서 잘라낸 모습), 조각 구분은 외곽선 색으로
+  if(tex&&tex.img){g.save();g.clip();_drawSlab(g,tex.img,tex.bx,tex.by,tex.w,tex.h);g.restore();g.lineWidth=4*k;}
   else g.fill();
   g.stroke();
   // 타공부/타공 (흰색)
