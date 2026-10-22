@@ -17,7 +17,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,14 +25,19 @@ jobs:
           python-version: '3.12'
       - name: 쇼핑몰 목록 읽기
         run: python tools/update_mall_catalog.py
+      # 온장 이미지(mall-img/<상품번호>.js): 새 제품·바뀐 이미지만 받음, 목록에서 빠진 제품은 지움
+      - name: 제품 온장 이미지 받기
+        run: |
+          pip install --quiet pillow
+          python tools/update_mall_images.py
       - name: 바뀌었으면 커밋
         run: |
-          if git diff --quiet -- mall-catalog.js; then
+          if [ -z "$(git status --porcelain -- mall-catalog.js mall-img)" ]; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mall-catalog.js
+          git add mall-catalog.js mall-img
           git commit -m "chore: 윤현몰 제품 목록 자동 갱신 ($(TZ=Asia/Seoul date +%Y-%m-%d))"
           git push

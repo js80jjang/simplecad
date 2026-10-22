@@ -15,6 +15,13 @@
 - 항목: `{id,name(한글),en,size(1600×3200×12T),price(장당),m2,img,url,cate}`. 앱의 `_catalog` = 몰 + 엑셀(`제품목록.js`), 이름+사이즈로 중복 제거
   — 검색은 한글·영문·사이즈, 여러 단어는 모두 포함. 고르면 제품명·사이즈 채움 + 온장 크기(`board-w`=긴 쪽, `board-h`)도 그 사이즈로(`_setBoardFromSize`)
 
+- 온장 이미지: 같은 워크플로가 `tools/update_mall_images.py`(Pillow) 실행 → 몰 목록 이미지(= 온장 전체 사진 2:1)를 640px JPEG로 줄여
+  `mall-img/<상품번호>.js`(`window._MALL_IMG[id]=data URL`)로 저장, `mall-img/manifest.json`에 원본 주소(같으면 다시 안 받음), 빠진 제품은 지움
+  — 쇼핑몰 이미지 서버에 CORS가 없어 바로 연결하면 도면화 캔버스가 막히므로 저장소에 받아 둠(사용자 승인: 공개 저장소에 올려도 됨)
+  - 앱: `_slabImgFor(제품 이름)`이 `<script>`로 불러옴(`_updateBoardQty`에서 미리), `_boardLabel(장)`=조각에 붙인 제품/첫 제품,
+    `_drawSlab`로 온장 배치 창·도면화 2쪽의 온장(옅게)과 조각(배치된 자리 무늬 그대로 + 조각 색 12%)에 채움. 이미지 없으면 예전 색
+  - 테스트는 http(serve) 주소로 — 브라우저 패널의 data: 주소에서는 `mall-img/` 상대 경로를 못 읽음
+
 ## 저장소에 없는 파일 (PC마다 따로 복사)
 - `세라믹제품목록.xlsx`, `제품목록.js` — 제품 목록. 공개 저장소라 `.gitignore`로 제외. 다른 PC에는 USB/클라우드로 복사.
 - 고객 도면/견적 파일(.ceramic, .dxf)은 절대 커밋하지 않음.

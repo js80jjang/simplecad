@@ -548,6 +548,42 @@ var _catalog=(function(){
   return out;
 })();
 var _ddResults=[];
+// ── 제품 온장 이미지 (mall-img/<상품번호>.js = data URL, tools/update_mall_images.py가 매일 받음) ──
+//   쇼핑몰 이미지를 바로 쓰면 도면화(PDF) 캔버스가 막혀서(CORS) 저장소에 받아 둔 것을 <script>로 읽음
+var _slabImgs={}; // 상품번호 → {img} (불러오는 중이면 빈 객체)
+function _mallIdFor(name,size){
+  var items=(window._MALL_CATALOG&&window._MALL_CATALOG.items)||[],n=(name||'').replace(/\s+/g,''),sz=(size||'').replace(/[^\d]/g,''),byName=null;
+  for(var i=0;i<items.length;i++){
+    if((items[i].name||'').replace(/\s+/g,'')!==n)continue;
+    if((items[i].size||'').replace(/[^\d]/g,'')===sz)return items[i].id;
+    if(!byName)byName=items[i].id;
+  }
+  return byName;
+}
+// 제품 이름(배치 그룹 이름) → 불러온 Image, 아직 없으면 null (불러오기 시작, 다 되면 온장 배치 창 다시 그림)
+function _slabImgFor(label){
+  var p=products.filter(function(q){return (q.name||'').trim()&&(q.name||'').trim()===label;})[0]||products[0];
+  var id=p&&p.name?_mallIdFor(p.name,p.size):null;if(!id)return null;
+  if(_slabImgs[id])return _slabImgs[id].img||null;
+  var ent=_slabImgs[id]={},sc=document.createElement('script');
+  sc.src='mall-img/'+id+'.js';
+  sc.onload=function(){
+    var d=window._MALL_IMG&&window._MALL_IMG[id];if(!d)return;
+    var im=new Image();im.onload=function(){ent.img=im;if(_bs&&document.getElementById('board-modal').classList.contains('show'))renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);};im.src=d;
+  };
+  document.head.appendChild(sc);
+  return null;
+}
+// 장 하나의 제품 이름: 조각에 붙인 제품(선 조각은 첫 선의 제품), 없으면 첫 제품
+function _boardLabel(board){
+  for(var i=0;i<board.length;i++){var sh=board[i].item&&board[i].item.shape;if(!sh)continue;var l=sh.kind==='linegroup'?(sh.lines[0]&&sh.lines[0].label):sh.label;if(l)return l;}
+  return (products[0]&&products[0].name||'').trim();
+}
+// 온장 무늬: 가로로 긴 온장 사진을 온장 상자(bx,by,w,h px)에 맞춤 — 온장이 세로면 90° 돌려서
+function _drawSlab(g,img,bx,by,w,h){
+  if((w>=h)===(img.width>=img.height)){g.drawImage(img,bx,by,w,h);return;}
+  g.save();g.translate(bx+w,by);g.rotate(Math.PI/2);g.drawImage(img,0,0,h,w);g.restore();
+}
 
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
@@ -4973,7 +5009,7 @@ function _updateBoardQty(){
   function add(label,n){var i=-1;products.forEach(function(p,k){if(i<0&&(p.name||'').trim()&&(p.name||'').trim()===label)i=k;});products[Math.max(0,i)].qty+=n;}
   if(groups&&groups.length)groups.forEach(function(gm){var n=0;for(var b=gm.startBi;b<gm.startBi+gm.count;b++)if(boards[b]&&boards[b].length)n++;add(gm.label,n);});
   else add('',boards.filter(function(b){return b.length;}).length);
-  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;});
+  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor((p.name||'').trim());}); // 온장 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
 }
 function deleteSelected(){
   if(!selectedShapes.length)return;
@@ -6002,14 +6038,15 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     // 장 머리글 + 온장
     var _biLbl='온장 '+(bi+1);
     if(groups&&groups.length>1){var _gmi=groups.filter(function(g){return bi>=g.startBi&&bi<g.startBi+g.count;})[0];if(_gmi)_biLbl=_gmi.label+' '+(bi-_gmi.startBi+1);}
-    _boardFrame(bctx,ox,oy,_biLbl,placed,bw,bh,sc,k);
+    var _img=_slabImgFor(_boardLabel(placed)),_tex={img:_img,bx:ox,by:oy,w:bw*sc,h:bh*sc};
+    _boardFrame(bctx,ox,oy,_biLbl,placed,bw,bh,sc,k,_img);
 
     // 피스 배치
     for(var i=0;i<placed.length;i++){
       var p=placed[i];
       var px=ox+mg+p.x*sc,py=oy+mg+p.y*sc;
       var pw=(p.pw||p.item.w)*sc,ph=(p.ph||p.item.h)*sc;
-      _boardPiece(bctx,p,i,px,py,sc,ref,k);
+      _boardPiece(bctx,p,i,px,py,sc,ref,k,_tex);
       // 선택 하이라이트
       var isSel=_bs&&_bs.selectedPiece&&_bs.selectedPiece.bi===bi&&_bs.selectedPiece.p===p;
       var isSnap=_bs&&_bs.snapState&&_bs.snapState.active&&_bs.snapState.bi===bi&&_bs.snapState.p===p;
@@ -6694,8 +6731,9 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin){
   boards.forEach(function(board,bi){
     var col=bi%best.cols,row=Math.floor(bi/best.cols);
     var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2;
-    _boardFrame(g,bx,by,'온장 '+(bi+1),board,bw,bh,sc,1);
-    board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1);});
+    var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:bw*sc,h:bh*sc};
+    _boardFrame(g,bx,by,'온장 '+(bi+1),board,bw,bh,sc,1,img);
+    board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});
   });
 }
 // ── 온장 배치 그리기 공통 (도면화 2쪽 · 온장 배치 창이 같은 모양) ── k: 글자·선 크기 배율(도면화=1)
@@ -6706,7 +6744,8 @@ function _boardDrawRef(){
   return{info:info,keyOf:keyOf,auto:showShapeNumbers?_autoPieceNums():null};
 }
 // 장 머리글(이름 · 크기 · 사용률) + 온장(남는 부분 = 회색)
-function _boardFrame(g,bx,by,title,board,bw,bh,sc,k){
+// img: 제품 온장 사진(있으면 남는 부분에 옅게)
+function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
   var FONT=_EXP_FONT,used=board.reduce(function(a,p){return a+(p.pw||0)*(p.ph||0);},0);
   g.font='bold '+Math.round(30*k)+'px '+FONT;g.fillStyle='#222';g.textAlign='left';g.textBaseline='alphabetic';
   g.fillText(title,bx,by-22*k);
@@ -6714,10 +6753,12 @@ function _boardFrame(g,bx,by,title,board,bw,bh,sc,k){
   g.font=Math.round(24*k)+'px '+FONT;g.fillStyle='#666';
   g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18*k,by-22*k);
   g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
+  if(img){g.save();g.globalAlpha=0.35;_drawSlab(g,img,bx,by,bw*sc,bh*sc);g.restore();}
   g.strokeStyle='#555';g.lineWidth=3*k;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
 }
 // 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
-function _boardPiece(g,p,pi,ox,oy,sc,ref,k){
+// tex: {img,bx,by,w,h} 제품 온장 사진과 온장 상자(px) — 있으면 조각을 무늬로 채움
+function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
   var pw=p.pw*sc,ph=p.ph*sc;
@@ -6734,7 +6775,10 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k){
   else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
   else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
   else{g.beginPath();g.rect(ox,oy,pw,ph);}
-  g.fill();g.stroke();
+  // 온장 사진이 있으면 조각 자리의 무늬를 그대로(배치된 자리에서 잘라낸 모습) + 조각 색은 아주 옅게
+  if(tex&&tex.img){g.save();g.clip();_drawSlab(g,tex.img,tex.bx,tex.by,tex.w,tex.h);g.fillStyle=_hexA(cc[0],0.12);g.fill();g.restore();}
+  else g.fill();
+  g.stroke();
   // 타공부/타공 (흰색)
   if(pc){
     g.fillStyle='#ffffff';g.lineWidth=2*k;
