@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-10-22",
+"updated":"2026-10-23",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -567,7 +567,7 @@ window._MALL_CATALOG={
 {
 "id":"1000005400",
 "name":"플리마 화이트01 매트",
-"en":"PLIMA WHITE 01 MATTE",
+"en":"PLIMA WHITE01 MATTE",
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
@@ -1468,8 +1468,8 @@ window._MALL_CATALOG={
 },
 {
 "id":"1000003583",
-"name":"아이온 플래티넘 화이트 내추럴",
-"en":"AION PLATINUM WHITE NATURAL",
+"name":"플래티넘 화이트 내추럴",
+"en":"PLATINUM WHITE NATURAL",
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
@@ -1479,19 +1479,19 @@ window._MALL_CATALOG={
 },
 {
 "id":"1000003021",
-"name":"아이온 팔라듐 그레이 내추럴",
-"en":"AION PALLADIUM GREY NATURAL",
-"size":"1540×3280×12T",
-"price":1478400,
-"m2":308000,
+"name":"팔라듐 그레이 내추럴",
+"en":"PALLADIUM GREY NATURAL",
+"size":"1600×3200×12T",
+"price":1802200,
+"m2":352000,
 "img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003021/image/list/1000003021_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003021",
 "cate":"009003"
 },
 {
 "id":"1000003827",
-"name":"아이온 블랙 다이아몬드 내추럴",
-"en":"AION BLACK DIAMOND NATURAL",
+"name":"블랙 다이아몬드 내추럴",
+"en":"BLACK DIAMOND NATURAL",
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
@@ -2843,7 +2843,7 @@ window._MALL_CATALOG={
 },
 {
 "id":"1000002961",
-"name":"화이트 아이온 혼드",
+"name":"화이트 아이온",
 "en":"WHITE AION",
 "size":"1200×2700×6T",
 "price":427600,
