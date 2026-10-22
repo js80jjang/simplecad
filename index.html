@@ -4757,7 +4757,8 @@ function showDimInput(d){
       var _nf=(fld==='w')?'h':'w';
       setTimeout(function(){
         for(var _i=0;_i<dimLabels.length;_i++){
-          if(dimLabels[_i].shape===s&&dimLabels[_i].field===_nf){showDimInput(dimLabels[_i]);break;}
+          // 치수선 잡기용 항목(.line, 글자 위치 없음)은 건너뛰고 글자 항목으로
+          if(dimLabels[_i].shape===s&&dimLabels[_i].field===_nf&&!dimLabels[_i].line){showDimInput(dimLabels[_i]);break;}
         }
       },0);
     }:undefined
