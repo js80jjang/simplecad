@@ -12,6 +12,7 @@
 <script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
 <script src="dxf-form.js" onerror="window._DXF_DEFAULT_FORM=null"></script>
 <script src="mall-catalog.js" onerror="window._MALL_CATALOG=null"></script>
+<script src="patch-notes.js" onerror="window._PATCH_NOTES=[]"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#151f28;color:#ccdde0;font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -126,6 +127,21 @@ canvas{display:block;cursor:crosshair}
 .tier-btn.active .tier-chk{background:#E3F2FD;border-color:#E3F2FD}
 .tier-save-btn{width:100%;margin-top:6px;background:#0d47a1;border:none;color:#B3E5FC;font-size:11px;padding:4px 0;border-radius:3px;cursor:pointer;letter-spacing:.3px;}
 .tier-save-btn:hover{background:#1565C0;}
+/* 패치 노트 팝업 */
+#pn-modal{position:fixed;inset:0;z-index:4800;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+#pn-modal .pn-box{background:#0d1822;border:1px solid #1976D2;border-radius:8px;width:620px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#pn-modal .pn-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #1e3a4a}
+#pn-modal .pn-head b{flex:1;color:#fff;font-size:16px}
+#pn-modal .pn-head button{background:none;border:none;color:#78909C;font-size:18px;cursor:pointer}
+#pn-modal .pn-body{overflow:auto;padding:6px 18px 10px;color:#ccdde0;font-size:13px;line-height:1.6}
+#pn-modal .pn-ver{margin:14px 0 4px;color:#FFD740;font-weight:bold;font-size:14px}
+#pn-modal .pn-ver span{display:inline-block;background:#E53935;color:#fff;font-size:10px;border-radius:8px;padding:0 6px;margin-left:6px;vertical-align:middle}
+#pn-modal .pn-grp{margin:8px 0 2px;color:#90CAF9;font-weight:bold;font-size:12px}
+#pn-modal ul{margin:0 0 0 18px;padding:0}
+#pn-modal li{margin:2px 0}
+#pn-modal .pn-old{color:#78909C}
+#pn-modal .pn-foot{padding:10px 18px;border-top:1px solid #1e3a4a;display:flex;justify-content:flex-end;gap:8px}
+#pn-modal .pn-foot button{background:#1565C0;border:none;color:#fff;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:13px}
 .other-row{display:flex;align-items:center;gap:4px;padding:2px 4px;margin-bottom:1px}
 .other-row label{font-size:11px;color:#90A4AE;flex:1}
 .other-row input{width:78px;background:#263545;border:none;color:#fff;padding:2px 5px;font-size:11px;border-radius:2px;text-align:right}
@@ -276,6 +292,7 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
     <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7" onclick="exportDxf()" title="기본 양식(가공의뢰서)에 넣어 DXF로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button><button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#A5D6A7;padding-left:6px;padding-right:6px;margin-left:-4px" onclick="dxfFormSettings()" title="DXF 양식 설정: 기본 양식 바꾸기 / 양식 없이 내보내기">⚙</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#263545;border:1px solid #37474f;color:#90CAF9" onclick="toggleShapeNumbers()">번호</button>
+    <button class="canvas-btn" style="background:#263545;border:1px solid #37474f;color:#FFD740" onclick="showPatchNotes(true)" title="업데이트 내용 (패치 노트)">📢 새 소식</button>
     <button class="canvas-btn" id="btn-install" style="display:none;background:#2E7D32;color:#fff" onclick="installApp()" title="바탕화면·시작 메뉴에 앱으로 설치 (별도 창으로 실행)">⬇ 앱 설치</button>
     <div id="board-panel">
       <label>온장</label>
@@ -7130,6 +7147,32 @@ window.addEventListener('beforeinstallprompt',function(e){
   var b=document.getElementById('btn-install');if(b)b.style.display='';
 });
 window.addEventListener('appinstalled',function(){_installEvt=null;var b=document.getElementById('btn-install');if(b)b.style.display='none';});
+// ═══ 패치 노트 (patch-notes.js) ═══
+// 앱을 열 때 아직 안 본 버전이 있으면 팝업 (본 버전은 이 PC 브라우저 localStorage에), "📢 새 소식" 버튼으로 언제든 다시 보기
+function showPatchNotes(all){
+  var notes=window._PATCH_NOTES||[];if(!notes.length)return;
+  var seen=null;try{seen=localStorage.getItem('scd_patch_seen');}catch(e){}
+  var fresh=[];for(var i=0;i<notes.length&&notes[i].v!==seen;i++)fresh.push(notes[i].v); // 마지막으로 본 것보다 새 버전들
+  if(!all&&!fresh.length)return;
+  var h='';
+  notes.forEach(function(n,ni){
+    var isNew=fresh.indexOf(n.v)>=0;
+    if(!all&&!isNew&&ni>0)return; // 시작 팝업은 새 버전만 (처음 쓰는 PC면 최신 하나)
+    if(!all&&!seen&&ni>0)return;
+    h+='<div class="pn-ver'+(isNew||all?'':' pn-old')+'">'+escHtml(n.v)+(isNew?'<span>NEW</span>':'')+'</div>';
+    (n.groups||[]).forEach(function(g){
+      h+='<div class="pn-grp">'+escHtml(g.t)+'</div><ul>'+(g.items||[]).map(function(t){return '<li>'+escHtml(t)+'</li>';}).join('')+'</ul>';
+    });
+  });
+  var old=document.getElementById('pn-modal');if(old)old.remove();
+  var d=document.createElement('div');d.id='pn-modal';
+  d.innerHTML='<div class="pn-box"><div class="pn-head"><b>📢 심플 캐드 새 소식</b><button title="닫기">✕</button></div><div class="pn-body">'+h+'</div><div class="pn-foot"><button>확인</button></div></div>';
+  function close(){try{localStorage.setItem('scd_patch_seen',notes[0].v);}catch(e){}d.remove();}
+  d.querySelector('.pn-head button').onclick=close;d.querySelector('.pn-foot button').onclick=close;
+  d.addEventListener('mousedown',function(e){if(e.target===d)close();});
+  document.body.appendChild(d);
+}
+setTimeout(function(){showPatchNotes(false);},600);
 function installApp(){
   if(!_installEvt){alert('브라우저 주소창 오른쪽의 설치 아이콘(⊕)이나 메뉴 → "앱 설치"로 설치할 수 있습니다.');return;}
   _installEvt.prompt();

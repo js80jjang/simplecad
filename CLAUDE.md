@@ -9,6 +9,8 @@
   `beforeinstallprompt` 때만 보임) → 별도 창 앱. sw.js는 앱 파일 "네트워크 먼저"(온라인이면 항상 최신, 오프라인이면 저장본),
   `mall-img/`는 저장본 먼저, 다른 사이트(Firebase 등) 요청은 안 건드림. file://에선 등록 안 함. 브라우저 패널은 서비스 워커 미지원 → 확인은 실제 크롬에서
   - 아이콘은 Pillow 스크립트로 만든 것(상판·싱크볼·수전·절단선). 바꾸려면 PNG 4개(192/512/maskable-512/apple-touch 180) 교체
+- 패치 노트: `patch-notes.js`(`window._PATCH_NOTES`, 맨 위가 최신 `{v:'날짜', groups:[{t,items}]}`). 앱을 열 때 안 본 버전이 있으면 팝업
+  (`showPatchNotes`, 본 버전 `scd_patch_seen`), 도구줄 "📢 새 소식"으로 전체 보기. **사용자에게 보이는 변경을 올릴 때 맨 위에 새 버전 추가**
 - 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(엑셀 제품 목록 → `제품목록.js` 생성 후 index.html 열기)
 
 ## 윤현몰 제품 목록 (`mall-catalog.js`, 자동 생성 — 직접 고치지 않음)
