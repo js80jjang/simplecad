@@ -1957,7 +1957,11 @@ function _fmtAng(deg){var r=Math.round(deg);return (Math.abs(deg-r)<0.05?r:Math.
 // 각도 표시 그리기 (편집 화면·도면화 공통). opt: {R:호 반지름 px, fs:글자 px, colOf(s), exp:도면화(겹침 피하기)}
 function _drawAngleMarks(opt){
   _lineAngleMarks().forEach(function(m){
-    var c=toCanvas(m.x,m.y),r=Math.min(opt.R,mm2px(m.len)*0.45);if(r<8)return;
+    var c=toCanvas(m.x,m.y),r=Math.min(opt.R,mm2px(m.len)*0.45);
+    // 편집 화면: 끌어서 바꾼 호 반지름(px, 선의 그 끝점별)
+    var ak=(Math.hypot(m.x-m.s.x1,m.y-m.s.y1)<0.01)?'a':'b';
+    if(!opt.exp&&m.s.angR&&m.s.angR[ak])r=m.s.angR[ak];
+    if(r<8)return;
     var col=opt.colOf(m.s),txt=_fmtAng(m.deg),fs=opt.fs;
     ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=opt.exp?2:1.2;
     if(m.ref!==undefined){ // 수평 기준선 (점선)
@@ -1978,6 +1982,13 @@ function _drawAngleMarks(opt){
     else{ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx-hw,ty-hh,hw*2,hh*2);}
     ctx.fillStyle=col;ctx.fillText(txt,tx,ty);
     ctx.restore();
+    // 편집 화면: 각도 글자를 끌면 호 반지름이 바뀜 (꼭지점에서 멀어지면 커짐)
+    if(!opt.exp){
+      var ms=m.s,r0=r;
+      dimLabels.push({shape:ms,field:'angmark',px:tx,py:ty,
+        start:function(){return{r0:r0,d0:Math.hypot(dimDragStartX-c[0],dimDragStartY-c[1])};},
+        drag:function(ex,ey,dx,dy,st){ms.angR=ms.angR||{};ms.angR[ak]=Math.max(10,st.r0+Math.hypot(ex-c[0],ey-c[1])-st.d0);}});
+    }
   });
 }
 
@@ -2209,6 +2220,8 @@ function drawDims(s,col){
     var _rcp_=toCanvas(_rbst_.wx,_rbst_.wy);
     var cAx=_rcp_[0],cAy=_rcp_[1];
     var lEx_=cAx+_rbst_.dx*lLen_*Math.SQRT1_2,lEy_=cAy+_rbst_.dy*lLen_*Math.SQRT1_2;
+    if(!printRender){var _ro=_lblOff(s,'rc');lEx_+=_ro[0];lEy_+=_ro[1];} // 끌어서 옮긴 자리
+    var _rRight=lEx_>=cAx; // 글자는 지시선 끝에서 바깥쪽으로
     ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
     ctx.beginPath();ctx.moveTo(cAx,cAy);ctx.lineTo(lEx_,lEy_);ctx.stroke();
     ctx.setLineDash([]);
@@ -2217,12 +2230,12 @@ function drawDims(s,col){
     var tw_rc=ctx.measureText(lbl_rc).width;
     var bh_rc=printRender?40:14;var pad_rc=printRender?16:6;
     if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
-    if(_rbst_.dx>0)ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);
+    if(_rRight)ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);
     else ctx.fillRect(lEx_-tw_rc-pad_rc-2,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);}
-    if(_rbst_.dx>0){ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
+    if(_rRight){ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
     else{ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_-3,lEy_);}
     ctx.restore();
-    dimLabels.push({shape:s,field:'cornerSize',px:lEx_,py:lEy_});
+    dimLabels.push(Object.assign({shape:s,field:'cornerSize',px:lEx_+(_rRight?1:-1)*(tw_rc/2+4),py:lEy_},_lblDrag(s,'rc')));
   }
   // 개별 코너 라운드(s.corners) 자동 치수 표시
   if(s.corners){
@@ -2244,6 +2257,8 @@ function drawDims(s,col){
       var _cp3f=toCanvas(cm3.wx,cm3.wy);
       var cAx3=_cp3f[0],cAy3=_cp3f[1];
       var lEx3=cAx3+_bd3.dx*lLen3*Math.SQRT1_2,lEy3=cAy3+_bd3.dy*lLen3*Math.SQRT1_2;
+      if(!printRender){var _ro3=_lblOff(s,'r_'+ck);lEx3+=_ro3[0];lEy3+=_ro3[1];} // 끌어서 옮긴 자리
+      var _r3Right=lEx3>=cAx3;
       var cCol3=printRender?'#1565C0':(isSelected(s)?'#FFD740':'#EF9A9A');
       ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
       ctx.beginPath();ctx.moveTo(cAx3,cAy3);ctx.lineTo(lEx3,lEy3);ctx.stroke();
@@ -2252,11 +2267,12 @@ function drawDims(s,col){
       ctx.font=(printRender?'bold 40px':'bold 11px')+' Consolas';
       var tw3=ctx.measureText(lbl3).width,bh3=printRender?40:14,pad3=printRender?16:6;
       if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
-      if(_bd3.dx>0)ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);
+      if(_r3Right)ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);
       else ctx.fillRect(lEx3-tw3-pad3-2,lEy3-bh3/2,tw3+pad3,bh3);}
-      if(_bd3.dx>0){ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
+      if(_r3Right){ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
       else{ctx.fillStyle=cCol3;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3-3,lEy3);}
       ctx.restore();
+      if(!printRender)dimLabels.push(Object.assign({shape:s,field:'cornerR',px:lEx3+(_r3Right?1:-1)*(tw3/2+4),py:lEy3},_lblDrag(s,'r_'+ck)));
     });
   }
 }
@@ -2268,13 +2284,14 @@ function drawDimsCircle(s,col){
   var label='Φ '+_fmtD(s.r*2);
   var dcol=printRender?'#1565C0':'#E53935';
   var ahsz=printRender?8:5;
-  // 우상단 45° 방향
+  // 우상단 45° 방향 (끌어서 옮겼으면 그 자리 쪽으로 지시선)
   var ang=-Math.PI/4;
+  var extLen=printRender?52:34;
+  var lx0=cx+Math.cos(ang)*(cr+extLen),ly0=cy+Math.sin(ang)*(cr+extLen);
+  if(!printRender){var _po=_lblOff(s,'phi');if(_po[0]||_po[1]){lx0+=_po[0];ly0+=_po[1];ang=Math.atan2(ly0-cy,lx0-cx);extLen=Math.max(8,Math.hypot(lx0-cx,ly0-cy)-cr);}}
   var dx=Math.cos(ang),dy_=Math.sin(ang);
   // 중심→원호 끝점
   var ex=cx+dx*cr,ey=cy+dy_*cr;
-  // 연장선 길이
-  var extLen=printRender?52:34;
   var lx=ex+dx*extLen,ly=ey+dy_*extLen;
   ctx.strokeStyle=dcol;ctx.lineWidth=printRender?1.5:1;ctx.setLineDash([3,3]);
   ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
@@ -2288,12 +2305,14 @@ function drawDimsCircle(s,col){
   var gap=printRender?12:4;
   var tx_=lx+Math.cos(ang)*(gap);
   var ty_=ly+Math.sin(ang)*(gap);
+  if(Math.cos(ang)<-0.01)tx_-=tw2+4; // 왼쪽으로 뺀 지시선이면 글자도 왼쪽에
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.9)';ctx.fillRect(tx_-2,ty_-7,tw2+6,14);}
   ctx.fillStyle=dcol;ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText(label,tx_,ty_);
   ctx.restore();
   if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(tx_-2,ty_-9,tw2+8,18);}
-  dimLabels.push({shape:s,field:'r',px:tx_,py:ty_,displayFactor:2,saveFactor:0.5});
+  // 클릭 = 지름 수정, 끌기 = 지시선·글자 자리 옮기기
+  dimLabels.push(Object.assign({shape:s,field:'r',px:tx_+tw2/2,py:ty_,displayFactor:2,saveFactor:0.5},_lblDrag(s,'phi')));
 }
 function drawDimsEllipse(s,col){
   var sel=isSelected(s);
@@ -2352,7 +2371,13 @@ function drawDimLine(s,preview){
     ctx.fillStyle=col;ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText(lbl_rp,0,0);
     ctx.restore();ctx.restore();
-    dimLabels.push({shape:s,field:'_dist',px:tx_,py:ty_});
+    // 글자 끌기 = 원 둘레를 따라 방향 돌리기 (R: 중심→끝점, Φ: 지름선 전체)
+    dimLabels.push({shape:s,field:'_dist',px:tx_+Math.cos(angle)*tw_rp/2,py:ty_+Math.sin(angle)*tw_rp/2,start:function(){return null;},
+      drag:function(ex,ey){
+        if(s.labelType==='phi'){var mxc=(s.x1+s.x2)/2,myc=(s.y1+s.y2)/2,rr=Math.hypot(s.x2-s.x1,s.y2-s.y1)/2,cc=toCanvas(mxc,myc),aa=Math.atan2(ey-cc[1],ex-cc[0]);
+          s.x1=mxc-Math.cos(aa)*rr;s.y1=myc-Math.sin(aa)*rr;s.x2=mxc+Math.cos(aa)*rr;s.y2=myc+Math.sin(aa)*rr;}
+        else{var rr2=Math.hypot(s.x2-s.x1,s.y2-s.y1),c0=toCanvas(s.x1,s.y1),a2=Math.atan2(ey-c0[1],ex-c0[0]);s.x2=s.x1+Math.cos(a2)*rr2;s.y2=s.y1+Math.sin(a2)*rr2;}
+      }});
     return;
   }
 
@@ -2374,7 +2399,10 @@ function drawDimLine(s,preview){
     if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx_a-tw_a/2-3,ty_a-8,tw_a+6,16);}
     else{ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText(lbl_a,tx_a,ty_a);}
     ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl_a,tx_a,ty_a);ctx.restore();
-    dimLabels.push({shape:s,field:'_dist',px:tx_a,py:ty_a});
+    // 글자 끌기 = 호 반지름 바꾸기 (꼭지점에서 멀어지면 커짐)
+    dimLabels.push({shape:s,field:'_dist',px:tx_a,py:ty_a,
+      start:function(){return{r0:Math.hypot(s.x2-s.x1,s.y2-s.y1),d0:Math.hypot(dimDragStartX-p1[0],dimDragStartY-p1[1])};},
+      drag:function(ex,ey,dx,dy,st){var rn=Math.max(5,st.r0+(Math.hypot(ex-p1[0],ey-p1[1])-st.d0)/scale),md=(s.a0||0)+(s.sweep||0)/2;s.x2=s.x1+Math.cos(md)*rn;s.y2=s.y1+Math.sin(md)*rn;}});
     return;
   }
 
@@ -2404,7 +2432,9 @@ function drawDimLine(s,preview){
   if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-7,dlbw*2,14);}
   else{ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(distLabel,0,0);}
   ctx.fillStyle=col;ctx.fillText(distLabel,0,0);_numUnderline(ctx,distLabel,0,0);ctx.restore();
-  dimLabels.push({shape:s,field:'_dist',px:mx2,py:my2});
+  // 글자 끌기 = 치수선을 법선 방향으로 옮기기 (치수선 자체를 끌면 전체 이동)
+  dimLabels.push({shape:s,field:'_dist',px:mx2,py:my2,start:function(){return s.offsetMm!=null?s.offsetMm:15;},
+    drag:function(ex,ey,dx,dy,o0){s.offsetMm=o0+(dx*cpx+dy*cpy)/scale;}});
 }
 
 // ─── 치수선 도구: 길이(두 점 → 마우스로 위치 → 클릭) / 각도(선 두 개 클릭 → 마우스로 위치 → 클릭) ───
@@ -4550,6 +4580,14 @@ function hitTestAll(mx,my){
 }
 var _cycleHitMx=null,_cycleHitMy=null,_cycleIdx=0;
 function ptLD(px,py,x1,y1,x2,y2){var dx2=x2-x1,dy2=y2-y1;if(!dx2&&!dy2)return Math.hypot(px-x1,py-y1);var t=Math.max(0,Math.min(1,((px-x1)*dx2+(py-y1)*dy2)/(dx2*dx2+dy2*dy2)));return Math.hypot(px-(x1+t*dx2),py-(y1+t*dy2));}
+// 끌어서 옮기는 치수 글자(각도·R·C·Φ·치수선 도구): dimLabels 항목에 start()/drag()를 달아 두면
+//   누르면 dimDragInfo가 되고, 끄는 동안 drag(ex,ey,dx,dy,st)가 도형에 위치를 기록 (클릭만 하면 예전처럼 값 편집/선택)
+// 지시선 글자 위치: s.lblOff[key] = [dx,dy] (기본 자리에서 px만큼)
+function _lblOff(s,key){var o=s.lblOff&&s.lblOff[key];return o?[o[0],o[1]]:[0,0];}
+function _lblDrag(s,key){
+  return{start:function(){return _lblOff(s,key);},
+    drag:function(ex,ey,dx,dy,st){s.lblOff=s.lblOff||{};s.lblOff[key]=[st[0]+dx,st[1]+dy];}};
+}
 // 선 길이 치수 위 커서: 치수가 움직이는 방향(선의 법선)에 맞는 양쪽 화살표
 function _lineDimCursor(d){
   var a=Math.atan2(d.n[1],d.n[0])*180/Math.PI;a=((a%180)+180)%180; // 0~180
@@ -4616,7 +4654,7 @@ cv.addEventListener('mousedown',function(e){
     // 여러 개 선택된 도형 위를 누르면 치수 글자보다 끌어 옮기기가 먼저 (선 길이 글자가 선 바로 옆이라 옮기려다 길이 편집이 열리던 것)
     var _onSel=selectedShapes.length>1&&(hitTestAll(mx,my).some(function(h){return selectedShapes.indexOf(h)>=0;})||(_lgAt&&_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;})));
     var dh=_onSel?null:hitDim(e.offsetX,e.offsetY);
-    if(dh&&dh.field!=='_dist'){
+    if(dh&&(dh.field!=='_dist'||dh.drag)){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}
       // 클릭=크기편집, 드래그=치수선 위치 이동 (mouseup에서 판단)
@@ -4711,7 +4749,7 @@ cv.addEventListener('mousedown',function(e){
   } else if(tool==='trim'){
     cv.focus();doTrim(mx,my);
 
-  } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&_h.lineDim;})()){
+  } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&(_h.lineDim||_h.drag);})()){
     // 선 절단 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
     var _hd=hitDim(e.offsetX,e.offsetY);
     selectedShapes=[_hd.shape];updatePropsPanel();
@@ -4877,12 +4915,12 @@ cv.addEventListener('mousemove',function(e){
     }
     var dh=hitDim(e.offsetX,e.offsetY);
     // 자동 치수선 레이블: w/h는 이동 가능 → move 커서, _dist는 text 커서 없음
-    var dimCur=(dh&&dh.field!=='_dist')?(dh.lineDim?_lineDimCursor(dh):(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text'))):null;
+    var dimCur=(dh&&(dh.field!=='_dist'||dh.drag))?(dh.lineDim?_lineDimCursor(dh):dh.drag?'move':(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text'))):null;
     cv.style.cursor=dimCur||(h?'move':'crosshair');
   } else if(tool==='line'&&!(lineChain&&drawStart)&&!dimDragInfo){
     // 선 절단 도구에서도 선 치수 위에서는 옮기기 화살표
     var dhl=hitDim(e.offsetX,e.offsetY);
-    cv.style.cursor=(dhl&&dhl.lineDim&&(!snapKind||snapKind==='grid'))?_lineDimCursor(dhl):'crosshair';
+    cv.style.cursor=(dhl&&(dhl.lineDim||dhl.drag)&&(!snapKind||snapKind==='grid'))?(dhl.lineDim?_lineDimCursor(dhl):'move'):'crosshair';
   } else if(!dimDragInfo){cv.style.cursor='crosshair';}
 
   lastMx=mx;lastMy=my;
@@ -4960,7 +4998,11 @@ document.addEventListener('mousemove',function(e){
     var _ds=dimDragInfo.shape;
     // 끄는 동안에도 자동 배치(autoAdjustDims)가 되돌리지 않게 먼저 "사용자가 옮김" 표시
     var isW=dimDragInfo.field==='w';dimDragSnap=null;
-    if(dimDragInfo.lineDim){
+    if(dimDragInfo.drag){
+      if(!dimDragInfo._st)dimDragInfo._st=dimDragInfo.start(ex,ey);
+      dimDragInfo.drag(ex,ey,_dx,_dy,dimDragInfo._st);
+    }
+    else if(dimDragInfo.lineDim){
       // 선 절단 길이 치수: 선에서 마우스까지 법선 거리(px) = 치수선 자리. 자동 자리 8px 안이면 자동으로
       if(dimDragInfo.off0==null)dimDragInfo.off0=_ds.dimOffPx!=null?_ds.dimOffPx:dimDragInfo.auto;
       var _n=dimDragInfo.n,_o=dimDragInfo.off0+_dx*_n[0]+_dy*_n[1];

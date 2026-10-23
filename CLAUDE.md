@@ -90,6 +90,9 @@
     이때 `_compactPageShapes`가 조각(+딸린 도형)을 원래 자리 대신 줄 맞춰 모은 복사본으로 바꿈(줄 폭을 바꿔 가며 도면 영역 `_DRW_AW×_DRW_AH`에 가장 크게, 간격 = 150px 상당 mm). 배치 안 된 조각은 따로 한 쪽.
     조각 번호는 `_autoPieceNums`를 `shapeNum`에 잠시 고정해 전체 기준 유지. 도면 쪽은 **항상 가로 A4**(`isPort=false`)
   - 밑면연마 띠는 50mm, 단 깊이가 더 큰 것(150×150 원클릭)은 그 깊이로·방향은 저장된 `inward`(가로선 +y, 세로선 +x)
+  - 끌어 옮기는 치수 글자 공통: `dimLabels` 항목에 `start()/drag(ex,ey,dx,dy,st)` (선택·선 절단 도구 mousedown → `dimDragInfo`, document mousemove가 호출).
+    지시선 글자 `s.lblOff[key]=[dx,dy]px`(`_lblOff/_lblDrag`, key: rc·r_코너·phi), 선 사이 각도 호 반지름 `line.angR{a|b}`(px),
+    치수선 도구: 길이=offsetMm, 각도=x2,y2(반지름), R/Φ=끝점 회전. 모두 편집 화면 전용(도면화는 자동 자리)
   - 편집 화면 선 길이 치수(`drawDimsLine`)는 끌어서 옮김: `s.dimOffPx`(px, 바깥쪽 +, 자동 자리 8px 안이면 지움 → 자동). 도면화는 자동 자리 그대로
   - 선 조각 가로/세로 선 치수는 `_lineDimPlan`으로 조각 상자 바깥 치수 줄(위·아래·왼·오)에 맞춤, 같은 쪽 범위가 겹치면 짧은 것부터 안쪽 줄 (DXF도 같음)
   - `_expDim`: 30px 미만 짧은 치수는 화살표를 바깥에서 안쪽으로, 글자는 화살표 너머
