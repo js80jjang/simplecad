@@ -6805,17 +6805,18 @@ function _drawCleanExport(){
       ctx.fillStyle=p.col[0];ctx.fillRect(a[0]+8,a[1]+8,bw,36);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,a[0]+8+bw/2,a[1]+26);
     });
   }
-  // ⑧ 범례 (밑면연마/고스라가 있을 때): 주황 빗금 = 밑면연마(50mm), 검정 ▲ = 고스라
-  if(stats.open||stats.gosra){
+  // ⑧ 범례 — 가공이 없어도 항상 (기본 양식): 실선 = 닫힘면, 주황 빗금 = 밑면연마(50mm), 검정 ▲ = 고스라, 빨간 ★ = 졸리컷
+  {
     var ly=cv.height-46,lx=60;
-    ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';
-    if(stats.open){
-      // 범례 견본: 가로 120px, 세로 28px 빗금 띠 (화면 좌표로 직접)
-      ctx.save();ctx.beginPath();ctx.rect(lx,ly-14,120,28);ctx.strokeStyle=_GRIND_COL;ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();ctx.clip();
-      ctx.beginPath();for(var hx=lx-28;hx<lx+120;hx+=10){ctx.moveTo(hx,ly+14);ctx.lineTo(hx+28,ly-14);}ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
-      ctx.fillStyle='#333';ctx.fillText('밑면연마 ('+_GRIND_MM+'mm)',lx+136,ly);lx+=136+ctx.measureText('밑면연마 ('+_GRIND_MM+'mm)').width+60;
-    }
-    if(stats.gosra){drawTriangle(lx+16,ly,-Math.PI/2,22,'#222222');ctx.fillStyle='#333';ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('고스라',lx+44,ly);}
+    function lgText(t,x){ctx.fillStyle='#333';ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,x,ly);return x+ctx.measureText(t).width+60;}
+    ctx.strokeStyle='#555';ctx.lineWidth=4;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+120,ly);ctx.stroke();
+    lx=lgText('닫힘면',lx+136);
+    // 밑면연마 견본: 가로 120px, 세로 28px 빗금 띠 (화면 좌표로 직접)
+    ctx.save();ctx.beginPath();ctx.rect(lx,ly-14,120,28);ctx.strokeStyle=_GRIND_COL;ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();ctx.clip();
+    ctx.beginPath();for(var hx=lx-28;hx<lx+120;hx+=10){ctx.moveTo(hx,ly+14);ctx.lineTo(hx+28,ly-14);}ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
+    lx=lgText('밑면연마 ('+_GRIND_MM+'mm)',lx+136);
+    drawTriangle(lx+16,ly,-Math.PI/2,22,'#222222');lx=lgText('고스라',lx+44);
+    drawStar(lx+16,ly,24,'#E53935');lgText('졸리컷',lx+46);
   }
 }
 // 선 조각의 선들을 이어 닫힌 다각형(world 점 목록)으로. 실패하면 null
@@ -7092,7 +7093,7 @@ function _renderDrawingImage(pageLine){
   shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}});
   if(!allBB)return null;
   var mmW=Math.max(1,allBB.r-allBB.l),mmH=Math.max(1,allBB.b-allBB.t);
-  var isPort=mmH>=mmW; // 방향 자동 결정
+  var isPort=false; // 도면은 모두 가로(가로폭이 긴 A4)
   var svScale=scale,svOffX=offsetX,svOffY=offsetY,_origW=mainCv.width,_origH=mainCv.height;
   // 캡처 캔버스를 A4 도면 영역 비율(가로 ≈267×171mm, 세로 ≈184×258mm)로 고정 크기 렌더링.
   // 화면 캔버스 비율을 그대로 쓰면 인쇄 시 이미지가 페이지 높이를 넘쳐 다음 장으로 밀림.
