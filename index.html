@@ -829,10 +829,12 @@ function rememberHist(k,v){
 setTimeout(renderHistories,0);
 // 업체명 + 주소 한 줄 (도면화·DXF 양식용)
 function _companySite(){var c=(document.getElementById('company-name')||{}).value||'',a=(document.getElementById('site-addr')||{}).value||'';c=c.trim();a=a.trim();return c&&a?c+' - '+a:(c||a);}
+// 날짜 → 20261021 (파일 이름용)
+function _ymd(d){return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
 // 저장 파일 이름: 업체명-주소-작성일(20261021). 둘 다 비어 있으면 제품명
 function _saveBaseName(){
   var c=((document.getElementById('company-name')||{}).value||'').trim(),a=((document.getElementById('site-addr')||{}).value||'').trim();
-  var d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  var ds=_ymd(new Date());
   var parts=[c,a].filter(Boolean);if(!parts.length)parts=[((products[0]&&products[0].name)||'도면').trim()||'도면'];
   parts.push(ds);
   return parts.join('-').replace(/[\\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim();
@@ -852,9 +854,8 @@ function makeShape(k,p){var base={id:nextId++,kind:k,ops:[]};if(k==='gosramark')
 // 모따기: 사각형 엣지 클릭 감지
 function syncGroupShapes(s){
   if(!s.groupId||s.kind!=='rect')return;
-  var _rot=s.rotation||0,_cx=s.x+s.w/2,_cy=s.y+s.h/2;
-  var _co=Math.cos(_rot),_si=Math.sin(_rot),_hw=s.w/2,_hh=s.h/2;
-  function _sg(dx,dy){return[_cx+dx*_co-dy*_si,_cy+dx*_si+dy*_co];}
+  var _hw=s.w/2,_hh=s.h/2,_f=_rectXf(s);
+  function _sg(dx,dy){var p=_f(dx,dy);return[p.x,p.y];}
   getGroupShapes(s).forEach(function(gs){
     if(gs===s)return;
     var r=gs.groupRole,a,b;
@@ -1105,9 +1106,7 @@ function snapPoints(excl){
   var _exclArr=Array.isArray(excl)?excl:(excl?[excl]:null);
   for(var i=0;i<shapes.length;i++){var s=shapes[i];if(_exclArr&&_exclArr.indexOf(s)>=0)continue;
     if(s.kind==='rect'){
-      var _rot=s.rotation||0,_cx=s.x+s.w/2,_cy=s.y+s.h/2;
-      var _co=Math.cos(_rot),_si=Math.sin(_rot),_hw=s.w/2,_hh=s.h/2;
-      function _rp(dx,dy){return{x:_cx+dx*_co-dy*_si,y:_cy+dx*_si+dy*_co};}
+      var _cx=s.x+s.w/2,_cy=s.y+s.h/2,_hw=s.w/2,_hh=s.h/2,_rp=_rectXf(s);
       var _tl=_rp(-_hw,-_hh),_tr=_rp(_hw,-_hh),_br=_rp(_hw,_hh),_bl=_rp(-_hw,_hh);
       var _tm=_rp(0,-_hh),_rm=_rp(_hw,0),_bm=_rp(0,_hh),_lm=_rp(-_hw,0);
       pts.push({x:_tl.x,y:_tl.y,k:'e'},{x:_tr.x,y:_tr.y,k:'e'},{x:_br.x,y:_br.y,k:'e'},{x:_bl.x,y:_bl.y,k:'e'});
@@ -1147,11 +1146,7 @@ function applySnap(cx,cy,excl){
     var etol=10/scale,bestEd=etol+1,esx=mx,esy=my;
     shapes.forEach(function(sh){
       if(sh.kind!=='rect')return;
-      var _r2=sh.rotation||0,_cx2=sh.x+sh.w/2,_cy2=sh.y+sh.h/2;
-      var _co2=Math.cos(_r2),_si2=Math.sin(_r2),_hw2=sh.w/2,_hh2=sh.h/2;
-      function _rp2(dx,dy){return[_cx2+dx*_co2-dy*_si2,_cy2+dx*_si2+dy*_co2];}
-      var _c0=_rp2(-_hw2,-_hh2),_c1=_rp2(_hw2,-_hh2),_c2=_rp2(_hw2,_hh2),_c3=_rp2(-_hw2,_hh2);
-      [_c0,_c1,_c2,_c3].forEach(function(_a,_i,_arr){
+      _rectCorners(sh).map(function(p){return[p.x,p.y];}).forEach(function(_a,_i,_arr){
         var _b=_arr[(_i+1)%4];
         var _dx=_b[0]-_a[0],_dy=_b[1]-_a[1],_l2=_dx*_dx+_dy*_dy;
         if(_l2<0.0001)return;
@@ -1189,8 +1184,7 @@ function doMagnet(arr){
 // ═══ 내부 도형 감지 ═══
 function getBBox(s){
   if(s.kind==='rect'){
-    var rot=s.rotation||0;
-    if(rot){var cx=s.x+s.w/2,cy=s.y+s.h/2,hw=s.w/2,hh=s.h/2,cos=Math.cos(rot),sin=Math.sin(rot);var xs=[cx-hw*cos+hh*sin,cx+hw*cos+hh*sin,cx+hw*cos-hh*sin,cx-hw*cos-hh*sin];var ys=[cy-hw*sin-hh*cos,cy+hw*sin-hh*cos,cy+hw*sin+hh*cos,cy-hw*sin+hh*cos];return{l:Math.min.apply(null,xs),t:Math.min.apply(null,ys),r:Math.max.apply(null,xs),b:Math.max.apply(null,ys),mx:cx,my:cy};}
+    if(s.rotation){var P=_rectCorners(s),xs=P.map(function(p){return p.x;}),ys=P.map(function(p){return p.y;});return{l:Math.min.apply(null,xs),t:Math.min.apply(null,ys),r:Math.max.apply(null,xs),b:Math.max.apply(null,ys),mx:s.x+s.w/2,my:s.y+s.h/2};}
     return{l:s.x,t:s.y,r:s.x+s.w,b:s.y+s.h,mx:s.x+s.w/2,my:s.y+s.h/2};
   }
   if(s.kind==='circle'||s.kind==='hole')return{l:s.cx-s.r,t:s.cy-s.r,r:s.cx+s.r,b:s.cy+s.r,mx:s.cx,my:s.cy};
@@ -1208,12 +1202,15 @@ function getBBoxAny(s){
   if(s.kind==='linkmark'){var wp=[].concat.apply([],_linkWaves(s,16)),xs=wp.map(function(p){return p[0];}),ys=wp.map(function(p){return p[1];});return{l:Math.min.apply(null,xs),t:Math.min.apply(null,ys),r:Math.max.apply(null,xs),b:Math.max.apply(null,ys)};}
   return getBBox(s);
 }
-// 회전된 rect의 4꼭짓점 (canvas px)
-function rotRectCorners(s){
-  var cx=s.x+s.w/2,cy=s.y+s.h/2,hw=s.w/2,hh=s.h/2;
-  var rot=s.rotation||0,cos=Math.cos(rot),sin=Math.sin(rot);
-  return[toCanvas(cx-hw*cos+hh*sin,cy-hw*sin-hh*cos),toCanvas(cx+hw*cos+hh*sin,cy+hw*sin-hh*cos),toCanvas(cx+hw*cos-hh*sin,cy+hw*sin+hh*cos),toCanvas(cx-hw*cos-hh*sin,cy-hw*sin+hh*cos)];
+// rect 로컬 좌표(중심 기준 dx,dy) → 도면 좌표(mm, 회전 포함). 꼭짓점·변 계산 공통
+function _rectXf(s){
+  var cx=s.x+s.w/2,cy=s.y+s.h/2,r=s.rotation||0,co=Math.cos(r),si=Math.sin(r);
+  return function(dx,dy){return{x:cx+dx*co-dy*si,y:cy+dx*si+dy*co};};
 }
+// rect 꼭짓점 4개(mm): 로컬 왼쪽 위·오른쪽 위·오른쪽 아래·왼쪽 아래 순
+function _rectCorners(s){var f=_rectXf(s),hw=s.w/2,hh=s.h/2;return[f(-hw,-hh),f(hw,-hh),f(hw,hh),f(-hw,hh)];}
+// 회전된 rect의 4꼭짓점 (canvas px)
+function rotRectCorners(s){return _rectCorners(s).map(function(p){return toCanvas(p.x,p.y);});}
 function isInsideRect(inner,outer){
   var ib=getBBox(inner);if(!ib)return false;
   var rot=outer.rotation||0;
@@ -1225,6 +1222,9 @@ function isInsideRect(inner,outer){
   var cx=outer.x+outer.w/2,cy=outer.y+outer.h/2,co=Math.cos(-rot),si=Math.sin(-rot),hw=Math.abs(outer.w)/2+0.01,hh=Math.abs(outer.h)/2+0.01;
   return pts.every(function(p){var dx=p[0]-cx,dy=p[1]-cy;return Math.abs(dx*co-dy*si)<=hw&&Math.abs(dx*si+dy*co)<=hh;});
 }
+// 주석·표시용 도형(치수선·밑면연마·졸리컷·고스라·글자·화살표·연결 표시) — 조각 경계·트림·교점 판정에서 빼는 것들
+var _ANNOT_KINDS={dimline:1,grindregion:1,jollymark:1,gosramark:1,note:1,arrow:1,linkmark:1};
+function _isAnnot(s){return !!_ANNOT_KINDS[s.kind];}
 // 회전이 90°의 배수인지 (회전 사각형을 축정렬 상자로 다뤄도 되는지)
 function _rightAngle(rot){return Math.abs(Math.sin(2*(rot||0)))<1e-3;}
 // 180° 돌려도 숫자로 읽히는데 값이 달라지는 수(6↔9, 18↔81, 66↔99 …)인지
@@ -1649,6 +1649,8 @@ function drawJollyMark(s,preview){
 
 // 고스라 삼각형 방향(꼭지점 = 방향): 사각/선 절단 조각 변 → 바깥에서 조각 안쪽을 향함,
 // 싱크볼/쿡탑(타공부) 변 → 타공부 안쪽에서 선을 향함. 반환 {mx,my(변 중점, mm), dx,dy(꼭지점 방향 단위벡터)}
+// 타공부 사각형인지: 싱크볼/쿡탑(main·applianceType) 또는 다른 일반 사각형 안에 든 사각형. rects = 도면의 사각형 목록
+function _isCutRect(s,rects){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
 function _gosraDir(m){
   var L=Math.hypot(m.x2-m.x1,m.y2-m.y1);if(L<0.5)return null;
   var mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2,nx=-(m.y2-m.y1)/L,ny=(m.x2-m.x1)/L,e=Math.max(2,Math.min(10,L/4));
@@ -1658,7 +1660,7 @@ function _gosraDir(m){
     return Math.abs(dx)<Math.abs(s.w)/2&&Math.abs(dy)<Math.abs(s.h)/2;
   }
   var rects=shapes.filter(function(s){return s.kind==='rect';});
-  function isCut(s){return s.groupRole==='main'||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
+  function isCut(s){return _isCutRect(s,rects);}
   function inCut(x,y){return rects.some(function(s){return isCut(s)&&inRectS(s,x,y);});}
   function inPiece(x,y){
     if(rects.some(function(s){return !isCut(s)&&inRectS(s,x,y);}))return true;
@@ -2087,6 +2089,21 @@ function _uprightAng(rot,local){
   return(c<-1e-3||(Math.abs(c)<=1e-3&&s<0))?local+Math.PI:local;
 }
 function _DIM_AH(){return printRender?18:8;} // 조각 가로/세로 치수 화살촉 크기(px)
+// R·C 지시선 글자: 코너(cAx,cAy)에서 기본 끝점(lEx,lEy)까지 점선 + 끝에 글자. 편집 화면에선 끌어 옮긴 자리(lblOff[key]) 반영·끌기 등록
+function _drawRLeader(s,cAx,cAy,lEx,lEy,lbl,col,key,field){
+  if(!printRender){var o=_lblOff(s,key);lEx+=o[0];lEy+=o[1];}
+  var right=lEx>=cAx; // 글자는 지시선 끝에서 바깥쪽으로
+  ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
+  ctx.beginPath();ctx.moveTo(cAx,cAy);ctx.lineTo(lEx,lEy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.save();
+  ctx.font=(printRender?'bold 40px':'bold 11px')+' Consolas';
+  var tw=ctx.measureText(lbl).width,bh=printRender?40:14,pad=printRender?16:6;
+  if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';ctx.fillRect(right?lEx+3:lEx-tw-pad-2,lEy-bh/2,tw+pad,bh);}
+  ctx.fillStyle=col;ctx.textAlign=right?'left':'right';ctx.textBaseline='middle';ctx.fillText(lbl,right?lEx+4:lEx-3,lEy);
+  ctx.restore();
+  if(!printRender)dimLabels.push(Object.assign({shape:s,field:field,px:lEx+(right?1:-1)*(tw/2+4),py:lEy},_lblDrag(s,key)));
+}
 function drawDims(s,col){
   // 도면화 모드: 싱크볼/쿡탑 → 도형 내부 중앙에 치수 텍스트 표시
   if(_exportLegend!==null&&s.groupId&&s.groupRole==='main'){
@@ -2220,23 +2237,7 @@ function drawDims(s,col){
     }
     var _rcp_=toCanvas(_rbst_.wx,_rbst_.wy);
     var cAx=_rcp_[0],cAy=_rcp_[1];
-    var lEx_=cAx+_rbst_.dx*lLen_*Math.SQRT1_2,lEy_=cAy+_rbst_.dy*lLen_*Math.SQRT1_2;
-    if(!printRender){var _ro=_lblOff(s,'rc');lEx_+=_ro[0];lEy_+=_ro[1];} // 끌어서 옮긴 자리
-    var _rRight=lEx_>=cAx; // 글자는 지시선 끝에서 바깥쪽으로
-    ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
-    ctx.beginPath();ctx.moveTo(cAx,cAy);ctx.lineTo(lEx_,lEy_);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.save();
-    ctx.font=(printRender?'bold 40px':'bold 11px')+' Consolas';
-    var tw_rc=ctx.measureText(lbl_rc).width;
-    var bh_rc=printRender?40:14;var pad_rc=printRender?16:6;
-    if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
-    if(_rRight)ctx.fillRect(lEx_+3,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);
-    else ctx.fillRect(lEx_-tw_rc-pad_rc-2,lEy_-bh_rc/2,tw_rc+pad_rc,bh_rc);}
-    if(_rRight){ctx.fillStyle=cCol_;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_+4,lEy_);}
-    else{ctx.fillStyle=cCol_;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl_rc,lEx_-3,lEy_);}
-    ctx.restore();
-    dimLabels.push(Object.assign({shape:s,field:'cornerSize',px:lEx_+(_rRight?1:-1)*(tw_rc/2+4),py:lEy_},_lblDrag(s,'rc')));
+    _drawRLeader(s,cAx,cAy,cAx+_rbst_.dx*lLen_*Math.SQRT1_2,cAy+_rbst_.dy*lLen_*Math.SQRT1_2,lbl_rc,cCol_,'rc','cornerSize');
   }
   // 개별 코너 라운드(s.corners) 자동 치수 표시
   if(s.corners){
@@ -2257,23 +2258,8 @@ function drawDims(s,col){
       }
       var _cp3f=toCanvas(cm3.wx,cm3.wy);
       var cAx3=_cp3f[0],cAy3=_cp3f[1];
-      var lEx3=cAx3+_bd3.dx*lLen3*Math.SQRT1_2,lEy3=cAy3+_bd3.dy*lLen3*Math.SQRT1_2;
-      if(!printRender){var _ro3=_lblOff(s,'r_'+ck);lEx3+=_ro3[0];lEy3+=_ro3[1];} // 끌어서 옮긴 자리
-      var _r3Right=lEx3>=cAx3;
       var cCol3=printRender?'#1565C0':(isSelected(s)?'#FFD740':'#EF9A9A');
-      ctx.strokeStyle='#E53935';ctx.lineWidth=0.8;ctx.setLineDash([2,2]);
-      ctx.beginPath();ctx.moveTo(cAx3,cAy3);ctx.lineTo(lEx3,lEy3);ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.save();
-      ctx.font=(printRender?'bold 40px':'bold 11px')+' Consolas';
-      var tw3=ctx.measureText(lbl3).width,bh3=printRender?40:14,pad3=printRender?16:6;
-      if(!printRender){ctx.fillStyle='rgba(30,42,53,0.92)';
-      if(_r3Right)ctx.fillRect(lEx3+3,lEy3-bh3/2,tw3+pad3,bh3);
-      else ctx.fillRect(lEx3-tw3-pad3-2,lEy3-bh3/2,tw3+pad3,bh3);}
-      if(_r3Right){ctx.fillStyle=cCol3;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3+4,lEy3);}
-      else{ctx.fillStyle=cCol3;ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(lbl3,lEx3-3,lEy3);}
-      ctx.restore();
-      if(!printRender)dimLabels.push(Object.assign({shape:s,field:'cornerR',px:lEx3+(_r3Right?1:-1)*(tw3/2+4),py:lEy3},_lblDrag(s,'r_'+ck)));
+      _drawRLeader(s,cAx3,cAy3,cAx3+_bd3.dx*lLen3*Math.SQRT1_2,cAy3+_bd3.dy*lLen3*Math.SQRT1_2,lbl3,cCol3,'r_'+ck,'cornerR');
     });
   }
 }
@@ -2624,7 +2610,7 @@ function _boundaryBBox(excludeInner){
   function _upd(x,y){if(x<l)l=x;if(x>r)r=x;if(y<t)t=y;if(y>b)b=y;found=true;}
   shapes.forEach(function(s){
     if(s===excludeInner)return;
-    if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
+    if(_isAnnot(s))return;
     if(s.kind==='circle'||s.kind==='hole')return; // 홀/타공은 외곽 경계로 취급하지 않음
     if(s.groupId)return; // 싱크볼/쿡탑 자신 및 그 하위 마크는 외곽 판단에서 제외
     if(s.kind==='line'){_upd(s.x1,s.y1);_upd(s.x2,s.y2);return;}
@@ -2638,7 +2624,7 @@ function _boundaryBBox(excludeInner){
 function drawNestDims(){
   for(var j=0;j<shapes.length;j++){
     var inner=shapes[j];
-    if(inner.kind==='dimline'||inner.kind==='grindregion'||inner.kind==='jollymark'||inner.kind==='gosramark'||inner.kind==='note'||inner.kind==='arrow'||inner.kind==='linkmark')continue;
+    if(_isAnnot(inner))continue;
     // 원/타공 여부 먼저 판단 (bestOuter 루프에서 사용)
     var isCirc=(inner.kind==='circle'||inner.kind==='hole');
     // 가장 가까운(면적 최소) 외곽 rect 하나만 기준
@@ -2815,7 +2801,7 @@ function clearAll(){
   if(!confirm('모든 도형을 삭제하시겠습니까?'))return;
   saveHistory();
   shapes=[];selectedShapes=[];
-  redraw();updateCost();updatePropsPanel();
+  redraw();calcCost();updatePropsPanel(); // (예전 updateCost는 없는 함수라 여기서 멈춰 가공비가 안 바뀌었음)
 }
 
 // 새로만들기: 도형 + 작업 정보(업체명/주소·제품·출고일) + 기타 비용 + 저장된 온장 배치를 비움. 단가·등급·온장 칸은 그대로 (되돌리기로 도형은 복구)
@@ -3332,7 +3318,7 @@ function _dxfCollect(H){
     ents.push({t:'TEXT',L:L,col:col,p:Q(x,y),h:h,s:String(s),deg:deg,align:'c'});
   }
   var rects=shapes.filter(function(s){return s.kind==='rect';});
-  function isCut(s){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
+  function isCut(s){return _isCutRect(s,rects);}
   function inAnyRect(x,y){return rects.some(function(o){return !isCut(o)&&x>=Math.min(o.x,o.x+o.w)&&x<=Math.max(o.x,o.x+o.w)&&y>=Math.min(o.y,o.y+o.h)&&y<=Math.max(o.y,o.y+o.h);});}
   // 치수: p1→p2, nrm(단위 법선) 방향으로 off 떨어진 치수선 + 보조선 + 양 화살촉 + 글자
   function dim(p1,p2,nrm,off,label,e1,e2){ // e1/e2: 보조선을 p1/p2에서 법선 반대쪽으로 더 늘릴 길이 (가로/세로 치수선)
@@ -3897,8 +3883,7 @@ function _trimRectGeo(s){
     if(s.corners){g.corners={};K.forEach(function(ck,i){if(s.corners[K[(i-k+4)%4]])g.corners[ck]=s.corners[K[(i-k+4)%4]];});}
     return g;
   }
-  var cx=s.x+s.w/2,cy=s.y+s.h/2,hw=s.w/2,hh=s.h/2,cos=Math.cos(rot),sin=Math.sin(rot);
-  g._pts=[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(function(p){return{x:cx+p[0]*cos-p[1]*sin,y:cy+p[0]*sin+p[1]*cos};});
+  g._pts=_rectCorners(s);
   g.cornerType='none';g.cornerSize=0;
   return g;
 }
@@ -3909,11 +3894,12 @@ function _trimRectEdges(g){
          {ax:P[2].x,ay:P[2].y,bx:P[3].x,by:P[3].y,s:'bottom',cA:'br',cB:'bl'},
          {ax:P[3].x,ay:P[3].y,bx:P[0].x,by:P[0].y,s:'left',cA:'bl',cB:'tl'}];
 }
-function doTrim(mx,my){
-  var tol=10/scale;
-  var hit=null,hitDist=tol+1,hitT=0.5,hitEdge=null,hitGeo=null;
+// (mx,my)에서 tol 안의 가장 가까운 선/사각형 변 (트림·트림/라운드 호버 공통). 사각형은 화면에 보이는(회전 포함) 변
+//   반환 {s:도형, e:{ax,ay,bx,by,side}, t:변 위 위치(0~1), d:거리, g:_trimRectGeo(사각형만)} 또는 null
+function _nearestEdge(mx,my,tol){
+  var best=null;
   shapes.forEach(function(s){
-    if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
+    if(_isAnnot(s))return;
     var edges=[],g=null;
     if(s.x1!==undefined){
       edges=[{ax:s.x1,ay:s.y1,bx:s.x2,by:s.y2,side:'line'}];
@@ -3925,12 +3911,15 @@ function doTrim(mx,my){
       var dx=e.bx-e.ax,dy=e.by-e.ay,len2=dx*dx+dy*dy;
       if(len2<1)return;
       var t=Math.max(0,Math.min(1,((mx-e.ax)*dx+(my-e.ay)*dy)/len2));
-      var px=e.ax+t*dx,py=e.ay+t*dy;
-      var d=Math.hypot(mx-px,my-py);
-      if(d<hitDist){hitDist=d;hit=s;hitT=t;hitEdge=e;hitGeo=g;}
+      var d=Math.hypot(mx-(e.ax+t*dx),my-(e.ay+t*dy));
+      if(d<=tol&&(!best||d<best.d))best={s:s,e:e,t:t,d:d,g:g};
     });
   });
-  if(!hit||!hitEdge)return;
+  return best;
+}
+function doTrim(mx,my){
+  var ne=_nearestEdge(mx,my,10/scale);if(!ne)return;
+  var hit=ne.s,hitT=ne.t,hitEdge=ne.e,hitGeo=ne.g;
   var hx1=hitEdge.ax,hy1=hitEdge.ay,hx2=hitEdge.bx,hy2=hitEdge.by;
   var hlen=Math.hypot(hx2-hx1,hy2-hy1);if(hlen<1)return;
 
@@ -3950,8 +3939,7 @@ function doTrim(mx,my){
   // 다른 도형과의 교점 수집
   var ixs=[];
   shapes.forEach(function(s){
-    if(s===hit)return;
-    if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
+    if(s===hit||_isAnnot(s))return;
     var edges=[];
     if(s.kind==='rect'){
       edges=_trimRectEdges(_trimRectGeo(s)).map(function(e){return[e.ax,e.ay,e.bx,e.by];});
@@ -4943,32 +4931,9 @@ cv.addEventListener('mousemove',function(e){
 
   // trim/fillet 호버 감지
   if(tool==='trim'||tool==='fillet'){
-    var _htol=12/scale;
-    var _nhs=null,_nhe=null,_nhd=_htol+1;
-    shapes.forEach(function(s){
-      if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
-      var _edges=[];
-      if(s.x1!==undefined){
-        _edges=[{ax:s.x1,ay:s.y1,bx:s.x2,by:s.y2}];
-      } else if(s.kind==='rect'){
-        _edges=[
-          {ax:s.x,     ay:s.y,      bx:s.x+s.w, by:s.y},
-          {ax:s.x+s.w, ay:s.y,      bx:s.x+s.w, by:s.y+s.h},
-          {ax:s.x,     ay:s.y+s.h,  bx:s.x+s.w, by:s.y+s.h},
-          {ax:s.x,     ay:s.y,      bx:s.x,      by:s.y+s.h}
-        ];
-      }
-      _edges.forEach(function(e){
-        var dx=e.bx-e.ax,dy=e.by-e.ay,len2=dx*dx+dy*dy;
-        if(len2<1)return;
-        var t=Math.max(0,Math.min(1,((mx-e.ax)*dx+(my-e.ay)*dy)/len2));
-        var px=e.ax+t*dx,py=e.ay+t*dy;
-        var d=Math.hypot(mx-px,my-py);
-        if(d<_nhd){_nhd=d;_nhs=s;_nhe=e;}
-      });
-    });
-    trimHoverShape=_nhd<=_htol?_nhs:null;
-    trimHoverEdge=_nhd<=_htol?_nhe:null;
+    var _ne=_nearestEdge(mx,my,12/scale); // 트림과 같은 판정 (돌린 사각형도 보이는 변)
+    trimHoverShape=_ne?_ne.s:null;
+    trimHoverEdge=_ne?_ne.e:null;
   } else {
     trimHoverShape=null;trimHoverEdge=null;
   }
@@ -5294,7 +5259,7 @@ function _applyAllPrices(all,persist){
 }
 // 다른 PC로 옮길 단가 파일 내보내기
 function exportTierPrices(){
-  var d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  var d=new Date(),ds=_ymd(d);
   var blob=new Blob([JSON.stringify({type:'scd-prices',version:1,saved:d.toISOString(),prices:_currentAllPrices()},null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='단가설정_'+ds+'.json';a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
@@ -5435,6 +5400,7 @@ function deleteSelected(){
   selectedShapes=[];hoverShape=null;filletSel=[];
   updatePropsPanel();redraw();calcCost();
 }
+var _DIM_HDR='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>'; // 속성 칸 '치수 표시' 제목
 function _dimToggleBtn(key,label,hidden){
   var on=!hidden;
   var bc=on?'#FFD740':'#37474F',bg=on?'rgba(255,215,64,0.15)':'#1a2530',fc=on?'#FFD740':'#546E7A';
@@ -5511,25 +5477,16 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(_dimSt){_dimSt=null;redraw();return;} // 치수선 그리는 중이면 그것만 취소
     selBox=null;drawStart=null;filletSel=[];
-    // 그리기 도구 → 선택 도구로 복귀
-    if(tool&&tool!=='select'){
-      tool='select';
-      document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
-      var _sb=document.querySelector('.tool-btn[data-tool="select"]');
-      if(_sb)_sb.classList.add('active');
-      document.getElementById('fillet-sub').style.display='none';
-      document.getElementById('circle-sub').style.display='none';
-      document.getElementById('circlecut-sub').style.display='none';
-      document.getElementById('note-sub').style.display='none';
-      document.getElementById('arrow-sub').style.display='none';
-      document.getElementById('link-sub').style.display='none';
-    }
+    // 그리기 도구 → 선택 도구로 복귀 (도구 버튼과 같은 처리: 보조 칸 숨기기·모드 초기화 등)
+    if(tool&&tool!=='select'){var _sb=document.querySelector('.tool-btn[data-tool="select"]');if(_sb)_sb.click();}
     redraw();
   }
 });
 document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;}});
 
 // ═══ 도구 버튼 ═══
+var _TOOL_SUBS={fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
+var _TOOL_FOCUS={fillet:'fillet-r',circle:'circle-phi',circlecut:'circlecut-phi',grind:'grind-depth'}; // 도구 → 먼저 입력할 칸
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
@@ -5537,32 +5494,19 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
     tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;
     document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
-    document.getElementById('fillet-sub').style.display=(tool==='fillet')?'block':'none';
-    document.getElementById('circle-sub').style.display=(tool==='circle')?'block':'none';
-    document.getElementById('circlecut-sub').style.display=(tool==='circlecut')?'block':'none';
-    document.getElementById('grind-sub').style.display=(tool==='grind')?'block':'none';
-    document.getElementById('dimline-sub').style.display=(tool==='dimline')?'block':'none';
-    document.getElementById('note-sub').style.display=(tool==='note')?'block':'none';
-    document.getElementById('arrow-sub').style.display=(tool==='arrow')?'block':'none';
-    document.getElementById('link-sub').style.display=(tool==='linkmark')?'block':'none';
+    // 도구별 보조 칸: 고른 도구 것만 보이기
+    Object.keys(_TOOL_SUBS).forEach(function(k){document.getElementById(_TOOL_SUBS[k]).style.display=(tool===k)?'block':'none';});
     if(tool==='note'||tool==='arrow'||tool==='linkmark')_renderAnnCols();
-    if(tool!=='grind'){grind150mode=false;grind100mode=false;var g150b=document.getElementById('grind-150-btn');if(g150b)g150b.style.background='#37474F';var g100b=document.getElementById('grind-100-btn');if(g100b)g100b.style.background='#37474F';}
-    if(tool==='fillet')setTimeout(function(){document.getElementById('fillet-r').focus();document.getElementById('fillet-r').select();},50);
-    if(tool==='circle')setTimeout(function(){document.getElementById('circle-phi').focus();document.getElementById('circle-phi').select();},50);
-    if(tool==='circlecut')setTimeout(function(){document.getElementById('circlecut-phi').focus();document.getElementById('circlecut-phi').select();},50);
-    if(tool==='grind')setTimeout(function(){document.getElementById('grind-depth').focus();document.getElementById('grind-depth').select();},50);
+    if(tool!=='grind'){grind150mode=false;grind100mode=false;['grind-150-btn','grind-100-btn'].forEach(function(id){var gb=document.getElementById(id);if(gb)gb.style.background='#37474F';});}
+    // 숫자부터 입력하는 도구는 입력칸에 바로 커서
+    if(_TOOL_FOCUS[tool])setTimeout(function(){var fi=document.getElementById(_TOOL_FOCUS[tool]);if(fi){fi.focus();fi.select();}},50);
   };
 });
-document.getElementById('ck-ortho').onchange=function(e){orthoMode=e.target.checked;ortho=orthoMode;};
-document.getElementById('ck-grid').onchange=function(e){gridSnap=e.target.checked;};
-document.getElementById('ck-obj').onchange=function(e){objSnap=e.target.checked;};
-document.getElementById('ck-magnet').onchange=function(e){magnetSnapOn=e.target.checked;};
-document.getElementById('ck-circlecenter').onchange=function(e){snapCircleCenter=e.target.checked;};
-document.getElementById('ck-rectcenter').onchange=function(e){snapRectCenter=e.target.checked;};
-document.getElementById('ck-intersect').onchange=function(e){snapIntersect=e.target.checked;};
-document.getElementById('ck-extension').onchange=function(e){snapExtension=e.target.checked;};
-document.getElementById('ck-virtinter').onchange=function(e){snapVirtInter=e.target.checked;};
-document.getElementById('ck-parallel').onchange=function(e){snapParallel=e.target.checked;};
+// 스냅 체크박스 → 설정 변수
+[['ck-ortho',function(v){orthoMode=v;ortho=v;}],['ck-grid',function(v){gridSnap=v;}],['ck-obj',function(v){objSnap=v;}],['ck-magnet',function(v){magnetSnapOn=v;}],
+ ['ck-circlecenter',function(v){snapCircleCenter=v;}],['ck-rectcenter',function(v){snapRectCenter=v;}],['ck-intersect',function(v){snapIntersect=v;}],
+ ['ck-extension',function(v){snapExtension=v;}],['ck-virtinter',function(v){snapVirtInter=v;}],['ck-parallel',function(v){snapParallel=v;}]
+].forEach(function(p){document.getElementById(p[0]).onchange=function(e){p[1](e.target.checked);};});
 
 // ═══ 속성 패널 ═══
 function updatePropsPanel(){
@@ -5583,7 +5527,7 @@ function updatePropsPanel(){
       if(s.cornerType&&s.cornerType!=='none')grpHtml+='<div class="prop-row"><label>R(mm):</label><input type="number" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveGroupProp(&quot;r&quot;,this.value)"></div>';
       var hd3=s.hideDims||{};
       grpHtml+='<hr style="border:none;border-top:1px solid #2d4a5a;margin:6px 0">';
-      grpHtml+='<div style="font-size:10px;color:#546E7A;margin-bottom:4px">치수 표시</div>';
+      grpHtml+=_DIM_HDR;
       grpHtml+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
       grpHtml+=_dimToggleBtn('w','W',hd3['w']);
       grpHtml+=_dimToggleBtn('h','H',hd3['h']);
@@ -5609,7 +5553,7 @@ function updatePropsPanel(){
     html+='<div class="prop-row"><label>H치수오프셋:</label><input type="number" id="pp-dimH" value="'+(s.dimOffsetH||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;H&quot;,this.value)"></div>';
     // 치수 표시 토글
     var hd=s.hideDims||{};
-    html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
+    html+=_DIM_HDR;
     html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">';
     html+=_dimToggleBtn('w','W',hd['w']);
     html+=_dimToggleBtn('h','H',hd['h']);
@@ -5633,7 +5577,7 @@ function updatePropsPanel(){
       html+='</div></div>';
     }
     var hd=s.hideDims||{};
-    html+='<div style="margin:5px 0 2px;font-size:10px;color:#546E7A">치수 표시</div>';
+    html+=_DIM_HDR;
     html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
     html+=_dimToggleBtn('r','Φ',hd['r']);
     html+=_dimToggleBtn('left','←',hd['left']);
@@ -5654,14 +5598,14 @@ function updatePropsPanel(){
     html+='<div style="color:#FFD740;font-size:11px;padding:4px">밑면연마 구간<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm / 깊이: '+(s.depth||30)+' mm</small></div>';
     html+='<button onclick="flipGrindInward()" style="width:100%;background:#263545;border:1px solid #546E7A;color:#FFD740;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer;margin-bottom:4px">⇄ 방향 반전 (도형 밖으로 나갈 때)</button>';
     var hd=s.hideDims||{};
-    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
+    html+=_DIM_HDR;
     html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','깊이',hd['dist'])+'</div>';
   } else if(s.kind==='jollymark'){
     html+='<div style="color:#2196F3;font-size:11px;padding:4px">졸리컷<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm (도면에는 치수 표기 안 함)</small></div>';
   } else if(s.kind==='gosramark'){
     html+='<div style="color:#F44336;font-size:11px;padding:4px">고스라<br><small style="color:#546E7A">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
     var hd=s.hideDims||{};
-    html+='<div style="font-size:10px;color:#546E7A;margin:4px 0 2px">치수 표시</div>';
+    html+=_DIM_HDR;
     html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','길이',hd['dist'])+'</div>';
   }
   // 치수 초기화 / 삭제 버튼
