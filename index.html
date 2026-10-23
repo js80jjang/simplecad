@@ -3179,7 +3179,8 @@ function _dxfCollect(H){
       if(_rightAngle(s.rotation)){
         var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),Bt=q.y+Math.abs(q.h),hd=s.hideDims||{};
         if(cut){if(!hd.w)dim([L,T],[R,T],[0,1],H*2.2,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[1,0],H*2.2,_fmtDim(Bt-T));}
-        else{if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T));}
+        else{var ff=_fullBoardFit(s,R-L,Bt-T); // 온장 그대로 사이즈 표기
+          if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L)+(ff.w?' '+_FULL_TXT:''));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T)+(ff.h?' '+_FULL_TXT:''));}
       }
       if(!cut&&s.pieceName){
         // 이름은 싱크볼·쿡탑·타공(+Φ 글자)을 피한 자리 중 가운데에 가까운 곳 (타공부 안에 있으면 다시 불러올 때 이름으로 안 잡힘)
@@ -5077,7 +5078,10 @@ function calcCost(){
         if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
-        lenMm.rect+=Math.abs(perimeterMm(s));
+        var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s,Math.abs(s.w),Math.abs(s.h));
+        // 온장 그대로 사이즈인 방향의 양쪽 면은 온장 원래 끝면이라 절단비 없음 (w가 온장 폭이면 h 길이 두 면)
+        if(_ff.w)_rl-=2*Math.abs(s.h);if(_ff.h)_rl-=2*Math.abs(s.w);
+        lenMm.rect+=Math.max(0,_rl);
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
       }
     } else if(s.kind==='circle'||s.kind==='hole'){
@@ -5558,6 +5562,15 @@ function _rotBox(lines,th){
   lines.forEach(function(l){[[l.x1,l.y1],[l.x2,l.y2]].forEach(function(p){var u=p[0]*c-p[1]*sn,v=p[0]*sn+p[1]*c;x0=Math.min(x0,u);y0=Math.min(y0,v);x1=Math.max(x1,u);y1=Math.max(y1,v);});});
   return{x0:x0,y0:y0,w:x1-x0,h:y1-y0};
 }
+// 온장 그대로 사이즈: 조각 한 변(w 또는 h)이 그 제품 온장의 폭/길이와 같으면(다른 변은 온장 안) 그 방향은 온장 원래 끝면 그대로
+//   → 온장 배치는 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "온장 그대로 사이즈"
+var _FULL_TXT='온장 그대로 사이즈';
+function _fullBoardFit(s,w,h){
+  var sz=_prodBoardSize(_itemProd(s)),A=sz.bw,B=sz.bh;
+  function eq(a,b){return Math.abs(a-b)<0.5;}
+  function fits(d,o){return (eq(d,B)&&o<=A+0.5)||(eq(d,A)&&o<=B+0.5);}
+  return{w:fits(w,h),h:fits(h,w)};
+}
 function _collectBoardItems(){
   var physical=['rect','circle','hole','ellipse'];
   var allPhysical=shapes.filter(function(s){return physical.indexOf(s.kind)>=0;});
@@ -5618,6 +5631,13 @@ function _collectBoardItems(){
       w=Math.abs(s.w);h=Math.abs(s.h);
       if(s.rotation){var _rb=getBBox(s);w=_rb.r-_rb.l;h=_rb.b-_rb.t;} // 돌린 사각형은 화면에 보이는 상자 크기로 (그리는 모양과 맞춤)
       label=Math.round(w)+'×'+Math.round(h);
+      // 온장 그대로 사이즈: 그 방향은 여백(양쪽 10)만큼 줄여서 배치 칸에 넣고, 그릴 때 온장 끝까지 늘림(_boardPiece)
+      var _ff=_fullBoardFit(s,w,h);
+      if(_ff.w||_ff.h){
+        var _fi={shape:s,w:_ff.w?w-20:w,h:_ff.h?h-20:h,label:label+' '+_FULL_TXT};
+        if(_ff.w)_fi.fw=true;if(_ff.h)_fi.fh=true;
+        return _fi;
+      }
     }
     else if(s.kind==='circle'||s.kind==='hole'){w=s.r*2;h=s.r*2;label='Φ'+w.toFixed(0);}
     else if(s.kind==='ellipse'){w=s.rx*2;h=s.ry*2;label=w.toFixed(0)+'×'+h.toFixed(0);}
@@ -5676,7 +5696,8 @@ function _restoreSavedBoards(saved,items){
       else if(p.lineIds&&p.lineIds.length)it=take(function(x){return x.shape.kind==='linegroup'&&p.lineIds.every(function(id){return x.shape.lines.some(function(l){return l.id===id;});});});
       else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
       if(!it){ok=false;return null;}
-      var _it={shape:it.shape,w:_w,h:_h,label:p.label||it.label};
+      var _it={shape:it.shape,w:_w,h:_h,label:it.label||p.label};
+      if(it.fw)_it.fw=true;if(it.fh)_it.fh=true; // 온장 그대로 사이즈
       if(p.rot!=null&&it.shape.kind==='linegroup'){ // 사용자가 각도를 지정해 돌린 조각
         var rb=_rotBox(it.shape.lines,p.rot);
         if(Math.abs(rb.w-_w)>1||Math.abs(rb.h-_h)>1){ok=false;return null;}
@@ -6729,13 +6750,14 @@ function _drawCleanExport(){
       var tl=toCanvas.apply(null,g.W(-g.w/2,-g.h/2)),tr=toCanvas.apply(null,g.W(g.w/2,-g.h/2)),br=toCanvas.apply(null,g.W(g.w/2,g.h/2)),bl=toCanvas.apply(null,g.W(-g.w/2,g.h/2));
       var nUp=[Math.sin(g.rot),-Math.cos(g.rot)],nLeft=[-Math.cos(g.rot),-Math.sin(g.rot)];
       var bx=pieceBoxesPx[pi],band=DOFF+70;
+      var ff=_fullBoardFit(s,g.w,g.h),tW=_fmtDim(g.w)+(ff.w?' '+_FULL_TXT:''),tH=_fmtDim(g.h)+(ff.h?' '+_FULL_TXT:''); // 온장 그대로 사이즈 표기
       if(!hd.w){
         var upHit=bandHits(pi,bx.l,bx.t-band,bx.r,bx.t),dnHit=bandHits(pi,bx.l,bx.b,bx.r,bx.b+band);
-        if(upHit&&!dnHit)_expDim(bl,br,[-nUp[0],-nUp[1]],DOFF,_fmtDim(g.w),col);else _expDim(tl,tr,nUp,DOFF,_fmtDim(g.w),col);
+        if(upHit&&!dnHit)_expDim(bl,br,[-nUp[0],-nUp[1]],DOFF,tW,col);else _expDim(tl,tr,nUp,DOFF,tW,col);
       }
       if(!hd.h){
         var lfHit=bandHits(pi,bx.l-band,bx.t,bx.l,bx.b),rtHit=bandHits(pi,bx.r,bx.t,bx.r+band,bx.b);
-        if(lfHit&&!rtHit)_expDim(tr,br,[-nLeft[0],-nLeft[1]],DOFF,_fmtDim(g.h),col);else _expDim(tl,bl,nLeft,DOFF,_fmtDim(g.h),col);
+        if(lfHit&&!rtHit)_expDim(tr,br,[-nLeft[0],-nLeft[1]],DOFF,tH,col);else _expDim(tl,bl,nLeft,DOFF,tH,col);
       }
     } else if(s.kind==='circle'||s.kind==='hole'){
       var c0=toCanvas(s.cx-s.r,s.cy),c1=toCanvas(s.cx+s.r,s.cy);_expDim(c0,c1,[0,-1],mm2px(s.r)+DOFF,'Φ'+_fmtDim(s.r*2),col);
@@ -6968,7 +6990,11 @@ function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
 function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
-  var pw=p.pw*sc,ph=p.ph*sc;
+  var ox0=ox,oy0=oy;
+  // 온장 그대로 사이즈: 그 방향은 배치 칸을 여백(10)만큼 양쪽으로 늘려 온장 끝에 붙여 그림
+  var _fx=p.rotated?p.item.fh:p.item.fw,_fy=p.rotated?p.item.fw:p.item.fh;
+  if(_fx)ox-=10*sc;if(_fy)oy-=10*sc;
+  var pw=(p.pw+(_fx?20:0))*sc,ph=(p.ph+(_fy?20:0))*sc;
   // 도형 좌표(mm) → 배치 위치(px). 회전 배치는 90° 회전
   var bb=pc?pc.bb:{l:sh.x||0,t:sh.y||0,r:(sh.x||0)+(p.item.w||0),b:(sh.y||0)+(p.item.h||0)};
   // 비스듬히 돌려서 배치한 조각(item.rot): 돌린 좌표의 상자 왼쪽 위(rx0,ry0) 기준
@@ -7026,7 +7052,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     g.font='bold '+f1+'px Arial';var nbw=nb?Math.max(f1*1.3,g.measureText(nb).width+10*k):0,nbg=nb?5*k:0;
     g.font='bold '+f1+'px '+FONT;var tw0=g.measureText(t1).width,tw=tw0+nbw+nbg;
     var hw=tw/2+4,hh=(f1+6*k)/2,gp=Math.max(20*k,f1*1.8),pad=3;
-    var b0x=ox-p.x*sc,b0y=oy-p.y*sc;
+    var b0x=ox0-p.x*sc,b0y=oy0-p.y*sc;
     var others=(tex.board||[]).filter(function(o){return o!==p;}).map(function(o){return[b0x+o.x*sc,b0y+o.y*sc,b0x+(o.x+o.pw)*sc,b0y+(o.y+o.ph)*sc];});
     tex._used=tex._used||[];var occ=others.concat(tex._used,[[ox,oy,ox+pw,oy+ph]]);
     function hits(b){return occ.some(function(o){return !(b[2]+pad<o[0]||b[0]-pad>o[2]||b[3]+pad<o[1]||b[1]-pad>o[3]);});}

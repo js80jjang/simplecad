@@ -52,6 +52,9 @@
     **온장 크기도 제품마다**: 제품 사이즈 칸에서(`_prodBoardSize`, 없으면 도구줄 온장 칸) → 장마다 `board.bw/bh`(`_boardDims`),
     배치 창·도면화 2쪽 칸은 가장 큰 온장 기준·장은 자기 크기로, 끌기·돌리기 한계는 그 장 유효 영역(`_bsArea`). 저장 배치는 `sig`(`_boardSizeSig`)가 같을 때만 복원
     도면화 1쪽 왼쪽 위·DXF 양식 글자는 제품마다 한 줄
+- **온장 그대로 사이즈**(`_fullBoardFit(s,w,h)`, `_FULL_TXT`): 사각 조각 한 변 = 그 제품 온장 폭/길이(다른 변은 온장 안)면
+  배치 칸은 그 방향 20(여백 양쪽) 줄여 넣고(`item.fw/fh`) `_boardPiece`가 온장 끝까지 늘려 그림, `calcCost` 사각 절단에서 그 방향 양쪽 면 길이 뺌,
+  도면화·DXF 치수와 온장 배치 크기 글자 옆에 "온장 그대로 사이즈" (편집 화면 치수는 그대로)
 - 제품 수량 = 온장 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
   손으로 고친 배치(`_savedBoardLayout`)나 자동 배치에서 장마다 고른 제품별로 셈. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
 - 작업 정보 줄(도면 위 `#work-bar`): `site-info` 한 칸 "업체명/현장주소"(첫 '/' 앞=업체명, 뒤=주소, `_syncSiteInfo`/`_setSiteInfo`) →
