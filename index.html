@@ -1621,7 +1621,8 @@ function drawGrindRegion(s,preview){
 }
 
 function drawJollyMark(s,preview){
-  var refCol=isSelected(s)?'#FF6D00':(preview?'rgba(33,150,243,0.5)':'rgba(33,150,243,0.6)');
+  // 도면화(printRender)에서는 빨간색, 편집 화면은 파란색
+  var refCol=printRender?'rgba(229,57,53,0.7)':(isSelected(s)?'#FF6D00':(preview?'rgba(33,150,243,0.5)':'rgba(33,150,243,0.6)'));
   var _corner=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);
   var mx2,my2,pc;
   if(_corner){
@@ -1637,7 +1638,7 @@ function drawJollyMark(s,preview){
     ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
     ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   }
-  drawStar(pc[0],pc[1],printRender?24:13,preview?'rgba(33,150,243,0.5)':'#2196F3'); // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기
+  drawStar(pc[0],pc[1],printRender?24:13,printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':'#2196F3')); // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기, 도면화는 빨간색
   // 졸리컷은 길이 치수를 표기하지 않음 (편집 화면·도면화 모두) — 길이는 속성 칸에서만 확인
 }
 
@@ -6322,7 +6323,21 @@ function _expOpenIntervals(ax,ay,bx,by){
   var out=[];iv.forEach(function(p){if(out.length&&p[0]<=out[out.length-1][1]+1)out[out.length-1][1]=Math.max(out[out.length-1][1],p[1]);else out.push(p.slice());});
   return out;
 }
-var _GRIND_COL='rgba(255,214,0,0.5)',_GRIND_LW=12; // 도면화 밑면연마 표시: 노란 선, 50% 음영
+var _GRIND_COL='#FB8C00',_GRIND_MM=50; // 도면화 밑면연마 표시: 변에서 재료 쪽으로 50mm 띠에 주황 45° 빗금
+// 밑면연마 띠: 변(x1,y1)-(x2,y2)에서 재료 쪽(_gosraDir 방향)으로 depthMm, 띠 안에 45° 빗금. 띠 윤곽점(px)을 돌려줌
+function _expHatchBand(x1,y1,x2,y2,dx,dy,depthMm,col){
+  var A=toCanvas(x1,y1),B=toCanvas(x2,y2),C=toCanvas(x2+dx*depthMm,y2+dy*depthMm),D=toCanvas(x1+dx*depthMm,y1+dy*depthMm);
+  var L=Math.hypot(B[0]-A[0],B[1]-A[1]),W=Math.hypot(D[0]-A[0],D[1]-A[1]);if(L<1||W<1)return null;
+  var ux=(B[0]-A[0])/L,uy=(B[1]-A[1])/L,nx=(D[0]-A[0])/W,ny=(D[1]-A[1])/W,sp=Math.max(6,Math.min(14,W/4));
+  ctx.save();
+  ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.lineTo(C[0],C[1]);ctx.lineTo(D[0],D[1]);ctx.closePath();
+  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();ctx.clip();
+  ctx.beginPath();
+  for(var s=0;s<=L+W;s+=sp){ctx.moveTo(A[0]+ux*s,A[1]+uy*s);ctx.lineTo(A[0]+ux*(s-W)+nx*W,A[1]+uy*(s-W)+ny*W);}
+  ctx.lineWidth=1.6;ctx.stroke();
+  ctx.restore();
+  return[A,B,C,D];
+}
 // 변 그리기: 열린 구간은 노란 선, 나머지 실선 (world mm 좌표, 변 전체 중 [ts,te] 구간만)
 function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
   var L=Math.hypot(bx-ax,by-ay);if(L<0.5)return;
@@ -6339,8 +6354,9 @@ function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
   cuts.forEach(function(c){
     if(c[1]-c[0]<0.5)return;
     var p=toCanvas(ax+(bx-ax)*c[0]/L,ay+(by-ay)*c[0]/L),q=toCanvas(ax+(bx-ax)*c[1]/L,ay+(by-ay)*c[1]/L);
-    // 밑면연마 구간 = 노란 굵은 선(50% 투명), 나머지 = 조각 색 실선
-    if(c[2]){stats.open=true;ctx.strokeStyle=_GRIND_COL;ctx.lineWidth=_GRIND_LW;}else{ctx.strokeStyle=col;ctx.lineWidth=4;}
+    // 변은 모두 조각 색 실선 (밑면연마는 _expGrindBands가 재료 쪽에 주황 빗금 띠로 따로 그림)
+    if(c[2])stats.open=true;
+    ctx.strokeStyle=col;ctx.lineWidth=4;
     ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();_psegAdd(p[0],p[1],q[0],q[1]);
   });
 }
@@ -6550,9 +6566,9 @@ function _drawCleanExport(){
   // 치수가 다른 조각 쪽으로 겹치면 반대편으로: band(px) 영역에 다른 조각이 있는지
   function bandHits(i,l,t,r,b){return pieceBoxesPx.some(function(o,j){return j!==i&&o.l<r&&o.r>l&&o.t<b&&o.b>t;});}
   var DOFF=46; // 조각 치수 간격(px)
-  // ① 채움 (조각 → 타공부/타공은 흰색)
+  // ① 채움: 조각 안은 음영 없이 흰색 (조각 구분은 외곽선 색으로), 타공부/타공도 흰색
   pieces.forEach(function(p){
-    var s=p.s;ctx.fillStyle=p.col[1];
+    var s=p.s;ctx.fillStyle='#ffffff';
     if(s.kind==='rect'){_expFillPath(_expRectPath(_expRectGeo(s)));ctx.fill();}
     else if(s.kind==='circle'||s.kind==='hole'){var c=toCanvas(s.cx,s.cy);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(s.r),0,2*Math.PI);ctx.fill();}
     else if(s.kind==='ellipse'){var e=toCanvas(s.cx,s.cy);ctx.beginPath();ctx.ellipse(e[0],e[1],mm2px(s.rx),mm2px(s.ry),0,0,2*Math.PI);ctx.fill();}
@@ -6574,13 +6590,21 @@ function _drawCleanExport(){
     });
     p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(q.r),0,2*Math.PI);ctx.stroke();});
   });
-  // ②-2 고스라: 변 가운데, 꼭지점이 변에 닿는 빨간 삼각형 (조각 변=바깥에서 안쪽으로, 싱크볼/쿡탑=안에서 선 쪽으로)
+  // ②-1b 밑면연마: 변에서 재료 쪽으로 50mm 띠 + 주황 빗금 (방향은 고스라 판정과 같음 — 조각 변=안쪽, 싱크볼/쿡탑 변=타공부 바깥쪽)
+  shapes.forEach(function(m){
+    if(m.kind!=='grindregion')return;
+    var gd=_gosraDir(m);if(!gd)return;
+    var band=_expHatchBand(m.x1,m.y1,m.x2,m.y2,gd.dx,gd.dy,_GRIND_MM,_GRIND_COL);if(!band)return;
+    stats.open=true;
+    for(var i=0;i<4;i++)_psegAdd(band[i][0],band[i][1],band[(i+1)%4][0],band[(i+1)%4][1]); // 글자·지시선이 피하도록
+  });
+  // ②-2 고스라: 변 가운데, 꼭지점이 변에 닿는 검정 삼각형 (조각 변=바깥에서 안쪽으로, 싱크볼/쿡탑=안에서 선 쪽으로)
   shapes.forEach(function(m){
     if(m.kind!=='gosramark')return;
     var gd=_gosraDir(m);if(!gd)return;
     var mp=toCanvas(gd.mx,gd.my),sz=m.groupId?16:22;
     var tcx=mp[0]-gd.dx*sz,tcy=mp[1]-gd.dy*sz;
-    drawTriangle(tcx,tcy,Math.atan2(gd.dy,gd.dx),sz,'#E53935');stats.gosra=true;
+    drawTriangle(tcx,tcy,Math.atan2(gd.dy,gd.dx),sz,'#222222');stats.gosra=true;
     _pdreg(tcx-sz,tcy-sz,tcx+sz,tcy+sz); // 치수 글자가 삼각형을 피하도록
   });
   // 타공 자리도 글자가 피하도록
@@ -6781,14 +6805,17 @@ function _drawCleanExport(){
       ctx.fillStyle=p.col[0];ctx.fillRect(a[0]+8,a[1]+8,bw,36);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,a[0]+8+bw/2,a[1]+26);
     });
   }
-  // ⑧ 범례 (밑면연마/고스라가 있을 때): 실선 = 막힌 모서리, 노란 선 = 밑면연마, ▲ = 고스라
+  // ⑧ 범례 (밑면연마/고스라가 있을 때): 주황 빗금 = 밑면연마(50mm), 검정 ▲ = 고스라
   if(stats.open||stats.gosra){
     var ly=cv.height-46,lx=60;
     ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.strokeStyle='#555';ctx.lineWidth=4;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+120,ly);ctx.stroke();
-    ctx.fillStyle='#333';ctx.fillText('막힌 모서리',lx+136,ly);lx+=136+ctx.measureText('막힌 모서리').width+60;
-    if(stats.open){ctx.strokeStyle=_GRIND_COL;ctx.lineWidth=_GRIND_LW;ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+120,ly);ctx.stroke();ctx.fillText('밑면연마',lx+136,ly);lx+=136+ctx.measureText('밑면연마').width+60;}
-    if(stats.gosra){drawTriangle(lx+16,ly,-Math.PI/2,22,'#E53935');ctx.fillStyle='#333';ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('고스라',lx+44,ly);}
+    if(stats.open){
+      // 범례 견본: 가로 120px, 세로 28px 빗금 띠 (화면 좌표로 직접)
+      ctx.save();ctx.beginPath();ctx.rect(lx,ly-14,120,28);ctx.strokeStyle=_GRIND_COL;ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();ctx.clip();
+      ctx.beginPath();for(var hx=lx-28;hx<lx+120;hx+=10){ctx.moveTo(hx,ly+14);ctx.lineTo(hx+28,ly-14);}ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
+      ctx.fillStyle='#333';ctx.fillText('밑면연마 ('+_GRIND_MM+'mm)',lx+136,ly);lx+=136+ctx.measureText('밑면연마 ('+_GRIND_MM+'mm)').width+60;
+    }
+    if(stats.gosra){drawTriangle(lx+16,ly,-Math.PI/2,22,'#222222');ctx.fillStyle='#333';ctx.font='28px '+_EXP_FONT;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('고스라',lx+44,ly);}
   }
 }
 // 선 조각의 선들을 이어 닫힌 다각형(world 점 목록)으로. 실패하면 null
@@ -6863,7 +6890,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var iw=rot?p.item.w:bb.r-bb.l;
   function M(x,y){var u=rot?x*cr-y*sr-p.item.rx0:x-bb.l,v=rot?x*sr+y*cr-p.item.ry0:y-bb.t;return p.rotated?[ox+v*sc,oy+(iw-u)*sc]:[ox+u*sc,oy+v*sc];}
   function path(pts){g.beginPath();pts.forEach(function(q,i){var m=M(q[0],q[1]);if(i)g.lineTo(m[0],m[1]);else g.moveTo(m[0],m[1]);});g.closePath();}
-  g.setLineDash([]);g.fillStyle=_hexA(cc[0],0.32);g.strokeStyle=cc[0];g.lineWidth=3*k;
+  g.setLineDash([]);g.fillStyle='#ffffff';g.strokeStyle=cc[0];g.lineWidth=3*k; // 조각 안 음영 없이 흰색, 외곽선만 조각 색
   if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(loop)path(loop);else{g.beginPath();g.rect(ox,oy,pw,ph);}}
   else if(sh.kind==='circle'||sh.kind==='hole'){g.beginPath();g.arc(ox+pw/2,oy+ph/2,Math.min(pw,ph)/2,0,2*Math.PI);}
   else if(sh.kind==='ellipse'){g.beginPath();g.ellipse(ox+pw/2,oy+ph/2,pw/2,ph/2,0,0,2*Math.PI);}
