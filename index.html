@@ -1837,7 +1837,7 @@ function drawShape(s,preview){
 }
 
 // 한 프레임 동안 재사용하는 선 그룹 목록 (redraw 시작 시 초기화)
-var _lgFrameGroups=null;
+var _lgFrameGroups=null,_lgDimPlan=null; // 선 그룹·선 치수 자리 (매 프레임 새로)
 // 선 s가 닫힌 선 그룹(상판 외곽)에 속하면, 치수를 도형 바깥쪽에 두기 위한 방향(+1/-1) 반환. 판단 불가 시 +1.
 // 기본 방향은 (dy,-dx) 법선. 그 쪽으로 살짝 옮긴 점이 도형 안이면(-1) 반대쪽으로.
 function _lineOutwardSide(s){
@@ -1867,6 +1867,29 @@ function drawDimsLine(s,col){
   var angle=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
   var perp=angle-Math.PI/2;
   if(_lineOutwardSide(s)<0)perp+=Math.PI; // 상판 바깥쪽에 표시
+  // 편집 화면: 사각형 치수처럼 보조선 + 화살표 치수선 + 숫자. 가로/세로 선은 조각 바깥 치수 줄에 맞춤(_lineDimPlan)
+  if(!printRender&&!isArc){
+    if(!_lgDimPlan){
+      _lgDimPlan=new Map();
+      if(!_lgFrameGroups)_lgFrameGroups=_lineBoundaryGroups();
+      _lgFrameGroups.forEach(function(g){_lineDimPlan(g.map(function(it){return it.s;})).forEach(function(v,k){_lgDimPlan.set(k,v);});});
+    }
+    var pl=_lgDimPlan.get(s),sel=isSelected(s),nx=Math.cos(perp),ny=Math.sin(perp);
+    var off=15+(pl?mm2px(pl.dist)+pl.level*18:0);
+    var a1=[p1[0]+nx*off,p1[1]+ny*off],a2=[p2[0]+nx*off,p2[1]+ny*off],Lp=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+    ctx.save();ctx.strokeStyle='#E53935';ctx.lineWidth=1;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(p1[0]+nx*2,p1[1]+ny*2);ctx.lineTo(a1[0]+nx*4,a1[1]+ny*4);ctx.moveTo(p2[0]+nx*2,p2[1]+ny*2);ctx.lineTo(a2[0]+nx*4,a2[1]+ny*4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
+    if(Lp>3*_DIM_AH()){arrowHead(a1[0],a1[1],angle+Math.PI,_DIM_AH(),'#E53935');arrowHead(a2[0],a2[1],angle,_DIM_AH(),'#E53935');}
+    var horiz=Math.abs(Math.cos(angle))>0.7,tg=horiz?9:13;
+    var tx=(a1[0]+a2[0])/2+nx*tg,ty=(a1[1]+a2[1])/2+ny*tg,da=angle;if(Math.cos(da)<-0.01||(Math.abs(Math.cos(da))<0.01&&Math.sin(da)>0))da+=Math.PI;
+    ctx.translate(tx,ty);ctx.rotate(da);
+    if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(-24,-8,48,16);}
+    ctx.fillStyle=sel?'#FFD740':'#90CAF9';ctx.font='10px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(lbl,0,0);_numUnderline(ctx,lbl,0,0);ctx.restore();
+    dimLabels.push({shape:s,field:'dist',px:tx,py:ty});
+    return;
+  }
   var offPx=printRender?40:14; // 인쇄 글자(44px)가 선에 겹치지 않도록
   var mx2=(p1[0]+p2[0])/2+Math.cos(perp)*offPx;
   var my2=(p1[1]+p2[1])/2+Math.sin(perp)*offPx;
@@ -4309,7 +4332,7 @@ function drawRotationHandle(){
 function redraw(){
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle=printRender?'#ffffff':'#1e2a35';ctx.fillRect(0,0,cv.width,cv.height);
   if(printRender)_pdr=[];
-  _lgFrameGroups=null; // 선 그룹 캐시는 매 프레임 새로 계산
+  _lgFrameGroups=null;_lgDimPlan=null; // 선 그룹 캐시는 매 프레임 새로 계산
   drawGrid();dimLabels=[];autoAdjustDims();
   if(!printRender)_drawProdTints();
   shapes.forEach(function(s){drawShape(s);});
