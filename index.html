@@ -6391,8 +6391,13 @@ function _expHatchBand(x1,y1,x2,y2,dx,dy,depthMm,col){
   var L=Math.hypot(B[0]-A[0],B[1]-A[1]),W=Math.hypot(D[0]-A[0],D[1]-A[1]);if(L<1||W<1)return null;
   var ux=(B[0]-A[0])/L,uy=(B[1]-A[1])/L,nx=(D[0]-A[0])/W,ny=(D[1]-A[1])/W,sp=Math.max(6,Math.min(14,W/4));
   ctx.save();
-  ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.lineTo(C[0],C[1]);ctx.lineTo(D[0],D[1]);ctx.closePath();
-  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();ctx.clip();
+  // 띠 윤곽은 변 쪽(A-B)을 빼고 그림 — 조각 변(굵은 실선)·모서리를 덮지 않게. 빗금도 변 굵기 절반(2px) 안쪽부터
+  //   양 끝도 3px 안쪽으로 — 모서리에서 옆 변(굵은 실선) 위에 주황 선이 겹치지 않게
+  var e2=Math.min(2,W/2),e3=Math.min(3,L/4);
+  var a2=[A[0]+ux*e3,A[1]+uy*e3],b2=[B[0]-ux*e3,B[1]-uy*e3],c2=[C[0]-ux*e3,C[1]-uy*e3],d2=[D[0]+ux*e3,D[1]+uy*e3];
+  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(b2[0]+nx*e2,b2[1]+ny*e2);ctx.lineTo(c2[0],c2[1]);ctx.lineTo(d2[0],d2[1]);ctx.lineTo(a2[0]+nx*e2,a2[1]+ny*e2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(a2[0]+nx*e2,a2[1]+ny*e2);ctx.lineTo(b2[0]+nx*e2,b2[1]+ny*e2);ctx.lineTo(c2[0],c2[1]);ctx.lineTo(d2[0],d2[1]);ctx.closePath();ctx.clip();
   ctx.beginPath();
   for(var s=0;s<=L+W;s+=sp){ctx.moveTo(A[0]+ux*s,A[1]+uy*s);ctx.lineTo(A[0]+ux*(s-W)+nx*W,A[1]+uy*(s-W)+ny*W);}
   ctx.lineWidth=1.6;ctx.stroke();
@@ -6411,7 +6416,8 @@ function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
       if(o[1]<c[1])next.push([o[1],c[1],false]);
     });cuts=next;
   });
-  ctx.lineCap='butt';ctx.setLineDash([]);
+  // 끝을 선 굵기 절반만큼 늘려(square) 두 변이 만나는 모서리가 빈틈 없이 직각으로 보이게
+  ctx.lineCap='square';ctx.setLineDash([]);
   cuts.forEach(function(c){
     if(c[1]-c[0]<0.5)return;
     var p=toCanvas(ax+(bx-ax)*c[0]/L,ay+(by-ay)*c[0]/L),q=toCanvas(ax+(bx-ax)*c[1]/L,ay+(by-ay)*c[1]/L);
@@ -6420,6 +6426,7 @@ function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
     ctx.strokeStyle=col;ctx.lineWidth=4;
     ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();_psegAdd(p[0],p[1],q[0],q[1]);
   });
+  ctx.lineCap='butt';
 }
 // 화살표 치수: p1,p2(캔버스 px) 사이, 법선 n(바깥쪽 단위벡터) 방향으로 off px 띄움. 글자는 치수선 바깥쪽.
 function _expDim(p1,p2,n,off,text,col,fs,force){
