@@ -70,6 +70,9 @@
 - 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 시작점에서 드래그=방향 고정(`dir`), 놓으면 길이·각도 입력란(`#line-pop`, `_linePopShow`; `line-ang`는 드래그 방향으로 미리 채움, 0°=오른쪽 반시계, Tab=칸 이동) →
   숫자+Enter=그 방향으로 길이(놓기만 해서는 안 그림 — 전역 mouseup의 `finalizeShape`는 line 제외), 끝나도 도구 유지, 다음 선은 방향 쪽을 클릭(드래그도 됨)하면 입력란, 스냅점(끝점·중간점·교차점 등, 격자 제외) 클릭은 입력 없이 그 점까지(`lineDown.snap`)(입력란에서 빈 Enter=끝·C=닫기·U=취소), 끝점에서 다시 드래그 → 숫자… 이어 그리기, 드래그 없는 클릭=그 점까지,
   `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유)
+- 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
+  (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
+  각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움

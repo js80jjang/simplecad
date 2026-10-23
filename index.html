@@ -234,7 +234,9 @@ canvas{display:block;cursor:crosshair}
       <button id="dl-type-dist" onclick="setDimLineType('dist')" style="flex:1;padding:3px 0;font-size:10px;background:#1565C0;border:1px solid #1976D2;color:#fff;border-radius:3px;cursor:pointer">길이</button>
       <button id="dl-type-r" onclick="setDimLineType('r')" style="flex:1;padding:3px 0;font-size:10px;background:#37474F;border:1px solid #546E7A;color:#fff;border-radius:3px;cursor:pointer">R값</button>
       <button id="dl-type-phi" onclick="setDimLineType('phi')" style="flex:1;padding:3px 0;font-size:10px;background:#37474F;border:1px solid #546E7A;color:#fff;border-radius:3px;cursor:pointer">Φ</button>
+      <button id="dl-type-ang" onclick="setDimLineType('ang')" style="flex:1;padding:3px 0;font-size:10px;background:#37474F;border:1px solid #546E7A;color:#fff;border-radius:3px;cursor:pointer">각도</button>
     </div>
+    <div id="dl-hint" style="font-size:9px;color:#78909C;margin-top:4px;line-height:1.4">두 점 클릭(또는 끌기) → 마우스로 치수선 위치 → 클릭. Shift = 비스듬히</div>
   </div>
   <button class="tool-btn" data-tool="note"><svg width="14" height="12" viewBox="0 0 14 12" style="vertical-align:middle;margin-right:4px"><text x="7" y="10.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#64B5F6" font-family="Malgun Gothic,sans-serif">가</text></svg> 글자 <span style="font-size:9px;color:#546E7A;margin-left:2px">도면 메모</span></button>
   <div class="fillet-sub" id="note-sub" style="display:none">
@@ -1042,8 +1044,10 @@ function _pdfit(x1,y1,x2,y2){return _pdr.every(function(r){return x2<r[0]-1||x1>
 function _pdreg(x1,y1,x2,y2){_pdr.push([x1,y1,x2,y2]);}
 var showShapeNumbers=false; // 도형 번호 표시
 function setDimLineType(t){
-  dimLineType=t;
-  ['dist','r','phi'].forEach(function(k){
+  dimLineType=t;_dimSt=null;
+  var hint=document.getElementById('dl-hint');
+  if(hint)hint.textContent={dist:'두 점 클릭(또는 끌기) → 마우스로 치수선 위치 → 클릭. Shift = 비스듬히',r:'원 클릭 → 방향으로 끌기',phi:'원 클릭',ang:'선 두 개 클릭 → 마우스로 각도 쪽·위치 → 클릭'}[t]||'';
+  ['dist','r','phi','ang'].forEach(function(k){
     var b=document.getElementById('dl-type-'+k);
     if(b)b.style.background=(k===t)?'#1565C0':'#37474F';
   });
@@ -2305,12 +2309,12 @@ function drawDimLine(s,preview){
   var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2);
   var angle=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
   var col=preview?'rgba(255,80,80,0.5)':(sel?'#FF6D00':(s===hoverShape?'#EF9A9A':'#E53935'));
-  var ahsz=printRender?11:7;
+  var ahsz=printRender?16:7; // 도면화는 자동 치수와 같은 크기
 
   // ── R / Φ 치수: 중심→원호 선 + 대각선 연장 + 화살표를 R값 끝에 ──
   if(s.labelType==='r'||s.labelType==='phi'){
     var dist_rp=Math.hypot(s.x2-s.x1,s.y2-s.y1);
-    var lbl_rp=(s.labelType==='phi'?'Φ ':'R ')+(s.labelType==='phi'?(dist_rp*2):dist_rp).toFixed(1);
+    var lbl_rp=(s.labelType==='phi'?'Φ':'R')+_fmtDim(s.labelType==='phi'?(dist_rp*2):dist_rp); // 다른 치수처럼 정수(소수 있으면 한 자리)
     ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([]);
     if(s.labelType==='phi'){
       // 지름: 중심에서 양쪽으로 연장 (화살표 없음, 끝에서 대각선 연장)
@@ -2330,7 +2334,7 @@ function drawDimLine(s,preview){
     arrowHead(ex_d,ey_d,angle+Math.PI,ahsz,col);
     // 텍스트: 화살표 끝 너머 (연장 방향)
     ctx.save();
-    ctx.font=(printRender?'bold 14px':'bold 10px')+' Consolas';
+    ctx.font=(printRender?'bold 28px':'bold 10px')+' Consolas';
     var tw_rp=ctx.measureText(lbl_rp).width;
     var gap=printRender?6:4;
     var tx_=ex_d+Math.cos(angle)*gap;
@@ -2348,28 +2352,141 @@ function drawDimLine(s,preview){
     return;
   }
 
+  // ── 각도 치수: 꼭지점 중심 호 + 양 끝 화살표 + 각도 값 ──
+  if(s.labelType==='ang'){
+    var r_a=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),a0=s.a0||0,sw=s.sweep||0;
+    ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p1[0]+Math.cos(a0)*(r_a+5),p1[1]+Math.sin(a0)*(r_a+5));
+    ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p1[0]+Math.cos(a0+sw)*(r_a+5),p1[1]+Math.sin(a0+sw)*(r_a+5));ctx.stroke();
+    ctx.strokeStyle=col;ctx.lineWidth=printRender?2:1.5;ctx.beginPath();ctx.arc(p1[0],p1[1],r_a,a0,a0+sw);ctx.stroke();
+    if(r_a*sw>3*ahsz){
+      var e0=[p1[0]+Math.cos(a0)*r_a,p1[1]+Math.sin(a0)*r_a],e1=[p1[0]+Math.cos(a0+sw)*r_a,p1[1]+Math.sin(a0+sw)*r_a];
+      arrowHead(e0[0],e0[1],a0-Math.PI/2,ahsz,col);arrowHead(e1[0],e1[1],a0+sw+Math.PI/2,ahsz,col);
+    }
+    var lbl_a=_fmtAng(sw*180/Math.PI),mid=a0+sw/2;
+    ctx.save();ctx.font=(printRender?'bold 28px':'bold 11px')+' Consolas';
+    var tw_a=ctx.measureText(lbl_a).width,dd=r_a+(printRender?24:10)+tw_a*0.35;
+    var tx_a=p1[0]+Math.cos(mid)*dd,ty_a=p1[1]+Math.sin(mid)*dd;
+    if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(tx_a-tw_a/2-3,ty_a-8,tw_a+6,16);}
+    else{ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText(lbl_a,tx_a,ty_a);}
+    ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl_a,tx_a,ty_a);ctx.restore();
+    dimLabels.push({shape:s,field:'_dist',px:tx_a,py:ty_a});
+    return;
+  }
+
   // ── 일반 / Φ 치수선 ──
-  var perp=angle-Math.PI/2;
-  var offPx=(s.offsetMm||15)*scale;
-  var q1x=p1[0]+Math.cos(perp)*offPx,q1y=p1[1]+Math.sin(perp)*offPx;
-  var q2x=p2[0]+Math.cos(perp)*offPx,q2y=p2[1]+Math.sin(perp)*offPx;
-  ctx.strokeStyle='#546E7A';ctx.lineWidth=1;ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(p1[0]+Math.cos(perp)*2,p1[1]+Math.sin(perp)*2);ctx.lineTo(q1x+Math.cos(perp)*5,q1y+Math.sin(perp)*5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(p2[0]+Math.cos(perp)*2,p2[1]+Math.sin(perp)*2);ctx.lineTo(q2x+Math.cos(perp)*5,q2y+Math.sin(perp)*5);ctx.stroke();
-  ctx.strokeStyle=col;ctx.lineWidth=1.5;
+  var perp=angle-Math.PI/2,cpx=Math.cos(perp),cpy=Math.sin(perp);
+  var offPx=(s.offsetMm!=null?s.offsetMm:15)*scale,sg=offPx>=0?1:-1;
+  var q1x=p1[0]+cpx*offPx,q1y=p1[1]+cpy*offPx;
+  var q2x=p2[0]+cpx*offPx,q2y=p2[1]+cpy*offPx;
+  // 보조선: 실제 측정점(기준선에서 e만큼 뒤)에서 조금 띄워 치수선 조금 너머까지
+  var e1p=(s.e1||0)*scale,e2p=(s.e2||0)*scale;
+  ctx.strokeStyle=printRender?col:'#546E7A';ctx.lineWidth=printRender?2:1;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(p1[0]-cpx*e1p+cpx*sg*(printRender?6:2),p1[1]-cpy*e1p+cpy*sg*(printRender?6:2));ctx.lineTo(q1x+cpx*sg*(printRender?10:5),q1y+cpy*sg*(printRender?10:5));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p2[0]-cpx*e2p+cpx*sg*(printRender?6:2),p2[1]-cpy*e2p+cpy*sg*(printRender?6:2));ctx.lineTo(q2x+cpx*sg*(printRender?10:5),q2y+cpy*sg*(printRender?10:5));ctx.stroke();
+  ctx.strokeStyle=col;ctx.lineWidth=printRender?2.5:1.5;
   ctx.beginPath();ctx.moveTo(q1x,q1y);ctx.lineTo(q2x,q2y);ctx.stroke();
   var len=Math.hypot(q2x-q1x,q2y-q1y);
   if(len>16){arrowHead(q1x,q1y,angle+Math.PI,ahsz,col);arrowHead(q2x,q2y,angle,ahsz,col);}
   var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);
-  var mx2=(q1x+q2x)/2,my2=(q1y+q2y)/2;
+  // 글자: 치수선 바깥쪽(보조선이 뻗은 쪽)에 바로 서게
+  var tgap=printRender?22:8;
+  var mx2=(q1x+q2x)/2+cpx*sg*tgap,my2=(q1y+q2y)/2+cpy*sg*tgap;
   var lt=s.labelType||'dist';
   var distLabel=lt==='phi'?('Φ'+_fmtDim(dist)):_fmtDim(dist);
-  ctx.save();ctx.translate(mx2,my2);var da=angle;if(Math.cos(da)<-0.01)da+=Math.PI;ctx.rotate(da);
-  var dlbw=printRender?96:30;
-  if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-9,dlbw*2,12);}
-  ctx.fillStyle=col;ctx.font=(printRender?'bold 28px':'bold 10px')+' Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(distLabel,0,-2);_numUnderline(ctx,distLabel,0,-2);ctx.restore();
+  ctx.save();ctx.translate(mx2,my2);var da=angle;if(Math.cos(da)<-0.01||(Math.abs(Math.cos(da))<0.01&&Math.sin(da)>0))da+=Math.PI;ctx.rotate(da);
+  ctx.font=printRender?'bold 32px '+_EXP_FONT:'bold 10px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
+  var dlbw=ctx.measureText(distLabel).width/2+4;
+  if(!printRender){ctx.fillStyle='rgba(30,42,53,0.85)';ctx.fillRect(-dlbw,-7,dlbw*2,14);}
+  else{ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineJoin='round';ctx.strokeText(distLabel,0,0);}
+  ctx.fillStyle=col;ctx.fillText(distLabel,0,0);_numUnderline(ctx,distLabel,0,0);ctx.restore();
   dimLabels.push({shape:s,field:'_dist',px:mx2,py:my2});
+}
+
+// ─── 치수선 도구: 길이(두 점 → 마우스로 위치 → 클릭) / 각도(선 두 개 클릭 → 마우스로 위치 → 클릭) ───
+//   길이: 기본은 가로/세로 치수(마우스가 두 점의 위·아래면 가로, 옆이면 세로), Shift = 두 점을 잇는 방향(비스듬한 치수)
+//   저장: x1..y2 = 치수 기준선(측정 구간), offsetMm = 기준선에서 치수선까지(법선 방향, 음수면 반대쪽),
+//         e1/e2 = 기준선에서 실제 측정점까지 보조선을 더 늘릴 길이(가로/세로 치수에서 두 점 높이가 다를 때)
+//   각도: labelType 'ang', x1,y1 = 꼭지점, x2,y2 = 호 위 한 점(반지름), a0·sweep = 호 시작각·크기(화면 기준 시계방향, 라디안)
+var _dimSt=null; // {stage:1(첫 점)|2(위치 정하기), p1, p2} 또는 각도 {ang:true, l1, l2, v}
+function _dimSegAt(mx,my){
+  var tol=10/scale,best=null,bd=tol;
+  shapes.forEach(function(s){
+    var segs=[];
+    if(s.kind==='line')segs=[[s.x1,s.y1,s.x2,s.y2]];
+    else if(s.kind==='rect')segs=_trimRectEdges(_trimRectGeo(s)).map(function(e){return[e.ax,e.ay,e.bx,e.by];});
+    segs.forEach(function(g){var d=ptLD(mx,my,g[0],g[1],g[2],g[3]);if(d<bd){bd=d;best=g;}});
+  });
+  return best;
+}
+function _dimBuildLinear(p1,p2,m,free){
+  var dx=p2[0]-p1[0],dy=p2[1]-p1[1],mode='a',A,B;
+  if(!free){
+    if(Math.abs(dy)<0.5)mode='h';else if(Math.abs(dx)<0.5)mode='v';
+    else{
+      var dxOut=Math.max(0,Math.min(p1[0],p2[0])-m[0],m[0]-Math.max(p1[0],p2[0])),dyOut=Math.max(0,Math.min(p1[1],p2[1])-m[1],m[1]-Math.max(p1[1],p2[1]));
+      mode=dyOut>=dxOut?'h':'v';
+    }
+  }
+  if(mode==='h'){var yb=Math.abs(m[1]-p1[1])<=Math.abs(m[1]-p2[1])?p1[1]:p2[1];A=[p1[0],yb];B=[p2[0],yb];}
+  else if(mode==='v'){var xb=Math.abs(m[0]-p1[0])<=Math.abs(m[0]-p2[0])?p1[0]:p2[0];A=[xb,p1[1]];B=[xb,p2[1]];}
+  else{A=p1;B=p2;}
+  var L=Math.hypot(B[0]-A[0],B[1]-A[1]);if(L<0.5)return null;
+  var nx=(B[1]-A[1])/L,ny=-(B[0]-A[0])/L; // drawDimLine의 perp(=진행각-90°)와 같은 법선
+  return{x1:A[0],y1:A[1],x2:B[0],y2:B[1],labelType:'dist',
+    offsetMm:(m[0]-A[0])*nx+(m[1]-A[1])*ny,
+    e1:-((p1[0]-A[0])*nx+(p1[1]-A[1])*ny),e2:-((p2[0]-B[0])*nx+(p2[1]-B[1])*ny)};
+}
+function _dimLineX(g1,g2){ // 두 선(무한 직선)의 교점
+  var x1=g1[0],y1=g1[1],x2=g1[2],y2=g1[3],x3=g2[0],y3=g2[1],x4=g2[2],y4=g2[3];
+  var d=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);if(Math.abs(d)<1e-9)return null;
+  var t=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/d;return[x1+t*(x2-x1),y1+t*(y2-y1)];
+}
+function _dimBuildAng(st,m){
+  var v=st.v,r=Math.hypot(m[0]-v[0],m[1]-v[1]);if(r<1)return null;
+  function dir(g){var L=Math.hypot(g[2]-g[0],g[3]-g[1]);return[(g[2]-g[0])/L,(g[3]-g[1])/L];}
+  var d1=dir(st.l1),d2=dir(st.l2),mv=[m[0]-v[0],m[1]-v[1]];
+  if(d1[0]*mv[0]+d1[1]*mv[1]<0)d1=[-d1[0],-d1[1]]; // 마우스가 있는 쪽의 반직선 두 개 사이 각
+  if(d2[0]*mv[0]+d2[1]*mv[1]<0)d2=[-d2[0],-d2[1]];
+  var a0=Math.atan2(d1[1],d1[0]),sw=Math.atan2(d2[1],d2[0])-a0;
+  while(sw>Math.PI)sw-=2*Math.PI;while(sw<-Math.PI)sw+=2*Math.PI;
+  if(sw<0){a0+=sw;sw=-sw;}
+  if(sw<1e-3)return null;
+  var mid=a0+sw/2;
+  return{x1:v[0],y1:v[1],x2:v[0]+Math.cos(mid)*r,y2:v[1]+Math.sin(mid)*r,labelType:'ang',a0:a0,sweep:sw};
+}
+// 치수선 도구 클릭. true면 처리 끝
+function _dimClick(mx,my,free){
+  if(dimLineType==='ang'){
+    if(_dimSt&&_dimSt.v){var o=_dimBuildAng(_dimSt,[mx,my]);if(o){saveHistory();var s=makeShape('dimline',o);shapes.push(s);selectedShapes=[s];updatePropsPanel();}_dimSt=null;redraw();return true;}
+    var g=_dimSegAt(mx,my);if(!g)return true;
+    if(!_dimSt||!_dimSt.l1){_dimSt={ang:true,l1:g};}
+    else{var v=_dimLineX(_dimSt.l1,g);if(!v)return true;_dimSt.l2=g;_dimSt.v=v;} // 평행한 선은 무시
+    redraw();return true;
+  }
+  if(dimLineType!=='dist')return false;
+  if(!_dimSt){_dimSt={stage:1,p1:[mx,my]};}
+  else if(_dimSt.stage===1){if(Math.hypot(mx-_dimSt.p1[0],my-_dimSt.p1[1])<0.5)return true;_dimSt.p2=[mx,my];_dimSt.stage=2;}
+  else{var o2=_dimBuildLinear(_dimSt.p1,_dimSt.p2,[mx,my],free);if(o2){saveHistory();var s2=makeShape('dimline',o2);shapes.push(s2);selectedShapes=[s2];updatePropsPanel();}_dimSt=null;}
+  redraw();return true;
+}
+function _dimPreview(mx,my,free){
+  if(!_dimSt)return;
+  ctx.save();ctx.globalAlpha=0.85;
+  if(_dimSt.ang){
+    [_dimSt.l1,_dimSt.l2].forEach(function(g){if(!g)return;var a=toCanvas(g[0],g[1]),b=toCanvas(g[2],g[3]);ctx.strokeStyle='#FF6D00';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});
+    if(_dimSt.v){var o=_dimBuildAng(_dimSt,[mx,my]);if(o){o.kind='dimline';o.ops=[];drawDimLine(o,true);}}
+  } else if(_dimSt.stage===1){
+    var a=toCanvas(_dimSt.p1[0],_dimSt.p1[1]),b=toCanvas(mx,my);
+    ctx.strokeStyle='rgba(255,80,80,0.7)';ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.setLineDash([]);
+  } else {
+    var o2=_dimBuildLinear(_dimSt.p1,_dimSt.p2,[mx,my],free);if(o2){o2.kind='dimline';o2.ops=[];drawDimLine(o2,true);}
+  }
+  // 안내
+  var msg=_dimSt.ang?(_dimSt.v?'마우스로 각도 쪽·위치 → 클릭':'두 번째 선 클릭'):(_dimSt.stage===1?'두 번째 점 클릭':'마우스로 치수선 위치 → 클릭 (Shift = 비스듬히)');
+  var c=toCanvas(mx,my);ctx.globalAlpha=1;ctx.font='11px "Malgun Gothic"';var tw=ctx.measureText(msg).width;
+  ctx.fillStyle='rgba(30,42,53,0.9)';ctx.fillRect(c[0]+14,c[1]+14,tw+10,18);ctx.fillStyle='#FFD740';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(msg,c[0]+19,c[1]+23);
+  ctx.restore();
 }
 
 // ─── Gap 치수 ───
@@ -3168,12 +3285,14 @@ function _dxfCollect(H){
   function isCut(s){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
   function inAnyRect(x,y){return rects.some(function(o){return !isCut(o)&&x>=Math.min(o.x,o.x+o.w)&&x<=Math.max(o.x,o.x+o.w)&&y>=Math.min(o.y,o.y+o.h)&&y<=Math.max(o.y,o.y+o.h);});}
   // 치수: p1→p2, nrm(단위 법선) 방향으로 off 떨어진 치수선 + 보조선 + 양 화살촉 + 글자
-  function dim(p1,p2,nrm,off,label){
+  function dim(p1,p2,nrm,off,label,e1,e2){ // e1/e2: 보조선을 p1/p2에서 법선 반대쪽으로 더 늘릴 길이 (가로/세로 치수선)
     var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<1)return;
+    if(off<0){nrm=[-nrm[0],-nrm[1]];off=-off;e1=-(e1||0);e2=-(e2||0);}
+    e1=e1||0;e2=e2||0;
     var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L;
     var a1=[p1[0]+nrm[0]*off,p1[1]+nrm[1]*off],a2=[p2[0]+nrm[0]*off,p2[1]+nrm[1]*off],gap=H*0.3,ov=H*0.4;
-    line('SC-DIM',[p1[0]+nrm[0]*gap,p1[1]+nrm[1]*gap],[a1[0]+nrm[0]*ov,a1[1]+nrm[1]*ov]);
-    line('SC-DIM',[p2[0]+nrm[0]*gap,p2[1]+nrm[1]*gap],[a2[0]+nrm[0]*ov,a2[1]+nrm[1]*ov]);
+    line('SC-DIM',[p1[0]+nrm[0]*(gap-e1),p1[1]+nrm[1]*(gap-e1)],[a1[0]+nrm[0]*ov,a1[1]+nrm[1]*ov]);
+    line('SC-DIM',[p2[0]+nrm[0]*(gap-e2),p2[1]+nrm[1]*(gap-e2)],[a2[0]+nrm[0]*ov,a2[1]+nrm[1]*ov]);
     line('SC-DIM',a1,a2);
     var ah=Math.min(AH,L/3),hw=ah*0.3;
     solid('SC-DIM',a1,[a1[0]+ux*ah-uy*hw,a1[1]+uy*ah+ux*hw],[a1[0]+ux*ah+uy*hw,a1[1]+uy*ah-ux*hw]);
@@ -3268,9 +3387,19 @@ function _dxfCollect(H){
       line('SC-JOLLY',[s.x1,s.y1],[s.x2,s.y2]);
       var jm=_gosraDir(s);if(jm)star('SC-JOLLY',jm.mx+jm.dx*H*1.3,jm.my+jm.dy*H*1.3,H*1.1); // 고스라 ▲(크기 H)와 비슷하게
     }
+    else if(s.kind==='dimline'&&s.labelType==='ang'){ // 각도 치수: 호 + 보조선 + 값 (편집 좌표 a0→a0+sweep 시계 = DXF -(a0+sweep)→-a0)
+      var ra=Math.hypot(s.x2-s.x1,s.y2-s.y1),A0=s.a0||0,SW=s.sweep||0;
+      if(ra>0.5&&SW>0){
+        ents.push({t:'ARC',L:'SC-DIM',c:Q(s.x1,s.y1),r:ra,a0:-(A0+SW)*180/Math.PI,a1:-A0*180/Math.PI});
+        line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0)*(ra+H*0.4),s.y1+Math.sin(A0)*(ra+H*0.4)]);
+        line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0+SW)*(ra+H*0.4),s.y1+Math.sin(A0+SW)*(ra+H*0.4)]);
+        var lbA=_fmtAng(SW*180/Math.PI),bisA=A0+SW/2,ddA=ra+H*0.6+lbA.length*H*0.3;
+        text('SC-DIM',s.x1+Math.cos(bisA)*ddA,s.y1+Math.sin(bisA)*ddA,H,lbA,0);
+      }
+    }
     else if(s.kind==='dimline'){
       var an2=Math.atan2(s.y2-s.y1,s.x2-s.x1),pp=an2-Math.PI/2,d=Math.hypot(s.x2-s.x1,s.y2-s.y1),lt=s.labelType||'dist';
-      dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm||15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d));
+      dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm!=null?s.offsetMm:15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d),s.e1,s.e2);
     }
     else if(s.kind==='note'){
       var ls=String(s.text||'').split('\n'),th=H*1.3*((s.fs||32)/32),lh=th*1.5,y0=s.y-(ls.length-1)*lh/2;
@@ -4360,8 +4489,13 @@ function redraw(){
 // ═══ 히트테스트 ═══
 function _dimlineHit(s,mx,my,tol){
   // 실제 시각적 치수선 위치(offsetMm 반영)로 히트 체크
+  if(s.labelType==='ang'){ // 각도 치수: 호 근처
+    var ra=Math.hypot(s.x2-s.x1,s.y2-s.y1),da=Math.hypot(mx-s.x1,my-s.y1);if(Math.abs(da-ra)>tol)return false;
+    var aa=Math.atan2(my-s.y1,mx-s.x1)-(s.a0||0);while(aa<0)aa+=2*Math.PI;while(aa>2*Math.PI)aa-=2*Math.PI;
+    return aa<=(s.sweep||0)+0.05;
+  }
   var ang=Math.atan2(s.y2-s.y1,s.x2-s.x1),perp=ang-Math.PI/2;
-  var off=s.offsetMm||15;
+  var off=s.offsetMm!=null?s.offsetMm:15;
   var ox1=s.x1+Math.cos(perp)*off,oy1=s.y1+Math.sin(perp)*off;
   var ox2=s.x2+Math.cos(perp)*off,oy2=s.y2+Math.sin(perp)*off;
   return ptLD(mx,my,ox1,oy1,ox2,oy2)<=tol||ptLD(mx,my,s.x1,s.y1,s.x2,s.y2)<=tol*1.5;
@@ -4580,6 +4714,8 @@ cv.addEventListener('mousedown',function(e){
     _lineRedraw();
   } else {
     cv.focus();
+    // 길이·각도 치수선: 클릭 단계로 (두 점/두 선 → 마우스로 위치 → 클릭)
+    if(tool==='dimline'&&_dimClick(mx,my,e.shiftKey)){drawStart=null;if(_dimSt&&_dimSt.stage===1)_dimSt.down=[e.offsetX,e.offsetY];return;}
     // R/Φ 치수선: 원 클릭 감지
     if(tool==='dimline'&&(dimLineType==='r'||dimLineType==='phi')){
       var _tol=12/scale,_hc=null;
@@ -4622,6 +4758,10 @@ cv.addEventListener('pointerup',function(e){
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
   if(tool==='line'){_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지
   if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
+  // 길이 치수: 첫 점에서 끌어서 놓으면 놓은 곳이 두 번째 점
+  if(tool==='dimline'&&_dimSt&&_dimSt.stage===1&&_dimSt.down&&Math.hypot(e.offsetX-_dimSt.down[0],e.offsetY-_dimSt.down[1])>6){
+    var _up=applySnap(e.offsetX,e.offsetY);_dimSt.down=null;_dimClick(_up[0],_up[1],e.shiftKey);return;
+  }
   if(!drawStart)return;
   finalizeShape(lastMx,lastMy);
 });
@@ -4764,6 +4904,7 @@ cv.addEventListener('mousemove',function(e){
   redraw();
   if(snapKind&&snapKind!=='grid')drawSnapInd(mx,my,snapKind);
   drawGuides(mx,my);
+  if(tool==='dimline'&&_dimSt)_dimPreview(mx,my,e.shiftKey);
 
   if(drawStart){
     var x0=drawStart[0],y0=drawStart[1];
@@ -5281,6 +5422,7 @@ document.addEventListener('keydown',function(e){
     selectedShapes=[];hoverShape=null;filletSel=[];updatePropsPanel();redraw();calcCost();
   }
   if(e.key==='Escape'){
+    if(_dimSt){_dimSt=null;redraw();return;} // 치수선 그리는 중이면 그것만 취소
     selBox=null;drawStart=null;filletSel=[];
     // 그리기 도구 → 선택 도구로 복귀
     if(tool&&tool!=='select'){
@@ -5305,7 +5447,7 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
     if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 절단 이어 그리기 끝
-    tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;
+    tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;
     document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
     document.getElementById('fillet-sub').style.display=(tool==='fillet')?'block':'none';
@@ -5415,6 +5557,8 @@ function updatePropsPanel(){
   } else if(s.kind==='ellipse'){
     html+='<div class="prop-row"><label>RX(mm):</label><input type="number" id="pp-rx" value="'+s.rx.toFixed(2)+'" step="0.5" oninput="liveProp(\'rx\',this.value)"></div>';
     html+='<div class="prop-row"><label>RY(mm):</label><input type="number" id="pp-ry" value="'+s.ry.toFixed(2)+'" step="0.5" oninput="liveProp(\'ry\',this.value)"></div>';
+  } else if(s.kind==='dimline'&&s.labelType==='ang'){
+    html+='<div style="color:#EF9A9A;font-size:11px;padding:4px">각도 치수: '+_fmtAng((s.sweep||0)*180/Math.PI)+'<br><small style="color:#546E7A">옮기기는 끌기, 다시 그리려면 지우고 치수선 → 각도</small></div>';
   } else if(s.kind==='dimline'){
     html+='<div class="prop-row"><label>오프셋:</label><input type="number" id="pp-offsetMm" value="'+(s.offsetMm||15).toFixed(1)+'" step="1" oninput="liveProp(\'offsetMm\',this.value)"></div>';
     var lt=s.labelType||'dist';
