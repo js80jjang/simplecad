@@ -7217,6 +7217,56 @@ function _renderDrawingImage(pageLine){
   }
   return{img:img,isPort:isPort};
 }
+// 쪽 나누기 도면: 그 장의 조각들을 원래 자리 대신 가깝게 모아(줄 맞춰 배치) 도면을 크게.
+// 조각마다 딸린 도형(타공·밑면연마·고스라·글자 등)은 같이 옮긴 복사본으로 돌려줌 (원본 shapes는 그대로)
+var _DRW_AW=1660,_DRW_AH=851; // _renderDrawingImage의 도면 영역(px): 2000×1281에서 여백 뺀 크기
+function _compactPageShapes(list,pmap,items){
+  var groups={},G=[];
+  list.forEach(function(s){
+    var k=pmap.get(s);if(k==null)return;
+    if(!groups[k]){
+      var sh=items[k].shape,b0=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!b0)return;
+      groups[k]={ss:[],bb:{l:b0.l,t:b0.t,r:b0.r,b:b0.b}};G.push(groups[k]);
+    }
+    var g=groups[k],b=getBBoxAny(s);g.ss.push(s);
+    if(b){g.bb.l=Math.min(g.bb.l,b.l);g.bb.t=Math.min(g.bb.t,b.t);g.bb.r=Math.max(g.bb.r,b.r);g.bb.b=Math.max(g.bb.b,b.b);}
+  });
+  if(G.length<2)return list;
+  // 원래 도면의 읽는 순서(위→아래, 왼쪽→오른쪽)대로
+  G.sort(function(a,b){return Math.round(a.bb.t/300)-Math.round(b.bb.t/300)||a.bb.l-b.bb.l;});
+  var sumW=0,maxW=0;G.forEach(function(g){var w=g.bb.r-g.bb.l;sumW+=w;maxW=Math.max(maxW,w);});
+  // 줄 폭을 바꿔 가며 도면 영역에 가장 크게 들어가는 배치. 조각 사이 간격 = 치수 두 줄 자리(약 150px)를 mm로
+  function shelf(rowW,gap){
+    var x=0,y=0,rowH=0,totW=0,pos=[];
+    G.forEach(function(g){
+      var w=g.bb.r-g.bb.l,h=g.bb.b-g.bb.t;
+      if(x>0&&x+w>rowW){y+=rowH+gap;x=0;rowH=0;}
+      pos.push([x,y]);x+=w+gap;rowH=Math.max(rowH,h);totW=Math.max(totW,x-gap);
+    });
+    return{pos:pos,w:totW,h:y+rowH,sc:Math.min(_DRW_AW/Math.max(1,totW),_DRW_AH/Math.max(1,y+rowH))};
+  }
+  var best=null,sc=0.3;
+  for(var it=0;it<4;it++){
+    var gap=150/sc;best=null;
+    for(var i=0;i<=40;i++){
+      var r=shelf(maxW+(sumW+gap*G.length-maxW)*i/40,gap);
+      if(!best||r.sc>best.sc+1e-9)best=r;
+    }
+    sc=best.sc;
+  }
+  // 각 줄 안에서 조각을 세로 가운데 맞춤 없이 위쪽 정렬, 옮긴 복사본 만들기
+  var out=[];
+  G.forEach(function(g,i){
+    var dx=best.pos[i][0]-g.bb.l,dy=best.pos[i][1]-g.bb.t;
+    g.ss.forEach(function(s){
+      var c=JSON.parse(JSON.stringify(s));
+      ['x','x1','x2','cx'].forEach(function(k){if(typeof c[k]==='number')c[k]+=dx;});
+      ['y','y1','y2','cy'].forEach(function(k){if(typeof c[k]==='number')c[k]+=dy;});
+      out.push(c);
+    });
+  });
+  return out;
+}
 function exportDrawingA4(){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
@@ -7232,8 +7282,7 @@ function exportDrawingA4(){
     var rest=[];items.forEach(function(it,k){if(!onBoard[k])rest.push(k);});
     if(rest.length)pagesDef.push({idx:rest,label:'온장에 배치되지 않은 조각',bw:null,bh:null});
     pagesDef.forEach(function(pd){var set={};pd.idx.forEach(function(k){set[k]=1;});pd.list=shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];});});
-    pagesDef=pagesDef.filter(function(pd){return pd.list.length;});
-  }
+    pagesDef=pagesDef.filter(function(pd){return pd.list.length;});  }
   if(pagesDef.length<2){var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];}
   // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
   var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
@@ -7241,7 +7290,7 @@ function exportDrawingA4(){
   var pages=[];
   try{
     pagesDef.forEach(function(pd){
-      if(pd.list)shapes=pd.list;
+      if(pd.list)shapes=_compactPageShapes(pd.list,pmap,items); // 조각을 모아 크게 (번호 고정 후라 복사본에도 번호가 따라감)
       try{var r=_renderDrawingImage(pd.label);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);}}
       finally{shapes=all;}
     });
