@@ -4343,6 +4343,19 @@ function hitDim(ex,ey){
   for(var j=0;j<dimLabels.length;j++){var l=dimLabels[j].line;if(l&&ptLD(ex,ey,l[0][0],l[0][1],l[1][0],l[1][1])<=5)return dimLabels[j];}
   return null;
 }
+// (mx,my)가 안에 있는 닫힌 선 조각(선 절단으로 만든 것)의 선 목록, 없으면 null. 여러 개면 가장 작은 것
+function _lineGroupAt(mx,my){
+  var best=null,ba=Infinity;
+  _collectBoardItems().forEach(function(it){
+    var sh=it.shape;if(sh.kind!=='linegroup')return;
+    if(mx<sh.x||mx>sh.x+sh.w||my<sh.y||my>sh.y+sh.h)return;
+    var loop=_expChain(sh.lines);if(!loop)return;
+    var inside=false;
+    for(var i=0,j=loop.length-1;i<loop.length;j=i++){var a=loop[i],b=loop[j];if((a[1]>my)!==(b[1]>my)&&mx<(b[0]-a[0])*(my-a[1])/(b[1]-a[1])+a[0])inside=!inside;}
+    if(inside&&sh.w*sh.h<ba){ba=sh.w*sh.h;best=sh.lines;}
+  });
+  return best;
+}
 function shapeInBox(s,bx1,by1,bx2,by2){
   var l=Math.min(bx1,bx2),r=Math.max(bx1,bx2),t=Math.min(by1,by2),b=Math.max(by1,by2);
   if(s.kind==='note')return s.x>=l&&s.x<=r&&s.y>=t&&s.y<=b;
@@ -4380,7 +4393,11 @@ cv.addEventListener('mousedown',function(e){
       cv.style.cursor='crosshair';
       e.preventDefault();return;
     }
-    var dh=hitDim(e.offsetX,e.offsetY);
+    // 선 절단으로 만든 닫힌 조각: 선 위가 아니라 안쪽을 눌러도 그 조각(선 전체)으로
+    var _lgAt=_lineGroupAt(mx,my);
+    // 여러 개 선택된 도형 위를 누르면 치수 글자보다 끌어 옮기기가 먼저 (선 길이 글자가 선 바로 옆이라 옮기려다 길이 편집이 열리던 것)
+    var _onSel=selectedShapes.length>1&&(hitTestAll(mx,my).some(function(h){return selectedShapes.indexOf(h)>=0;})||(_lgAt&&_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;})));
+    var dh=_onSel?null:hitDim(e.offsetX,e.offsetY);
     if(dh&&dh.field!=='_dist'){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}
@@ -4405,6 +4422,11 @@ cv.addEventListener('mousedown',function(e){
       _cycleHitMx=mx;_cycleHitMy=my;
       hit=hits[_cycleIdx];
     } else {_cycleHitMx=null;_cycleHitMy=null;_cycleIdx=0;}
+    if(!hit&&_lgAt&&!(e.ctrlKey||e.metaKey)){
+      // 선 조각 안쪽: 이미 다 선택돼 있으면 그대로 끌기, 아니면 그 조각의 선 전체를 선택
+      if(!_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;}))selectedShapes=_lgAt.slice();
+      hit=_lgAt[0];
+    }
     if(e.ctrlKey||e.metaKey){
       // Ctrl: 클릭 = 그 도형 넣기/빼기, 드래그 = 상자 안 도형을 지금 선택에 더하기 (도형 위에서 시작해도 상자)
       selBox={x1:mx,y1:my,x2:mx,y2:my,add:true,hit:hit,px:e.offsetX,py:e.offsetY};
