@@ -605,6 +605,17 @@ function _boardLabel(board){
   if(board.prod&&names.indexOf(board.prod)>=0)return board.prod;
   return names[0]||'';
 }
+// 제품의 온장 크기(mm, 긴 쪽이 가로): 제품 사이즈 칸(예: 1600×3200×12T)에서, 없으면 도구줄 온장 칸
+//   제품마다 사이즈가 다르면 장마다 크기가 다름 → board.bw/bh (_boardDims)
+function _prodBoardSize(name){
+  var p=products.filter(function(q){return (q.name||'').trim()===name;})[0];
+  var m=p&&/(\d{3,4})\s*[x×X*]\s*(\d{3,4})/.exec(p.size||'');
+  if(m){var a=+m[1],b=+m[2];return{bw:Math.max(a,b),bh:Math.min(a,b)};}
+  return{bw:parseFloat((document.getElementById('board-w')||{}).value)||3200,bh:parseFloat((document.getElementById('board-h')||{}).value)||1600};
+}
+function _boardDims(board){return board&&board.bw?{bw:board.bw,bh:board.bh}:_prodBoardSize(_boardLabel(board||[]));}
+// 저장된 배치를 그대로 쓸 수 있는지: 온장 칸·제품별 사이즈가 그대로일 때만
+function _boardSizeSig(){return JSON.stringify([(document.getElementById('board-w')||{}).value,(document.getElementById('board-h')||{}).value,products.map(function(p){return (p.name||'').trim()+'|'+(p.size||'').trim();})]);}
 // 장 머리글: 온장 N · 제품명
 function _boardTitle(board,bi){var n=_boardLabel(board);return '온장 '+(bi+1)+(n?' · '+n:'');}
 // 온장 무늬: 가로로 긴 온장 사진을 온장 상자(bx,by,w,h px)에 맞춤 — 온장이 세로면 90° 돌려서
@@ -5076,7 +5087,7 @@ function _updateBoardQty(){
   var bw=parseFloat(document.getElementById('board-w').value)||1600,bh=parseFloat(document.getElementById('board-h').value)||3200;
   var items=_collectBoardItems(),boards=[],groups=null;
   if(items.length){
-    var saved=(_savedBoardLayout&&_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh)?_restoreSavedBoards(_savedBoardLayout,items):null;
+    var saved=(_savedBoardLayout&&(_savedBoardLayout.sig?_savedBoardLayout.sig===_boardSizeSig():(_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh)))?_restoreSavedBoards(_savedBoardLayout,items):null;
     if(saved){boards=saved;groups=_savedBoardLayout.groups||null;}
     else{var pk=_packBoardItems(items,bw-20,bh-20,3);boards=pk.boards;groups=pk.groups;}
   }
@@ -5520,9 +5531,6 @@ function _collectBoardItems(){
     pieces.push(pseudo);
   }
 
-  // 온장 유효 영역 (showBoardLayout과 같은 여백 10)
-  var _bw=parseFloat((document.getElementById('board-w')||{}).value)||1600,_bh=parseFloat((document.getElementById('board-h')||{}).value)||3200;
-  var _ew=_bw-20,_eh=_bh-20;
   // 각 피스의 BBox (w,h) 계산
   return pieces.map(function(s){
     var w,h,label,rot=0,rx0=0,ry0=0;
@@ -5532,6 +5540,7 @@ function _collectBoardItems(){
     else if(s.kind==='linegroup'){
       w=s.w;h=s.h;
       // 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌려서 배치
+      var _sz=_prodBoardSize(_itemProd(s)),_ew=_sz.bw-20,_eh=_sz.bh-20; // 이 조각 제품의 온장 유효 영역 (여백 10)
       var fit=function(a,b){return (a<=_ew&&b<=_eh)||(b<=_ew&&a<=_eh);};
       if(!fit(w,h)){
         var best=null;
@@ -5560,9 +5569,10 @@ function _packBoardItems(items,ew,eh,gap){
   var allBoards=[],groupMeta=[];
   _grpOrder.forEach(function(lbl,gi){
     var grpItems=_grpMap[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});
-    var grpBoards=packBoards(grpItems,ew,eh,gap);
+    var sz=_prodBoardSize(lbl); // 제품마다 온장 크기가 다를 수 있음
+    var grpBoards=packBoards(grpItems,sz.bw-20,sz.bh-20,gap);
     var startBi=allBoards.length;
-    grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;allBoards.push(b);}); // 장 제품 = 그 장 조각들의 제품
+    grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;b.bw=sz.bw;b.bh=sz.bh;allBoards.push(b);}); // 장 제품 = 그 장 조각들의 제품
     groupMeta.push({label:lbl,color:_grpCols[gi%_grpCols.length],startBi:startBi,count:grpBoards.length});
   });
   return{boards:allBoards,groups:groupMeta};
@@ -5595,7 +5605,10 @@ function _restoreSavedBoards(saved,items){
     });
   });
   if(!ok||count!==items.length)return null;
-  boards.forEach(function(b,i){if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i];}); // 장마다 고른 제품
+  boards.forEach(function(b,i){
+    if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
+    var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 온장 크기
+  });
   return boards;
 }
 function showBoardLayout(){
@@ -5607,17 +5620,24 @@ function showBoardLayout(){
   if(!items.length){alert('배치할 도형이 없습니다.');return;}
   var _packed=_packBoardItems(items,ew,eh,gap);
   var allBoards=_packed.boards,groupMeta=_packed.groups;
+  // 저장된 배치(사이즈가 그대로일 때만)
+  var _canRestore=_savedBoardLayout&&(_savedBoardLayout.sig?_savedBoardLayout.sig===_boardSizeSig():(_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh));
+  var _rBoards=_canRestore?_restoreSavedBoards(_savedBoardLayout,items):null;
+  var useBoards=_rBoards||allBoards;
+  // 화면 배치 칸은 가장 큰 온장 기준 (장마다 크기가 다르면 각자 크기로 그림)
+  bw=0;bh=0;useBoards.forEach(function(b){var d=_boardDims(b);bw=Math.max(bw,d.bw);bh=Math.max(bh,d.bh);});
+  if(!bw){var d0=_prodBoardSize('');bw=d0.bw;bh=d0.bh;}
+  ew=bw-2*margin;eh=bh-2*margin;
 
   var totalPlaced=allBoards.reduce(function(a,b){return a+b.length;},0);
   var infoEl=document.getElementById('board-modal-info');
-  var infoStr='온장 '+bw+'×'+bh+' (유효 '+ew+'×'+eh+') mm | '+allBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
+  var _sizes=[];useBoards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
+  var infoStr='온장 '+_sizes.join(', ')+' mm | '+useBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
   infoStr+=' | <span style="color:#78909C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
   infoEl.innerHTML=infoStr;
 
-  // 저장된 배치가 있으면 복원
-  if(_savedBoardLayout&&_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh){
-    // 복사/추가로 도형 수가 달라지면 저장 배치 무효화(null)
-    var _rBoards=_restoreSavedBoards(_savedBoardLayout,items);
+  // 저장된 배치가 있으면 복원 (복사/추가로 도형 수가 달라지면 _restoreSavedBoards가 null)
+  {
     if(_rBoards){
       document.getElementById('board-modal').classList.add('show');
       _bs={boards:_rBoards,groups:_savedBoardLayout.groups||groupMeta,bw:bw,bh:bh,ew:ew,eh:eh,margin:margin,gap:gap,sc:1,boardPxW:0,boardPxH:0,startX:0,startY:0,gap2:20,boardOffsets:[],selectedPiece:null,dragOffX:0,dragOffY:0,boardPage:0,pickedPiece:null,dragMoved:false,dragStartX:0,dragStartY:0};
@@ -5704,6 +5724,8 @@ function packBoards(sorted,ew,eh,gap){
 // ─── 온장 배치 인터랙션 상태 ───
 var _bs=null; // board state: {boards,bw,bh,ew,eh,margin,gap,sc,boardPxW,boardPxH,startX,startY,gap2,selectedPiece,dragOffX,dragOffY}
 
+// 장(bi)의 유효 영역(mm): 제품마다 온장 크기가 다를 수 있음
+function _bsArea(bi){var d=_boardDims(_bs.boards[bi]);return{ew:d.bw-2*_bs.margin,eh:d.bh-2*_bs.margin};}
 function _bsHitTest(ex,ey){
   if(!_bs)return null;
   var mg=_bs.margin*_bs.sc;
@@ -5780,7 +5802,7 @@ function _bsInitEvents(){
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
     var hit=_bsHitTest(ex,ey);
     if(!hit)return;
-    var p=hit.p;
+    var p=hit.p,EA=_bsArea(hit.bi),EW=EA.ew,EH=EA.eh; // 이 장의 유효 영역
     if(e.shiftKey){
       var sh=p.item&&p.item.shape;
       if(!sh||sh.kind!=='linegroup'){alert('각도 지정 돌리기는 선으로 그린 조각만 됩니다.\n사각형은 오른쪽 클릭으로 90°씩 돌려 주세요.');return;}
@@ -5789,19 +5811,19 @@ function _bsInitEvents(){
       var ans=prompt('돌릴 각도를 입력하세요 (°)\n그린 방향 = 0°, 반시계 방향 +\n지금: '+cur+'°',String(cur));
       if(ans==null)return;var deg=parseFloat(ans);if(!isFinite(deg)){alert('숫자로 입력해 주세요.');return;}
       var th=-deg*Math.PI/180,rb=_rotBox(sh.lines,th);
-      var fitN=rb.w<=_bs.ew+0.01&&rb.h<=_bs.eh+0.01;
-      if(!fitN){alert(deg+'°로 돌리면 '+Math.round(rb.w)+'×'+Math.round(rb.h)+' 이라 온장 유효 영역('+_bs.ew+'×'+_bs.eh+')에 들어가지 않습니다.');return;}
+      var fitN=rb.w<=EW+0.01&&rb.h<=EH+0.01;
+      if(!fitN){alert(deg+'°로 돌리면 '+Math.round(rb.w)+'×'+Math.round(rb.h)+' 이라 온장 유효 영역('+EW+'×'+EH+')에 들어가지 않습니다.');return;}
       if(Math.abs(th)<1e-9){delete p.item.rot;delete p.item.rx0;delete p.item.ry0;}
       else{p.item.rot=th;p.item.rx0=rb.x0;p.item.ry0=rb.y0;}
       p.item.w=rb.w;p.item.h=rb.h;p.item.label=Math.round(rb.w)+'×'+Math.round(rb.h);
       p.rotated=false;p.pw=rb.w;p.ph=rb.h;
     } else {
       var newPw=p.ph,newPh=p.pw;
-      if(newPw>_bs.ew+0.01||newPh>_bs.eh+0.01)return; // 초과 시 무시
+      if(newPw>EW+0.01||newPh>EH+0.01)return; // 초과 시 무시
       p.pw=newPw;p.ph=newPh;p.rotated=!p.rotated;
     }
-    p.x=Math.max(0,Math.min(_bs.ew-p.pw,p.x));
-    p.y=Math.max(0,Math.min(_bs.eh-p.ph,p.y));
+    p.x=Math.max(0,Math.min(EW-p.pw,p.x));
+    p.y=Math.max(0,Math.min(EH-p.ph,p.y));
     // 충돌 해소
     var placed=_bs.boards[hit.bi],g=_bs.gap;
     function ovR(a,b){return !(a.x+a.pw+g<=b.x||b.x+b.pw+g<=a.x||a.y+a.ph+g<=b.y||b.y+b.ph+g<=a.y);}
@@ -5810,7 +5832,7 @@ function _bsInitEvents(){
       var mn=Math.min(pR,pL,pD,pU);
       if(mn===pR)mv.x=an.x+an.pw+g;else if(mn===pL)mv.x=an.x-mv.pw-g;
       else if(mn===pD)mv.y=an.y+an.ph+g;else mv.y=an.y-mv.ph-g;
-      mv.x=Math.max(0,Math.min(_bs.ew-mv.pw,mv.x));mv.y=Math.max(0,Math.min(_bs.eh-mv.ph,mv.y));
+      mv.x=Math.max(0,Math.min(EW-mv.pw,mv.x));mv.y=Math.max(0,Math.min(EH-mv.ph,mv.y));
     }
     for(var it=0;it<30;it++){var any2=false;for(var i=0;i<placed.length;i++){for(var j=i+1;j<placed.length;j++){if(ovR(placed[i],placed[j])){any2=true;if(placed[i]===p)pwR(placed[j],placed[i]);else pwR(placed[i],placed[j]);}}}if(!any2)break;}
     renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
@@ -5865,14 +5887,15 @@ function _bsInitEvents(){
       // rawX/Y: 피스 TL 캔버스 위치(ex-dragOffX)를 현재 장 좌표계로 변환
       var rawX=(ex-_bs.dragOffX-ox-mg)/_bs.sc;
       var rawY=(ey-_bs.dragOffY-oy_-mg)/_bs.sc;
-      rawX=Math.max(0,Math.min(_bs.ew-p.pw,rawX));
-      rawY=Math.max(0,Math.min(_bs.eh-p.ph,rawY));
+      var EA=_bsArea(hit.bi),EW=EA.ew,EH=EA.eh; // 이 장의 유효 영역
+      rawX=Math.max(0,Math.min(EW-p.pw,rawX));
+      rawY=Math.max(0,Math.min(EH-p.ph,rawY));
 
       // 마그넷 스냅 (현재 장 기준)
       var g=_bs.gap,snapTolMm=10;
       var placed=_bs.boards[hit.bi];
-      var xCands=[0,_bs.ew-p.pw];
-      var yCands=[0,_bs.eh-p.ph];
+      var xCands=[0,EW-p.pw];
+      var yCands=[0,EH-p.ph];
       placed.forEach(function(o){
         if(o===p)return;
         xCands.push(o.x+o.pw+g,o.x-p.pw-g,o.x,o.x+o.pw-p.pw);
@@ -5881,8 +5904,8 @@ function _bsInitEvents(){
       var snapX=rawX,snapY=rawY,bestDX=snapTolMm+1,bestDY=snapTolMm+1;
       xCands.forEach(function(cx){var d=Math.abs(rawX-cx);if(d<bestDX){bestDX=d;snapX=cx;}});
       yCands.forEach(function(cy){var d=Math.abs(rawY-cy);if(d<bestDY){bestDY=d;snapY=cy;}});
-      snapX=Math.max(0,Math.min(_bs.ew-p.pw,snapX));
-      snapY=Math.max(0,Math.min(_bs.eh-p.ph,snapY));
+      snapX=Math.max(0,Math.min(EW-p.pw,snapX));
+      snapY=Math.max(0,Math.min(EH-p.ph,snapY));
       p.x=snapX;p.y=snapY;
 
       // ── 스냅 하이라이트 계산 ──
@@ -5910,7 +5933,7 @@ function _bsInitEvents(){
     if(!_bs||!_bs.selectedPiece)return;
     var hit=_bs.selectedPiece;
     var placed=_bs.boards[hit.bi];
-    var g=_bs.gap;
+    var g=_bs.gap,EA=_bsArea(hit.bi);
     function overlaps(a,b){return !(a.x+a.pw+g<=b.x||b.x+b.pw+g<=a.x||a.y+a.ph+g<=b.y||b.y+b.ph+g<=a.y);}
     function pushAway(mover,anchor){
       var pR=anchor.x+anchor.pw+g-mover.x,pL=mover.x+mover.pw+g-anchor.x;
@@ -5920,8 +5943,8 @@ function _bsInitEvents(){
       else if(mn===pL)mover.x=anchor.x-mover.pw-g;
       else if(mn===pD)mover.y=anchor.y+anchor.ph+g;
       else mover.y=anchor.y-mover.ph-g;
-      mover.x=Math.max(0,Math.min(_bs.ew-mover.pw,mover.x));
-      mover.y=Math.max(0,Math.min(_bs.eh-mover.ph,mover.y));
+      mover.x=Math.max(0,Math.min(EA.ew-mover.pw,mover.x));
+      mover.y=Math.max(0,Math.min(EA.eh-mover.ph,mover.y));
     }
     for(var iter=0;iter<30;iter++){
       var any=false;
@@ -6077,8 +6100,9 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     // 장 머리글 + 온장
     // 머리글 "온장 N · 제품명" (제품은 도형에 정한 제품)
     var _biLbl=_boardTitle(placed,bi);
-    var _img=_slabImgFor(_boardLabel(placed)),_tex={img:_img,bx:ox,by:oy,w:bw*sc,h:bh*sc,board:placed};
-    _boardFrame(bctx,ox,oy,_biLbl,placed,bw,bh,sc,k,_img);
+    var _bd=_boardDims(placed); // 이 장의 온장 크기 (제품마다 다를 수 있음, 칸은 가장 큰 온장 기준)
+    var _img=_slabImgFor(_boardLabel(placed)),_tex={img:_img,bx:ox,by:oy,w:_bd.bw*sc,h:_bd.bh*sc,board:placed};
+    _boardFrame(bctx,ox,oy,_biLbl,placed,_bd.bw,_bd.bh,sc,k,_img);
 
     // 피스 배치
     for(var i=0;i<placed.length;i++){
@@ -6149,6 +6173,8 @@ function movePieceTo(dir){
   // 대상 장이 없으면 새로 추가 (제품은 원래 장과 같게)
   var _srcProd=_boardLabel(_bs.boards[srcBi]);
   if(tgtBi>=_bs.boards.length){var _nb=[];_nb.prod=_srcProd;_bs.boards.push(_nb);}
+  // 다른 제품 장으로는 못 옮김 (온장 크기·무늬가 다름) — 제품은 도면에서 바꿈
+  if(_bs.boards[tgtBi].length&&_boardLabel(_bs.boards[tgtBi])!==_srcProd){alert('다른 제품의 온장으로는 옮길 수 없습니다.\n제품을 바꾸려면 도면에서 그 조각을 선택하고 제품 ● 을 눌러 주세요.');return;}
   // 피스를 원본 장에서 제거
   var idx=_bs.boards[srcBi].indexOf(p);
   if(idx>=0)_bs.boards[srcBi].splice(idx,1);
@@ -6179,6 +6205,8 @@ function closeBoardModal(){
   // 현재 배치 상태 저장
   if(_bs&&_bs.boards){
     _savedBoardLayout={bw:_bs.bw,bh:_bs.bh,ew:_bs.ew,eh:_bs.eh,margin:_bs.margin,gap:_bs.gap,
+      sig:_boardSizeSig(), // 온장 칸·제품 사이즈가 바뀌면 새로 배치
+      boardSizes:_bs.boards.map(function(b){return _boardDims(b);}), // 장마다 온장 크기
       groups:_bs.groups,
       boardProds:_bs.boards.map(function(b){return _boardLabel(b);}), // 장마다 제품
       boards:_bs.boards.map(function(board){
@@ -6760,6 +6788,8 @@ function _expChain(lines){
 function _hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
 function _renderCleanBoards(cvs,boards,bw,bh,margin){
   var g=cvs.getContext('2d'),W=cvs.width,H=cvs.height,PAD=40;
+  // 칸은 가장 큰 온장 기준, 장마다 자기 크기로 그림
+  if(boards.length){bw=0;bh=0;boards.forEach(function(b){var d=_boardDims(b);bw=Math.max(bw,d.bw);bh=Math.max(bh,d.bh);});}
   g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
   // 장 수에 맞춰 가장 크게 보이는 행/열 배치
   var n=boards.length,best=null;
@@ -6771,9 +6801,9 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin){
   var sc=best.sc,ref=_boardDrawRef();
   boards.forEach(function(board,bi){
     var col=bi%best.cols,row=Math.floor(bi/best.cols);
-    var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2;
-    var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:bw*sc,h:bh*sc,board:board};
-    _boardFrame(g,bx,by,_boardTitle(board,bi),board,bw,bh,sc,1,img);
+    var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2,d=_boardDims(board);
+    var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:d.bw*sc,h:d.bh*sc,board:board};
+    _boardFrame(g,bx,by,_boardTitle(board,bi),board,d.bw,d.bh,sc,1,img);
     board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});
   });
 }
@@ -7051,7 +7081,7 @@ function exportDrawingA4(){
   // 온장 배치와 같은 피스 목록(사각/원형/선 절단 조각) 사용
   var _items2r=_collectBoardItems();
   // _savedBoardLayout에서 복원 (도형이 바뀌어 매핑이 안 되면 null → 재계산)
-  _boards2r=_restoreSavedBoards(_savedBoardLayout,_items2r);
+  _boards2r=(_savedBoardLayout&&(!_savedBoardLayout.sig||_savedBoardLayout.sig===_boardSizeSig()))?_restoreSavedBoards(_savedBoardLayout,_items2r):null; // 사이즈가 바뀌었으면 새로
   var _fromSaved=!!_boards2r;
   if(_fromSaved){
     _gm2r=_savedBoardLayout.groups||null;
