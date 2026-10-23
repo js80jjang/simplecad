@@ -68,6 +68,8 @@
   숫자+Enter=그 방향으로 길이(놓기만 해서는 안 그림 — 전역 mouseup의 `finalizeShape`는 line 제외), 끝나도 도구 유지, 다음 선은 방향 쪽을 클릭(드래그도 됨)하면 입력란, 스냅점(끝점·중간점·교차점 등, 격자 제외) 클릭은 입력 없이 그 점까지(`lineDown.snap`)(입력란에서 빈 Enter=끝·C=닫기·U=취소), 끝점에서 다시 드래그 → 숫자… 이어 그리기, 드래그 없는 클릭=그 점까지,
   `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유)
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
+- 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
+  `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
   - 온장 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)

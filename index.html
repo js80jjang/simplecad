@@ -3677,21 +3677,41 @@ function loadProject(){
 }
 
 // ═══ 트림 ═══
+// 트림용 rect 실제 모양: 회전 없으면 그대로, 90° 단위 회전이면 화면에 보이는 대로 회전 없는 rect(코너 키도 돌려서),
+// 그 밖의 각도는 꼭짓점 4개(_pts: 화면 기준 위·오른쪽·아래·왼쪽 변 순서, 코너 라운드는 무시)
+function _trimRectGeo(s){
+  var rot=s.rotation||0;
+  if(!rot)return s;
+  var g={x:s.x,y:s.y,w:s.w,h:s.h,rotation:0,cornerType:s.cornerType,cornerSize:s.cornerSize};
+  if(_rightAngle(rot)){
+    var b=getBBox(s),K=['tl','tr','br','bl'],k=((Math.round(rot/(Math.PI/2))%4)+4)%4;
+    g.x=b.l;g.y=b.t;g.w=b.r-b.l;g.h=b.b-b.t;
+    if(s.corners){g.corners={};K.forEach(function(ck,i){if(s.corners[K[(i-k+4)%4]])g.corners[ck]=s.corners[K[(i-k+4)%4]];});}
+    return g;
+  }
+  var cx=s.x+s.w/2,cy=s.y+s.h/2,hw=s.w/2,hh=s.h/2,cos=Math.cos(rot),sin=Math.sin(rot);
+  g._pts=[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(function(p){return{x:cx+p[0]*cos-p[1]*sin,y:cy+p[0]*sin+p[1]*cos};});
+  g.cornerType='none';g.cornerSize=0;
+  return g;
+}
+function _trimRectEdges(g){
+  var P=g._pts||[{x:g.x,y:g.y},{x:g.x+g.w,y:g.y},{x:g.x+g.w,y:g.y+g.h},{x:g.x,y:g.y+g.h}];
+  return[{ax:P[0].x,ay:P[0].y,bx:P[1].x,by:P[1].y,s:'top',cA:'tl',cB:'tr'},
+         {ax:P[1].x,ay:P[1].y,bx:P[2].x,by:P[2].y,s:'right',cA:'tr',cB:'br'},
+         {ax:P[2].x,ay:P[2].y,bx:P[3].x,by:P[3].y,s:'bottom',cA:'br',cB:'bl'},
+         {ax:P[3].x,ay:P[3].y,bx:P[0].x,by:P[0].y,s:'left',cA:'bl',cB:'tl'}];
+}
 function doTrim(mx,my){
   var tol=10/scale;
-  var hit=null,hitDist=tol+1,hitT=0.5,hitEdge=null;
+  var hit=null,hitDist=tol+1,hitT=0.5,hitEdge=null,hitGeo=null;
   shapes.forEach(function(s){
     if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
-    var edges=[];
+    var edges=[],g=null;
     if(s.x1!==undefined){
       edges=[{ax:s.x1,ay:s.y1,bx:s.x2,by:s.y2,side:'line'}];
     } else if(s.kind==='rect'){
-      edges=[
-        {ax:s.x,     ay:s.y,      bx:s.x+s.w, by:s.y,      side:'top'},
-        {ax:s.x+s.w, ay:s.y,      bx:s.x+s.w, by:s.y+s.h,  side:'right'},
-        {ax:s.x,     ay:s.y+s.h,  bx:s.x+s.w, by:s.y+s.h,  side:'bottom'},
-        {ax:s.x,     ay:s.y,      bx:s.x,      by:s.y+s.h,  side:'left'}
-      ];
+      g=_trimRectGeo(s);
+      edges=_trimRectEdges(g).map(function(e){return{ax:e.ax,ay:e.ay,bx:e.bx,by:e.by,side:e.s};});
     }
     edges.forEach(function(e){
       var dx=e.bx-e.ax,dy=e.by-e.ay,len2=dx*dx+dy*dy;
@@ -3699,7 +3719,7 @@ function doTrim(mx,my){
       var t=Math.max(0,Math.min(1,((mx-e.ax)*dx+(my-e.ay)*dy)/len2));
       var px=e.ax+t*dx,py=e.ay+t*dy;
       var d=Math.hypot(mx-px,my-py);
-      if(d<hitDist){hitDist=d;hit=s;hitT=t;hitEdge=e;}
+      if(d<hitDist){hitDist=d;hit=s;hitT=t;hitEdge=e;hitGeo=g;}
     });
   });
   if(!hit||!hitEdge)return;
@@ -3714,8 +3734,8 @@ function doTrim(mx,my){
   if(hit.kind==='rect'&&(hitEdge.side==='top'||hitEdge.side==='right'||hitEdge.side==='bottom'||hitEdge.side==='left')){
     var _ecMap={top:['tl','tr'],right:['tr','br'],bottom:['br','bl'],left:['bl','tl']};
     _ecMap[hitEdge.side].forEach(function(ck){
-      var _info=_rcInfo(hit,ck);
-      if(_info.r>0){_tanPts.push(_rcPIn(hit,ck));_tanPts.push(_rcPOut(hit,ck));}
+      var _info=_rcInfo(hitGeo,ck);
+      if(_info.r>0){_tanPts.push(_rcPIn(hitGeo,ck));_tanPts.push(_rcPOut(hitGeo,ck));}
     });
   }
 
@@ -3726,8 +3746,7 @@ function doTrim(mx,my){
     if(s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'||s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark')return;
     var edges=[];
     if(s.kind==='rect'){
-      edges=[[s.x,s.y,s.x+s.w,s.y],[s.x+s.w,s.y,s.x+s.w,s.y+s.h],
-             [s.x+s.w,s.y+s.h,s.x,s.y+s.h],[s.x,s.y+s.h,s.x,s.y]];
+      edges=_trimRectEdges(_trimRectGeo(s)).map(function(e){return[e.ax,e.ay,e.bx,e.by];});
     } else if(s.x1!==undefined){
       edges=[[s.x1,s.y1,s.x2,s.y2]];
     }
@@ -3749,6 +3768,7 @@ function doTrim(mx,my){
       saveHistory();
       shapes=shapes.filter(function(s){return s!==hit;});
       selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
+      _trimOverlaps(hx1,hy1,hx2,hy2,hit);
       redraw();calcCost();
     }
     return;
@@ -3767,6 +3787,10 @@ function doTrim(mx,my){
   for(var i=0;i<dd.length;i++){if(dd[i].t>hitT&&hi===null)hi=dd[i];}
 
   saveHistory();
+  // 잘려 나가는 구간 — 같은 자리에 겹쳐 그린 다른 선(사각형 변 위에 그은 홈 선 등)도 이 구간만큼 같이 자름
+  var H0={x:hx1,y:hy1},H1={x:hx2,y:hy2},cut=null;
+  if(lo&&hi)cut=[lo,hi];
+  else if(lo||hi){var c0=lo||hi;cut=(hitT<=c0.t)?[H0,c0]:[c0,H1];}
 
   if(hitEdge.side==='line'){
     // 선 트림: 두 교점 사이 제거 or 끝부분 제거
@@ -3788,14 +3812,16 @@ function doTrim(mx,my){
     }
   } else {
     // rect 엣지: 4선분(+라운드/모따기 코너)으로 분해 후 해당 선분만 트림
-    var rx=hit.x,ry=hit.y,rw=hit.w,rh=hit.h;
+    // 회전된 rect는 화면에 보이는 모양(hitGeo) 기준으로 분해
+    var G=hitGeo,rx=G.x,ry=G.y,rw=G.w,rh=G.h;
     // 코너별 라운드(필릿)/모따기 정보 수집 (개별 코너 s.corners 우선, 없으면 균일 cornerType/cornerSize)
     function _cornerInfo(ck){
-      if(hit.corners&&hit.corners[ck]&&hit.corners[ck].type&&(hit.corners[ck].r||0)>0){
-        var cv=hit.corners[ck];return{type:cv.type,r:Math.min(cv.r||0,rw/2,rh/2)};
+      if(G._pts)return{type:null,r:0};
+      if(G.corners&&G.corners[ck]&&G.corners[ck].type&&(G.corners[ck].r||0)>0){
+        var cv=G.corners[ck];return{type:cv.type,r:Math.min(cv.r||0,rw/2,rh/2)};
       }
-      if((hit.cornerType==='fillet'||hit.cornerType==='chamfer')&&(hit.cornerSize||0)>0){
-        return{type:hit.cornerType,r:Math.min(hit.cornerSize,rw/2,rh/2)};
+      if((G.cornerType==='fillet'||G.cornerType==='chamfer')&&(G.cornerSize||0)>0){
+        return{type:G.cornerType,r:Math.min(G.cornerSize,rw/2,rh/2)};
       }
       return{type:null,r:0};
     }
@@ -3812,12 +3838,7 @@ function doTrim(mx,my){
     }
     shapes=shapes.filter(function(s){return s!==hit;});
     selectedShapes=selectedShapes.filter(function(s){return s!==hit;});
-    var sides4=[
-      {ax:rx,   ay:ry,   bx:rx+rw,by:ry,   s:'top',   cA:'tl',cB:'tr'},
-      {ax:rx+rw,ay:ry,   bx:rx+rw,by:ry+rh,s:'right', cA:'tr',cB:'br'},
-      {ax:rx+rw,ay:ry+rh,bx:rx,   by:ry+rh,s:'bottom',cA:'br',cB:'bl'},
-      {ax:rx,   ay:ry+rh,bx:rx,   by:ry,   s:'left',  cA:'bl',cB:'tl'}
-    ];
+    var sides4=_trimRectEdges(G);
     // lo와 hi가 둘 다 있으면(엣지 중간에 다른 도형이 양쪽으로 걸쳐있는 노치/컷아웃) 두 교점 "사이" 중간 구간만
     // 제거하고 양쪽 끝(및 양쪽 코너의 라운드)은 그대로 유지해야 함. 한쪽만 있을 때만 "그 쪽 끝까지 통째로" 제거하는
     // (코너 하나가 사라지는) 방식이 맞음 - 이 둘을 구분하지 않으면 중간 노치를 트림할 때 관련 없는 반대쪽 코너의
@@ -3882,7 +3903,31 @@ function doTrim(mx,my){
       }
     });
   }
+  if(cut)_trimOverlaps(cut[0].x,cut[0].y,cut[1].x,cut[1].y,hit);
   redraw();calcCost();
+}
+// 트림으로 잘린 구간(ax,ay)-(bx,by)과 같은 직선 위에 겹친 다른 선은 그 구간 부분만 지움 (겹친 선이 남아 트림이 안 된 것처럼 보이지 않게)
+function _trimOverlaps(ax,ay,bx,by,except){
+  var len=Math.hypot(bx-ax,by-ay);if(len<0.5)return;
+  var ux=(bx-ax)/len,uy=(by-ay)/len,out=[];
+  shapes.forEach(function(s){
+    if(s===except||s.kind!=='line'){out.push(s);return;}
+    var d1=Math.abs((s.x1-ax)*uy-(s.y1-ay)*ux),d2=Math.abs((s.x2-ax)*uy-(s.y2-ay)*ux);
+    if(d1>0.5||d2>0.5){out.push(s);return;}
+    var t1=(s.x1-ax)*ux+(s.y1-ay)*uy,t2=(s.x2-ax)*ux+(s.y2-ay)*uy;
+    var lo=Math.min(t1,t2),hi=Math.max(t1,t2);
+    if(hi<=0.5||lo>=len-0.5){out.push(s);return;} // 안 겹침
+    // 남는 부분: [lo,0] 과 [len,hi]
+    var keep=[];if(lo<-0.5)keep.push([lo,0]);if(hi>len+0.5)keep.push([len,hi]);
+    var rev=t1>t2;
+    keep.forEach(function(k,i){
+      var p=k[0],q=k[1];if(rev){var tmp=p;p=q;q=tmp;}
+      var ns=i===0?s:Object.assign({},s,{id:nextId++});
+      ns.x1=ax+ux*p;ns.y1=ay+uy*p;ns.x2=ax+ux*q;ns.y2=ay+uy*q;out.push(ns);
+    });
+    if(!keep.length)selectedShapes=selectedShapes.filter(function(x){return x!==s;});
+  });
+  shapes=out;
 }
 
 // ═══ 선 절단: 오토캐드 LINE 방식 ═══
