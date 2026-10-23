@@ -288,6 +288,7 @@ canvas{display:block;cursor:crosshair}
 </div>
 <div id="center">
   <div id="canvas-toolbar">
+    <button class="canvas-btn" style="background:#2E7D32;color:#fff" onclick="newProject()" title="도형·작업 정보(업체명·주소·제품·출고일)·기타 비용·온장 배치를 비우고 새 도면 시작 (단가는 그대로)">📄 새로만들기</button>
     <button class="canvas-btn red" onclick="clearAll()">전체삭제</button>
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" style="background:#1565C0;color:#fff" onclick="saveProject()">💾 저장</button>
@@ -2817,6 +2818,21 @@ function clearAll(){
   redraw();updateCost();updatePropsPanel();
 }
 
+// 새로만들기: 도형 + 작업 정보(업체명/주소·제품·출고일) + 기타 비용 + 저장된 온장 배치를 비움. 단가·등급·온장 칸은 그대로 (되돌리기로 도형은 복구)
+function newProject(){
+  var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
+  if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
+  if(lineChain)_lineEnd();
+  saveHistory();
+  shapes=[];selectedShapes=[];nextId=1;hoverShape=null;filletSel=[];_dimSt=null;drawStart=null;
+  products=[{name:'',size:'',qty:1}];
+  _setSiteInfo('','');
+  document.getElementById('deliv-date').value='';document.getElementById('deliv-time').value='';
+  ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
+  _savedBoardLayout=null;_savedBoardImg=null;
+  offsetX=60;offsetY=60;
+  renderProductList();updatePropsPanel();redraw();calcCost();
+}
 // 뷰 맞춤: 모든 도형이 화면 가운데에 들어오게 확대·이동 (치수 글자 자리만큼 여백)
 function fitView(){
   if(!shapes.length){offsetX=60;offsetY=60;redraw();return;}
