@@ -5602,7 +5602,11 @@ function _collectBoardItems(){
   // 각 피스의 BBox (w,h) 계산
   return pieces.map(function(s){
     var w,h,label,rot=0,rx0=0,ry0=0;
-    if(s.kind==='rect'){w=Math.abs(s.w);h=Math.abs(s.h);label=w.toFixed(0)+'×'+h.toFixed(0);}
+    if(s.kind==='rect'){
+      w=Math.abs(s.w);h=Math.abs(s.h);
+      if(s.rotation){var _rb=getBBox(s);w=_rb.r-_rb.l;h=_rb.b-_rb.t;} // 돌린 사각형은 화면에 보이는 상자 크기로 (그리는 모양과 맞춤)
+      label=Math.round(w)+'×'+Math.round(h);
+    }
     else if(s.kind==='circle'||s.kind==='hole'){w=s.r*2;h=s.r*2;label='Φ'+w.toFixed(0);}
     else if(s.kind==='ellipse'){w=s.rx*2;h=s.ry*2;label=w.toFixed(0)+'×'+h.toFixed(0);}
     else if(s.kind==='linegroup'){
