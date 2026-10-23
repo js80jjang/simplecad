@@ -4706,6 +4706,11 @@ cv.addEventListener('mousedown',function(e){
   } else if(tool==='trim'){
     cv.focus();doTrim(mx,my);
 
+  } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&_h.lineDim;})()){
+    // 선 절단 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
+    var _hd=hitDim(e.offsetX,e.offsetY);
+    selectedShapes=[_hd.shape];updatePropsPanel();
+    dimDragInfo=_hd;dimDragStartX=e.offsetX;dimDragStartY=e.offsetY;dimDragL0=null;e.preventDefault();redraw();
   } else if(tool==='line'){
     // 선 절단: 시작점에서 누르고 방향으로 드래그 → 놓으면 방향 고정 → 숫자 입력 + Enter = 그 방향으로 그 길이
     //   다음 선: 방향 쪽을 클릭 → 숫자 … (이어 그리기) / 다른 선의 스냅점(끝점·중간점·교차점 등)을 클릭 = 그 점까지 바로
@@ -4760,7 +4765,7 @@ cv.addEventListener('pointerdown',function(e){
 cv.addEventListener('pointerup',function(e){
   if(e.button!==0)return;
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
-  if(tool==='line'){_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지
+  if(tool==='line'){if(!dimDragInfo)_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지 (치수 끌기 중이면 그쪽)
   if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
   // 길이 치수: 첫 점에서 끌어서 놓으면 놓은 곳이 두 번째 점
   if(tool==='dimline'&&_dimSt&&_dimSt.stage===1&&_dimSt.down&&Math.hypot(e.offsetX-_dimSt.down[0],e.offsetY-_dimSt.down[1])>6){
@@ -4980,6 +4985,11 @@ document.addEventListener('mouseup',function(e){
   if(e.button!==0)return;
   if(panOrigin){panOrigin=null;return;}
   if(_endDrag){_endDrag=null;cv.style.cursor='default';updatePropsPanel();redraw();return;} // 화살표 끝점 드래그 종료
+  // 선 절단 도구에서 선 치수 끌기 종료 (클릭만 했으면 길이 수정)
+  if(tool==='line'&&dimDragInfo){
+    if(Math.hypot(e.offsetX-dimDragStartX,e.offsetY-dimDragStartY)<=3){if(!dimDragInfo.line)showDimInput(dimDragInfo);}else saveHistory();
+    dimDragInfo=null;redraw();return;
+  }
 
   if(tool==='select'){
     // 회전 드래그 종료
