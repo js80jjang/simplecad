@@ -5598,6 +5598,18 @@ function _collectBoardItems(){
     var pseudo={kind:'linegroup',lines:grp,x:lx1,y:ly1,w:lw,h:lh};
     pieces.push(pseudo);
   }
+  // 선으로 그린 조각 안에 든 사각형·원 = 타공(따로 온장에 배치하지 않음)
+  var lgs=pieces.filter(function(p){return p.kind==='linegroup'&&p.lines.length>=3;});
+  if(lgs.length)pieces=pieces.filter(function(s){
+    if(s.kind==='linegroup')return true;
+    var b=getBBox(s);if(!b)return true;
+    return !lgs.some(function(g){
+      if(b.l<g.x-0.5||b.r>g.x+g.w+0.5||b.t<g.y-0.5||b.b>g.y+g.h+0.5)return false;
+      var x=b.mx,y=b.my,ins=false;
+      g.lines.forEach(function(l){if((l.y1>y)!==(l.y2>y)){var xi=l.x1+(y-l.y1)*(l.x2-l.x1)/(l.y2-l.y1);if(xi>x)ins=!ins;}});
+      return ins;
+    });
+  });
 
   // 각 피스의 BBox (w,h) 계산
   return pieces.map(function(s){
@@ -6412,12 +6424,14 @@ function _expStrokeEdge(ax,ay,bx,by,ts,te,col,stats){
 // 화살표 치수: p1,p2(캔버스 px) 사이, 법선 n(바깥쪽 단위벡터) 방향으로 off px 띄움. 글자는 치수선 바깥쪽.
 function _expDim(p1,p2,n,off,text,col,fs,force){
   fs=fs||32;
-  var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<4)return;
+  var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<0.5)return;
+  // 아주 짧은 치수(18mm 홈 등): 화살표를 바깥에서 안쪽으로, 글자는 화살표 너머에
+  var small=L<30,AO=16;
   ctx.font='bold '+fs+'px '+_EXP_FONT;
   var tw=ctx.measureText(text).width;
   var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L;
   var horiz=Math.abs(ux)>=Math.abs(uy);
-  var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4,gapT=fs*0.65,ext=(horiz?tw:fs)/2+16;
+  var hw=(horiz?tw:fs)/2+4,hh=(horiz?fs:tw)/2+4,gapT=fs*0.65,ext=(horiz?tw:fs)/2+16+(small?AO:0);
   // 글자 자리 후보 (치수선 위치는 그대로): ① 바깥쪽 가운데 ② 안쪽 가운데 ③④ 화살표 바깥 끝 너머(짧은 치수)
   //   ⑤⑥ 그래도 겹치면 치수선을 조금씩 바깥으로 (조각 치수만, 최대 2단계)
   function cands(o){
@@ -6439,11 +6453,19 @@ function _expDim(p1,p2,n,off,text,col,fs,force){
   ctx.moveTo(p2[0]+n[0]*6,p2[1]+n[1]*6);ctx.lineTo(a2[0]+n[0]*10,a2[1]+n[1]*10);
   ctx.stroke();
   // 치수선 + 양쪽 화살표
-  ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
-  _psegAdd(a1[0],a1[1],a2[0],a2[1]);
+  var ang=Math.atan2(uy,ux);
+  if(small){
+    var b1=[a1[0]-ux*AO,a1[1]-uy*AO],b2=[a2[0]+ux*AO,a2[1]+uy*AO];
+    ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(b1[0],b1[1]);ctx.lineTo(b2[0],b2[1]);ctx.stroke();
+    _psegAdd(b1[0],b1[1],b2[0],b2[1]);
+    arrowHead(a1[0],a1[1],ang,10,col);arrowHead(a2[0],a2[1],ang+Math.PI,10,col);
+  } else {
+    ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();
+    _psegAdd(a1[0],a1[1],a2[0],a2[1]);
+    var ah=Math.min(18,L/3);
+    arrowHead(a1[0],a1[1],ang+Math.PI,ah,col);arrowHead(a2[0],a2[1],ang,ah,col);
+  }
   _psegAdd(p1[0]+n[0]*6,p1[1]+n[1]*6,a1[0]+n[0]*10,a1[1]+n[1]*10);_psegAdd(p2[0]+n[0]*6,p2[1]+n[1]*6,a2[0]+n[0]*10,a2[1]+n[1]*10);
-  var ah=Math.min(18,L/3),ang=Math.atan2(uy,ux);
-  arrowHead(a1[0],a1[1],ang+Math.PI,ah,col);arrowHead(a2[0],a2[1],ang,ah,col);
   // 글자 (흰 테두리로 뒤의 선과 구분)
   var tx=pick.x,ty=pick.y;
   var ta=ang;if(Math.cos(ta)<-0.01||(Math.abs(Math.cos(ta))<0.01&&Math.sin(ta)>0))ta+=Math.PI; // 세로 치수는 아래→위로 읽기
@@ -6643,7 +6665,14 @@ function _drawCleanExport(){
   shapes.forEach(function(m){
     if(m.kind!=='grindregion')return;
     var gd=_gosraDir(m);if(!gd)return;
-    var band=_expHatchBand(m.x1,m.y1,m.x2,m.y2,gd.dx,gd.dy,_GRIND_MM,_GRIND_COL);if(!band)return;
+    // 150×150 원클릭처럼 깊이가 50mm보다 큰 연마는 그 깊이 그대로(조각 안쪽 선이라 방향은 저장된 inward: 가로선 +y, 세로선 +x)
+    var dep=_GRIND_MM,ddx=gd.dx,ddy=gd.dy;
+    if((m.depth||0)>_GRIND_MM){
+      dep=m.depth;
+      var gH=Math.abs(m.y2-m.y1)<0.5,gV=Math.abs(m.x2-m.x1)<0.5;
+      if((gH||gV)&&m.inward){var sg=m.inward>0?1:-1;ddx=gV?sg:0;ddy=gH?sg:0;}
+    }
+    var band=_expHatchBand(m.x1,m.y1,m.x2,m.y2,ddx,ddy,dep,_GRIND_COL);if(!band)return;
     stats.open=true;
     for(var i=0;i<4;i++)_psegAdd(band[i][0],band[i][1],band[(i+1)%4][0],band[(i+1)%4][1]); // 글자·지시선이 피하도록
   });
@@ -6705,7 +6734,7 @@ function _drawCleanExport(){
       var c0=toCanvas(s.cx-s.r,s.cy),c1=toCanvas(s.cx+s.r,s.cy);_expDim(c0,c1,[0,-1],mm2px(s.r)+DOFF,'Φ'+_fmtDim(s.r*2),col);
     } else if(s.kind==='linegroup'){
       s.lines.forEach(function(l){
-        var a=toCanvas(l.x1,l.y1),b=toCanvas(l.x2,l.y2),L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<2)return;
+        var a=toCanvas(l.x1,l.y1),b=toCanvas(l.x2,l.y2),L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<0.5)return;
         var n=[(b[1]-a[1])/L,-(b[0]-a[0])/L];if(_lineOutwardSide(l)<0)n=[-n[0],-n[1]];
         if(l.arcR!==undefined){if(l.arcMid){var m=[(a[0]+b[0])/2+n[0]*34,(a[1]+b[1])/2+n[1]*34];_expText('R'+_fmtDim(l.arcR),m[0],m[1],col,24);}return;}
         _expDim(a,b,n,DOFF*0.7,_fmtDim(Math.hypot(l.x2-l.x1,l.y2-l.y1)),col);
@@ -7051,7 +7080,9 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   }
 }
 // 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (온장 배치용)
-function _expRectPathLocal(s){var g=_expRectGeo({x:s.x,y:s.y,w:s.w,h:s.h,corners:s.corners,cornerType:s.cornerType,cornerSize:s.cornerSize});return _expRectPath(g);}
+function _expRectPathLocal(s){
+  // 돌린 사각형도 화면에 보이는 모양 그대로 (온장 조각 상자는 회전 포함 bbox 기준)
+  var g=_expRectGeo({x:s.x,y:s.y,w:s.w,h:s.h,rotation:s.rotation||0,corners:s.corners,cornerType:s.cornerType,cornerSize:s.cornerSize});return _expRectPath(g);}
 // 조각 이름 자리 찾기: 큰 글씨부터 줄여가며, 조각 안에서 타공부/타공(+치수 자리)을 피하는 빈 곳 중 중심에 가까운 곳
 function _expNameSpot(p,nm){
   var c0=_expLabelPoint(p),a=toCanvas(p.bb.l,p.bb.t),b=toCanvas(p.bb.r,p.bb.b);
