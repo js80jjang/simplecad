@@ -7044,112 +7044,141 @@ function _expLabelPoint(p){
   }
   return toCanvas((p.bb.l+p.bb.r)/2,(p.bb.t+p.bb.b)/2);
 }
-function exportDrawingA4(){
-  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
-  var mainCv=document.getElementById('cv');
-  // 전체 도형 BBox
-  var allBB=null;
+// ═══ 도면화 (PDF) ═══
+// 온장이 2장 이상이면 도면도 온장마다 한 쪽씩: 그 장에 배치된 조각(+싱크볼·타공·밑면연마·고스라·졸리컷·글자 등)만 크게.
+// 배치 안 된 조각은 따로 한 쪽, 마지막 쪽은 온장 배치도. 조각 번호는 전체 도면 기준 그대로(_autoPieceNums를 잠시 고정).
+function _drawingBoards(){
+  var items=_collectBoardItems();
+  var boards=(_savedBoardLayout&&(!_savedBoardLayout.sig||_savedBoardLayout.sig===_boardSizeSig()))?_restoreSavedBoards(_savedBoardLayout,items):null; // 사이즈가 바뀌었으면 새로
+  var fromSaved=!!boards;
+  if(!boards&&items.length)boards=_packBoardItems(items,3180,1580,3).boards; // 제품별 온장 크기로 다시 계산
+  return{items:items,boards:boards||[],fromSaved:fromSaved,margin:(fromSaved&&_savedBoardLayout.margin)||10};
+}
+// 도형 → 속한 조각(items 번호): 조각 자체(선 조각은 그 선들)는 그 조각, 나머지는 안에 있는(변 위 포함) 가장 작은 조각,
+// 어느 조각에도 없으면(조각 밖 글자·치수선 등) 가장 가까운 조각. 싱크볼 등 그룹은 main 도형 자리로
+function _shapePieceMap(items){
+  var map=new Map();
+  items.forEach(function(it,i){var sh=it.shape;if(sh.kind==='linegroup')sh.lines.forEach(function(l){map.set(l,i);});else map.set(sh,i);});
+  function inPiece(it,x,y){
+    var sh=it.shape;
+    if(_expPieceContains({s:sh},x,y))return true;
+    if(sh.kind==='linegroup')return sh.lines.some(function(l){return ptLD(x,y,l.x1,l.y1,l.x2,l.y2)<=3;});
+    return false;
+  }
+  function boxDist(it,x,y){
+    var sh=it.shape,bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!bb)return Infinity;
+    return Math.hypot(Math.max(bb.l-x,0,x-bb.r),Math.max(bb.t-y,0,y-bb.b));
+  }
+  var groupPt={};shapes.forEach(function(s){if(s.groupId&&s.groupRole==='main')groupPt[s.groupId]=[s.x+s.w/2,s.y+s.h/2];});
+  shapes.forEach(function(s){
+    if(map.has(s))return;
+    var pt=null;
+    if(s.groupId&&groupPt[s.groupId])pt=groupPt[s.groupId];
+    else if(s.kind==='note')pt=[s.x,s.y];
+    else if(s.x1!==undefined)pt=[(s.x1+s.x2)/2,(s.y1+s.y2)/2];
+    else if(s.cx!==undefined)pt=[s.cx,s.cy];
+    else if(s.x!==undefined&&s.w!==undefined)pt=[s.x+s.w/2,s.y+s.h/2];
+    if(!pt)return;
+    var hit=-1,ha=Infinity;
+    items.forEach(function(it,i){if(inPiece(it,pt[0],pt[1])&&it.w*it.h<ha){ha=it.w*it.h;hit=i;}});
+    if(hit<0){var bd=Infinity;items.forEach(function(it,i){var d=boxDist(it,pt[0],pt[1]);if(d<bd){bd=d;hit=i;}});}
+    if(hit>=0)map.set(s,hit);
+  });
+  return map;
+}
+// 지금 shapes(쪽마다 잠시 바꿔 넣음)를 A4 도면 그림으로: {img, isPort}. pageLine = 왼쪽 위 정보 아래에 붙는 쪽 설명
+function _renderDrawingImage(pageLine){
+  var mainCv=cv,allBB=null;
   shapes.forEach(function(s){var bb=getBBoxAny(s);if(!bb)return;if(!allBB){allBB={l:bb.l,t:bb.t,r:bb.r,b:bb.b};}else{allBB.l=Math.min(allBB.l,bb.l);allBB.t=Math.min(allBB.t,bb.t);allBB.r=Math.max(allBB.r,bb.r);allBB.b=Math.max(allBB.b,bb.b);}});
-  if(!allBB)return;
-  var mmW=allBB.r-allBB.l,mmH=allBB.b-allBB.t;
-  // 방향 자동 결정
-  var isPort=mmH>=mmW;
-  // 뷰 저장 후 도면 맞춤
-  var svScale=scale,svOffX=offsetX,svOffY=offsetY;
+  if(!allBB)return null;
+  var mmW=Math.max(1,allBB.r-allBB.l),mmH=Math.max(1,allBB.b-allBB.t);
+  var isPort=mmH>=mmW; // 방향 자동 결정
+  var svScale=scale,svOffX=offsetX,svOffY=offsetY,_origW=mainCv.width,_origH=mainCv.height;
   // 캡처 캔버스를 A4 도면 영역 비율(가로 ≈267×171mm, 세로 ≈184×258mm)로 고정 크기 렌더링.
   // 화면 캔버스 비율을 그대로 쓰면 인쇄 시 이미지가 페이지 높이를 넘쳐 다음 장으로 밀림.
-  var _origW=mainCv.width,_origH=mainCv.height;
   var _capLong=2000,_capRatio=isPort?184/258:267/171;
   mainCv.width=Math.round(isPort?_capLong*_capRatio:_capLong);
   mainCv.height=Math.round(isPort?_capLong:_capLong/_capRatio);
   // 여백: 치수(약 120px) + 위쪽 현장정보/아래쪽 범례 자리. 여백이 클수록 도면이 작아져 글자가 몰리므로 필요한 만큼만
-  var padX=170,padT=190,padB=210;
-  var newSc=Math.min((mainCv.width-2*padX)/mmW,(mainCv.height-padT-padB)/mmH);
-  newSc=Math.min(newSc,20);
+  var padX=170,padT=pageLine?220:190,padB=210;
+  var newSc=Math.min((mainCv.width-2*padX)/mmW,(mainCv.height-padT-padB)/mmH,20);
   scale=newSc;
   offsetX=padX+(mainCv.width-2*padX-mmW*newSc)/2-allBB.l*newSc;
   offsetY=padT+(mainCv.height-padT-padB-mmH*newSc)/2-allBB.t*newSc;
   // 도면화 전용 렌더러로 캡처 (printRender: 사용자 치수선 등 기존 인쇄용 크기 사용)
-  _exportLegend=[];
-  printRender=true;printMode=true;
-  _drawCleanExport();
-  var tmpCv=document.createElement('canvas');
-  tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
-  var tmpCtx=tmpCv.getContext('2d');
-  tmpCtx.drawImage(mainCv,0,0);
-  // 좌상단 현장주소 / 제품명 정보 오버레이
-  {
+  _exportLegend=[];printRender=true;printMode=true;
+  var img='';
+  try{
+    _drawCleanExport();
+    var tmpCv=document.createElement('canvas');tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
+    var tmpCtx=tmpCv.getContext('2d');tmpCtx.drawImage(mainCv,0,0);
+    // 좌상단 현장주소 / 제품명(제품마다 한 줄) / 쪽 설명
     var _sa2=_companySite(); // 업체명 - 주소
-    // 제품이 여러 개면 제품마다 한 줄 (이름 사이즈 N장)
     var _plns=(products||[]).map(function(p){return [p.name,p.size,p.qty>0?p.qty+'장':''].filter(Boolean).join(' ');}).filter(Boolean);
-    var _p1ln=_plns.length;
-    if(_sa2||_p1ln){
-      tmpCtx.save();
-      var _tfs2=26,_lpad=24,_ly2=_lpad+_tfs2*0.5;
-      tmpCtx.textBaseline='middle';tmpCtx.textAlign='left';
-      if(_sa2){
-        tmpCtx.font='bold '+_tfs2+'px "Malgun Gothic","맑은 고딕",sans-serif';
-        var _sw2=tmpCtx.measureText(_sa2).width;
-        tmpCtx.fillStyle='rgba(255,255,255,0.88)';tmpCtx.fillRect(_lpad-6,_ly2-_tfs2*0.75,_sw2+12,_tfs2*1.5);
-        tmpCtx.fillStyle='#111111';tmpCtx.fillText(_sa2,_lpad,_ly2);
-        _ly2+=_tfs2*1.7;
-      }
-      _plns.forEach(function(ln){
-        var _pfs2=Math.round(_tfs2*0.82);
-        tmpCtx.font=_pfs2+'px "Malgun Gothic","맑은 고딕",sans-serif';
-        var _pw3=tmpCtx.measureText(ln).width;
-        tmpCtx.fillStyle='rgba(255,255,255,0.88)';tmpCtx.fillRect(_lpad-6,_ly2-_pfs2*0.75,_pw3+12,_pfs2*1.5);
-        tmpCtx.fillStyle='#333333';tmpCtx.fillText(ln,_lpad,_ly2);
-        _ly2+=_pfs2*1.45;
-      });
-      tmpCtx.restore();
+    tmpCtx.save();
+    var _tfs2=26,_lpad=24,_ly2=_lpad+_tfs2*0.5;
+    tmpCtx.textBaseline='middle';tmpCtx.textAlign='left';
+    function line(t,font,col){
+      tmpCtx.font=font;var w=tmpCtx.measureText(t).width,fs=parseInt(font.match(/(\d+)px/)[1],10);
+      tmpCtx.fillStyle='rgba(255,255,255,0.88)';tmpCtx.fillRect(_lpad-6,_ly2-fs*0.75,w+12,fs*1.5);
+      tmpCtx.fillStyle=col;tmpCtx.fillText(t,_lpad,_ly2);_ly2+=fs*1.5;
     }
+    if(_sa2)line(_sa2,'bold '+_tfs2+'px "Malgun Gothic","맑은 고딕",sans-serif','#111111');
+    _plns.forEach(function(ln){line(ln,Math.round(_tfs2*0.82)+'px "Malgun Gothic","맑은 고딕",sans-serif','#333333');});
+    if(pageLine)line(pageLine,'bold '+Math.round(_tfs2*0.95)+'px "Malgun Gothic","맑은 고딕",sans-serif','#1565C0');
+    tmpCtx.restore();
+    img=tmpCv.toDataURL('image/png');
+  } finally {
+    _exportLegend=null;
+    mainCv.width=_origW;mainCv.height=_origH;
+    scale=svScale;offsetX=svOffX;offsetY=svOffY;
+    printRender=false;printMode=false;
   }
-  _exportLegend=null;
-  // 복구
-  mainCv.width=_origW;mainCv.height=_origH;
-  scale=svScale;offsetX=svOffX;offsetY=svOffY;
-  printRender=false;printMode=false;
-  redraw();
-  var imgData='';
-  try{imgData=tmpCv.toDataURL('image/png');}catch(e){alert('캡처 오류: '+e.message);return;}
-  var _bw=parseFloat(document.getElementById('board-w').value)||3200;
-  var _bh=parseFloat(document.getElementById('board-h').value)||1600;
+  return{img:img,isPort:isPort};
+}
+function exportDrawingA4(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
+  // ── 도면 쪽 나누기: 온장 2장 이상이면 장마다 한 쪽 ──
+  var pagesDef=[];
+  if(boards.length>1){
+    var pmap=_shapePieceMap(items),onBoard={};
+    boards.forEach(function(b,bi){
+      var idx=[];b.forEach(function(p){var k=items.findIndex(function(it){return it.shape===p.item.shape;});if(k>=0){idx.push(k);onBoard[k]=1;}});
+      var d=_boardDims(b),nm=_boardLabel(b);
+      pagesDef.push({idx:idx,label:'온장 '+(bi+1)+'/'+boards.length+(nm?' · '+nm:'')+'  ('+d.bw+'×'+d.bh+')',bw:d.bw,bh:d.bh});
+    });
+    var rest=[];items.forEach(function(it,k){if(!onBoard[k])rest.push(k);});
+    if(rest.length)pagesDef.push({idx:rest,label:'온장에 배치되지 않은 조각',bw:null,bh:null});
+    pagesDef.forEach(function(pd){var set={};pd.idx.forEach(function(k){set[k]=1;});pd.list=shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];});});
+    pagesDef=pagesDef.filter(function(pd){return pd.list.length;});
+  }
+  if(pagesDef.length<2){var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];}
+  // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
+  var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
+  all.forEach(function(s,i){if(auto[i]&&s.shapeNum==null){s.shapeNum=auto[i];frozen.push(s);}});
+  var pages=[];
+  try{
+    pagesDef.forEach(function(pd){
+      if(pd.list)shapes=pd.list;
+      try{var r=_renderDrawingImage(pd.label);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);}}
+      finally{shapes=all;}
+    });
+  }catch(e){alert('캡처 오류: '+e.message);}
+  finally{shapes=all;frozen.forEach(function(s){delete s.shapeNum;});redraw();}
+  if(!pages.length)return;
   var _delivDateRaw=(document.getElementById('deliv-date')||{}).value||'';
   var _delivTimeRaw=(document.getElementById('deliv-time')||{}).value||'';
   var _delivDate=(_delivDateRaw||_delivTimeRaw)?(_delivDateRaw.replace(/-/g,'.')+(_delivTimeRaw?' '+_delivTimeRaw:'')).trim():'';
   var today=new Date();
   var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
-  var orientation=isPort?'portrait':'landscape';
-  // 온장 배치 렌더링: _savedBoardLayout 직접 복원 우선, 없으면 재계산
-  var boardImg2='';
-  var _bw2r=parseFloat(document.getElementById('board-w').value)||3200;
-  var _bh2r=parseFloat(document.getElementById('board-h').value)||1600;
-  var _margin2r=10,_gap2r=3,_ew2r=_bw2r-2*_margin2r,_eh2r=_bh2r-2*_margin2r;
-  var _boards2r=null,_gm2r=null,_use_bw=_bw2r,_use_bh=_bh2r,_use_ew=_ew2r,_use_eh=_eh2r,_use_margin=_margin2r;
-  // 온장 배치와 같은 피스 목록(사각/원형/선 절단 조각) 사용
-  var _items2r=_collectBoardItems();
-  // _savedBoardLayout에서 복원 (도형이 바뀌어 매핑이 안 되면 null → 재계산)
-  _boards2r=(_savedBoardLayout&&(!_savedBoardLayout.sig||_savedBoardLayout.sig===_boardSizeSig()))?_restoreSavedBoards(_savedBoardLayout,_items2r):null; // 사이즈가 바뀌었으면 새로
-  var _fromSaved=!!_boards2r;
-  if(_fromSaved){
-    _gm2r=_savedBoardLayout.groups||null;
-    _use_bw=_savedBoardLayout.bw||_bw2r;
-    _use_bh=_savedBoardLayout.bh||_bh2r;
-    _use_ew=_savedBoardLayout.ew||_ew2r;
-    _use_eh=_savedBoardLayout.eh||_eh2r;
-    _use_margin=_savedBoardLayout.margin||_margin2r;
-  } else if(_items2r.length>0){
-    // 저장 배치 없으면 재계산
-    var _pk2r=_packBoardItems(_items2r,_use_ew,_use_eh,_gap2r);
-    _boards2r=_pk2r.boards;_gm2r=_pk2r.groups;
-  }
-  // 저장된 배치 이미지 우선 사용 (closeBoardModal에서 직접 렌더링한 이미지)
-  // 온장 배치: 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm)
-  if(_boards2r&&_boards2r.length>0){
+  // 온장 배치도 (마지막 쪽): 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm)
+  var boardImg2='',_sizes=[];
+  if(boards.length){
+    boards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
     try{
       var _bcv=document.createElement('canvas');_bcv.width=2000;_bcv.height=1280;
-      _renderCleanBoards(_bcv,_boards2r,_use_bw,_use_bh,_use_margin);
+      _renderCleanBoards(_bcv,boards,3200,1600,DB.margin);
       boardImg2=_bcv.toDataURL('image/png');
     }catch(e2){console.error(e2);}
   }
@@ -7157,14 +7186,17 @@ function exportDrawingA4(){
   var pw=window.open('','_blank','width=900,height=750,scrollbars=yes,resizable=yes');
   if(!pw){alert('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요.');return;}
   var css='*{box-sizing:border-box;margin:0;padding:0;}'
-    +'@page{size:A4 '+orientation+';margin:8mm;}'
+    +'@page{size:A4 '+(pages[0].isPort?'portrait':'landscape')+';margin:8mm;}'
+    +'@page land{size:A4 landscape;margin:8mm;}@page port{size:A4 portrait;margin:8mm;}'
     +'body{background:#bbb;font-family:"Malgun Gothic","맑은 고딕",sans-serif;}'
     +'.ctrl{padding:8px 14px;background:#263238;display:flex;gap:10px;align-items:center;}'
     +'.ctrl button{padding:6px 18px;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;background:#1565C0;color:#fff;}'
     +'.ctrl span{font-size:11px;color:#9eceff;}'
     +'@media print{.ctrl{display:none!important;}body{background:#fff;}.page,.page2{margin:0!important;border:none!important;}}'
-    // 페이지 높이를 A4 인쇄 영역(여백 8mm 제외)에 고정 → 도면+표제란이 항상 한 장에 들어감
-    +'.page{width:'+(isPort?'194mm':'281mm')+';height:'+(isPort?'280mm':'193mm')+';margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;overflow:hidden;}'
+    // 페이지 높이를 A4 인쇄 영역(여백 8mm 제외)에 고정 → 도면+표제란이 항상 한 장에 들어감 (쪽마다 가로/세로)
+    +'.page{margin:6mm auto;background:#fff;display:flex;flex-direction:column;border:1px solid #555;overflow:hidden;}'
+    +'.page.land{width:281mm;height:193mm;page:land;}.page.port{width:194mm;height:280mm;page:port;}'
+    +'.page+.page{page-break-before:always;}'
     +'.frame{border:3mm solid #fff;border-bottom:0;display:flex;flex-direction:column;flex:1;min-height:0;}'
     +'.inner-border{border:0.7pt solid #333;margin:0;flex:1;min-height:0;display:flex;flex-direction:column;}'
     +'.drawing-area{flex:1;min-height:0;position:relative;}'
@@ -7186,32 +7218,37 @@ function exportDrawingA4(){
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
     +'@media print{.page2{page-break-before:always;}}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
-    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택</span></div>'
-    +'<div class="page"><div class="frame"><div class="inner-border">'
-    +'<div class="drawing-area"><img src="'+imgData+'"></div>'
-    +'<div class="title-block">'
-    +'<div class="tb-main">'
-    +'<div class="tb-co">윤현상재</div>'
-    +'<div class="tb-title">세라믹 가공 도면</div>'
-    +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">온장</span>'+_bw.toFixed(0)+' × '+_bh.toFixed(0)+' mm</div>'
-    +'</div>'
-    +'<div class="tb-cells">'
-    +'<div class="tb-row"><div class="tbl">작성일</div><div class="tbv">'+dateStr+'</div></div>'
-    +(_delivDate?'<div class="tb-row"><div class="tbl">출고예정</div><div class="tbv" style="font-size:7.5pt;">'+_delivDate+'</div></div>':'')
-    +'<div class="tb-row"><div class="tbl">단위</div><div class="tbv">mm</div></div>'
-    +'</div>'
-    +'</div></div></div></div>'
-    +(boardImg2?'<div class="page2">'
-      +'<div class="page2-title">📋 온장 배치도 — '+_use_bw.toFixed(0)+' × '+_use_bh.toFixed(0)+' mm'+(_fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
+    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 온장 배치도':'')+'</span></div>';
+  pages.forEach(function(pg,pi){
+    var bwT=pg.bw||_prodBoardSize('').bw,bhT=pg.bh||_prodBoardSize('').bh;
+    body+='<div class="page '+(pg.isPort?'port':'land')+'"><div class="frame"><div class="inner-border">'
+      +'<div class="drawing-area"><img id="_dimg'+pi+'" src=""></div>'
+      +'<div class="title-block">'
+      +'<div class="tb-main">'
+      +'<div class="tb-co">윤현상재</div>'
+      +'<div class="tb-title">세라믹 가공 도면'+(pages.length>1?' <span style="font-size:9pt;font-weight:bold;color:#1565C0">('+(pi+1)+'/'+pages.length+')</span>':'')+'</div>'
+      +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">온장</span>'+bwT.toFixed(0)+' × '+bhT.toFixed(0)+' mm</div>'
+      +'</div>'
+      +'<div class="tb-cells">'
+      +'<div class="tb-row"><div class="tbl">작성일</div><div class="tbv">'+dateStr+'</div></div>'
+      +(_delivDate?'<div class="tb-row"><div class="tbl">출고예정</div><div class="tbv" style="font-size:7.5pt;">'+_delivDate+'</div></div>':'')
+      +'<div class="tb-row"><div class="tbl">단위</div><div class="tbv">mm</div></div>'
+      +'</div>'
+      +'</div></div></div></div>';
+  });
+  if(boardImg2)body+='<div class="page2">'
+      +'<div class="page2-title">📋 온장 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
       +'<div class="board-area"><img id="_bimg2" src=""></div>'
-      +'</div>':'');
+      +'</div>';
   pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
   pw.document.close();
-  if(boardImg2){
-    setTimeout(function(){
-      try{var _bi2=pw.document.getElementById('_bimg2');if(_bi2)_bi2.src=boardImg2;}catch(e){}
-    },200);
-  }
+  // 큰 그림은 문서를 쓴 뒤에 넣음
+  setTimeout(function(){
+    try{
+      pages.forEach(function(pg,pi){var im=pw.document.getElementById('_dimg'+pi);if(im)im.src=pg.img;});
+      var _bi2=pw.document.getElementById('_bimg2');if(_bi2&&boardImg2)_bi2.src=boardImg2;
+    }catch(e){}
+  },200);
 }
 
 document.addEventListener('keydown',function(e){
