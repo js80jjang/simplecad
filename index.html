@@ -4550,6 +4550,11 @@ function hitTestAll(mx,my){
 }
 var _cycleHitMx=null,_cycleHitMy=null,_cycleIdx=0;
 function ptLD(px,py,x1,y1,x2,y2){var dx2=x2-x1,dy2=y2-y1;if(!dx2&&!dy2)return Math.hypot(px-x1,py-y1);var t=Math.max(0,Math.min(1,((px-x1)*dx2+(py-y1)*dy2)/(dx2*dx2+dy2*dy2)));return Math.hypot(px-(x1+t*dx2),py-(y1+t*dy2));}
+// 선 길이 치수 위 커서: 치수가 움직이는 방향(선의 법선)에 맞는 양쪽 화살표
+function _lineDimCursor(d){
+  var a=Math.atan2(d.n[1],d.n[0])*180/Math.PI;a=((a%180)+180)%180; // 0~180
+  return a<22.5||a>=157.5?'ew-resize':(a<67.5?'nwse-resize':(a<112.5?'ns-resize':'nesw-resize'));
+}
 function hitDim(ex,ey){
   for(var i=0;i<dimLabels.length;i++){var d=dimLabels[i];if(Math.abs(ex-d.px)<=36&&Math.abs(ey-d.py)<=14)return d;}
   // 치수 글자가 아니면 치수선 자체(5px 이내) — 끌어서 위치만 옮김
@@ -4872,9 +4877,13 @@ cv.addEventListener('mousemove',function(e){
     }
     var dh=hitDim(e.offsetX,e.offsetY);
     // 자동 치수선 레이블: w/h는 이동 가능 → move 커서, _dist는 text 커서 없음
-    var dimCur=(dh&&dh.field!=='_dist')?(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text')):null;
+    var dimCur=(dh&&dh.field!=='_dist')?(dh.lineDim?_lineDimCursor(dh):(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text'))):null;
     cv.style.cursor=dimCur||(h?'move':'crosshair');
-  } else {cv.style.cursor='crosshair';}
+  } else if(tool==='line'&&!(lineChain&&drawStart)&&!dimDragInfo){
+    // 선 절단 도구에서도 선 치수 위에서는 옮기기 화살표
+    var dhl=hitDim(e.offsetX,e.offsetY);
+    cv.style.cursor=(dhl&&dhl.lineDim&&(!snapKind||snapKind==='grid'))?_lineDimCursor(dhl):'crosshair';
+  } else if(!dimDragInfo){cv.style.cursor='crosshair';}
 
   lastMx=mx;lastMy=my;
 
