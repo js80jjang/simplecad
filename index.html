@@ -1879,7 +1879,8 @@ function drawDimsLine(s,col){
       _lgFrameGroups.forEach(function(g){_lineDimPlan(g.map(function(it){return it.s;})).forEach(function(v,k){_lgDimPlan.set(k,v);});});
     }
     var pl=_lgDimPlan.get(s),sel=isSelected(s),nx=Math.cos(perp),ny=Math.sin(perp);
-    var off=15+(pl?mm2px(pl.dist)+pl.level*18:0);
+    var autoOff=15+(pl?mm2px(pl.dist)+pl.level*18:0);
+    var off=s.dimOffPx!=null?s.dimOffPx:autoOff; // 끌어서 옮긴 자리(px, 바깥쪽 +)가 있으면 그 자리
     var a1=[p1[0]+nx*off,p1[1]+ny*off],a2=[p2[0]+nx*off,p2[1]+ny*off],Lp=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
     ctx.save();ctx.strokeStyle='#E53935';ctx.lineWidth=1;ctx.setLineDash([]);
     ctx.beginPath();ctx.moveTo(p1[0]+nx*2,p1[1]+ny*2);ctx.lineTo(a1[0]+nx*4,a1[1]+ny*4);ctx.moveTo(p2[0]+nx*2,p2[1]+ny*2);ctx.lineTo(a2[0]+nx*4,a2[1]+ny*4);ctx.stroke();
@@ -1891,7 +1892,10 @@ function drawDimsLine(s,col){
     if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(-24,-8,48,16);}
     ctx.fillStyle=sel?'#FFD740':'#90CAF9';ctx.font='10px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(lbl,0,0);_numUnderline(ctx,lbl,0,0);ctx.restore();
-    dimLabels.push({shape:s,field:'dist',px:tx,py:ty});
+    // 글자 클릭 = 길이 편집, 글자·치수선 끌기 = 치수 위치 옮기기 (자동 자리 가까이 놓으면 자동으로 되돌림)
+    var _ld={p1:p1,n:[nx,ny],auto:autoOff};
+    dimLabels.push(Object.assign({shape:s,field:'dist',px:tx,py:ty,lineDim:true},_ld));
+    dimLabels.push(Object.assign({shape:s,field:'loff',px:NaN,py:NaN,line:[a1,a2],lineDim:true},_ld));
     return;
   }
   var offPx=printRender?40:14; // 인쇄 글자(44px)가 선에 겹치지 않도록
@@ -4942,7 +4946,13 @@ document.addEventListener('mousemove',function(e){
     var _ds=dimDragInfo.shape;
     // 끄는 동안에도 자동 배치(autoAdjustDims)가 되돌리지 않게 먼저 "사용자가 옮김" 표시
     var isW=dimDragInfo.field==='w';dimDragSnap=null;
-    if(!_ds.rotation&&dimDragL0!==null&&(isW||dimDragInfo.field==='h')){
+    if(dimDragInfo.lineDim){
+      // 선 절단 길이 치수: 선에서 마우스까지 법선 거리(px) = 치수선 자리. 자동 자리 8px 안이면 자동으로
+      if(dimDragInfo.off0==null)dimDragInfo.off0=_ds.dimOffPx!=null?_ds.dimOffPx:dimDragInfo.auto;
+      var _n=dimDragInfo.n,_o=dimDragInfo.off0+_dx*_n[0]+_dy*_n[1];
+      if(Math.abs(_o-dimDragInfo.auto)<8)delete _ds.dimOffPx;else _ds.dimOffPx=_o;
+    }
+    else if(!_ds.rotation&&dimDragL0!==null&&(isW||dimDragInfo.field==='h')){
       // 회전 없는 조각: 치수선 위치(px)를 스냅 → 오프셋으로 환산
       var c1=toCanvas(_ds.x,_ds.y),c2=toCanvas(_ds.x+_ds.w,_ds.y+_ds.h),lo=isW?c1[1]:c1[0],hi=isW?c2[1]:c2[0];
       var T=dimDragL0+(isW?_dy:_dx),best=null,bd=8;
