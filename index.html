@@ -1384,6 +1384,8 @@ function drawGrindRegion(s,preview){
   var ymin=Math.min(s.y1,s.y2),ymax=Math.max(s.y1,s.y2);
   var depth=s.depth||30;
   var alpha=preview?0.35:0.85;
+  var hov=s===hoverShape&&(!isSelected(s)||_hoverSelected)&&!preview&&!printRender; // 마우스 올림: 빗금 칸을 진하게 + 테두리
+  var _gFill=hov?'rgba(255,215,0,0.38)':'rgba(255,215,0,0.12)';if(hov)alpha=1;
 
   // 라운드 코너(탄젠트점↔탄젠트점) 또는 원(원형 절단 등)의 둘레 위에 양 끝점이 있으면,
   // 방향(수평/수직/대각선)과 무관하게 항상 실제 곡선을 따라가는 환형(부채꼴) 해칭으로 그림.
@@ -1408,16 +1410,16 @@ function drawGrindRegion(s,preview){
       ctx.arc(ccp[0],ccp[1],rIpx,ai.a1,ai.a0,true);
       ctx.closePath();
       ctx.clip();
-      ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fill();
+      ctx.fillStyle=_gFill;ctx.fill();
       ctx.strokeStyle='rgba(255,215,0,'+alpha+')';ctx.lineWidth=1.2;ctx.setLineDash([]);
       var _step3=Math.max(4,mm2px(4)),_bboxR=rOpx+2;
       for(var _d3=-2*_bboxR;_d3<2*_bboxR;_d3+=_step3){
         ctx.beginPath();ctx.moveTo(ccp[0]-_bboxR+_d3,ccp[1]-_bboxR);ctx.lineTo(ccp[0]-_bboxR+_d3+2*_bboxR,ccp[1]+_bboxR);ctx.stroke();
       }
       ctx.restore();
-      if(isSelected(s)||preview){
-        ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
-        ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+      if(isSelected(s)||preview||hov){
+        ctx.strokeStyle=hov?'#FFD740':(isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)');
+        ctx.lineWidth=(isSelected(s)||hov)?2:1;ctx.setLineDash((isSelected(s)||hov)?[]:[3,3]);
         ctx.beginPath();
         ctx.arc(ccp[0],ccp[1],rOpx,ai.a0,ai.a1,false);
         ctx.arc(ccp[0],ccp[1],rIpx,ai.a1,ai.a0,true);
@@ -1454,7 +1456,7 @@ function drawGrindRegion(s,preview){
     for(var i=1;i<cpts.length;i++)ctx.lineTo(cpts[i][0],cpts[i][1]);
     ctx.closePath();
     ctx.clip();
-    ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fill();
+    ctx.fillStyle=_gFill;ctx.fill();
     ctx.strokeStyle='rgba(255,215,0,'+alpha+')';ctx.lineWidth=1.2;ctx.setLineDash([]);
     // 해칭: 클리핑 영역 전체를 대각선으로 채움
     var bx=[cpts[0][0],cpts[1][0],cpts[2][0],cpts[3][0]];
@@ -1466,9 +1468,9 @@ function drawGrindRegion(s,preview){
       ctx.beginPath();ctx.moveTo(pxMin+d,pyMin);ctx.lineTo(pxMin+d+span,pyMin+span);ctx.stroke();
     }
     ctx.restore();
-    if(isSelected(s)||preview){
-      ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
-      ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+    if(isSelected(s)||preview||hov){
+      ctx.strokeStyle=hov?'#FFD740':(isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)');
+      ctx.lineWidth=(isSelected(s)||hov)?2:1;ctx.setLineDash((isSelected(s)||hov)?[]:[3,3]);
       ctx.beginPath();ctx.moveTo(cpts[0][0],cpts[0][1]);
       for(var i=1;i<cpts.length;i++)ctx.lineTo(cpts[i][0],cpts[i][1]);
       ctx.closePath();ctx.stroke();ctx.setLineDash([]);
@@ -1525,16 +1527,16 @@ function drawGrindRegion(s,preview){
     ctx.save();
     ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
     ctx.beginPath();ctx.rect(_lx,_ly,_lw,_lh);ctx.clip(); // 그린 스트립으로 클리핑
-    ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fillRect(_lx,_ly,_lw,_lh);
+    ctx.fillStyle=_gFill;ctx.fillRect(_lx,_ly,_lw,_lh);
     ctx.strokeStyle='rgba(255,215,0,'+(preview?0.35:0.85)+')';
     ctx.lineWidth=1.2;ctx.setLineDash([]);
     var _step2=Math.max(4,mm2px(4));
     for(var _d2=-(_lw+Math.abs(_lh));_d2<(_lw+Math.abs(_lh));_d2+=_step2){
       ctx.beginPath();ctx.moveTo(_lx+_d2,_ly);ctx.lineTo(_lx+_d2+Math.abs(_lh),_ly+Math.abs(_lh));ctx.stroke();
     }
-    if(isSelected(s)||preview){
-      ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
-      ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+    if(isSelected(s)||preview||hov){
+      ctx.strokeStyle=hov?'#FFD740':(isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)');
+      ctx.lineWidth=(isSelected(s)||hov)?2:1;ctx.setLineDash((isSelected(s)||hov)?[]:[3,3]);
       ctx.strokeRect(_lx,_ly,_lw,_lh);ctx.setLineDash([]);
     }
     ctx.restore();
@@ -1589,15 +1591,15 @@ function drawGrindRegion(s,preview){
     if(parentShape.cornerType==='fillet')buildFillet(prx,pry,prw,prh,csPx2);else buildChamfer(prx,pry,prw,prh,csPx2);
     ctx.clip();
   }
-  ctx.fillStyle='rgba(255,215,0,0.12)';ctx.fillRect(px,py,pw,ph);
+  ctx.fillStyle=_gFill;ctx.fillRect(px,py,pw,ph);
   ctx.strokeStyle='rgba(255,215,0,'+alpha+')';ctx.lineWidth=1.2;ctx.setLineDash([]);
   var step=Math.max(4,mm2px(4));
   for(var d=-(Math.abs(pw)+Math.abs(ph));d<Math.abs(pw)+Math.abs(ph);d+=step){ctx.beginPath();ctx.moveTo(px+d,py);ctx.lineTo(px+d+Math.abs(ph),py+Math.abs(ph));ctx.stroke();}
   ctx.restore();
   // Border — 선택 또는 프리뷰 시에만 테두리 표시
-  if(isSelected(s)||preview){
-    ctx.strokeStyle=isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)';
-    ctx.lineWidth=isSelected(s)?2:1;ctx.setLineDash(isSelected(s)?[]:[3,3]);
+  if(isSelected(s)||preview||hov){
+    ctx.strokeStyle=hov?'#FFD740':(isSelected(s)?'#FF6D00':'rgba(255,215,0,0.45)');
+    ctx.lineWidth=(isSelected(s)||hov)?2:1;ctx.setLineDash((isSelected(s)||hov)?[]:[3,3]);
     ctx.strokeRect(px,py,pw,ph);ctx.setLineDash([]);
   }
   // Edge line — 부모 rect의 라운드 코너 쪽으로 걸쳐 있으면 탄젠트점까지 당기고 코너를 따라 휘어지도록(아크 캡) 보정
@@ -1627,20 +1629,22 @@ function drawGrindRegion(s,preview){
 
 function drawJollyMark(s,preview){
   // 도면화(printRender)에서는 빨간색, 편집 화면은 파란색
-  var refCol=printRender?'rgba(229,57,53,0.7)':(isSelected(s)?'#FF6D00':(preview?'rgba(33,150,243,0.5)':'rgba(33,150,243,0.6)'));
+  var hov=!printRender&&s===hoverShape&&(!isSelected(s)||_hoverSelected)&&!preview; // 마우스 올림: 선을 진하고 굵게
+  var refCol=printRender?'rgba(229,57,53,0.7)':(hov?'#2979FF':(isSelected(s)?'#FF6D00':(preview?'rgba(33,150,243,0.5)':'rgba(33,150,243,0.6)')));
+  var refW=hov?3.5:1.5;
   var _corner=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);
   var mx2,my2,pc;
   if(_corner){
     var ai=_corner.arc;
     var acp=toCanvas(ai.x,ai.y),apx=mm2px(ai.r);
-    ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.strokeStyle=refCol;ctx.lineWidth=refW;ctx.setLineDash(hov?[]:[4,3]);
     ctx.beginPath();ctx.arc(acp[0],acp[1],apx,ai.a0,ai.a1,false);ctx.stroke();ctx.setLineDash([]);
     var _midA=(ai.a0+ai.a1)/2;
     mx2=ai.x+ai.r*Math.cos(_midA);my2=ai.y+ai.r*Math.sin(_midA);pc=toCanvas(mx2,my2);
   } else {
     mx2=(s.x1+s.x2)/2;my2=(s.y1+s.y2)/2;pc=toCanvas(mx2,my2);
     var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2);
-    ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.strokeStyle=refCol;ctx.lineWidth=refW;ctx.setLineDash(hov?[]:[4,3]);
     ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   }
   drawStar(pc[0],pc[1],printRender?24:13,printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':'#2196F3')); // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기, 도면화는 빨간색
@@ -1675,14 +1679,16 @@ function _gosraDir(m){
 }
 function drawGosraMark(s,preview){
   var outDir=s.outward||1;
-  var refCol=isSelected(s)?'#FF6D00':(preview?'rgba(244,67,54,0.5)':'rgba(244,67,54,0.6)');
+  var hov=s===hoverShape&&(!isSelected(s)||_hoverSelected)&&!preview&&!printRender; // 마우스 올림: 선을 진하고 굵게
+  var refCol=hov?'#FF1744':(isSelected(s)?'#FF6D00':(preview?'rgba(244,67,54,0.5)':'rgba(244,67,54,0.6)'));
+  var refW=hov?3.5:1.5;
   var mx2,my2,pc,triAngle;
   // 라운드 코너의 탄젠트점↔탄젠트점을 가로지르는 대각선이면 직선이 아니라 실제 라운드 곡선을 따라 그림
   var _corner=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);
   if(_corner){
     var ai=_corner.arc;
     var acp=toCanvas(ai.x,ai.y),apx=mm2px(ai.r);
-    ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.strokeStyle=refCol;ctx.lineWidth=refW;ctx.setLineDash(hov?[]:[4,3]);
     ctx.beginPath();ctx.arc(acp[0],acp[1],apx,ai.a0,ai.a1,false);ctx.stroke();ctx.setLineDash([]);
     var _midA=(ai.a0+ai.a1)/2;
     mx2=ai.x+ai.r*Math.cos(_midA);my2=ai.y+ai.r*Math.sin(_midA);pc=toCanvas(mx2,my2);
@@ -1695,7 +1701,7 @@ function drawGosraMark(s,preview){
     var _bend=_bendEdgeMark(_gctx.shape,_gctx.edge,s.x1,s.y1,s.x2,s.y2);
     mx2=(s.x1+s.x2)/2;my2=(s.y1+s.y2)/2;pc=toCanvas(mx2,my2);
     var p1=toCanvas(_bend.p1.x,_bend.p1.y),p2=toCanvas(_bend.p2.x,_bend.p2.y);
-    ctx.strokeStyle=refCol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.strokeStyle=refCol;ctx.lineWidth=refW;ctx.setLineDash(hov?[]:[4,3]);
     ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();
     _bend.arcs.forEach(function(ad){
       var bacp=toCanvas(ad.cx,ad.cy),bapx=mm2px(ad.r);
@@ -1705,8 +1711,8 @@ function drawGosraMark(s,preview){
   }
   // 직선 고스라: 꼭지점이 변에 닿도록, 방향은 _gosraDir 규칙(조각=안쪽, 싱크볼/쿡탑=선 쪽)
   var _gd=_corner?null:_gosraDir(s);
-  if(_gd){triAngle=Math.atan2(_gd.dy,_gd.dx);drawTriangle(pc[0]-_gd.dx*11,pc[1]-_gd.dy*11,triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');}
-  else drawTriangle(pc[0],pc[1],triAngle,11,preview?'rgba(244,67,54,0.5)':'#F44336');
+  if(_gd){triAngle=Math.atan2(_gd.dy,_gd.dx);drawTriangle(pc[0]-_gd.dx*11,pc[1]-_gd.dy*11,triAngle,hov?13:11,preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':'#F44336'));}
+  else drawTriangle(pc[0],pc[1],triAngle,hov?13:11,preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':'#F44336'));
   if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(!printRender){ctx.fillStyle='rgba(30,42,53,0.8)';ctx.fillRect(pc[0]-22,pc[1]+14,44,13);}ctx.fillStyle=printRender?'#1565C0':'#EF9A9A';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(dist),pc[0],pc[1]+20);}
 }
 
@@ -1782,11 +1788,11 @@ function drawShape(s,preview){
   if(s.kind==='grindregion'){drawGrindRegion(s,preview);return;}
   if(s.kind==='jollymark'){drawJollyMark(s,preview);return;}
   if(s.kind==='gosramark'){drawGosraMark(s,preview);return;}
-  var sel=isSelected(s);
-  var col=printRender?'#1565C0':(sel?'#FF6D00':(s===hoverShape?'#64B5F6':_baseColor(s)));
-  var fill=printRender?'rgba(21,101,192,0.07)':(sel?'rgba(51,68,85,0.45)':(s===hoverShape?'rgba(100,181,246,0.10)':_baseFill(s)));
+  var sel=isSelected(s),hovS=s===hoverShape&&(!sel||_hoverSelected); // 마우스 올림 = 파란 테두리 + 옅은 파란 채움 (올리기만 해서 잡힌 선택보다 먼저)
+  var col=printRender?'#1565C0':(hovS?'#64B5F6':(sel?'#FF6D00':_baseColor(s)));
+  var fill=printRender?'rgba(21,101,192,0.07)':(hovS?'rgba(100,181,246,0.20)':(sel?'rgba(51,68,85,0.45)':_baseFill(s)));
   ctx.strokeStyle=preview?'rgba(255,80,80,0.85)':col;
-  ctx.lineWidth=sel?2.5:(s===hoverShape?2:1.5);
+  ctx.lineWidth=hovS?3:(sel?2.5:1.5);
   if(preview)ctx.setLineDash([4,3]);
   if(s.kind==='rect'){
     var rot=s.rotation||0;
@@ -4568,40 +4574,6 @@ function _markAreaHit(s,mx,my){
   var t=((mx-s.x1)*(s.x2-s.x1)+(my-s.y1)*(s.y2-s.y1))/(L*L),dn=(mx-s.x1)*gd.dx+(my-s.y1)*gd.dy;
   return t>=0&&t<=1&&dn>=0&&dn<=(s.depth||30);
 }
-// 겹친 도형 이름 (선택 목록용)
-function _shapeKindName(s){
-  if(s.kind==='rect'){var at=_applianceType(s);return at==='sink'?'싱크볼':at==='cook'?'쿡탑':'사각형 '+Math.round(Math.abs(s.w))+'×'+Math.round(Math.abs(s.h));}
-  var L=s.x1!==undefined?Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1)):0;
-  return({line:'선 '+L,grindregion:'밑면연마 '+L+(s.depth&&s.depth!==50?' (깊이 '+s.depth+')':''),gosramark:'고스라 '+L,jollymark:'졸리컷 '+L,
-    circle:'타공 Φ'+Math.round((s.r||0)*2),hole:'타공 Φ'+Math.round((s.r||0)*2),dimline:'치수선',note:'글자',arrow:'화살표',linkmark:'연결 표시',arc:'호',ellipse:'타원'})[s.kind]||s.kind;
-}
-// 겹친 도형 고르기 목록: 마우스를 올리면 그 도형이 선택돼 보이고, 누르면 확정. 바깥 클릭·Esc = 닫기
-var _pickCand=null;
-function _showPickList(cands,px,py){
-  _hidePickList();
-  var wrap=document.getElementById('canvas-wrap')||cv.parentNode,box=document.createElement('div');
-  box.id='pick-list';
-  box.style.cssText='position:absolute;z-index:50;left:'+(px+cv.offsetLeft+12)+'px;top:'+(py+cv.offsetTop+8)+'px;background:#1e2a35;border:1px solid #546E7A;border-radius:4px;padding:3px;box-shadow:0 3px 10px rgba(0,0,0,.5);font-size:11px;min-width:120px';
-  box.innerHTML='<div style="color:#78909C;padding:2px 6px 4px;font-size:10px">겹친 도형 고르기</div>';
-  var pick=function(s){selectedShapes=(s.groupId&&s.groupRole&&s.groupRole!=='main')?[s]:getGroupShapes(s);updatePropsPanel();redraw();};
-  var cur=selectedShapes.slice();
-  cands.forEach(function(s){
-    var it=document.createElement('div');it.textContent=_shapeKindName(s);
-    it.style.cssText='padding:4px 8px;color:#eceff1;cursor:pointer;border-radius:3px;white-space:nowrap';
-    it.onmouseenter=function(){it.style.background='#1565C0';pick(s);};
-    it.onmouseleave=function(){it.style.background='';};
-    it.onmousedown=function(ev){ev.stopPropagation();ev.preventDefault();pick(s);cur=selectedShapes.slice();_hidePickList();};
-    box.appendChild(it);
-  });
-  box.onmouseleave=function(){selectedShapes=cur;updatePropsPanel();redraw();};
-  wrap.appendChild(box);
-  // 캔버스 밖으로 나가면 안쪽으로 (아래가 모자라면 커서 위로)
-  var maxL=cv.offsetLeft+cv.clientWidth-box.offsetWidth-4,maxT=cv.offsetTop+cv.clientHeight-box.offsetHeight-4;
-  if(box.offsetLeft>maxL)box.style.left=Math.max(cv.offsetLeft+4,maxL)+'px';
-  if(box.offsetTop>maxT)box.style.top=Math.max(cv.offsetTop+4,py+cv.offsetTop-box.offsetHeight-8)+'px';
-  setTimeout(function(){document.addEventListener('mousedown',_hidePickList,{once:true});},0);
-}
-function _hidePickList(){var b=document.getElementById('pick-list');if(b)b.remove();}
 function hitTest(mx,my){
   var tol=6/scale;
   for(var i=shapes.length-1;i>=0;i--){if(_shapeHit(shapes[i],mx,my,tol))return shapes[i];}
@@ -4731,8 +4703,6 @@ cv.addEventListener('mousedown',function(e){
       _cycleHitMx=mx;_cycleHitMy=my;
       hit=hits[_cycleIdx];
     } else {_cycleHitMx=null;_cycleHitMy=null;_cycleIdx=0;}
-    // 밑면연마·고스라 등이 다른 도형과 겹친 곳을 누르면, 놓을 때(끌지 않았으면) 고르기 목록
-    _pickCand=(!(e.ctrlKey||e.metaKey)&&hits.length>1&&hits.some(function(h){return h.kind==='grindregion'||h.kind==='gosramark'||h.kind==='jollymark';}))?{hits:hits,px:e.offsetX,py:e.offsetY}:null;
     if(!hit&&_lgAt&&!(e.ctrlKey||e.metaKey)){
       // 선 조각 안쪽: 이미 다 선택돼 있으면 그대로 끌기, 아니면 그 조각의 선 전체를 선택
       if(!_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;}))selectedShapes=_lgAt.slice();
@@ -4951,7 +4921,7 @@ cv.addEventListener('mousemove',function(e){
       if(nonDim.length)doMagnet(nonDim);
       updatePropsPanel();redraw();return;
     }
-    var h=hitTest(mx,my);
+    var h=hitTestAll(mx,my)[0]||null; // 클릭하면 선택될 도형 = 마우스 올림 강조 (밑면연마·고스라가 조각보다 먼저)
     if(h!==hoverShape){
       hoverShape=h;
       if(h&&!dragStart&&!selBox){
@@ -5106,9 +5076,7 @@ document.addEventListener('mouseup',function(e){
       selectedShapes=withGroups;
       selBox=null;updatePropsPanel();redraw();
     } else {
-      var _pc=_pickCand;_pickCand=null;
-      if(_pc&&Math.hypot(e.offsetX-_pc.px,e.offsetY-_pc.py)<=3&&e.target===cv)_showPickList(_pc.hits,_pc.px,_pc.py); // 끌지 않은 클릭만
-      else if(dragStart)saveHistory();
+      if(dragStart)saveHistory();
       dragStart=null;dragOriginals={};
       setTimeout(function(){magnetLineX=null;magnetLineY=null;redraw();},400);
       calcCost();
@@ -5528,7 +5496,6 @@ document.addEventListener('keydown',function(e){
     selectedShapes=[];hoverShape=null;filletSel=[];updatePropsPanel();redraw();calcCost();
   }
   if(e.key==='Escape'){
-    if(document.getElementById('pick-list')){_hidePickList();return;} // 겹친 도형 고르기 목록만 닫기
     if(_dimSt){_dimSt=null;redraw();return;} // 치수선 그리는 중이면 그것만 취소
     selBox=null;drawStart=null;filletSel=[];
     // 그리기 도구 → 선택 도구로 복귀 (도구 버튼과 같은 처리: 보조 칸 숨기기·모드 초기화 등)
