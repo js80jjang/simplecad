@@ -108,6 +108,11 @@
   - `_expDim`: 30px 미만 짧은 치수는 화살표를 바깥에서 안쪽으로, 글자는 화살표 너머
   - 범례는 가공이 없어도 항상: 실선 = 닫힘면, 주황 빗금 = 밑면연마(50mm), 검정 ▲ = 고스라, 빨간 ★ = 졸리컷
   - 겹침 방지: `_pdr`(글자 상자), `_pseg`(그린 선), `_pcut`(타공부 안쪽) 등록 후 `_expDim`/`_expBestDim`/`_expLeader`가 빈 자리 선택
+- 3D 보기(`show3D`/`close3D`/`save3DImage`, WebGL 직접 구현 — 외부 라이브러리 없음): `_3dBuildScene`이 `_expCollect` 조각마다
+  외곽·구멍 루프(`_3dLoops`: rect=`_expRectPath`, 선 조각=`_expChain`, 싱크볼/쿡탑·타공=구멍), 두께(`_3dThick`, 제품 사이즈 "12T", 없으면 12),
+  윗면 텍스처 = 조각 모양으로 오린 온장 사진(`_drawingBoards` 배치 자리 → `_3dWorldToBoard`(= `_boardPiece`의 M) → 아핀 `_afMul/_afInv`로 `_drawSlab` 온장 캔버스를 옮겨 그림, 사진 없으면 돌 색).
+  `_3dSetupGL`: 윗/밑면 = 조각 상자 사각형 + 텍스처(투명 버림, 삼각분할 없음), 옆면 = 루프 따라 세운 사각형(법선은 재료 바깥), 윗면 외곽선 = 이음선, 바닥판.
+  카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
 

@@ -303,6 +303,7 @@ canvas{display:block;cursor:crosshair}
       <label style="color:#546E7A">mm</label>
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
       <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
+      <button class="bp-btn" style="background:#00695C;margin-left:6px" onclick="show3D()" title="조각을 두께·구멍·온장 무늬까지 3D로 보기 (돌리기·확대·이미지 저장)">🧊 3D 보기</button>
     </div>
     <span id="canvas-hint">드래그=다중선택 / Ctrl+클릭·드래그=선택 추가 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
@@ -7762,6 +7763,218 @@ document.addEventListener('keydown',function(e){
 
   }
 });
+
+// ═══ 3D 보기 (WebGL, 외부 라이브러리 없음) ═══
+// 조각(_expCollect)을 도면 자리 그대로 두께(제품 사이즈의 "12T" 등, 없으면 12mm)만큼 세우고 싱크볼·쿡탑·타공은 구멍으로.
+// 윗면 무늬 = 온장 배치에서 그 조각이 놓인 자리의 온장 사진(_drawingBoards + _drawSlab) → 실제로 잘려 나올 결이 보임.
+//   윗면은 조각 상자 크기 사각형에 "조각 모양으로 오린 무늬 텍스처"를 붙이고 투명한 곳은 버림(구멍까지 삼각분할 없이).
+//   옆면 = 외곽·구멍 둘레를 따라 세운 사각형, 윗면 외곽선 = 이음선(조각끼리 맞닿는 곳이 선으로 보임).
+// 좌표: X = 도면 x, Z = 도면 y(아래가 +), Y = 위. 단위 mm
+var _3d=null;
+function _3dThick(shape){
+  var nm=_itemProd(shape),p=(products||[]).filter(function(q){return (q.name||'').trim()===nm;})[0]||products[0];
+  var m=p&&/(\d+(?:\.\d+)?)\s*T/i.exec(p.size||'');return m?+m[1]:12;
+}
+function _3dPoly(cx,cy,rx,ry,n){var o=[];for(var i=0;i<n;i++){var a=i/n*2*Math.PI;o.push([cx+rx*Math.cos(a),cy+ry*Math.sin(a)]);}return o;}
+function _3dOpen(pts){if(pts&&pts.length>2){var a=pts[0],b=pts[pts.length-1];if(Math.hypot(a[0]-b[0],a[1]-b[1])<0.01)pts=pts.slice(0,-1);}return pts;}
+// 조각 → {outer, holes} (mm, 도면 좌표)
+function _3dLoops(p){
+  var s=p.s,outer=null;
+  if(s.kind==='rect')outer=_expRectPath(_expRectGeo(s));
+  else if(s.kind==='linegroup')outer=_expChain(s.lines);
+  else if(s.kind==='circle'||s.kind==='hole')outer=_3dPoly(s.cx,s.cy,s.r,s.r,48);
+  else if(s.kind==='ellipse')outer=_3dPoly(s.cx,s.cy,s.rx,s.ry,48);
+  outer=_3dOpen(outer);if(!outer||outer.length<3)return null;
+  var holes=[];
+  p.cutouts.forEach(function(q){holes.push(_3dOpen(q.kind==='rect'?_expRectPath(_expRectGeo(q)):_3dPoly(q.cx,q.cy,q.rx,q.ry,40)));});
+  p.holes.forEach(function(q){holes.push(_3dPoly(q.cx,q.cy,q.r,q.r,28));});
+  return{outer:outer,holes:holes.filter(function(h){return h&&h.length>2;})};
+}
+function _3dInside(loops,x,y){
+  var ins=false;[loops.outer].concat(loops.holes).forEach(function(L){for(var i=0,j=L.length-1;i<L.length;j=i++){var a=L[i],b=L[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])ins=!ins;}});
+  return ins;
+}
+// 2D 아핀 [a,b,c,d,e,f] (x'=a x + c y + e, y'=b x + d y + f)
+function _afMul(m,n){return[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];}
+function _afInv(m){var d=m[0]*m[3]-m[1]*m[2];return[m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
+// 온장 배치의 조각 자리: 도면 좌표 → 온장 좌표(mm). _boardPiece의 M과 같은 계산 (sc=1)
+function _3dWorldToBoard(bp,bb,margin){
+  var it=bp.item,rot=it.rot||0,cr=Math.cos(rot),sr=Math.sin(rot),iw=rot?it.w:bb.r-bb.l;
+  var fx=bp.rotated?it.fh:it.fw,fy=bp.rotated?it.fw:it.fh,ox=margin+bp.x-(fx?10:0),oy=margin+bp.y-(fy?10:0);
+  function M(x,y){var u=rot?x*cr-y*sr-it.rx0:x-bb.l,v=rot?x*sr+y*cr-it.ry0:y-bb.t;return bp.rotated?[ox+v,oy+(iw-u)]:[ox+u,oy+v];}
+  var o=M(0,0),ax=M(1,0),ay=M(0,1);
+  return[ax[0]-o[0],ax[1]-o[1],ay[0]-o[0],ay[1]-o[1],o[0],o[1]];
+}
+// 장면 만들기: 조각마다 {loops, bb, th, tex(캔버스), side(옆면 색), waiting(사진 불러오는 중)}
+function _3dBuildScene(){
+  var pieces=_expCollect(),DB=_drawingBoards(),place=new Map(),boardCv=[];
+  function key(sh){return sh&&sh.kind==='linegroup'?sh.lines[0]:sh;}
+  DB.boards.forEach(function(b,bi){b.forEach(function(bp){if(bp.item&&bp.item.shape)place.set(key(bp.item.shape),{bp:bp,bi:bi});});});
+  function slabCanvas(bi){ // 온장 한 장 = 사진을 온장 크기로 (_drawSlab), 장마다 한 번만
+    if(boardCv[bi]!==undefined)return boardCv[bi];
+    var b=DB.boards[bi],img=_slabImgFor(_boardLabel(b));if(!img)return null; // 아직 불러오는 중이면 다음에
+    var d=_boardDims(b),s=Math.min(2048,Math.max(img.width,img.height))/Math.max(d.bw,d.bh),c=document.createElement('canvas');
+    c.width=Math.round(d.bw*s);c.height=Math.round(d.bh*s);_drawSlab(c.getContext('2d'),img,0,0,c.width,c.height);
+    var t=document.createElement('canvas');t.width=t.height=1;var tg=t.getContext('2d');tg.drawImage(c,0,0,1,1);var px=tg.getImageData(0,0,1,1).data;
+    return boardCv[bi]={c:c,s:s,avg:[px[0]/255,px[1]/255,px[2]/255]};
+  }
+  var out=[],waiting=false;
+  pieces.forEach(function(p){
+    var loops=_3dLoops(p);if(!loops)return;
+    var bb=p.bb,bw=bb.r-bb.l,bh=bb.b-bb.t;if(bw<1||bh<1)return;
+    var k=Math.min(0.8,2048/Math.max(bw,bh)),tex=document.createElement('canvas');tex.width=Math.max(2,Math.ceil(bw*k));tex.height=Math.max(2,Math.ceil(bh*k));
+    var g=tex.getContext('2d'),T=[k,0,0,k,-bb.l*k,-bb.t*k];
+    g.setTransform(T[0],T[1],T[2],T[3],T[4],T[5]);g.beginPath();
+    [loops.outer].concat(loops.holes).forEach(function(L){L.forEach(function(q,i){if(i)g.lineTo(q[0],q[1]);else g.moveTo(q[0],q[1]);});g.closePath();});
+    g.save();g.clip('evenodd');
+    var pl=place.get(key(p.s)),sc=pl?slabCanvas(pl.bi):null,side=[0.86,0.85,0.82];
+    if(pl&&!sc&&_mallIdFor(_boardLabel(DB.boards[pl.bi]),'')!=null)waiting=true;
+    if(sc){
+      var W2B=_3dWorldToBoard(pl.bp,bb,DB.margin),M=_afMul(_afMul(T,_afInv(W2B)),[1/sc.s,0,0,1/sc.s,0,0]);
+      g.setTransform(M[0],M[1],M[2],M[3],M[4],M[5]);g.drawImage(sc.c,0,0);side=sc.avg;
+    } else {g.setTransform(1,0,0,1,0,0);g.fillStyle='#E8E4DC';g.fillRect(0,0,tex.width,tex.height);}
+    g.restore();
+    out.push({loops:loops,bb:bb,th:_3dThick(p.s),tex:tex,side:side});
+  });
+  return{pieces:out,waiting:waiting};
+}
+// ── 행렬 (열 우선, WebGL용) ──
+function _m4Persp(fov,asp,n,f){var t=1/Math.tan(fov/2);return[t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0];}
+function _m4Look(e,c,u){
+  var z=[e[0]-c[0],e[1]-c[1],e[2]-c[2]],zl=Math.hypot(z[0],z[1],z[2]);z=[z[0]/zl,z[1]/zl,z[2]/zl];
+  var x=[u[1]*z[2]-u[2]*z[1],u[2]*z[0]-u[0]*z[2],u[0]*z[1]-u[1]*z[0]],xl=Math.hypot(x[0],x[1],x[2]);x=[x[0]/xl,x[1]/xl,x[2]/xl];
+  var y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
+  return[x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -(x[0]*e[0]+x[1]*e[1]+x[2]*e[2]),-(y[0]*e[0]+y[1]*e[1]+y[2]*e[2]),-(z[0]*e[0]+z[1]*e[1]+z[2]*e[2]),1];
+}
+function _m4Mul(a,b){var o=new Array(16);for(var c=0;c<4;c++)for(var r=0;r<4;r++){var s=0;for(var k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;}
+// ── WebGL 준비: 조각마다 윗면·밑면(텍스처)·옆면 삼각형 + 윗면 외곽선 ──
+function _3dSetupGL(cv,scene){
+  var gl=cv.getContext('webgl',{antialias:true,preserveDrawingBuffer:true});if(!gl)return null;
+  function sh(type,src){var o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);return o;}
+  var prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,'attribute vec3 aP;attribute vec3 aN;attribute vec2 aT;uniform mat4 uM;varying vec3 vN;varying vec2 vT;void main(){gl_Position=uM*vec4(aP,1.0);vN=aN;vT=aT;}'));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 vN;varying vec2 vT;uniform sampler2D uS;uniform float uTex;uniform vec3 uC;uniform vec3 uL;uniform float uLit;'
+    +'void main(){vec4 c=uTex>0.5?texture2D(uS,vT):vec4(uC,1.0);if(c.a<0.5)discard;float d=max(dot(normalize(vN),uL),0.0);float k=mix(1.0,0.58+0.5*d,uLit);gl_FragColor=vec4(c.rgb*k,1.0);}'));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  var A={p:gl.getAttribLocation(prog,'aP'),n:gl.getAttribLocation(prog,'aN'),t:gl.getAttribLocation(prog,'aT')};
+  var U={m:gl.getUniformLocation(prog,'uM'),s:gl.getUniformLocation(prog,'uS'),tex:gl.getUniformLocation(prog,'uTex'),c:gl.getUniformLocation(prog,'uC'),l:gl.getUniformLocation(prog,'uL'),lit:gl.getUniformLocation(prog,'uLit')};
+  function buf(arr){var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);return{b:b,n:arr.length/8};}
+  var lo=Infinity,hi=-Infinity,zl=Infinity,zh=-Infinity,thMax=0,draws=[];
+  scene.pieces.forEach(function(pc){
+    var bb=pc.bb,th=pc.th,top=[],side=[],line=[];thMax=Math.max(thMax,th);
+    lo=Math.min(lo,bb.l);hi=Math.max(hi,bb.r);zl=Math.min(zl,bb.t);zh=Math.max(zh,bb.b);
+    function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
+    function quad(a,y,ny){var L=bb.l,R=bb.r,T=bb.t,B=bb.b;v(a,L,y,T,0,ny,0,0,0);v(a,R,y,T,0,ny,0,1,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,T,0,ny,0,0,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,B,0,ny,0,0,1);}
+    quad(top,th,1);var bot=[];quad(bot,0,-1);
+    [pc.loops.outer].concat(pc.loops.holes).forEach(function(L){
+      for(var i=0;i<L.length;i++){
+        var a=L[i],b=L[(i+1)%L.length],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(len<0.01)continue;
+        var nx=dz/len,nz=-dx/len,mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;
+        if(_3dInside(pc.loops,mx+nx*0.5,mz+nz*0.5)){nx=-nx;nz=-nz;} // 재료 바깥쪽으로
+        v(side,a[0],0,a[1],nx,0,nz,0,0);v(side,b[0],0,b[1],nx,0,nz,0,0);v(side,b[0],th,b[1],nx,0,nz,0,0);
+        v(side,a[0],0,a[1],nx,0,nz,0,0);v(side,b[0],th,b[1],nx,0,nz,0,0);v(side,a[0],th,a[1],nx,0,nz,0,0);
+        v(line,a[0],th+0.3,a[1],0,1,0,0,0);v(line,b[0],th+0.3,b[1],0,1,0,0,0);
+      }
+    });
+    var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pc.tex);
+    [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(function(w){gl.texParameteri(gl.TEXTURE_2D,w,gl.CLAMP_TO_EDGE);});
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    draws.push({top:buf(top),bot:buf(bot),side:buf(side),line:buf(line),tex:t,col:pc.side});
+  });
+  if(!draws.length)return null;
+  var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500),G=size*2.2;
+  var ground=buf([cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz+G,0,1,0,0,0]);
+  return{gl:gl,A:A,U:U,draws:draws,ground:ground,center:[cx,thMax/2,cz],size:size};
+}
+function _3dRender(){
+  var st=_3d;if(!st||!st.r)return;var R=st.r,gl=R.gl,cv=st.cv,cam=st.cam;
+  gl.viewport(0,0,cv.width,cv.height);gl.clearColor(0.86,0.89,0.92,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);
+  var cp=Math.cos(cam.pitch),eye=[cam.t[0]+cam.d*cp*Math.sin(cam.yaw),cam.t[1]+cam.d*Math.sin(cam.pitch),cam.t[2]+cam.d*cp*Math.cos(cam.yaw)];
+  var M=_m4Mul(_m4Persp(38*Math.PI/180,cv.width/cv.height,cam.d/60,cam.d*20),_m4Look(eye,cam.t,[0,1,0]));
+  gl.uniformMatrix4fv(R.U.m,false,new Float32Array(M));
+  var Ln=Math.hypot(0.35,1,0.55);gl.uniform3f(R.U.l,0.35/Ln,1/Ln,0.55/Ln);gl.uniform1i(R.U.s,0);
+  function draw(b,mode){gl.bindBuffer(gl.ARRAY_BUFFER,b.b);
+    gl.enableVertexAttribArray(R.A.p);gl.vertexAttribPointer(R.A.p,3,gl.FLOAT,false,32,0);
+    gl.enableVertexAttribArray(R.A.n);gl.vertexAttribPointer(R.A.n,3,gl.FLOAT,false,32,12);
+    gl.enableVertexAttribArray(R.A.t);gl.vertexAttribPointer(R.A.t,2,gl.FLOAT,false,32,24);
+    gl.drawArrays(mode,0,b.n);}
+  gl.uniform1f(R.U.tex,0);gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.80,0.83,0.86);draw(R.ground,gl.TRIANGLES); // 바닥
+  R.draws.forEach(function(d){
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,d.tex);
+    gl.uniform1f(R.U.lit,1);gl.uniform1f(R.U.tex,1);draw(d.top,gl.TRIANGLES);draw(d.bot,gl.TRIANGLES);
+    gl.uniform1f(R.U.tex,0);gl.uniform3f(R.U.c,d.col[0]*0.95,d.col[1]*0.95,d.col[2]*0.95);draw(d.side,gl.TRIANGLES);
+    gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.25,0.27,0.29);draw(d.line,gl.LINES); // 윗면 외곽선 = 이음선
+  });
+}
+var _3D_VIEWS={iso:{yaw:-0.65,pitch:0.62},top:{yaw:0,pitch:1.5},front:{yaw:0,pitch:0.22}};
+function _3dSetView(name){var st=_3d;if(!st||!st.r)return;var v=_3D_VIEWS[name]||_3D_VIEWS.iso,asp=st.cv.width/st.cv.height;st.cam={yaw:v.yaw,pitch:v.pitch,d:st.r.size*1.35*Math.max(1,1.5/asp),t:st.r.center.slice()};_3dRender();} // 세로로 좁은 창이면 더 멀리서
+function _3dResize(){var st=_3d;if(!st)return;var r=st.cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;st.cv.width=Math.max(10,Math.round(r.width*dp));st.cv.height=Math.max(10,Math.round(r.height*dp));_3dRender();}
+// 장면을 (다시) 만들기 — 온장 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
+function _3dRebuild(tries){
+  var st=_3d;if(!st)return;var sc=_3dBuildScene(),r=_3dSetupGL(st.cv,sc);
+  if(!r){st.msg.textContent=shapes.length?'3D로 보여 줄 조각이 없거나 이 브라우저가 WebGL을 지원하지 않습니다.':'도면에 조각이 없습니다.';return;}
+  var keep=st.cam;st.r=r;if(!keep)_3dSetView('iso');else _3dRender();
+  st.msg.textContent=sc.waiting?'온장 사진 불러오는 중…':'';
+  if(sc.waiting&&(tries||0)<20)setTimeout(function(){if(_3d===st)_3dRebuild((tries||0)+1);},300);
+}
+function show3D(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  close3D();
+  var nm=(products||[]).map(function(p){return (p.name||'').trim();}).filter(Boolean).join(', ');
+  var m=document.createElement('div');m.id='v3d-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:3000;background:rgba(10,18,26,0.92);display:flex;flex-direction:column';
+  var bs='padding:5px 12px;border:1px solid #546E7A;border-radius:3px;background:#263545;color:#ECEFF1;font-size:12px;cursor:pointer';
+  m.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d1822;border-bottom:1px solid #263545">'
+    +'<b style="color:#90CAF9;font-size:14px">🧊 3D 보기</b><span style="color:#B0BEC5;font-size:12px">'+escHtml(nm)+'</span>'
+    +'<span id="v3d-msg" style="color:#FFD740;font-size:11px"></span><span style="flex:1"></span>'
+    +'<button style="'+bs+'" data-v="iso">비스듬히</button><button style="'+bs+'" data-v="top">위에서</button><button style="'+bs+'" data-v="front">앞에서</button>'
+    +'<button id="v3d-save" style="'+bs.replace('#263545','#1565C0')+'">💾 이미지 저장</button><button id="v3d-close" style="'+bs+'">✕ 닫기</button></div>'
+    +'<div style="flex:1;position:relative;min-height:0"><canvas id="v3d-cv" style="position:absolute;inset:0;width:100%;height:100%;cursor:grab"></canvas>'
+    +'<div style="position:absolute;left:10px;bottom:8px;color:#37474F;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px">왼쪽 끌기 = 돌리기 · 휠 = 확대/축소 · 오른쪽(또는 Shift) 끌기 = 이동 · 더블클릭 = 처음 시점 · Esc = 닫기</div></div>';
+  document.body.appendChild(m);
+  var cv=document.getElementById('v3d-cv');
+  _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null};
+  m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
+  document.getElementById('v3d-close').onclick=close3D;
+  document.getElementById('v3d-save').onclick=save3DImage;
+  // 마우스: 왼쪽 끌기 = 돌리기, 오른쪽/Shift 끌기 = 이동, 휠 = 확대, 더블클릭 = 처음 시점
+  var drag=null;
+  cv.addEventListener('contextmenu',function(e){e.preventDefault();});
+  cv.addEventListener('mousedown',function(e){drag={x:e.clientX,y:e.clientY,pan:e.button===2||e.shiftKey};cv.style.cursor='grabbing';e.preventDefault();});
+  window.addEventListener('mousemove',_3d.onMove=function(e){
+    if(!drag||!_3d||!_3d.cam)return;var dx=e.clientX-drag.x,dy=e.clientY-drag.y,c=_3d.cam;drag.x=e.clientX;drag.y=e.clientY;
+    if(drag.pan){var k=c.d/600,sy=Math.sin(c.yaw),cy=Math.cos(c.yaw);c.t[0]-=(cy*dx-sy*dy*Math.sin(c.pitch))*k;c.t[2]-=(-sy*dx-cy*dy*Math.sin(c.pitch))*k;c.t[1]+=dy*Math.cos(c.pitch)*k;}
+    else{c.yaw-=dx*0.008;c.pitch=Math.max(0.03,Math.min(1.55,c.pitch+dy*0.008));}
+    _3dRender();
+  });
+  window.addEventListener('mouseup',_3d.onUp=function(){drag=null;if(_3d)_3d.cv.style.cursor='grab';});
+  cv.addEventListener('wheel',function(e){e.preventDefault();if(!_3d.cam)return;_3d.cam.d=Math.max(100,_3d.cam.d*(e.deltaY>0?1.12:1/1.12));_3dRender();},{passive:false});
+  cv.addEventListener('dblclick',function(){_3dSetView('iso');});
+  document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close3D();}},true);
+  window.addEventListener('resize',_3d.onResize=_3dResize);
+  var r=cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;cv.width=Math.max(10,Math.round(r.width*dp));cv.height=Math.max(10,Math.round(r.height*dp));
+  _3dRebuild(0);
+  requestAnimationFrame(function(){if(_3d&&_3d.cv===cv){_3dResize();_3dSetView('iso');}}); // 창이 그려진 뒤 크기를 다시 재고 전체가 보이게
+}
+function close3D(){
+  var st=_3d;if(!st)return;_3d=null;
+  window.removeEventListener('mousemove',st.onMove);window.removeEventListener('mouseup',st.onUp);
+  document.removeEventListener('keydown',st.onKey,true);window.removeEventListener('resize',st.onResize);
+  if(st.r){var ext=st.r.gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
+  st.m.remove();
+}
+// 지금 보이는 3D 화면을 PNG로 (지난번 이미지 저장 폴더에서, 처음엔 바탕화면)
+async function save3DImage(){
+  var st=_3d;if(!st||!st.r)return;_3dRender();
+  var blob=await new Promise(function(res){st.cv.toBlob(res,'image/png');}),name=_saveBaseName()+'-3D';
+  if(typeof window.showSaveFilePicker==='function'){
+    try{var fh=await _pickSaveFile('img','desktop',{suggestedName:name+'.png',types:[{description:'PNG 이미지',accept:{'image/png':['.png']}}]});var w=await fh.createWritable();await w.write(blob);await w.close();
+      var b=document.getElementById('v3d-save');if(b){var o=b.textContent;b.textContent='✓ 저장됨';setTimeout(function(){b.textContent=o;},1500);}return;}
+    catch(err){if(err.name==='AbortError')return;}
+  }
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'.png';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+}
 
 // ═══ 앱 설치 (PWA) ═══
 // 서비스 워커(sw.js)는 http(s)에서만 — GitHub Pages 주소에서 열면 크롬/엣지가 "앱 설치"를 띄울 수 있음
