@@ -7545,8 +7545,13 @@ function exportDrawingA4(){
     var rest=[];items.forEach(function(it,k){if(!onBoard[k])rest.push(k);});
     if(rest.length)pagesDef.push({idx:rest,label:'온장에 배치되지 않은 조각',bw:null,bh:null});
     pagesDef.forEach(function(pd){var set={};pd.idx.forEach(function(k){set[k]=1;});pd.list=shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];});});
-    pagesDef=pagesDef.filter(function(pd){return pd.list.length;});  }
-  if(pagesDef.length<2){var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];}
+    pagesDef=pagesDef.filter(function(pd){return pd.list.length;});
+    pagesDef.forEach(function(pd){pd.label='상세 · '+pd.label;});
+  }
+  var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');
+  // 첫 쪽은 언제나 모든 도형이 원래 자리 그대로 들어간 전체 도면, 온장이 2장 이상이면 다음 쪽부터 장별 상세 도면
+  if(pagesDef.length<2)pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];
+  else pagesDef.unshift({list:null,label:'전체 도면 (다음 쪽부터 온장별 상세)',bw:d0.bw,bh:d0.bh});
   // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
   var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
   all.forEach(function(s,i){if(auto[i]&&s.shapeNum==null){s.shapeNum=auto[i];frozen.push(s);}});
