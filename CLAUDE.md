@@ -115,6 +115,9 @@
   하부장(기본 켬, 머리줄 "하부장" 체크 `_3d.furn`): 상판 윗면 900(`_3D_H`), 몸통 = 외곽을 20 들인 다각형(`_3dInset`) 벽, 걸레받이 100(+50 들임),
   민자 도어 = 앞면 변(`_3dFrontEdges`: 밑면연마·고스라 붙은 변, 없으면 도면 아래쪽을 보는 가장 긴 변)에 폭 약 500씩 + 틈 선, 폭 300 미만 조각은 장 없음.
   싱크볼 구멍 아래 스테인리스 볼(깊이 200), 쿡탑 구멍에 검은 유리판(`fan`)
+  조각 구분(`_3dGetType/_3dSetType`, 도형 `piece3d` = top|mid|etc, 선 조각은 선마다, 기본 = 폭 300 미만 etc·나머지 top, 3D 창 왼쪽 `_3dPiecePanel`):
+  미드웨이 = 상판 뒷변(`backs`: 앞면 아닌 300 이상 변, 긴 것부터)을 따라 상판 위에 세운 판(긴 변=벽 따라·짧은 변=높이·앞면 무늬), 기타 = 안 그림.
+  머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`)
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
