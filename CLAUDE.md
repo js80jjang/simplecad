@@ -61,7 +61,8 @@
   숨은 `company-name`(업체명)·`site-addr`(주소)에 나눠 넣음(저장 파일 company/siteAddr 그대로), 최근 목록 `scd_siteinfo_history`, 제품(`renderProductList`, 2개부터 `#prod-pop`),
   `deliv-date`/`deliv-time`(직접 입력 → `_normDate` 2026.10.28 / `_normTime` 14:00). 업체명·주소 최근 15개는 localStorage
   — 도면화·DXF에는 `_companySite()`("업체명 - 주소"), 저장 파일 이름은 `_saveBaseName()`(업체명-주소-20261021)
-  — 저장 창 `_pickSaveFile(kind,기본위치,opts)`: 처음은 바탕화면(.ceramic)/문서(DXF), 그다음은 지난번 저장 파일 핸들(IndexedDB `scd-files`, kind별)의 폴더 + picker `id`
+  — 저장 창 `_pickSaveFile(kind,기본위치,opts)`: 처음은 바탕화면(.ceramic)/문서(DXF), 그다음은 지난번 저장 파일 핸들(IndexedDB `scd-files`, kind별)의 폴더 + picker `id`.
+    불러오기 `loadProject`도 `showOpenFilePicker`로 지난번 불러온 폴더('open', 없으면 'save' → 바탕화면), 없는 브라우저는 파일 칸 → `_loadProjectFile`
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,

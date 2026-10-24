@@ -3846,11 +3846,22 @@ function dxfFormSettings(){
     +'</div>';
   document.body.appendChild(md);
 }
-function loadProject(){
+// 불러오기: 열기 창이 지난번 불러온 폴더(없으면 지난번 저장 폴더 → 바탕화면)에서 열리고, 고른 파일을 다음 번 시작 폴더로 기억
+//   showOpenFilePicker가 없는 브라우저는 예전처럼 파일 선택 칸
+async function loadProject(){
+  if(typeof window.showOpenFilePicker==='function'){
+    var last=(await _lastDirGet('open'))||(await _lastDirGet('save')),opts={id:'scd-open',multiple:false,
+      types:[{description:'세라믹 도면 · 오토캐드 DXF',accept:{'application/json':['.ceramic','.json'],'application/dxf':['.dxf']}}]},hs;
+    try{hs=await window.showOpenFilePicker(Object.assign({},opts,{startIn:last||'desktop'}));}
+    catch(err){if(err.name==='AbortError')return;try{hs=await window.showOpenFilePicker(Object.assign({},opts,{startIn:'desktop'}));}catch(e2){if(e2.name==='AbortError')return;hs=null;}}
+    if(hs&&hs[0]){_lastDirSet('open',hs[0]);var f=await hs[0].getFile();_loadProjectFile(f);return;}
+  }
   var inp=document.createElement('input');
   inp.type='file';inp.accept='.ceramic,.json,.dxf';
-  inp.onchange=function(){
-    var file=inp.files[0];if(!file)return;
+  inp.onchange=function(){if(inp.files[0])_loadProjectFile(inp.files[0]);};
+  inp.click();
+}
+function _loadProjectFile(file){
     var reader=new FileReader();
     reader.onload=function(e){
       if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
@@ -3882,8 +3893,6 @@ function loadProject(){
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
     };
     reader.readAsText(file);
-  };
-  inp.click();
 }
 
 // ═══ 트림 ═══
