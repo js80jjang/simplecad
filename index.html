@@ -7954,6 +7954,21 @@ function _3dDragTarget(m,ray){
 // 미드웨이 위아래 끌기: 광선이 V.C를 지나는 세로 평면(법선 V.N = 누를 때 시선의 수평 방향)과 만나는 높이
 function _3dVertH(V,ray){if(!ray)return null;var dn=ray.d[0]*V.N[0]+ray.d[2]*V.N[1];if(Math.abs(dn)<1e-6)return null;
   var t=((V.C[0]-ray.o[0])*V.N[0]+(V.C[2]-ray.o[2])*V.N[1])/dn;return t<0?null:ray.o[1]+ray.d[1]*t;}
+// 하부장 도어 나누기(변 길이 L, apps = 싱크볼·쿡탑 구간 [{a,b}]) → [[s0,s1]…]
+// 싱크볼·쿡탑 아래 = 그 폭 + 양옆 30 이상을 100 단위로 올린 장(가운데 맞춤, 800 이상이면 문 2짝), 겹치면 두 기기 사이 가운데서 나눔,
+// 150 미만 남는 틈은 옆 장에 붙이고, 나머지는 약 500(_3D_DOOR)씩 고르게
+function _3dDoorSplit(L,apps){
+  var segs=apps.map(function(p){var w=Math.min(L,Math.ceil((p.b-p.a+60)/100)*100),s=Math.max(0,Math.min(L-w,(p.a+p.b)/2-w/2));return{s:s,e:s+w,a:p.a,b:p.b};})
+    .sort(function(x,y){return x.s-y.s;});
+  for(var i=0;i+1<segs.length;i++)if(segs[i].e>segs[i+1].s){var m=(segs[i].b+segs[i+1].a)/2;segs[i].e=m;segs[i+1].s=m;}
+  var prev=0;segs.forEach(function(g){if(g.s>prev&&g.s-prev<150)g.s=prev;prev=g.e;});
+  if(segs.length&&L-segs[segs.length-1].e<150)segs[segs.length-1].e=L;
+  var out=[],cur=0;
+  function fill(a,b){if(b-a<1)return;var n=Math.max(1,Math.round((b-a)/_3D_DOOR)),w=(b-a)/n;for(var k=0;k<n;k++)out.push([a+k*w,a+(k+1)*w]);}
+  segs.forEach(function(g){fill(cur,g.s);var w=g.e-g.s;if(w>=800)out.push([g.s,g.s+w/2],[g.s+w/2,g.e]);else out.push([g.s,g.e]);cur=g.e;});
+  fill(cur,L);
+  return out;
+}
 // 바닥부터 세우는 미드웨이(키 큰 판)는 상판 변 바깥쪽(상판 옆)에 바닥 0부터 → 변의 법선을 뒤집고 높이 0
 function _3dFloorEdge(e){return{id:e.id,a:e.a,ux:e.ux,uz:e.uz,len:e.len,nx:-e.nx,nz:-e.nz,used:0,y:0};}
 // 미드웨이 자동 자리: 도면에서 상판 변 바깥쪽에 붙어 있으면 그 변(붙은 길이가 가장 긴 것) → {e, s0(변 시작에서 mm), along(벽 따라가는 도면 축 x|z)}
@@ -8044,14 +8059,24 @@ function _3dSetupGL(cv,scene,furn,mode){ // mode: 'top' = 상판만, 'mid' = 상
         if(kd==='sink'){var bowl={outer:H,holes:[]};walls(furnDraw.sink,H.slice().reverse(),bowl,y0-200,y0);fan(furnDraw.sink,H,y0-200,1);}
         else if(kd==='cook')fan(furnDraw.cook,H,y1-1.5,1);
       });
-      var dy0=_3D_KICK+3,dy1=y0-3;
+      var dy0=_3D_KICK+3,dy1=y0-3,appAt={}; // appAt: 앞면 변 번호 → 그 변 쪽 싱크볼·쿡탑이 차지하는 구간(변 시작에서 mm)
+      loops.holes.forEach(function(H,hi2){
+        var kd=loops.kinds[hi2];if(kd!=='sink'&&kd!=='cook')return;
+        var c=H.reduce(function(s,p){return[s[0]+p[0]/H.length,s[1]+p[1]/H.length];},[0,0]),best=-1,bd=Infinity,ba=0,bz=0;
+        for(var i=0;i<body.length;i++){ // 가장 가까운 앞면 변 하나에만
+          if(!front[i])continue;var A=body[i],B=body[(i+1)%body.length],L=Math.hypot(B[0]-A[0],B[1]-A[1]);if(L<150)continue;
+          var ux=(B[0]-A[0])/L,uz=(B[1]-A[1])/L,ss=H.map(function(p){return (p[0]-A[0])*ux+(p[1]-A[1])*uz;}),a=Math.min.apply(null,ss),b=Math.max.apply(null,ss);
+          if(b<0||a>L)continue;var d=Math.abs((c[0]-A[0])*uz-(c[1]-A[1])*ux);if(d<bd){bd=d;best=i;ba=a;bz=b;}
+        }
+        if(best>=0)(appAt[best]=appAt[best]||[]).push({a:ba,b:bz});
+      });
       for(var i=0;i<body.length;i++){
         if(!front[i])continue;
         var A=body[i],B=body[(i+1)%body.length],dx=B[0]-A[0],dz=B[1]-A[1],L=Math.hypot(dx,dz);if(L<150)continue;
         var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(A[0]+B[0])/2+nx,(A[1]+B[1])/2+nz)){nx=-nx;nz=-nz;}
-        var cnt=Math.max(1,Math.round(L/_3D_DOOR)),w=L/cnt;
-        for(var k=0;k<cnt;k++){
-          var s0=k*w+1.5,s1=(k+1)*w-1.5,P=[A[0]+ux*s0+nx*2,A[1]+uz*s0+nz*2],Q=[A[0]+ux*s1+nx*2,A[1]+uz*s1+nz*2];
+        var parts=_3dDoorSplit(L,appAt[i]||[]);
+        for(var k=0;k<parts.length;k++){
+          var s0=parts[k][0]+1.5,s1=parts[k][1]-1.5,P=[A[0]+ux*s0+nx*2,A[1]+uz*s0+nz*2],Q=[A[0]+ux*s1+nx*2,A[1]+uz*s1+nz*2];
           v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy0,Q[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);
           v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);v(furnDraw.door,P[0],dy1,P[1],nx,0,nz,0,0);
           // 도어 테두리 = 문 사이 틈
