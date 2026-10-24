@@ -112,6 +112,9 @@
   외곽·구멍 루프(`_3dLoops`: rect=`_expRectPath`, 선 조각=`_expChain`, 싱크볼/쿡탑·타공=구멍), 두께(`_3dThick`, 제품 사이즈 "12T", 없으면 12),
   윗면 텍스처 = 조각 모양으로 오린 온장 사진(`_drawingBoards` 배치 자리 → `_3dWorldToBoard`(= `_boardPiece`의 M) → 아핀 `_afMul/_afInv`로 `_drawSlab` 온장 캔버스를 옮겨 그림, 사진 없으면 돌 색).
   `_3dSetupGL`: 윗/밑면 = 조각 상자 사각형 + 텍스처(투명 버림, 삼각분할 없음), 옆면 = 루프 따라 세운 사각형(법선은 재료 바깥), 윗면 외곽선 = 이음선, 바닥판.
+  하부장(기본 켬, 머리줄 "하부장" 체크 `_3d.furn`): 상판 윗면 900(`_3D_H`), 몸통 = 외곽을 20 들인 다각형(`_3dInset`) 벽, 걸레받이 100(+50 들임),
+  민자 도어 = 앞면 변(`_3dFrontEdges`: 밑면연마·고스라 붙은 변, 없으면 도면 아래쪽을 보는 가장 긴 변)에 폭 약 500씩 + 틈 선, 폭 300 미만 조각은 장 없음.
+  싱크볼 구멍 아래 스테인리스 볼(깊이 200), 쿡탑 구멍에 검은 유리판(`fan`)
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`

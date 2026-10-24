@@ -7785,10 +7785,10 @@ function _3dLoops(p){
   else if(s.kind==='circle'||s.kind==='hole')outer=_3dPoly(s.cx,s.cy,s.r,s.r,48);
   else if(s.kind==='ellipse')outer=_3dPoly(s.cx,s.cy,s.rx,s.ry,48);
   outer=_3dOpen(outer);if(!outer||outer.length<3)return null;
-  var holes=[];
-  p.cutouts.forEach(function(q){holes.push(_3dOpen(q.kind==='rect'?_expRectPath(_expRectGeo(q)):_3dPoly(q.cx,q.cy,q.rx,q.ry,40)));});
-  p.holes.forEach(function(q){holes.push(_3dPoly(q.cx,q.cy,q.r,q.r,28));});
-  return{outer:outer,holes:holes.filter(function(h){return h&&h.length>2;})};
+  var holes=[],kinds=[]; // kinds: 구멍마다 'sink'·'cook'·'' (하부장을 보일 때 싱크볼·쿡탑 모양)
+  p.cutouts.forEach(function(q){var h=_3dOpen(q.kind==='rect'?_expRectPath(_expRectGeo(q)):_3dPoly(q.cx,q.cy,q.rx,q.ry,40));if(h&&h.length>2){holes.push(h);kinds.push(q.kind==='rect'?(_applianceType(q)||''):'');}});
+  p.holes.forEach(function(q){holes.push(_3dPoly(q.cx,q.cy,q.r,q.r,28));kinds.push('');});
+  return{outer:outer,holes:holes,kinds:kinds};
 }
 function _3dInside(loops,x,y){
   var ins=false;[loops.outer].concat(loops.holes).forEach(function(L){for(var i=0,j=L.length-1;i<L.length;j=i++){var a=L[i],b=L[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])ins=!ins;}});
@@ -7847,8 +7847,40 @@ function _m4Look(e,c,u){
   return[x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -(x[0]*e[0]+x[1]*e[1]+x[2]*e[2]),-(y[0]*e[0]+y[1]*e[1]+y[2]*e[2]),-(z[0]*e[0]+z[1]*e[1]+z[2]*e[2]),1];
 }
 function _m4Mul(a,b){var o=new Array(16);for(var c=0;c<4;c++)for(var r=0;r<4;r++){var s=0;for(var k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;}
-// ── WebGL 준비: 조각마다 윗면·밑면(텍스처)·옆면 삼각형 + 윗면 외곽선 ──
-function _3dSetupGL(cv,scene){
+// ── 하부장(가구): 상판 아래 일반적인 싱크대 하부장 ──
+var _3D_H=900,_3D_KICK=100,_3D_SET=20,_3D_KICKSET=50,_3D_DOOR=500; // 상판 윗면 높이·걸레받이 높이·몸통 들임(상판 끝에서)·걸레받이 추가 들임·도어 폭 기준(mm)
+// 다각형을 안쪽으로 d만큼 줄임 (변마다 평행 이동한 직선끼리 교점). i번째 변 = 원래 i번째 변을 옮긴 것
+function _3dInset(pts,d){
+  var n=pts.length,A=0;for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n];A+=p[0]*q[1]-q[0]*p[1];}
+  var sg=A>0?1:-1,lines=[]; // 도면 좌표(아래가 +y)에서 A>0 = 시계 방향 → 안쪽 법선은 (-dy,dx)
+  for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n],dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*sg,ny=dx/L*sg;lines.push([p[0]+nx*d,p[1]+ny*d,dx,dy]);}
+  var out=[];
+  for(var i=0;i<n;i++){
+    var a=lines[(i+n-1)%n],b=lines[i],den=a[2]*b[3]-a[3]*b[2];
+    if(Math.abs(den)<1e-9){out.push([b[0],b[1]]);continue;}
+    var t=((b[0]-a[0])*b[3]-(b[1]-a[1])*b[2])/den;out.push([a[0]+a[2]*t,a[1]+a[3]*t]);
+  }
+  return out;
+}
+// 앞면 변 찾기: 조각 외곽 변 중 밑면연마·고스라(싱크볼 둘레 제외)가 붙은 변 = 드러나는 앞쪽. 없으면 도면 아래쪽을 보는 가장 긴 변
+function _3dFrontEdges(outer,marks){
+  var n=outer.length,front=[];
+  for(var i=0;i<n;i++){
+    var a=outer[i],b=outer[(i+1)%n],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<50){front.push(false);continue;}
+    front.push(marks.some(function(m){var mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2;return ptLD(mx,my,a[0],a[1],b[0],b[1])<5&&ptLD(m.x1,m.y1,a[0],a[1],b[0],b[1])<5&&ptLD(m.x2,m.y2,a[0],a[1],b[0],b[1])<5;}));
+  }
+  if(front.indexOf(true)<0){
+    var best=-1,bl=0;
+    for(var i=0;i<n;i++){var a=outer[i],b=outer[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);
+      var mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,ny=dx/L;if(_3dInside({outer:outer,holes:[]},mx,my+ny*2))ny=-ny; // 바깥 법선의 y
+      if(ny>0.7&&L>bl){bl=L;best=i;}}
+    if(best<0)for(var i=0;i<n;i++){var a=outer[i],b=outer[(i+1)%n],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L>bl){bl=L;best=i;}}
+    if(best>=0)front[best]=true;
+  }
+  return front;
+}
+// ── WebGL 준비: 조각마다 윗면·밑면(텍스처)·옆면 삼각형 + 윗면 외곽선 (+ 하부장) ──
+function _3dSetupGL(cv,scene,furn){
   var gl=cv.getContext('webgl',{antialias:true,preserveDrawingBuffer:true});if(!gl)return null;
   function sh(type,src){var o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);return o;}
   var prog=gl.createProgram();
@@ -7859,23 +7891,56 @@ function _3dSetupGL(cv,scene){
   var A={p:gl.getAttribLocation(prog,'aP'),n:gl.getAttribLocation(prog,'aN'),t:gl.getAttribLocation(prog,'aT')};
   var U={m:gl.getUniformLocation(prog,'uM'),s:gl.getUniformLocation(prog,'uS'),tex:gl.getUniformLocation(prog,'uTex'),c:gl.getUniformLocation(prog,'uC'),l:gl.getUniformLocation(prog,'uL'),lit:gl.getUniformLocation(prog,'uLit')};
   function buf(arr){var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);return{b:b,n:arr.length/8};}
-  var lo=Infinity,hi=-Infinity,zl=Infinity,zh=-Infinity,thMax=0,draws=[];
+  var lo=Infinity,hi=-Infinity,zl=Infinity,zh=-Infinity,draws=[],furnDraw={body:[],kick:[],door:[],gap:[],sink:[],cook:[]};
+  // 볼록한 루프(싱크볼·쿡탑 사각형)를 높이 y의 면으로 (부채꼴 삼각형)
+  function fan(a,L,y,ny){var c=[0,0];L.forEach(function(q){c[0]+=q[0]/L.length;c[1]+=q[1]/L.length;});for(var i=0;i<L.length;i++){var p=L[i],q=L[(i+1)%L.length];v(a,c[0],y,c[1],0,ny,0,0,0);v(a,p[0],y,p[1],0,ny,0,0,0);v(a,q[0],y,q[1],0,ny,0,0,0);}}
+  var marks=furn?shapes.filter(function(m){return (m.kind==='grindregion'||m.kind==='gosramark')&&!m.groupId;}):[];
+  function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
+  // 루프 둘레를 따라 y0~y1 높이로 세운 벽 (법선 = loops 재료 바깥)
+  function walls(a,L,loops,y0,y1){
+    for(var i=0;i<L.length;i++){
+      var p=L[i],q=L[(i+1)%L.length],dx=q[0]-p[0],dz=q[1]-p[1],len=Math.hypot(dx,dz);if(len<0.01)continue;
+      var nx=dz/len,nz=-dx/len,mx=(p[0]+q[0])/2,mz=(p[1]+q[1])/2;
+      if(_3dInside(loops,mx+nx*0.5,mz+nz*0.5)){nx=-nx;nz=-nz;} // 재료 바깥쪽으로
+      v(a,p[0],y0,p[1],nx,0,nz,0,0);v(a,q[0],y0,q[1],nx,0,nz,0,0);v(a,q[0],y1,q[1],nx,0,nz,0,0);
+      v(a,p[0],y0,p[1],nx,0,nz,0,0);v(a,q[0],y1,q[1],nx,0,nz,0,0);v(a,p[0],y1,p[1],nx,0,nz,0,0);
+    }
+  }
   scene.pieces.forEach(function(pc){
-    var bb=pc.bb,th=pc.th,top=[],side=[],line=[];thMax=Math.max(thMax,th);
+    var bb=pc.bb,th=pc.th,top=[],side=[],line=[],y0=furn?_3D_H-th:0,y1=y0+th; // 가구를 보이면 상판 윗면 = 900
     lo=Math.min(lo,bb.l);hi=Math.max(hi,bb.r);zl=Math.min(zl,bb.t);zh=Math.max(zh,bb.b);
-    function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
     function quad(a,y,ny){var L=bb.l,R=bb.r,T=bb.t,B=bb.b;v(a,L,y,T,0,ny,0,0,0);v(a,R,y,T,0,ny,0,1,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,T,0,ny,0,0,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,B,0,ny,0,0,1);}
-    quad(top,th,1);var bot=[];quad(bot,0,-1);
+    quad(top,y1,1);var bot=[];quad(bot,y0,-1);
     [pc.loops.outer].concat(pc.loops.holes).forEach(function(L){
-      for(var i=0;i<L.length;i++){
-        var a=L[i],b=L[(i+1)%L.length],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(len<0.01)continue;
-        var nx=dz/len,nz=-dx/len,mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;
-        if(_3dInside(pc.loops,mx+nx*0.5,mz+nz*0.5)){nx=-nx;nz=-nz;} // 재료 바깥쪽으로
-        v(side,a[0],0,a[1],nx,0,nz,0,0);v(side,b[0],0,b[1],nx,0,nz,0,0);v(side,b[0],th,b[1],nx,0,nz,0,0);
-        v(side,a[0],0,a[1],nx,0,nz,0,0);v(side,b[0],th,b[1],nx,0,nz,0,0);v(side,a[0],th,a[1],nx,0,nz,0,0);
-        v(line,a[0],th+0.3,a[1],0,1,0,0,0);v(line,b[0],th+0.3,b[1],0,1,0,0,0);
-      }
+      walls(side,L,pc.loops,y0,y1);
+      for(var i=0;i<L.length;i++){var a=L[i],b=L[(i+1)%L.length];v(line,a[0],y1+0.3,a[1],0,1,0,0,0);v(line,b[0],y1+0.3,b[1],0,1,0,0,0);}
     });
+    // 하부장: 상판 외곽에서 20 들인 몸통(걸레받이 위~상판 아래), 걸레받이(50 더 들임), 앞면 변에 민자 도어(폭 약 500씩 나눔)
+    if(furn&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){
+      var body=_3dInset(pc.loops.outer,_3D_SET),kick=_3dInset(pc.loops.outer,_3D_SET+_3D_KICKSET);
+      walls(furnDraw.body,body,{outer:body,holes:[]},_3D_KICK,y0);
+      walls(furnDraw.kick,kick,{outer:kick,holes:[]},0,_3D_KICK);
+      // 싱크볼 = 구멍 아래 스테인리스 볼(깊이 200), 쿡탑 = 구멍에 검은 유리판(상판 윗면 바로 아래)
+      pc.loops.holes.forEach(function(H,hi2){
+        var kd=pc.loops.kinds[hi2];
+        if(kd==='sink'){var bowl={outer:H,holes:[]};walls(furnDraw.sink,H.slice().reverse(),bowl,y0-200,y0);fan(furnDraw.sink,H,y0-200,1);}
+        else if(kd==='cook')fan(furnDraw.cook,H,y1-1.5,1);
+      });
+      var front=_3dFrontEdges(pc.loops.outer,marks),dy0=_3D_KICK+3,dy1=y0-3;
+      for(var i=0;i<body.length;i++){
+        if(!front[i])continue;
+        var A=body[i],B=body[(i+1)%body.length],dx=B[0]-A[0],dz=B[1]-A[1],L=Math.hypot(dx,dz);if(L<150)continue;
+        var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(A[0]+B[0])/2+nx,(A[1]+B[1])/2+nz)){nx=-nx;nz=-nz;}
+        var cnt=Math.max(1,Math.round(L/_3D_DOOR)),w=L/cnt;
+        for(var k=0;k<cnt;k++){
+          var s0=k*w+1.5,s1=(k+1)*w-1.5,P=[A[0]+ux*s0+nx*2,A[1]+uz*s0+nz*2],Q=[A[0]+ux*s1+nx*2,A[1]+uz*s1+nz*2];
+          v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy0,Q[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);
+          v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);v(furnDraw.door,P[0],dy1,P[1],nx,0,nz,0,0);
+          // 도어 테두리 = 문 사이 틈
+          [[P,dy0,Q,dy0],[Q,dy0,Q,dy1],[Q,dy1,P,dy1],[P,dy1,P,dy0]].forEach(function(e){v(furnDraw.gap,e[0][0]+nx*0.5,e[1],e[0][1]+nz*0.5,0,1,0,0,0);v(furnDraw.gap,e[2][0]+nx*0.5,e[3],e[2][1]+nz*0.5,0,1,0,0,0);});
+        }
+      }
+    }
     var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pc.tex);
     [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(function(w){gl.texParameteri(gl.TEXTURE_2D,w,gl.CLAMP_TO_EDGE);});
@@ -7883,9 +7948,10 @@ function _3dSetupGL(cv,scene){
     draws.push({top:buf(top),bot:buf(bot),side:buf(side),line:buf(line),tex:t,col:pc.side});
   });
   if(!draws.length)return null;
-  var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500),G=size*2.2;
+  var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500,furn?_3D_H*1.4:0),G=size*2.2;
   var ground=buf([cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz+G,0,1,0,0,0]);
-  return{gl:gl,A:A,U:U,draws:draws,ground:ground,center:[cx,thMax/2,cz],size:size};
+  var fb=null;if(furn&&(furnDraw.body.length||furnDraw.sink.length||furnDraw.cook.length))fb={body:buf(furnDraw.body),kick:buf(furnDraw.kick),door:buf(furnDraw.door),gap:buf(furnDraw.gap),sink:buf(furnDraw.sink),cook:buf(furnDraw.cook)};
+  return{gl:gl,A:A,U:U,draws:draws,ground:ground,furn:fb,center:[cx,furn?_3D_H*0.45:6,cz],size:size};
 }
 function _3dRender(){
   var st=_3d;if(!st||!st.r)return;var R=st.r,gl=R.gl,cv=st.cv,cam=st.cam;
@@ -7900,6 +7966,15 @@ function _3dRender(){
     gl.enableVertexAttribArray(R.A.t);gl.vertexAttribPointer(R.A.t,2,gl.FLOAT,false,32,24);
     gl.drawArrays(mode,0,b.n);}
   gl.uniform1f(R.U.tex,0);gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.80,0.83,0.86);draw(R.ground,gl.TRIANGLES); // 바닥
+  if(R.furn){ // 하부장: 몸통(밝은 회색) · 걸레받이(진회색) · 민자 도어(흰색) · 도어 틈(선)
+    gl.uniform1f(R.U.lit,1);
+    gl.uniform3f(R.U.c,0.84,0.84,0.83);if(R.furn.body.n)draw(R.furn.body,gl.TRIANGLES);
+    gl.uniform3f(R.U.c,0.30,0.31,0.33);if(R.furn.kick.n)draw(R.furn.kick,gl.TRIANGLES);
+    gl.uniform3f(R.U.c,0.97,0.97,0.96);if(R.furn.door.n)draw(R.furn.door,gl.TRIANGLES);
+    gl.uniform3f(R.U.c,0.70,0.72,0.74);if(R.furn.sink.n)draw(R.furn.sink,gl.TRIANGLES); // 스테인리스 싱크볼
+    gl.uniform3f(R.U.c,0.07,0.07,0.08);if(R.furn.cook.n)draw(R.furn.cook,gl.TRIANGLES); // 쿡탑 검은 유리
+    gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.45,0.46,0.48);if(R.furn.gap.n)draw(R.furn.gap,gl.LINES);
+  }
   R.draws.forEach(function(d){
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,d.tex);
     gl.uniform1f(R.U.lit,1);gl.uniform1f(R.U.tex,1);draw(d.top,gl.TRIANGLES);draw(d.bot,gl.TRIANGLES);
@@ -7912,7 +7987,7 @@ function _3dSetView(name){var st=_3d;if(!st||!st.r)return;var v=_3D_VIEWS[name]|
 function _3dResize(){var st=_3d;if(!st)return;var r=st.cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;st.cv.width=Math.max(10,Math.round(r.width*dp));st.cv.height=Math.max(10,Math.round(r.height*dp));_3dRender();}
 // 장면을 (다시) 만들기 — 온장 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
 function _3dRebuild(tries){
-  var st=_3d;if(!st)return;var sc=_3dBuildScene(),r=_3dSetupGL(st.cv,sc);
+  var st=_3d;if(!st)return;var sc=_3dBuildScene(),r=_3dSetupGL(st.cv,sc,st.furn);
   if(!r){st.msg.textContent=shapes.length?'3D로 보여 줄 조각이 없거나 이 브라우저가 WebGL을 지원하지 않습니다.':'도면에 조각이 없습니다.';return;}
   var keep=st.cam;st.r=r;if(!keep)_3dSetView('iso');else _3dRender();
   st.msg.textContent=sc.waiting?'온장 사진 불러오는 중…':'';
@@ -7928,13 +8003,15 @@ function show3D(){
   m.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d1822;border-bottom:1px solid #263545">'
     +'<b style="color:#90CAF9;font-size:14px">🧊 3D 보기</b><span style="color:#B0BEC5;font-size:12px">'+escHtml(nm)+'</span>'
     +'<span id="v3d-msg" style="color:#FFD740;font-size:11px"></span><span style="flex:1"></span>'
+    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn" checked> 하부장 (높이 900)</label>'
     +'<button style="'+bs+'" data-v="iso">비스듬히</button><button style="'+bs+'" data-v="top">위에서</button><button style="'+bs+'" data-v="front">앞에서</button>'
     +'<button id="v3d-save" style="'+bs.replace('#263545','#1565C0')+'">💾 이미지 저장</button><button id="v3d-close" style="'+bs+'">✕ 닫기</button></div>'
     +'<div style="flex:1;position:relative;min-height:0"><canvas id="v3d-cv" style="position:absolute;inset:0;width:100%;height:100%;cursor:grab"></canvas>'
     +'<div style="position:absolute;left:10px;bottom:8px;color:#37474F;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px">왼쪽 끌기 = 돌리기 · 휠 = 확대/축소 · 오른쪽(또는 Shift) 끌기 = 이동 · 더블클릭 = 처음 시점 · Esc = 닫기</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
-  _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null};
+  _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null,furn:true};
+  document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
   document.getElementById('v3d-close').onclick=close3D;
   document.getElementById('v3d-save').onclick=save3DImage;
