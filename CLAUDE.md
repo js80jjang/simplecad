@@ -122,6 +122,10 @@
   미드웨이 자리 손으로: 도형(`_3dKey`) `mid3d={edge:'상판도형id:변번호', off:mm, swap}` — 목록의 벽 ◀▶(모든 상판 변 `allEdges`/`scene.edges`), 위치 ◀▶ 100mm, ↻ 가로/세로, 자동(=mid3d 지움). 장면이 지금 자리를 `pc.mid`로 돌려줌.
   끌기: mousedown에서 `_3dRay`(화면 → 광선, `_m4Inv`·`_3d.M`) + `_3dPickMid`(미드웨이 상자 `R.midInfo`) → 끄는 동안 `_3dDragTarget`(상판 윗면 평면 교점 → 가장 가까운 상판 변, 커서 가운데)
   노란 테두리 미리보기(`_3d.prev`, `_3dMidBox`) → 놓으면 `mid3d` 저장 후 `_3dRebuild`
+  상판 자리 손으로: 도형(`_3dKey`) `pos3d={dx,dz,rot}`(rot = 조각 상자 가운데 기준 90°×n), `_3dSetupGL`이 외곽·구멍·윗면 사각형·하부장에 적용, `R.tops[]={key,loops,y,pos}`.
+  마우스(`show3D`): 왼쪽 = 조각 위면 선택(`_3d.sel`) + 끌기(`_3dPick` → 상판은 `_3dPlane` 평면 교점 차이 + `_3dSnap`(다른 상판 꼭짓점 x/z tol 안 맞춤) → `pos3d`, rAF로 `_3dRegeom`
+  = 버퍼만 다시(텍스처·GL 프로그램은 `_3dGLC`에 캐시), 미드웨이는 미리보기 → 놓을 때 `mid3d`), 빈 곳 = 돌리기, 오른쪽/가운데/Shift 끌기 = 옮기기,
+  오른쪽 클릭(안 움직임) = 상판 rot+1 / 미드웨이 swap, R 키 = 선택 조각 돌리기, 올림 `_3d.hover` 파랑·선택 주황 외곽선. "↺ 처음 배치로" = `_3dResetLayout`(pos3d·mid3d 지움)
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
