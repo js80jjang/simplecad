@@ -11,14 +11,14 @@
   - 아이콘은 Pillow 스크립트로 만든 것(상판·싱크볼·수전·절단선). 바꾸려면 PNG 4개(192/512/maskable-512/apple-touch 180) 교체
 - 패치 노트: `patch-notes.js`(`window._PATCH_NOTES`, 맨 위가 최신 `{v:'날짜', groups:[{t,items}]}`). 앱을 열 때 안 본 버전이 있으면 팝업
   (`showPatchNotes`, 본 버전 `scd_patch_seen`), 도구줄 "📢 새 소식"으로 전체 보기. **사용자에게 보이는 변경을 올릴 때 맨 위에 새 버전 추가**
-- 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(엑셀 제품 목록 → `제품목록.js` 생성 후 index.html 열기)
+- 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(index.html 열기만). 제품 목록은 윤현몰(`mall-catalog.js`)만 씀 — 엑셀 목록 기능은 없앰
 
 ## 윤현몰 제품 목록 (`mall-catalog.js`, 자동 생성 — 직접 고치지 않음)
 - `.github/workflows/mall-catalog.yml`이 매일 03:00(KST) `tools/update_mall_catalog.py` 실행 → 바뀌었으면 봇이 커밋·푸시
   → 로컬 작업 전 pull 필수(봇 커밋이 생김). 손으로 돌리기: Actions → "윤현몰 제품 목록 갱신" → Run workflow
 - 가져오는 분류: 스크립트의 `CATEGORIES`(지금 `009003` = 두께 12mm, `009001` = 두께 6mm). 고도몰 목록 HTML(`item_cont`/`item_name`/`item_name_explain`/`item_price`/`m2`)을 읽음
   — 쇼핑몰 화면이 바뀌어 10개 미만이면 실패로 끝나고 기존 파일 유지
-- 항목: `{id,name(한글),en,size(1600×3200×12T),price(장당),m2,img,url,cate}`. 앱의 `_catalog` = 몰 + 엑셀(`제품목록.js`), 이름+사이즈로 중복 제거
+- 항목: `{id,name(한글),en,size(1600×3200×12T),price(장당),m2,img,url,cate}`. 앱의 `_catalog` = 몰 상품만, 이름+사이즈로 중복 제거
   — 검색은 한글·영문·사이즈, 여러 단어는 모두 포함. 고르면 제품명·사이즈 채움 + 온장 크기(`board-w`=긴 쪽, `board-h`)도 그 사이즈로(`_setBoardFromSize`)
 
 - 온장 이미지: 같은 워크플로가 `tools/update_mall_images.py`(Pillow) 실행 → 몰 목록 이미지(= 온장 전체 사진 2:1, 몰에서 가장 큰 것이 1150×576)를 줄이지 않고 JPEG q86(`SPEC`, 바꾸면 전부 다시 받음, 장당 ≈90KB)으로
@@ -29,9 +29,9 @@
     조각은 배치된 자리 무늬 그대로 + 조각 색 외곽선. 이미지 없으면 예전 색
   - 테스트는 http(serve) 주소로 — 브라우저 패널의 data: 주소에서는 `mall-img/` 상대 경로를 못 읽음
 
-## 저장소에 없는 파일 (PC마다 따로 복사)
-- `세라믹제품목록.xlsx`, `제품목록.js` — 제품 목록. 공개 저장소라 `.gitignore`로 제외. 다른 PC에는 USB/클라우드로 복사.
-- 고객 도면/견적 파일(.ceramic, .dxf)은 절대 커밋하지 않음.
+## 저장소에 올리지 않는 파일
+- 고객 도면/견적 파일(.ceramic, .dxf)은 절대 커밋하지 않음. 단가 파일(`단가설정_*.json`, 원가 포함)도 `.gitignore`.
+- 예전 엑셀 제품 목록(`*.xlsx`, `제품목록.js`)은 더 이상 쓰지 않지만 남아 있어도 올라가지 않게 `.gitignore`에 둠.
 
 ## 이 PC 환경 (Windows)
 - `git`이 PATH에 없음 → GitHub Desktop 내장 git 사용 (버전 폴더는 업데이트마다 바뀜):

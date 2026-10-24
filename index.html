@@ -9,7 +9,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script src="제품목록.js" onerror="window._PRODUCT_CATALOG=[]"></script>
 <script src="dxf-form.js" onerror="window._DXF_DEFAULT_FORM=null"></script>
 <script src="mall-catalog.js" onerror="window._MALL_CATALOG=null"></script>
 <script src="patch-notes.js" onerror="window._PATCH_NOTES=[]"></script>
@@ -564,14 +563,13 @@ function setTier(t){
   if(body&&body.style.display==='none'){body.style.display='block';if(arrow)arrow.textContent='▼';}
   calcCost();
 }
-// 제품 검색 목록 = 윤현몰 상품(mall-catalog.js, GitHub Actions가 매일 갱신) + 엑셀 목록(제품목록.js, BAT 실행 때 생성)
-// 같은 이름은 윤현몰 쪽을 씀. 몰 상품은 {name(한글), en(영문), size, price(장당), m2(㎡당), url, id}
+// 제품 검색 목록 = 윤현몰 상품만 (mall-catalog.js, GitHub Actions가 매일 갱신)
+// 몰 상품은 {name(한글), en(영문), size, price(장당), m2(㎡당), url, id}
 var _catalog=(function(){
   var out=[],seen={};
   var mall=(window._MALL_CATALOG&&window._MALL_CATALOG.items)||[];
   function key(n,s){return(n||'').replace(/\s+/g,'')+'|'+(s||'').replace(/[^\d]/g,'');} // 같은 이름이라도 사이즈(두께)가 다르면 따로
   mall.forEach(function(m){var k=key(m.name,m.size);if(!m.name||seen[k])return;seen[k]=1;out.push({name:m.name,size:m.size||'',en:m.en||'',price:m.price||0,m2:m.m2||0,url:m.url||'',mall:true});});
-  (window._PRODUCT_CATALOG||[]).forEach(function(c){var k=key(c.name,c.size);if(!c.name||seen[k])return;seen[k]=1;out.push({name:c.name,size:c.size||''});});
   return out;
 })();
 var _ddResults=[];
