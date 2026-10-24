@@ -7907,7 +7907,7 @@ function _3dSetupGL(cv,scene,furn,mode){ // mode: 'top' = 상판만, 'mid' = 상
   // 볼록한 루프(싱크볼·쿡탑 사각형)를 높이 y의 면으로 (부채꼴 삼각형)
   function fan(a,L,y,ny){var c=[0,0];L.forEach(function(q){c[0]+=q[0]/L.length;c[1]+=q[1]/L.length;});for(var i=0;i<L.length;i++){var p=L[i],q=L[(i+1)%L.length];v(a,c[0],y,c[1],0,ny,0,0,0);v(a,p[0],y,p[1],0,ny,0,0,0);v(a,q[0],y,q[1],0,ny,0,0,0);}}
   var marks=shapes.filter(function(m){return (m.kind==='grindregion'||m.kind==='gosramark')&&!m.groupId;});
-  var backs=[],topY=furn?_3D_H:12,midDraw=[]; // backs: 상판 뒷변(앞면이 아닌 변) — 미드웨이를 세울 자리
+  var backs=[],allEdges=[],topY=furn?_3D_H:12,midDraw=[]; // backs: 상판 뒷변(앞면이 아닌 변) — 미드웨이 자동 자리, allEdges: 손으로 고를 수 있는 모든 상판 변
   function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
   function texOf(c){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
     [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(function(w){gl.texParameteri(gl.TEXTURE_2D,w,gl.CLAMP_TO_EDGE);});
@@ -7926,10 +7926,11 @@ function _3dSetupGL(cv,scene,furn,mode){ // mode: 'top' = 상판만, 'mid' = 상
     if(pc.type!=='top')return; // 미드웨이는 아래에서 상판 뒷변에 세움, 기타는 안 그림
     var bb=pc.bb,th=pc.th,top=[],side=[],line=[],y0=furn?_3D_H-th:0,y1=y0+th; // 가구를 보이면 상판 윗면 = 900
     var front=_3dFrontEdges(pc.loops.outer,marks);topY=y1;
-    pc.loops.outer.forEach(function(a,i){ // 뒷변 = 앞면이 아닌 300 이상 변, 안쪽(상판 쪽) 법선과 함께
-      var b=pc.loops.outer[(i+1)%pc.loops.outer.length],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(front[i]||L<300)return;
+    pc.loops.outer.forEach(function(a,i){ // 상판 변(200 이상) = 미드웨이를 세울 수 있는 자리, 안쪽(상판 쪽) 법선과 함께. 뒷변 = 앞면이 아닌 300 이상 변
+      var b=pc.loops.outer[(i+1)%pc.loops.outer.length],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(L<200)return;
       var nx=dz/L,nz=-dx/L;if(!_3dInside(pc.loops,(a[0]+b[0])/2+nx,(a[1]+b[1])/2+nz)){nx=-nx;nz=-nz;}
-      backs.push({a:a,ux:dx/L,uz:dz/L,len:L,nx:nx,nz:nz,used:0,y:y1});
+      var ed={id:_3dKey(pc.shape).id+':'+i,a:a,ux:dx/L,uz:dz/L,len:L,nx:nx,nz:nz,used:0,y:y1};
+      allEdges.push(ed);if(!front[i]&&L>=300)backs.push(ed);
     });
     lo=Math.min(lo,bb.l);hi=Math.max(hi,bb.r);zl=Math.min(zl,bb.t);zh=Math.max(zh,bb.b);
     function quad(a,y,ny){var L=bb.l,R=bb.r,T=bb.t,B=bb.b;v(a,L,y,T,0,ny,0,0,0);v(a,R,y,T,0,ny,0,1,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,T,0,ny,0,0,0);v(a,R,y,B,0,ny,0,1,1);v(a,L,y,B,0,ny,0,0,1);}
@@ -7970,11 +7971,18 @@ function _3dSetupGL(cv,scene,furn,mode){ // mode: 'top' = 상판만, 'mid' = 상
   if(mode!=='top'){
     backs.sort(function(p,q){return q.len-p.len;});
     scene.pieces.filter(function(pc){return pc.type==='mid';}).sort(function(p,q){return Math.max(q.bb.r-q.bb.l,q.bb.b-q.bb.t)-Math.max(p.bb.r-p.bb.l,p.bb.b-p.bb.t);}).forEach(function(pc){
-      var bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,land=bw>=bh,Lm=Math.max(bw,bh),Hm=Math.min(bw,bh),tm=pc.th,e=null;
-      backs.forEach(function(b){if(!e&&b.len-b.used>=Lm-5)e=b;});
-      if(!e)backs.forEach(function(b){if(!e||b.len-b.used>e.len-e.used)e=b;});
-      if(!e)e={a:[pc.bb.l,pc.bb.t],ux:land?1:0,uz:land?0:1,len:Lm,nx:land?0:-1,nz:land?1:0,used:0,y:topY}; // 상판이 없으면 그 자리에 세움
-      var s0=Math.max(0,Math.min(e.used,e.len-Lm)),s1=s0+Lm;e.used=s1;
+      // 손으로 정한 자리(mid3d: edge=상판 변 id, off=변 시작에서 mm, swap=가로/세로 바꿈)가 있으면 그대로, 없으면 자동
+      var cfg=_3dKey(pc.shape).mid3d||{},bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,land=(bw>=bh)!==!!cfg.swap;
+      var Lm=cfg.swap?Math.min(bw,bh):Math.max(bw,bh),Hm=cfg.swap?Math.max(bw,bh):Math.min(bw,bh),tm=pc.th,e=null,s0;
+      if(cfg.edge!=null)allEdges.forEach(function(x){if(x.id===cfg.edge)e=x;});
+      if(e)s0=Math.max(0,Math.min(cfg.off||0,e.len-Lm));
+      else{
+        backs.forEach(function(b){if(!e&&b.len-b.used>=Lm-5)e=b;});
+        if(!e)backs.forEach(function(b){if(!e||b.len-b.used>e.len-e.used)e=b;});
+        if(!e)e={a:[pc.bb.l,pc.bb.t],ux:land?1:0,uz:land?0:1,len:Lm,nx:land?0:-1,nz:land?1:0,used:0,y:topY}; // 상판이 없으면 그 자리에 세움
+        s0=Math.max(0,Math.min(e.used,e.len-Lm));e.used=s0+Lm;
+      }
+      var s1=s0+Lm;pc.mid={edge:e.id||null,off:s0,swap:!!cfg.swap,manual:cfg.edge!=null&&!!e.id}; // 목록 조절 버튼이 지금 자리에서 시작하도록
       var W0=[e.a[0]+e.ux*s0,e.a[1]+e.uz*s0],W1=[e.a[0]+e.ux*s1,e.a[1]+e.uz*s1],F0=[W0[0]+e.nx*tm,W0[1]+e.nz*tm],F1=[W1[0]+e.nx*tm,W1[1]+e.nz*tm];
       var yA=e.y,yB=e.y+Hm,front=[],rest=[],ln=[];
       function uv(a,h){return land?[a,1-h]:[1-h,a];} // 평면에서 긴 쪽 = 벽 따라
@@ -7990,6 +7998,7 @@ function _3dSetupGL(cv,scene,furn,mode){ // mode: 'top' = 상판만, 'mid' = 상
       midDraw.push({front:buf(front),rest:buf(rest),line:buf(ln),tex:texOf(pc.tex),col:pc.side});
     });
   }
+  scene.edges=allEdges.map(function(x){return x.id;});
   if(!draws.length&&!midDraw.length)return null;
   var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500,furn?_3D_H*1.4:0),G=size*2.2;
   var ground=buf([cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz+G,0,1,0,0,0]);
@@ -8037,7 +8046,7 @@ function _3dResize(){var st=_3d;if(!st)return;var r=st.cv.getBoundingClientRect(
 // 장면을 (다시) 만들기 — 온장 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
 function _3dRebuild(tries){
   var st=_3d;if(!st)return;var sc=_3dBuildScene(),r=_3dSetupGL(st.cv,sc,st.furn,st.mode);
-  _3dPiecePanel(sc);
+  _3dPiecePanel(sc); // 장면을 만든 뒤 (미드웨이 지금 자리를 알아야 조절 버튼이 거기서 시작)
   if(!r){st.msg.textContent=shapes.length?'3D로 보여 줄 조각이 없거나 이 브라우저가 WebGL을 지원하지 않습니다.':'도면에 조각이 없습니다.';return;}
   var keep=st.cam;st.r=r;if(!keep)_3dSetView('iso');else _3dRender();
   st.msg.textContent=sc.waiting?'온장 사진 불러오는 중…':'';
@@ -8047,11 +8056,31 @@ function _3dRebuild(tries){
 function _3dPiecePanel(sc){
   var box=document.getElementById('v3d-pieces');if(!box||!_3d)return;
   var T=[['top','상판'],['mid','미드웨이'],['etc','기타']];
+  var bs='padding:1px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #546E7A;background:#263545;color:#fff';
   box.innerHTML='<div style="font-weight:bold;color:#90CAF9;margin-bottom:4px">조각 구분</div>'+sc.pieces.map(function(pc,i){
-    return '<div style="display:flex;align-items:center;gap:4px;margin:3px 0"><span style="min-width:74px;color:#ECEFF1">'+(i+1)+'. '+pc.label+'</span>'
+    var row='<div style="display:flex;align-items:center;gap:4px;margin:3px 0"><span style="min-width:74px;color:#ECEFF1">'+(i+1)+'. '+pc.label+'</span>'
       +T.map(function(t){var on=pc.type===t[0];return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#42A5F5':'#546E7A')+';background:'+(on?'#1565C0':'#263545')+';color:#fff">'+t[1]+'</button>';}).join('')+'</div>';
-  }).join('')+'<div style="color:#78909C;font-size:10px;margin-top:4px;line-height:1.4">미드웨이 = 상판 뒷변(앞면이 아닌 변)에<br>긴 쪽을 벽 따라 세움 · 기타 = 3D 안 그림</div>';
-  box.querySelectorAll('button').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
+    // 미드웨이 자리 조절 (상판+미드웨이로 보는 중일 때)
+    if(pc.type==='mid'&&pc.mid&&sc.edges&&sc.edges.length){
+      var k=sc.edges.indexOf(pc.mid.edge);
+      row+='<div style="display:flex;align-items:center;gap:3px;margin:0 0 6px 14px;color:#B0BEC5">'
+        +'벽 <button data-i="'+i+'" data-a="e-" style="'+bs+'">◀</button><span style="min-width:30px;text-align:center">'+(k>=0?(k+1)+'/'+sc.edges.length:'-')+'</span><button data-i="'+i+'" data-a="e+" style="'+bs+'">▶</button>'
+        +' 위치 <button data-i="'+i+'" data-a="p-" style="'+bs+'">◀</button><button data-i="'+i+'" data-a="p+" style="'+bs+'">▶</button>'
+        +' <button data-i="'+i+'" data-a="sw" style="'+bs+'" title="길이와 높이 바꾸기">↻ 가로/세로</button>'
+        +(pc.mid.manual?' <button data-i="'+i+'" data-a="au" style="'+bs+'">자동</button>':'')+'</div>';
+    }
+    return row;
+  }).join('')+'<div style="color:#78909C;font-size:10px;margin-top:4px;line-height:1.4">미드웨이 = 처음엔 상판 뒷변(앞면이 아닌 변)에 자동으로 세움<br>벽 ◀▶ = 다른 상판 변으로 · 위치 ◀▶ = 변 따라 100mm씩 · 기타 = 3D 안 그림</div>';
+  box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
+  box.querySelectorAll('button[data-a]').forEach(function(b){b.onclick=function(){
+    var pc=sc.pieces[+b.dataset.i];if(!pc||!pc.mid)return;var key=_3dKey(pc.shape),m=pc.mid,E=sc.edges,a=b.dataset.a;
+    var c={edge:m.edge,off:m.off,swap:m.swap};
+    if(a==='e-'||a==='e+'){var k=E.indexOf(m.edge);k=(k<0?0:k+(a==='e+'?1:-1)+E.length)%E.length;c.edge=E[k];c.off=0;}
+    else if(a==='p-'||a==='p+')c.off=Math.max(0,m.off+(a==='p+'?100:-100));
+    else if(a==='sw')c.swap=!m.swap;
+    if(a==='au')delete key.mid3d;else key.mid3d=c;
+    _3dRebuild(0);
+  };});
 }
 function _3dSetMode(md){
   if(!_3d)return;_3d.mode=md;
