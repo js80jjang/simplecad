@@ -6419,8 +6419,8 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   var sc,boardPxW,boardPxH;
   var boardOffsets=[];
 
-  if(groups&&groups.length>1){
-    // 그룹별 행 레이아웃: 각 그룹을 별도 행으로
+  if(groups&&groups.length>1&&targetCanvas){
+    // 그룹별 행 레이아웃: 각 그룹을 별도 행으로 (그림으로 내보낼 때만 — 온장 배치 창은 제품이 여러 개여도 한 쪽에 2장씩)
     var maxCount=1;
     groups.forEach(function(g){if(g.count>maxCount)maxCount=g.count;});
     var numGroups=groups.length;
@@ -7250,7 +7250,8 @@ function _expChain(lines){
 }
 // ═══ 도면화 2페이지: 온장 배치 (도면과 같은 조각 색) ═══
 function _hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
-function _renderCleanBoards(cvs,boards,bw,bh,margin){
+function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전체 번호(쪽을 나눠 그릴 때 "온장 N" 번호 유지)
+  bi0=bi0||0;
   var g=cvs.getContext('2d'),W=cvs.width,H=cvs.height,PAD=40;
   // 칸은 가장 큰 온장 기준, 장마다 자기 크기로 그림
   if(boards.length){bw=0;bh=0;boards.forEach(function(b){var d=_boardDims(b);bw=Math.max(bw,d.bw);bh=Math.max(bh,d.bh);});}
@@ -7267,7 +7268,7 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin){
     var col=bi%best.cols,row=Math.floor(bi/best.cols);
     var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2,d=_boardDims(board);
     var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:d.bw*sc,h:d.bh*sc,board:board};
-    _boardFrame(g,bx,by,_boardTitle(board,bi),board,d.bw,d.bh,sc,1,img);
+    _boardFrame(g,bx,by,_boardTitle(board,bi0+bi),board,d.bw,d.bh,sc,1,img);
     board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});
   });
 }
@@ -7647,15 +7648,17 @@ function exportDrawingA4(){
   var _delivDate=(_delivDateRaw||_delivTimeRaw)?(_delivDateRaw.replace(/-/g,'.')+(_delivTimeRaw?' '+_delivTimeRaw:'')).trim():'';
   var today=new Date();
   var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
-  // 온장 배치도 (마지막 쪽): 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm)
-  var boardImg2='',_sizes=[];
+  // 온장 배치도: 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm). 장이 많으면 너무 작아지므로 한 쪽에 최대 2장씩
+  var _BPP=2,boardImgs=[],_sizes=[];
   if(boards.length){
     boards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
-    try{
-      var _bcv=document.createElement('canvas');_bcv.width=2000;_bcv.height=1280;
-      _renderCleanBoards(_bcv,boards,3200,1600,DB.margin);
-      boardImg2=_bcv.toDataURL('image/png');
-    }catch(e2){console.error(e2);}
+    for(var _bk=0;_bk<boards.length;_bk+=_BPP){
+      try{
+        var _bcv=document.createElement('canvas');_bcv.width=2000;_bcv.height=1280;
+        _renderCleanBoards(_bcv,boards.slice(_bk,_bk+_BPP),3200,1600,DB.margin,_bk);
+        boardImgs.push(_bcv.toDataURL('image/png'));
+      }catch(e2){console.error(e2);}
+    }
   }
 
   var pw=window.open('','_blank','width=900,height=750,scrollbars=yes,resizable=yes');
@@ -7711,10 +7714,14 @@ function exportDrawingA4(){
       +'</div>'
       +'</div></div></div></div>';
   });
-  if(boardImg2)body+='<div class="page2">'
-      +'<div class="page2-title">📋 온장 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
-      +'<div class="board-area"><img id="_bimg2" src=""></div>'
+  boardImgs.forEach(function(im,k){
+    var a=k*_BPP+1,b=Math.min(boards.length,a+_BPP-1);
+    body+='<div class="page2">'
+      +'<div class="page2-title">📋 온장 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')
+      +(boardImgs.length>1?'  <span style="color:#1565C0">(온장 '+a+(b>a?'~'+b:'')+' / 전체 '+boards.length+'장)</span>':'')+'</div>'
+      +'<div class="board-area"><img id="_bimg'+k+'" src=""></div>'
       +'</div>';
+  });
   // 맨 마지막 쪽: 사용 제품의 온장 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
   var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
     var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
@@ -7742,7 +7749,7 @@ function exportDrawingA4(){
   setTimeout(function(){
     try{
       pages.forEach(function(pg,pi){var im=pw.document.getElementById('_dimg'+pi);if(im)im.src=pg.img;});
-      var _bi2=pw.document.getElementById('_bimg2');if(_bi2&&boardImg2)_bi2.src=boardImg2;
+      boardImgs.forEach(function(src,k){var bi=pw.document.getElementById('_bimg'+k);if(bi)bi.src=src;});
     }catch(e){}
     // 제품 사진: 불러오는 중인 것도 있어서 다 들어올 때까지 잠깐씩 다시 넣어 봄 (최대 약 6초)
     var tries=0;(function fill(){
