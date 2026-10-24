@@ -4189,16 +4189,16 @@ function _linePopOpen(){var p=document.getElementById('line-pop');return !!p&&p.
   }
   inp.addEventListener('keydown',onKey);angInp.addEventListener('keydown',onKey);
 })();
-// 놓았을 때: 지금 점 → 놓은 점(드래그) 또는 클릭한 점 방향으로 고정(직교 적용됨) + 길이·각도 입력란
-//   첫 선: 시작점에서 드래그 / 다음 선: 방향 쪽을 클릭(드래그도 됨). 시작점만 찍은 클릭은 그대로 대기
+// 놓았을 때 (오토캐드 LINE): 클릭(또는 끌다 놓기) = 그 점까지 바로 선 (직교·스냅 적용된 자리). 시작점만 찍은 클릭은 대기
+//   움직이는 동안 숫자를 치고 Enter = 마우스 방향으로 그 길이 (_lineKey) — 누른 채로 숫자로 그렸으면 놓을 때는 아무것도 안 함
 function _lineMouseUp(e){
   var d=lineDown;lineDown=null;if(!d||!lineChain||!drawStart)return;
+  if(lineChain.segs.length!==d.nseg)return;
   var moved=Math.hypot(e.offsetX-d.px[0],e.offsetY-d.px[1])>6;
   if(!moved&&d.isNew){_lineRedraw();return;}
-  if(!moved&&d.snap){_lineAddTo(d.pt[0],d.pt[1]);return;} // 스냅점 클릭 = 그 점까지 바로 (길이·각도 입력 없이)
-  var ex=moved?lastMx:d.pt[0],ey=moved?lastMy:d.pt[1],dx=ex-drawStart[0],dy=ey-drawStart[1],L=Math.hypot(dx,dy);
-  if(L>1e-6){lineChain.dir=[dx/L,dy/L];lineChain.buf='';_linePopShow(e.offsetX,e.offsetY);}
-  _lineRedraw();
+  if(lineChain.buf){var tp=_lineTarget(lineChain.buf);if(tp){_lineAddTo(tp[0],tp[1]);return;}} // 숫자를 쳐 둔 채 클릭 = 그 길이로
+  var pt=moved?[lastMx,lastMy]:d.pt;
+  _lineAddTo(pt[0],pt[1]);
 }
 function _lineEnd(){if(!lineChain)return;_linePopHide();lineChain=null;drawStart=null;redraw();calcCost();}
 function _lineUndo(){
@@ -4234,6 +4234,10 @@ function _lineKey(e){
   if(k==='Escape'){if(c.buf){c.buf='';_lineRedraw();}else _lineEnd();return true;}
   if((k==='c'||k==='C')&&!c.buf){if(c.segs.length>=2)_lineAddTo(c.first[0],c.first[1]);_lineEnd();return true;} // 닫기
   if((k==='u'||k==='U')&&!c.buf){_lineUndo();return true;}                                                    // 마지막 선 취소
+  if(k==='Tab'&&lastMx!=null){ // 지금 마우스 방향을 길이·각도 입력란으로 (각도 칸에 커서)
+    var dx=lastMx-drawStart[0],dy=lastMy-drawStart[1],L=Math.hypot(dx,dy);c.dir=L>1e-6?[dx/L,dy/L]:[1,0];
+    var cp=toCanvas(lastMx,lastMy);_linePopShow(cp[0],cp[1]);var ai=document.getElementById('line-ang');ai.focus();ai.select();return true;
+  }
   return false;
 }
 // 지금 점 → 마우스(또는 입력값) 미리보기 선 + 커서 옆 입력 상자
@@ -4247,8 +4251,9 @@ function _lineOverlay(){
   ctx.globalAlpha=0.8;drawShape({kind:'line',x1:drawStart[0],y1:drawStart[1],x2:ex,y2:ey,ops:[]},true);ctx.globalAlpha=1;
   if(_linePopOpen())return; // 길이 입력란이 떠 있으면 안내 상자는 생략
   var p=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy),len=Math.hypot(ex-drawStart[0],ey-drawStart[1]);
-  var l1=c.buf?('입력: '+c.buf+'▏'):(dir?'방향 고정 → 길이를 입력하세요':(lineDown?'놓으면 이 방향으로 고정':'길이 '+_fmtD(len)));
-  var l2=(dir||c.buf)?'숫자 + Enter = 그리기 · 다시 드래그 = 방향 바꾸기':(c.segs.length?'방향 쪽을 클릭 → 길이·각도 입력 · 빈 Enter/Esc 끝 · C 닫기 · U 취소':'드래그(또는 방향 쪽 클릭)로 방향 정하기');
+  var ang=Math.atan2(-(ey-drawStart[1]),ex-drawStart[0])*180/Math.PI;if(ang<0)ang+=360;
+  var l1=c.buf?('입력: '+c.buf+'▏'):('길이 '+_fmtD(len)+'   각도 '+_fmtAng(ang)); // 움직이는 동안 길이·각도가 계속 바뀜
+  var l2=c.buf?'Enter = 이 방향으로 그리기 · Backspace = 지우기':('클릭 = 그리기 · 숫자+Enter = 이 방향으로 · Tab = 각도'+(c.segs.length?' · 빈 Enter/Esc 끝 · C 닫기 · U 취소':''));
   ctx.save();
   ctx.font='bold 12px Consolas, "Malgun Gothic"';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic"';var w=Math.max(w1,ctx.measureText(l2).width)+12;
   var bx=p[0]+16,by=p[1]+14;if(bx+w>cv.width)bx=p[0]-16-w;if(by+38>cv.height)by=p[1]-52;
@@ -4780,14 +4785,14 @@ cv.addEventListener('mousedown',function(e){
     selectedShapes=[_hd.shape];updatePropsPanel();
     dimDragInfo=_hd;dimDragStartX=e.offsetX;dimDragStartY=e.offsetY;dimDragL0=null;e.preventDefault();redraw();
   } else if(tool==='line'){
-    // 선 절단: 시작점에서 누르고 방향으로 드래그 → 놓으면 방향 고정 → 숫자 입력 + Enter = 그 방향으로 그 길이
-    //   다음 선: 방향 쪽을 클릭 → 숫자 … (이어 그리기) / 다른 선의 스냅점(끝점·중간점·교차점 등)을 클릭 = 그 점까지 바로
-    //   빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
+    // 선 절단 (오토캐드 LINE): 클릭 = 시작점 → 마우스를 움직이면 길이가 계속 바뀌는 미리보기
+    //   클릭(또는 끌다 놓기) = 그 점까지 선 / 움직이며 숫자 + Enter = 마우스 방향으로 그 길이 (Tab = 각도까지 입력)
+    //   끝점에서 바로 다음 선 이어 그리기. 빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
     _linePopHide();cv.focus();
     var _new=!lineChain||!drawStart;
     if(_new){lineChain={first:[mx,my],segs:[],buf:'',dir:null};drawStart=[mx,my];}
     lastMx=mx;lastMy=my; // 움직이지 않고 클릭해도 미리보기가 그 점 기준
-    lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new,snap:!!snapKind&&snapKind!=='grid'};
+    lineDown={px:[e.offsetX,e.offsetY],pt:[mx,my],isNew:_new,nseg:lineChain.segs.length};
     _lineRedraw();
   } else {
     cv.focus();

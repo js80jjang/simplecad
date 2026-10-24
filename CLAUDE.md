@@ -67,9 +67,10 @@
   `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/온장 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
-- 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 시작점에서 드래그=방향 고정(`dir`), 놓으면 길이·각도 입력란(`#line-pop`, `_linePopShow`; `line-ang`는 드래그 방향으로 미리 채움, 0°=오른쪽 반시계, Tab=칸 이동) →
-  숫자+Enter=그 방향으로 길이(놓기만 해서는 안 그림 — 전역 mouseup의 `finalizeShape`는 line 제외), 끝나도 도구 유지, 다음 선은 방향 쪽을 클릭(드래그도 됨)하면 입력란, 스냅점(끝점·중간점·교차점 등, 격자 제외) 클릭은 입력 없이 그 점까지(`lineDown.snap`)(입력란에서 빈 Enter=끝·C=닫기·U=취소), 끝점에서 다시 드래그 → 숫자… 이어 그리기, 드래그 없는 클릭=그 점까지,
-  `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유)
+- 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 클릭 = 시작점 → 마우스를 움직이면 미리보기 선 + 커서 옆 길이·각도(실시간)
+  → 클릭(또는 끌다 놓기, `_lineMouseUp`) = 그 점(직교·스냅 적용)까지 바로 선 / 움직이며 숫자 + Enter(`_lineKey` → `_lineTarget`) = 마우스 방향으로 그 길이
+  (누른 채 숫자로 그렸으면 놓을 때 무시: `lineDown.nseg`), Tab = 지금 방향으로 길이·각도 입력란(`#line-pop`, 각도 칸 커서, 0°=오른쪽 반시계). 끝점에서 계속 이어 그림, 끝나도 도구 유지
+  `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유). 전역 mouseup의 `finalizeShape`는 line 제외
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
