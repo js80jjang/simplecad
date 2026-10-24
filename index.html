@@ -2862,17 +2862,29 @@ function _makeProjectData(){
   });
 }
 
+// 마지막으로 저장한 파일(핸들)을 이 PC 브라우저(IndexedDB)에 기억 → 다음 저장 창이 그 폴더에서 열림 (처음엔 바탕화면/문서)
+//   kind: 'save'(.ceramic) · 'dxf'. 핸들을 못 쓰는 환경이면 조용히 기본 위치로
+function _lastDirDb(){return new Promise(function(res,rej){var r=indexedDB.open('scd-files',1);r.onupgradeneeded=function(){r.result.createObjectStore('h');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};});}
+async function _lastDirGet(kind){try{var db=await _lastDirDb();return await new Promise(function(res){var q=db.transaction('h').objectStore('h').get(kind);q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}catch(e){return null;}}
+async function _lastDirSet(kind,fh){try{var db=await _lastDirDb();db.transaction('h','readwrite').objectStore('h').put(fh,kind);}catch(e){}}
+// 저장 창 열기: 지난번 저장 폴더(없으면 기본 위치)에서 시작하고, 고른 파일을 다음 번 시작 폴더로 기억
+async function _pickSaveFile(kind,defStart,opts){
+  var last=await _lastDirGet(kind),fh;
+  try{fh=await window.showSaveFilePicker(Object.assign({},opts,{id:'scd-'+kind,startIn:last||defStart}));}
+  catch(err){if(err.name==='AbortError'||!last)throw err;fh=await window.showSaveFilePicker(Object.assign({},opts,{id:'scd-'+kind,startIn:defStart}));} // 기억한 폴더가 없어졌으면 기본 위치로
+  _lastDirSet(kind,fh);
+  return fh;
+}
 async function saveProject(){
   var defaultName=_saveBaseName(); // 업체명-주소-작성일(20261021)
   var data=_makeProjectData();
   rememberHist('siteinfo',(document.getElementById('site-info')||{}).value);
 
-  // showSaveFilePicker 지원 시: 탐색기 형식 Save As 창 (기본 위치 = 바탕화면, 폴더+파일명 모두 바꿀 수 있음)
+  // showSaveFilePicker 지원 시: 탐색기 형식 Save As 창 (처음 = 바탕화면, 그다음부터 지난번에 저장한 폴더, 폴더+파일명 모두 바꿀 수 있음)
   if(typeof window.showSaveFilePicker==='function'){
     try{
-      var fh=await window.showSaveFilePicker({
+      var fh=await _pickSaveFile('save','desktop',{
         suggestedName:defaultName+'.ceramic',
-        startIn:'desktop',
         types:[{description:'세라믹 도면 파일',accept:{'application/json':['.ceramic']}}]
       });
       var writable=await fh.createWritable();
@@ -3791,7 +3803,7 @@ function pickDxfTemplate(then){
 async function _saveDxfFile(data,name){
   if(typeof window.showSaveFilePicker==='function'){
     try{
-      var fh=await window.showSaveFilePicker({suggestedName:name+'.dxf',startIn:'documents',types:[{description:'오토캐드 DXF',accept:{'application/dxf':['.dxf']}}]});
+      var fh=await _pickSaveFile('dxf','documents',{suggestedName:name+'.dxf',types:[{description:'오토캐드 DXF',accept:{'application/dxf':['.dxf']}}]}); // 지난번 DXF 저장 폴더에서
       var wr=await fh.createWritable();await wr.write(data);await wr.close();
       var btn=document.querySelector('[onclick="exportDxf()"]');
       if(btn){var orig=btn.textContent;btn.textContent='✓ 내보냄';setTimeout(function(){btn.textContent=orig;},1500);}
