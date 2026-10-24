@@ -4250,17 +4250,48 @@ function _lineOverlay(){
   if(ex==null)return;
   ctx.globalAlpha=0.8;drawShape({kind:'line',x1:drawStart[0],y1:drawStart[1],x2:ex,y2:ey,ops:[]},true);ctx.globalAlpha=1;
   if(_linePopOpen())return; // 길이 입력란이 떠 있으면 안내 상자는 생략
-  var p=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy),len=Math.hypot(ex-drawStart[0],ey-drawStart[1]);
-  var ang=Math.atan2(-(ey-drawStart[1]),ex-drawStart[0])*180/Math.PI;if(ang<0)ang+=360;
-  var l1=c.buf?('입력: '+c.buf+'▏'):('길이 '+_fmtD(len)+'   각도 '+_fmtAng(ang)); // 움직이는 동안 길이·각도가 계속 바뀜
-  var l2=c.buf?'Enter = 이 방향으로 그리기 · Backspace = 지우기':('클릭 = 그리기 · 숫자+Enter = 이 방향으로 · Tab = 각도'+(c.segs.length?' · 빈 Enter/Esc 끝 · C 닫기 · U 취소':''));
-  ctx.save();
-  ctx.font='bold 12px Consolas, "Malgun Gothic"';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic"';var w=Math.max(w1,ctx.measureText(l2).width)+12;
-  var bx=p[0]+16,by=p[1]+14;if(bx+w>cv.width)bx=p[0]-16-w;if(by+38>cv.height)by=p[1]-52;
-  ctx.fillStyle='rgba(13,24,34,0.92)';ctx.strokeStyle=(c.buf||dir)?'#FFD740':'#1976D2';ctx.lineWidth=1;ctx.fillRect(bx,by,w,36);ctx.strokeRect(bx,by,w,36);
-  ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.font='bold 12px Consolas, "Malgun Gothic"';ctx.fillStyle=(c.buf||dir)?'#FFD740':'#E3F2FD';ctx.fillText(l1,bx+6,by+11);
-  ctx.font='11px "Malgun Gothic"';ctx.fillStyle='#78909C';ctx.fillText(l2,bx+6,by+27);
+  _lineDynInput(ex,ey);
+}
+// 오토캐드 동적 입력처럼: 그리는 선 옆에 점선 치수 + 길이 칸(파랗게 선택된 숫자 = 바로 치면 바뀜), 시작점 수평 기준 점선 호 + 각도 칸,
+//   커서 옆에 "다음 점 지정 또는 길이 입력" 안내 (숫자를 바로 칠 수 있다는 걸 알 수 있게)
+function _lineDynInput(ex,ey){
+  var c=lineChain,p0=toCanvas(drawStart[0],drawStart[1]),p1=toCanvas(ex,ey),cur=toCanvas(lastMx==null?ex:lastMx,lastMy==null?ey:lastMy);
+  var len=Math.hypot(ex-drawStart[0],ey-drawStart[1]),dx=p1[0]-p0[0],dy=p1[1]-p0[1],Lp=Math.hypot(dx,dy);
+  var deg=Math.atan2(-dy,dx)*180/Math.PI;if(deg<0)deg+=360;
+  ctx.save();ctx.lineWidth=1;ctx.strokeStyle='rgba(207,216,220,0.75)';ctx.setLineDash([2,3]);
+  function box(cx,cy,txt,sel,typing){ // 흰 칸: 숫자 선택(파랑) 또는 입력 중(커서)
+    ctx.font='12px Consolas, "Malgun Gothic"';var tw=ctx.measureText(txt).width,w=tw+10,h=17,x=cx-w/2,y=cy-h/2;
+    ctx.setLineDash([]);ctx.fillStyle='#ffffff';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#90A4AE';ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
+    if(sel){ctx.fillStyle='#1976D2';ctx.fillRect(x+3,y+2,tw+4,h-4);}
+    ctx.fillStyle=sel?'#ffffff':'#111111';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(txt,x+5,cy+0.5);
+    if(typing){ctx.fillStyle='#111';ctx.fillRect(x+5+tw+1,y+3,1,h-6);}
+  }
+  if(Lp>12){
+    // ① 선과 나란한 점선 치수 (선 왼쪽 법선 쪽으로 36px)
+    var ux=dx/Lp,uy=dy/Lp,nx=uy,ny=-ux;if(ny>0||(Math.abs(ny)<1e-6&&nx>0)){nx=-nx;ny=-ny;} // 위쪽(화면) 편으로
+    var off=36,a=[p0[0]+nx*off,p0[1]+ny*off],b=[p1[0]+nx*off,p1[1]+ny*off];
+    ctx.beginPath();ctx.moveTo(p0[0]+nx*4,p0[1]+ny*4);ctx.lineTo(a[0]+nx*4,a[1]+ny*4);ctx.moveTo(p1[0]+nx*4,p1[1]+ny*4);ctx.lineTo(b[0]+nx*4,b[1]+ny*4);ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    // ② 시작점에서 수평 기준 점선 + 반지름 = 선 길이인 점선 호
+    var rad=deg*Math.PI/180;
+    if(deg>0.05&&Math.abs(deg-180)>0.05&&deg<359.95){
+      ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p0[0]+Lp,p0[1]);ctx.stroke();
+      ctx.beginPath();if(deg<=180)ctx.arc(p0[0],p0[1],Lp,0,-rad,true);else ctx.arc(p0[0],p0[1],Lp,0,2*Math.PI-rad,false);ctx.stroke();
+    }
+    // ③ 칸: 길이(치수 가운데, 입력 중이면 친 글자) · 각도(호 가운데 바깥)
+    box((a[0]+b[0])/2,(a[1]+b[1])/2,c.buf?c.buf:(Math.round(len*10)/10).toString(),!c.buf,!!c.buf);
+    if(deg>0.05&&deg<359.95&&!c.buf){
+      var hm=deg<=180?-rad/2:(2*Math.PI-rad)/2; // 호 가운데 각 (화면 기준)
+      box(p0[0]+Math.cos(hm)*(Lp+22),p0[1]+Math.sin(hm)*(Lp+22),_fmtAng(deg),false,false);
+    }
+  }
+  // ④ 커서 옆 안내
+  var t1=c.buf?'Enter = 이 길이로 그리기':'다음 점 지정 또는 길이 입력',t2=c.buf?'Backspace 지우기 · Esc 취소':('클릭 = 그리기 · 숫자 바로 입력 · Tab 각도'+(c.segs.length?' · Enter 끝 · C 닫기 · U 취소':''));
+  ctx.setLineDash([]);ctx.font='12px "Malgun Gothic"';var w1=ctx.measureText(t1).width+30;ctx.font='10px "Malgun Gothic"';var w=Math.max(w1,ctx.measureText(t2).width+12);
+  var bx=cur[0]+18,by=cur[1]+20;if(bx+w>cv.width)bx=cur[0]-18-w;if(by+34>cv.height)by=cur[1]-50;
+  ctx.fillStyle='rgba(55,71,79,0.95)';ctx.fillRect(bx,by,w,20);ctx.strokeStyle='#90A4AE';ctx.strokeRect(bx+0.5,by+0.5,w-1,19);
+  ctx.font='12px "Malgun Gothic"';ctx.fillStyle='#ECEFF1';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t1,bx+6,by+10.5);
+  ctx.strokeStyle='#ECEFF1';ctx.strokeRect(bx+w-17.5,by+4.5,11,11);ctx.font='9px Consolas';ctx.fillText('⌨',bx+w-16,by+10.5);
+  ctx.font='10px "Malgun Gothic"';ctx.fillStyle='#B0BEC5';ctx.fillText(t2,bx+6,by+30);
   ctx.restore();
 }
 function _lineRedraw(){redraw();_lineOverlay();}

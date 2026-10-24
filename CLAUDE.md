@@ -67,7 +67,8 @@
   `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/온장 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
-- 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 클릭 = 시작점 → 마우스를 움직이면 미리보기 선 + 커서 옆 길이·각도(실시간)
+- 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 클릭 = 시작점 → 마우스를 움직이면 미리보기 선 + 동적 입력(`_lineDynInput`:
+  선 옆 점선 치수의 길이 칸(파랑 선택 = 바로 치면 바뀜, 입력 중엔 친 글자), 시작점 수평 기준 점선 호 + 각도 칸, 커서 옆 "다음 점 지정 또는 길이 입력")
   → 클릭(또는 끌다 놓기, `_lineMouseUp`) = 그 점(직교·스냅 적용)까지 바로 선 / 움직이며 숫자 + Enter(`_lineKey` → `_lineTarget`) = 마우스 방향으로 그 길이
   (누른 채 숫자로 그렸으면 놓을 때 무시: `lineDown.nseg`), Tab = 지금 방향으로 길이·각도 입력란(`#line-pop`, 각도 칸 커서, 0°=오른쪽 반시계). 끝점에서 계속 이어 그림, 끝나도 도구 유지
   `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유). 전역 mouseup의 `finalizeShape`는 line 제외
