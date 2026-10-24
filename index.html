@@ -8224,11 +8224,17 @@ function _3dResetLayout(){
   _3d.sel=null;_3dRebuild(0);
 }
 // 3D 창 왼쪽 "조각 구분" 목록: 조각마다 상판·미드웨이·기타 (누르면 도형에 저장하고 다시 그림)
+var _3dFold=null; // 목록 접힘 (처음 한 번 localStorage scd_3d_fold에서)
 function _3dPiecePanel(sc){
   var box=document.getElementById('v3d-pieces');if(!box||!_3d)return;
   var T=[['top','상판'],['mid','미드웨이'],['etc','기타']];
   var bs='padding:1px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #546E7A;background:#263545;color:#fff';
-  box.innerHTML='<div style="font-weight:bold;color:#90CAF9;margin-bottom:4px">조각 구분</div>'+sc.pieces.map(function(pc,i){
+  // 머리글 누르면 접기/펴기 (이 PC에 기억)
+  if(_3dFold==null){_3dFold=false;try{_3dFold=localStorage.getItem('scd_3d_fold')==='1';}catch(e){}}var fold=_3dFold;
+  var hd='<div id="v3d-fold" style="font-weight:bold;color:#90CAF9;cursor:pointer;user-select:none'+(fold?'':';margin-bottom:4px')+'" title="'+(fold?'펴기':'접기')+'">'+(fold?'▸':'▾')+' 조각 구분 ('+sc.pieces.length+')</div>';
+  function bindFold(){document.getElementById('v3d-fold').onclick=function(){_3dFold=!fold;try{localStorage.setItem('scd_3d_fold',_3dFold?'1':'0');}catch(e){}_3dPiecePanel(sc);};}
+  if(fold){box.innerHTML=hd;bindFold();return;}
+  box.innerHTML=hd+sc.pieces.map(function(pc,i){
     var row='<div style="display:flex;align-items:center;gap:4px;margin:3px 0"><span style="min-width:74px;color:#ECEFF1">'+(i+1)+'. '+pc.label+'</span>'
       +T.map(function(t){var on=pc.type===t[0];return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#42A5F5':'#546E7A')+';background:'+(on?'#1565C0':'#263545')+';color:#fff">'+t[1]+'</button>';}).join('')+'</div>';
     // 미드웨이 자리 조절 (상판+미드웨이로 보는 중일 때)
@@ -8245,6 +8251,7 @@ function _3dPiecePanel(sc){
     }
     return row;
   }).join('')+'<div style="color:#78909C;font-size:10px;margin-top:4px;line-height:1.4">미드웨이 = 처음엔 상판 뒷변(앞면이 아닌 변)에 자동으로 세움<br><b style="color:#FFD740">3D에서 조각을 끌어 옮기고, 오른쪽 클릭으로 돌림<br>Shift+미드웨이 끌기 = 위아래로 (바닥·상판 높이에 딱 맞춤)</b><br>높이 ▼▲ = 100mm씩 (숫자 = 바닥에서 아랫변까지)<br>무늬 앞/뒤/양면 = 무늬가 보이는 면 (미드웨이 더블클릭도 됨)<br>벽 ◀▶ = 다른 상판 변으로 · 위치 ◀▶ = 변 따라 100mm씩 · 기타 = 3D 안 그림</div>';
+  bindFold();
   box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
   box.querySelectorAll('button[data-a]').forEach(function(b){b.onclick=function(){
     var pc=sc.pieces[+b.dataset.i];if(!pc||!pc.mid)return;var key=_3dKey(pc.shape),m=pc.mid,E=sc.edges,a=b.dataset.a;
