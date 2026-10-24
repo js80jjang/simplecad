@@ -7638,6 +7638,27 @@ function exportDrawingA4(){
       +'<div class="page2-title">📋 온장 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')+'</div>'
       +'<div class="board-area"><img id="_bimg2" src=""></div>'
       +'</div>';
+  // 맨 마지막 쪽: 사용 제품의 온장 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
+  var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
+    var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
+    if(id)((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).forEach(function(c){if(c.id===id)cat=c;});
+    if(id)_slabImgFor(nm); // 아직 안 불러왔으면 지금 불러오기 시작
+    return{i:i,name:nm,size:p.size||(cat&&cat.size)||'',en:cat&&cat.en||'',qty:p.qty,id:id};
+  });
+  if(_prodCards.length){
+    var _one=_prodCards.length===1,_imgH=_one?135:Math.max(25,Math.min(62,Math.floor(165/Math.ceil(_prodCards.length/2))-22)); // 한 쪽에 다 들어가게 (mm)
+    body+='<div class="page2"><div class="page2-title">📷 사용 제품 — 온장 사진 (공장 확인용)</div>'
+      +'<div style="flex:1;min-height:0;display:grid;grid-template-columns:'+(_one?'1fr':'1fr 1fr')+';gap:5mm;padding:5mm;align-content:start">';
+    _prodCards.forEach(function(c){
+      body+='<div style="border:0.5pt solid #999;border-radius:2mm;padding:3mm;display:flex;flex-direction:column;gap:2mm;break-inside:avoid">'
+        +'<div style="font-size:'+(_one?'16':'12')+'pt;font-weight:900;color:#111">'+escHtml(c.name)+(c.en?' <span style="font-size:9pt;font-weight:normal;color:#555">'+escHtml(c.en)+'</span>':'')+'</div>'
+        +'<div style="font-size:9pt;color:#333;font-family:Consolas,monospace">'+escHtml(c.size)+(c.qty?'  ·  '+c.qty+'장':'')+'</div>'
+        +(c.id?'<img id="_pimg'+c.i+'" src="" style="width:100%;max-height:'+_imgH+'mm;object-fit:contain;background:#eee;border:0.5pt solid #ccc">'
+              :'<div style="height:30mm;display:flex;align-items:center;justify-content:center;background:#f3f3f3;color:#888;font-size:9pt">윤현몰 제품 사진 없음</div>')
+        +'</div>';
+    });
+    body+='</div></div>';
+  }
   pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
   pw.document.close();
   // 큰 그림은 문서를 쓴 뒤에 넣음
@@ -7646,6 +7667,15 @@ function exportDrawingA4(){
       pages.forEach(function(pg,pi){var im=pw.document.getElementById('_dimg'+pi);if(im)im.src=pg.img;});
       var _bi2=pw.document.getElementById('_bimg2');if(_bi2&&boardImg2)_bi2.src=boardImg2;
     }catch(e){}
+    // 제품 사진: 불러오는 중인 것도 있어서 다 들어올 때까지 잠깐씩 다시 넣어 봄 (최대 약 6초)
+    var tries=0;(function fill(){
+      var left=0;
+      _prodCards.forEach(function(c){
+        if(!c.id)return;var im=pw.document.getElementById('_pimg'+c.i);if(!im||im.getAttribute('src'))return;
+        var d=window._MALL_IMG&&window._MALL_IMG[c.id];if(d)im.src=d;else left++;
+      });
+      if(left&&++tries<20)setTimeout(fill,300);
+    })();
   },200);
 }
 
