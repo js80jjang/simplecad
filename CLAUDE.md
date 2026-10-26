@@ -159,6 +159,8 @@
 - 닫힌 폴리선 사각형은 코너마다 라운드/모따기가 달라도 사각 조각(`corners`)으로
 
 ## DXF 내보내기 (`exportDxf` 창 → `buildDxf` / `buildDxfInForm`, 상단 "DXF 내보내기" 버튼)
+- 길이 치수 = 진짜 DIMENSION(`dim()` → `{t:'DIM',parts,p10/p11/p13/p14,ang(0|90|null=정렬),txt}`): 그린 모양(parts)은 익명 블록 `*D n`(`_dxfDimBlocks`, 양식의 *D 번호 다음부터)에,
+  치수 스타일 `SC-DIM`(`_dxfDimStyle`, 양식이면 DIMSTYLE 표 머리 71·340 목록도 늘림). 글자: 양식(R2000+) = 측정값 "<>"+앞뒤 글자, R12 = 값 그대로. 각도 호·R/Φ 지시선은 아직 선+글자
 - 도형 → 추상 엔티티 `_dxfCollect(H)` → `_dxfWriteEnts`(R12 또는 R2000+ 핸들 형식). mm, Y 뒤집기, 한글 `\U+XXXX`, Φ `%%c`, 글자 스타일 `SC-KOR`(malgun.ttf)
 - 양식 없이: R12(AC1009) ASCII
 - "DXF 내보내기" 버튼 = 묻지 않고 양식에 넣어서(`buildDxfInForm`). 옆 ⚙ = 양식 바꾸기 / 기본으로 되돌리기 / 양식 없이
