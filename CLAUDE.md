@@ -99,9 +99,9 @@
     온장 안을 훑어 다른 조각·다른 바깥 글자와 안 겹치고 화살표가 다른 조각을 지나지 않는 자리, 없으면 캔버스 안(잘리지 않게).
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
   - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
-  - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(◀ ▶ `goBoardPage`). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
+  - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 창 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
 - 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(온장 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "온장 N" 번호 유지)
-  + 맨 마지막 쪽 "사용 제품" = 제품마다 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
+  + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
   - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 온장 2장 이상이면 2쪽부터 **온장마다 상세 한 쪽**("상세 · 온장 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
     밖이면 가장 가까운 조각, 그룹은 main 자리) → 쪽마다 `shapes`를 그 장 조각 것만으로 잠시 바꿔 `_renderDrawingImage`.
     이때 `_compactPageShapes`가 조각(+딸린 도형)을 원래 자리 대신 줄 맞춰 모은 복사본으로 바꿈(줄 폭을 바꿔 가며 도면 영역 `_DRW_AW×_DRW_AH`에 가장 크게, 간격 = 150px 상당 mm). 배치 안 된 조각은 따로 한 쪽.
