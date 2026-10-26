@@ -86,7 +86,7 @@
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
-  - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
+  - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
   - 온장 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):

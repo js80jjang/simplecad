@@ -5964,6 +5964,13 @@ function _fullBoardFit(s,w,h){
   function fits(d,o){return (eq(d,B)&&o<=A+0.5)||(eq(d,A)&&o<=B+0.5);}
   return{w:fits(w,h),h:fits(h,w)};
 }
+// 선이 사각형 안에 드는지: 두 끝이 사각형 범위 안 + 사각형 변 위에 놓인 선(가로선이 위·아래 변, 세로선이 왼·오른 변)이 아님
+function _lineInRect(s,r){
+  var L=Math.min(r.x,r.x+r.w),R=Math.max(r.x,r.x+r.w),T=Math.min(r.y,r.y+r.h),B=Math.max(r.y,r.y+r.h),t=0.5;
+  if(!(s.x1>=L-t&&s.x1<=R+t&&s.y1>=T-t&&s.y1<=B+t&&s.x2>=L-t&&s.x2<=R+t&&s.y2>=T-t&&s.y2<=B+t))return false;
+  function on(a,b,v){return Math.abs(a-v)<=t&&Math.abs(b-v)<=t;}
+  return !(on(s.y1,s.y2,T)||on(s.y1,s.y2,B)||on(s.x1,s.x2,L)||on(s.x1,s.x2,R));
+}
 function _collectBoardItems(){
   var physical=['rect','circle','hole','ellipse'];
   var allPhysical=shapes.filter(function(s){return physical.indexOf(s.kind)>=0;});
@@ -5972,14 +5979,14 @@ function _collectBoardItems(){
     return !allRects.some(function(other){return other!==s&&isInsideRect(s,other);});
   });
 
-  // 연결된 선 그룹 감지 (rect 안에 속하지 않는 선만)
+  // 연결된 선 그룹 감지 (rect 안에 속하지 않는 선만 — 단 사각형 변 위에 딱 겹친 선은 옆 조각의 선이므로 안에 든 것으로 보지 않음)
   var freeLines=shapes.filter(function(s){
     if(s.kind!=='line')return false;
-    return !allRects.some(function(r){
-      return s.x1>=r.x&&s.x1<=r.x+r.w&&s.y1>=r.y&&s.y1<=r.y+r.h&&
-             s.x2>=r.x&&s.x2<=r.x+r.w&&s.y2>=r.y&&s.y2<=r.y+r.h;
-    });
+    return !allRects.some(function(r){return _lineInRect(s,r);});
   });
+  // 같은 자리에 두 번 그린 선(양 끝이 같음)은 하나만 — 겹친 선이 있으면 닫힌 조각으로 안 이어짐
+  freeLines=freeLines.filter(function(s,i){return !freeLines.slice(0,i).some(function(o){
+    return (Math.hypot(o.x1-s.x1,o.y1-s.y1)<1&&Math.hypot(o.x2-s.x2,o.y2-s.y2)<1)||(Math.hypot(o.x1-s.x2,o.y1-s.y2)<1&&Math.hypot(o.x2-s.x1,o.y2-s.y1)<1);});});
   var usedLines=freeLines.map(function(){return false;});
   var lineTol=2; // 연결 판정 허용 오차(mm)
   for(var li=0;li<freeLines.length;li++){
