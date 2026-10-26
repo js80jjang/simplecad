@@ -3340,17 +3340,35 @@ function _dxfCollect(H){
   // 치수: p1→p2, nrm(단위 법선) 방향으로 off 떨어진 치수선 + 보조선 + 양 화살촉 + 글자
   // 오토캐드 DIMENSION 하나로 내보냄: 그린 선·화살촉·글자(parts)는 치수 블록(*D) 안에, 측정점(13/14)·치수선 자리(10)·글자 자리(11)는 치수에
   //   → 오토캐드에서 한 번에 선택·삭제, 끌면 값이 다시 계산됨 (글자 = 측정값 "<>" + 앞뒤 글자)
-  function dim(p1,p2,nrm,off,label,e1,e2){ // e1/e2: 보조선을 p1/p2에서 법선 반대쪽으로 더 늘릴 길이 (가로/세로 치수선)
+  function dim(p1,p2,nrm,off,label,e1,e2,rk){ // e1/e2: 보조선을 p1/p2에서 법선 반대쪽으로 더 늘릴 길이 (가로/세로 치수선), rk: 'rad'|'dia' = 치수선 도구의 R/Φ
     var L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);if(L<1)return;
     if(off<0){nrm=[-nrm[0],-nrm[1]];off=-off;e1=-(e1||0);e2=-(e2||0);}
     e1=e1||0;e2=e2||0;
-    var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L,keep=ents;ents=[];
-    dimParts(p1,p2,nrm,off,label,e1,e2,L,ux,uy);
-    var parts=ents;ents=keep;
+    var ux=(p2[0]-p1[0])/L,uy=(p2[1]-p1[1])/L;
     var tg=H*0.8,a1=[p1[0]+nrm[0]*off,p1[1]+nrm[1]*off],a2=[p2[0]+nrm[0]*off,p2[1]+nrm[1]*off],num=_fmtDim(L),lb=String(label),k=lb.indexOf(num);
     var axis=Math.abs(uy)<1e-6?0:(Math.abs(ux)<1e-6?90:null); // 가로·세로 = 회전 치수, 비스듬히 = 정렬 치수
-    ents.push({t:'DIM',L:'SC-DIM',parts:parts,ang:axis,label:lb,txt:k<0?lb:(lb===num?'':lb.slice(0,k)+'<>'+lb.slice(k+num.length)),
-      p13:Q(p1[0]-nrm[0]*e1,p1[1]-nrm[1]*e1),p14:Q(p2[0]-nrm[0]*e2,p2[1]-nrm[1]*e2),p10:Q(a2[0],a2[1]),p11:Q((a1[0]+a2[0])/2+nrm[0]*tg,(a1[1]+a2[1])/2+nrm[1]*tg)});
+    var p11=Q((a1[0]+a2[0])/2+nrm[0]*tg,(a1[1]+a2[1])/2+nrm[1]*tg),dr=function(){dimParts(p1,p2,nrm,off,label,e1,e2,L,ux,uy);};
+    if(rk){ // R = p1 중심 → p2 원 위, Φ = p1·p2 원 위 맞은편 (오토캐드가 R·Ø를 붙이므로 값만이면 글자 비움)
+      var num2=_fmtDim(L);dimEnt({k:rk,label:lb,txt:lb===(rk==='rad'?'R':'Φ')+num2?'':lb,p10:Q(p1[0],p1[1]),p15:Q(p2[0],p2[1]),p11:p11,len:off},dr);return;
+    }
+    dimEnt({k:'lin',ang:axis,label:lb,txt:k<0?lb:(lb===num?'':lb.slice(0,k)+'<>'+lb.slice(k+num.length)),
+      p13:Q(p1[0]-nrm[0]*e1,p1[1]-nrm[1]*e1),p14:Q(p2[0]-nrm[0]*e2,p2[1]-nrm[1]*e2),p10:Q(a2[0],a2[1]),p11:p11},dr);
+  }
+  // 치수 하나(o = 종류·정의점, 편집 좌표를 Q로 바꾼 값) + 그 모양(draw가 line/solid/text로 그린 것 → 치수 블록 안)
+  //   k: lin(길이) · rad(R: p10 중심, p15 호 위 점) · dia(Φ: p10·p15 원 위 맞은편 두 점) · ang(3점 각도: p15 꼭지점, p13·p14 두 변 위, p10 호 위)
+  function dimEnt(o,draw){var keep=ents;ents=[];draw();o.parts=ents;ents=keep;o.t='DIM';o.L='SC-DIM';ents.push(o);}
+  // R·Φ 지시선 치수: 원(중심 c, 반지름 r) 위 점 pt → e1 → e2 꺾인 지시선 + 글자. 반지름은 rad, 지름은 dia
+  function leaderDim(k,c,r,pt,e1,e2,lbl,tx){
+    var num=_fmtDim(k==='dia'?r*2:r),plain=lbl===(k==='dia'?'Φ':'R')+num,o={k:k,label:lbl,txt:plain?'':lbl,p11:Q(tx[0],tx[1]),len:Math.hypot(e1[0]-pt[0],e1[1]-pt[1])};
+    var ux=(pt[0]-c[0])/(Math.hypot(pt[0]-c[0],pt[1]-c[1])||1),uy=(pt[1]-c[1])/(Math.hypot(pt[0]-c[0],pt[1]-c[1])||1);
+    if(k==='dia'){o.p15=Q(pt[0],pt[1]);o.p10=Q(c[0]-ux*r,c[1]-uy*r);}else{o.p10=Q(c[0],c[1]);o.p15=Q(pt[0],pt[1]);}
+    dimEnt(o,function(){line('SC-DIM',pt,e1);line('SC-DIM',e1,e2);text('SC-DIM',tx[0],tx[1],H,lbl,0);});
+  }
+  // 각도 치수: 꼭지점 v, 반지름 r, 편집 좌표 각 a0 → a0+sw (draw = 호·보조선·글자)
+  function angDim(v,r,a0,sw,lbl,draw){
+    var bis=a0+sw/2,plain=/^\d+°$/.test(lbl)&&+lbl.replace('°','')===Math.round(sw*180/Math.PI);
+    dimEnt({k:'ang',label:lbl,txt:plain?'':lbl,p15:Q(v[0],v[1]),p13:Q(v[0]+Math.cos(a0)*r,v[1]+Math.sin(a0)*r),p14:Q(v[0]+Math.cos(a0+sw)*r,v[1]+Math.sin(a0+sw)*r),
+      p10:Q(v[0]+Math.cos(bis)*r,v[1]+Math.sin(bis)*r),p11:Q(v[0]+Math.cos(bis)*(r+H*1.2),v[1]+Math.sin(bis)*(r+H*1.2))},draw);
   }
   function dimParts(p1,p2,nrm,off,label,e1,e2,L,ux,uy){
     var a1=[p1[0]+nrm[0]*off,p1[1]+nrm[1]*off],a2=[p2[0]+nrm[0]*off,p2[1]+nrm[1]*off],gap=H*0.3,ov=H*0.4;
@@ -3403,7 +3421,10 @@ function _dxfCollect(H){
     else if(s.kind==='circle'||s.kind==='hole'){
       var piece=s.holeType==='cut'||!inAnyRect(s.cx,s.cy);
       ents.push({t:'CIRCLE',L:piece?'SC-PIECE':'SC-HOLE',c:Q(s.cx,s.cy),r:s.r});
-      if(_holeSet.indexOf(s)<0)text('SC-DIM',s.cx+s.r*0.75+H*1.6,s.cy-s.r*0.75-H*0.6,H,'Φ'+_fmtDim(s.r*2),0); // 조각 안 타공은 아래 위치 치수에서 지시선으로
+      if(_holeSet.indexOf(s)<0){ // 조각 안 타공은 아래 위치 치수에서 지시선으로 / 나머지 원은 오른쪽 위로 짧은 지시선 + Φ값 (지름 치수)
+        var lbC='Φ'+_fmtDim(s.r*2),ptC=[s.cx+s.r*Math.SQRT1_2,s.cy-s.r*Math.SQRT1_2],eC=[ptC[0]+H*0.8,ptC[1]-H*0.8],e2C=[eC[0]+H*0.8,eC[1]];
+        leaderDim('dia',[s.cx,s.cy],s.r,ptC,eC,e2C,lbC,[e2C[0]+lbC.length*H*0.38,e2C[1]]);
+      }
       if(piece&&s.pieceName)text('SC-NAME',s.cx,s.cy,H*1.6,s.pieceName,0);
     }
     else if(s.kind==='ellipse'){
@@ -3416,7 +3437,11 @@ function _dxfCollect(H){
       var ll=Math.hypot(s.x2-s.x1,s.y2-s.y1);
       if(ll>=1){
         var ln=[(s.y2-s.y1)/ll,-(s.x2-s.x1)/ll];if(_lineOutwardSide(s)<0)ln=[-ln[0],-ln[1]];
-        if(s.arcR!==undefined){if(s.arcMid)text('SC-DIM',(s.x1+s.x2)/2+ln[0]*H*1.5,(s.y1+s.y2)/2+ln[1]*H*1.5,H,'R'+_fmtDim(s.arcR),0);}
+        if(s.arcR!==undefined){if(s.arcMid){ // 곡선 근사: 반지름 치수 (중심 = 가운데 선분에서 안쪽으로 R쯤)
+          var mA=[(s.x1+s.x2)/2,(s.y1+s.y2)/2],rA=s.arcR,hA=Math.sqrt(Math.max(0,rA*rA-ll*ll/4)),lbA0='R'+_fmtDim(rA),tA=[mA[0]+ln[0]*H*1.5,mA[1]+ln[1]*H*1.5];
+          dimEnt({k:'rad',label:lbA0,txt:'',p10:Q(mA[0]-ln[0]*hA,mA[1]-ln[1]*hA),p15:Q(mA[0]+ln[0]*(rA-hA),mA[1]+ln[1]*(rA-hA)),p11:Q(tA[0],tA[1]),len:H*1.5},
+            function(){text('SC-DIM',tA[0],tA[1],H,lbA0,0);});
+        }}
         else{
           // 선 조각의 가로/세로 선은 도면화처럼 조각 바깥 치수 줄에 맞춤
           if(!_dxfLinePlan){_dxfLinePlan=new Map();_collectBoardItems().forEach(function(it){if(it.shape.kind==='linegroup')_lineDimPlan(it.shape.lines).forEach(function(v,k){_dxfLinePlan.set(k,v);});});}
@@ -3453,16 +3478,19 @@ function _dxfCollect(H){
     else if(s.kind==='dimline'&&s.labelType==='ang'){ // 각도 치수: 호 + 보조선 + 값 (편집 좌표 a0→a0+sweep 시계 = DXF -(a0+sweep)→-a0)
       var ra=Math.hypot(s.x2-s.x1,s.y2-s.y1),A0=s.a0||0,SW=s.sweep||0;
       if(ra>0.5&&SW>0){
-        ents.push({t:'ARC',L:'SC-DIM',c:Q(s.x1,s.y1),r:ra,a0:-(A0+SW)*180/Math.PI,a1:-A0*180/Math.PI});
-        line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0)*(ra+H*0.4),s.y1+Math.sin(A0)*(ra+H*0.4)]);
-        line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0+SW)*(ra+H*0.4),s.y1+Math.sin(A0+SW)*(ra+H*0.4)]);
-        var lbA=_fmtAng(SW*180/Math.PI),bisA=A0+SW/2,ddA=ra+H*0.6+lbA.length*H*0.3;
-        text('SC-DIM',s.x1+Math.cos(bisA)*ddA,s.y1+Math.sin(bisA)*ddA,H,lbA,0);
+        var lbA=_fmtAng(SW*180/Math.PI);
+        angDim([s.x1,s.y1],ra,A0,SW,lbA,function(){
+          ents.push({t:'ARC',L:'SC-DIM',c:Q(s.x1,s.y1),r:ra,a0:-(A0+SW)*180/Math.PI,a1:-A0*180/Math.PI});
+          line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0)*(ra+H*0.4),s.y1+Math.sin(A0)*(ra+H*0.4)]);
+          line('SC-DIM',[s.x1,s.y1],[s.x1+Math.cos(A0+SW)*(ra+H*0.4),s.y1+Math.sin(A0+SW)*(ra+H*0.4)]);
+          var bisA=A0+SW/2,ddA=ra+H*0.6+lbA.length*H*0.3;
+          text('SC-DIM',s.x1+Math.cos(bisA)*ddA,s.y1+Math.sin(bisA)*ddA,H,lbA,0);
+        });
       }
     }
     else if(s.kind==='dimline'){
       var an2=Math.atan2(s.y2-s.y1,s.x2-s.x1),pp=an2-Math.PI/2,d=Math.hypot(s.x2-s.x1,s.y2-s.y1),lt=s.labelType||'dist';
-      dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm!=null?s.offsetMm:15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d),s.e1,s.e2);
+      dim([s.x1,s.y1],[s.x2,s.y2],[Math.cos(pp),Math.sin(pp)],s.offsetMm!=null?s.offsetMm:15,(lt==='r'?'R':(lt==='phi'?'Φ':''))+_fmtDim(d),s.e1,s.e2,lt==='r'?'rad':(lt==='phi'?'dia':null));
     }
     else if(s.kind==='note'){
       var ls=String(s.text||'').split('\n'),th=H*1.3*((s.fs||32)/32),lh=th*1.5,y0=s.y-(ls.length-1)*lh/2;
@@ -3480,10 +3508,13 @@ function _dxfCollect(H){
   //    편집 좌표(아래가 +)의 a0→a0+sweep(시계)은 DXF에서 -(a0+sweep)→-a0(반시계)
   _lineAngleMarks().forEach(function(m){
     var r=Math.min(H*3,m.len*0.45);if(r<H*0.5)return;
-    if(m.ref!==undefined)line('SC-DIM',[m.x,m.y],[m.x+Math.cos(m.ref)*r*1.5,m.y]);
-    ents.push({t:'ARC',L:'SC-DIM',c:Q(m.x,m.y),r:r,a0:-(m.a0+m.sweep)*180/Math.PI,a1:-m.a0*180/Math.PI});
-    var bis=m.a0+m.sweep/2,lbl=_fmtAng(m.deg),dd=r+H*0.6+lbl.length*H*0.3;
-    text('SC-DIM',m.x+Math.cos(bis)*dd,m.y+Math.sin(bis)*dd,H,lbl,0);
+    var lbl=_fmtAng(m.deg);
+    angDim([m.x,m.y],r,m.a0,m.sweep,lbl,function(){
+      if(m.ref!==undefined)line('SC-DIM',[m.x,m.y],[m.x+Math.cos(m.ref)*r*1.5,m.y]);
+      ents.push({t:'ARC',L:'SC-DIM',c:Q(m.x,m.y),r:r,a0:-(m.a0+m.sweep)*180/Math.PI,a1:-m.a0*180/Math.PI});
+      var bis=m.a0+m.sweep/2,dd=r+H*0.6+lbl.length*H*0.3;
+      text('SC-DIM',m.x+Math.cos(bis)*dd,m.y+Math.sin(bis)*dd,H,lbl,0);
+    });
   });
   // ── 위치 치수·R값 (도면화와 같은 규칙) ──
   //   싱크볼·쿡탑 → 가까운 좌/우, 위/아래 조각 변까지 / 수전 → 가장 가까운 싱크볼 변까지 / 콘센트 등 → 가장 가까운 선까지
@@ -3497,8 +3528,7 @@ function _dxfCollect(H){
       var dx=k[1]*Math.SQRT1_2,dy=k[2]*Math.SQRT1_2,kk=ci.type==='chamfer'?Math.SQRT1_2:1;
       var cx=k[1]*(w-ci.r),cy=k[2]*(h-ci.r),pt=g0.W(cx+dx*ci.r*kk,cy+dy*ci.r*kk),sg=inward?-1:1,L=H*2.5;
       var e1=g0.W(cx+dx*ci.r*kk+sg*dx*L,cy+dy*ci.r*kk+sg*dy*L),right=(e1[0]>=pt[0]),e2=[e1[0]+(right?H*1.2:-H*1.2),e1[1]];
-      line('SC-DIM',pt,e1);line('SC-DIM',e1,e2);
-      text('SC-DIM',e2[0]+(right?1:-1)*lbl.length*H*0.35,e2[1]-H*0.7,H,lbl,0);
+      leaderDim('rad',g0.W(cx,cy),ci.r*kk,pt,e1,e2,lbl,[e2[0]+(right?1:-1)*lbl.length*H*0.35,e2[1]-H*0.7]); // 모따기(C)는 값 글자를 그대로
     });
   }
   _pieces.forEach(function(p){
@@ -3550,8 +3580,7 @@ function _dxfCollect(H){
         // 여러 개가 한 줄이면 위쪽 간격 치수 줄을 넘어 그 위에 글자
         var L=row.length>1&&sy<0?(off+H*2.2)*Math.SQRT2:H*1.8;
         var a=[o.cx+sx*o.r*Math.SQRT1_2,o.cy+sy*o.r*Math.SQRT1_2],e1=[a[0]+sx*L*Math.SQRT1_2,a[1]+sy*L*Math.SQRT1_2],e2=[e1[0]+sx*H*0.8,e1[1]],lbl='Φ'+_fmtDim(o.r*2);
-        line('SC-DIM',a,e1);line('SC-DIM',e1,e2);
-        text('SC-DIM',e2[0]+sx*lbl.length*H*0.38,e2[1],H,lbl,0);
+        leaderDim('dia',[o.cx,o.cy],o.r,a,e1,e2,lbl,[e2[0]+sx*lbl.length*H*0.38,e2[1]]);
       });
     });
   });
@@ -3578,11 +3607,17 @@ function _dxfWriteEnts(ents,out,modern,hnd,owner){
     if(e.t==='DIM'){ // 치수 (블록 e.blk은 BLOCKS 구역에 먼저 써 둠 — _dxfDimBlocks)
       head('DIMENSION',e.L,e.col,'AcDbDimension');g(2,e.blk);
       g(10,N(e.p10[0]));g(20,N(e.p10[1]));g(30,0);g(11,N(e.p11[0]));g(21,N(e.p11[1]));g(31,0);
-      g(70,(e.ang===null?1:0)+(modern?32:0));if(modern)g(71,5);
+      var ty={lin:e.ang===null?1:0,ang:5,dia:3,rad:4}[e.k||'lin']; // 0 회전·1 정렬·3 지름·4 반지름·5 3점 각도
+      g(70,ty+(modern?32:0));if(modern)g(71,5);
       g(1,modern?_dxfText(e.txt):_dxfText(e.label));g(3,'SC-DIM'); // R12는 값 그대로(측정값 자리수 설정이 없음)
-      if(modern)g(100,'AcDbAlignedDimension');
-      g(13,N(e.p13[0]));g(23,N(e.p13[1]));g(33,0);g(14,N(e.p14[0]));g(24,N(e.p14[1]));g(34,0);
-      if(e.ang!==null){g(50,e.ang);if(modern)g(100,'AcDbRotatedDimension');}
+      function pt(c,p){g(c,N(p[0]));g(c+10,N(p[1]));g(c+20,0);}
+      if(e.k==='rad'||e.k==='dia'){if(modern)g(100,e.k==='rad'?'AcDbRadialDimension':'AcDbDiametricDimension');pt(15,e.p15);g(40,N(e.len||0));}
+      else if(e.k==='ang'){if(modern)g(100,'AcDb3PointAngularDimension');pt(13,e.p13);pt(14,e.p14);pt(15,e.p15);}
+      else{
+        if(modern)g(100,'AcDbAlignedDimension');
+        pt(13,e.p13);pt(14,e.p14);
+        if(e.ang!==null){g(50,e.ang);if(modern)g(100,'AcDbRotatedDimension');}
+      }
     }
     else if(e.t==='LINE'){head('LINE',e.L,e.col,'AcDbLine');g(10,N(e.a[0]));g(20,N(e.a[1]));g(30,0);g(11,N(e.b[0]));g(21,N(e.b[1]));g(31,0);}
     else if(e.t==='CIRCLE'){head('CIRCLE',e.L,e.col,'AcDbCircle');g(10,N(e.c[0]));g(20,N(e.c[1]));g(30,0);g(40,N(e.r));}
@@ -3611,7 +3646,7 @@ function _dxfDimBlocks(ents,start){var n=start||1;return ents.filter(function(e)
 function _dxfDimStyle(g,H,modern,styleH){
   g(70,0);g(40,1);g(41,_dxfN(H*0.8));g(42,_dxfN(H*0.3));g(43,0);g(44,_dxfN(H*0.4));g(73,0);g(74,0);g(77,1);g(78,8);
   g(140,_dxfN(H));g(141,0);g(147,_dxfN(H*0.3));g(172,1);
-  if(modern){g(271,0);g(277,2);g(279,0);if(styleH)g(340,styleH);}
+  if(modern){g(179,0);g(271,0);g(275,0);g(277,2);g(279,0);if(styleH)g(340,styleH);} // 179 각도 소수 0자리, 275 각도 = 도
 }
 // ① 양식 없이: R12
 function buildDxf(){

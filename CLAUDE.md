@@ -160,7 +160,9 @@
 
 ## DXF 내보내기 (`exportDxf` 창 → `buildDxf` / `buildDxfInForm`, 상단 "DXF 내보내기" 버튼)
 - 길이 치수 = 진짜 DIMENSION(`dim()` → `{t:'DIM',parts,p10/p11/p13/p14,ang(0|90|null=정렬),txt}`): 그린 모양(parts)은 익명 블록 `*D n`(`_dxfDimBlocks`, 양식의 *D 번호 다음부터)에,
-  치수 스타일 `SC-DIM`(`_dxfDimStyle`, 양식이면 DIMSTYLE 표 머리 71·340 목록도 늘림). 글자: 양식(R2000+) = 측정값 "<>"+앞뒤 글자, R12 = 값 그대로. 각도 호·R/Φ 지시선은 아직 선+글자
+  치수 스타일 `SC-DIM`(`_dxfDimStyle`, 양식이면 DIMSTYLE 표 머리 71·340 목록도 늘림). 글자: 양식(R2000+) = 측정값 "<>"+앞뒤 글자, R12 = 값 그대로.
+  모든 SC-DIM이 치수: `dimEnt(o,draw)`(draw로 그린 것 = 블록), `o.k` lin(0 회전/1 정렬) · rad(4, R·C 지시선 `leaderDim`, 곡선 근사 R, 치수선 도구 R) · dia(3, Φ 지시선·치수선 도구 Φ) · ang(5 3점, `angDim`: 선 각도·치수선 도구 각도).
+  R/Φ/각도는 값만이면 글자 비움(오토캐드가 R·Ø·° 붙임), 모따기 C는 글자 그대로
 - 도형 → 추상 엔티티 `_dxfCollect(H)` → `_dxfWriteEnts`(R12 또는 R2000+ 핸들 형식). mm, Y 뒤집기, 한글 `\U+XXXX`, Φ `%%c`, 글자 스타일 `SC-KOR`(malgun.ttf)
 - 양식 없이: R12(AC1009) ASCII
 - "DXF 내보내기" 버튼 = 묻지 않고 양식에 넣어서(`buildDxfInForm`). 옆 ⚙ = 양식 바꾸기 / 기본으로 되돌리기 / 양식 없이
