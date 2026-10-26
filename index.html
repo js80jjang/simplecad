@@ -8283,7 +8283,7 @@ function _3dRender(){
   if(st.prev){ // 끌고 있는 미드웨이가 놓일 자리 (노란 테두리, 가려져도 보이게)
     var pb=R.buf(st.prev);gl.disable(gl.DEPTH_TEST);gl.uniform1f(R.U.tex,0);gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,1,0.8,0.1);draw(pb,gl.LINES);gl.enable(gl.DEPTH_TEST);gl.deleteBuffer(pb.b);
   }
-  _3dLabels();
+  try{_3dLabels();}catch(err){console.error(err);} // 번호표가 잘못돼도 3D 화면·목록은 그대로
 }
 // 조각 번호표: 3D 조각 위에 "조각 구분" 목록과 같은 번호 (마우스 올림 = 파랑, 선택 = 주황) + 목록 줄도 같이 강조
 function _3dLabels(){
@@ -8293,9 +8293,17 @@ function _3dLabels(){
   var pts=[],M=st.M,r=st.cv.getBoundingClientRect(),br=box.getBoundingClientRect();
   function proj(x,y,z){var w=M[3]*x+M[7]*y+M[11]*z+M[15];if(w<=0)return null;
     return[((M[0]*x+M[4]*y+M[8]*z+M[12])/w*0.5+0.5)*r.width+r.left-br.left,(1-((M[1]*x+M[5]*y+M[9]*z+M[13])/w*0.5+0.5))*r.height+r.top-br.top];}
-  st.r.tops.forEach(function(tp){ // 윗면 안쪽 점 (가운데가 밖이면 조각 모양 안의 가장 큰 띠 가운데)
+  st.r.tops.forEach(function(tp){ // 윗면 안쪽 점 (가운데가 밖이면 ㄱ자 등: 가로줄 몇 개를 그어 조각 안 가장 긴 구간 가운데)
     var L=tp.loops.outer,cx=0,cz=0;L.forEach(function(p){cx+=p[0]/L.length;cz+=p[1]/L.length;});
-    if(!_3dInside(tp.loops,cx,cz)){var best=0;_triPoly(L,tp.loops.holes).forEach(function(t){var a=Math.abs((t[1][0]-t[0][0])*(t[2][1]-t[0][1])-(t[2][0]-t[0][0])*(t[1][1]-t[0][1]));if(a>best){best=a;cx=(t[0][0]+t[1][0]+t[2][0])/3;cz=(t[0][1]+t[1][1]+t[2][1])/3;}});}
+    if(!_3dInside(tp.loops,cx,cz)){
+      var z0=Math.min.apply(null,L.map(function(p){return p[1];})),z1=Math.max.apply(null,L.map(function(p){return p[1];})),bestW=0;
+      [0.5,0.25,0.75,0.15,0.85,0.35,0.65].forEach(function(f){
+        var z=z0+(z1-z0)*f,xs=[];
+        [L].concat(tp.loops.holes).forEach(function(R){for(var i=0;i<R.length;i++){var a=R[i],b=R[(i+1)%R.length];if((a[1]-z)*(b[1]-z)<0)xs.push(a[0]+(z-a[1])*(b[0]-a[0])/(b[1]-a[1]));}});
+        xs.sort(function(p,q){return p-q;});
+        for(var k=0;k+1<xs.length;k+=2)if(xs[k+1]-xs[k]>bestW){bestW=xs[k+1]-xs[k];cx=(xs[k]+xs[k+1])/2;cz=z;}
+      });
+    }
     pts.push({key:tp.key,p:proj(cx,tp.y+2,cz)});
   });
   st.r.midInfo.forEach(function(m){pts.push({key:_3dKey(m.shape),p:proj((m.min[0]+m.max[0])/2,(m.min[1]+m.max[1])/2,(m.min[2]+m.max[2])/2)});});
@@ -8393,7 +8401,7 @@ function _3dPiecePanel(sc){
     rw.onmouseenter=function(){if(_3d&&_3d.hover!==k){_3d.hover=k;_3dRender();}};
     rw.onmouseleave=function(){if(_3d&&_3d.hover===k){_3d.hover=null;_3dRender();}};});
   box.querySelectorAll('[data-pick]').forEach(function(sp){sp.onclick=function(){if(!_3d)return;var k=_3dKey(sc.pieces[+sp.dataset.pick].shape);_3d.sel=_3d.sel===k?null:k;_3dRender();};});
-  _3dLabels();
+  try{_3dLabels();}catch(err){console.error(err);}
   box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
   box.querySelectorAll('button[data-a]').forEach(function(b){b.onclick=function(){
     var pc=sc.pieces[+b.dataset.i];if(!pc||!pc.mid)return;var key=_3dKey(pc.shape),m=pc.mid,E=sc.edges,a=b.dataset.a;
