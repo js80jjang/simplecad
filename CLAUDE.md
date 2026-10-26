@@ -42,6 +42,11 @@
 - 테스트: 브라우저 패널에서 `file://`로 열면 data: 주소라 localStorage가 막힘 → 저장소/파일 fetch가 필요하면
   `powershell -ExecutionPolicy Bypass -File tools\serve.ps1 [-Dxf 경로]` 후 http://localhost:8765/ 사용.
 
+## 화면 디자인 (2안 "미드나잇 골드", 2026-10-26 사용자 확정)
+- 바탕 #060B16 / 패널 #0A1222 / 입력칸·호버 #121D33 / 테두리 #1C2A47 / 버튼 #16233D / 선택·주버튼 #1F3F7A(테두리 #2A4F92)
+  / 강조(제목·값) 금색 #E3B861(밝은 #F1D69A) / 글자 #D9DFEA, 흐린 글자 #A9B4C8·#75839C·#56647E. 글꼴 나눔스퀘어(없으면 맑은 고딕)
+- 새 화면 요소도 이 색을 쓰기 (예전 파랑 #1565C0·#263545·#90CAF9 계열은 모두 바꿈). CSS 끝 "네이비 테마 2안" 묶음이 덮어쓰는 규칙, 머리글 = SVG 로고 + `.hd-name`
+
 ## 코드 구조 (index.html 안 주요 함수)
 - 상태: `shapes`(도형 배열), `nextId`, `products`, 단가 입력칸(`su-/du-/ru-/cu-/xt-` + `TIER_KEYS`)
 - 제품: 작업 정보 줄에 제품마다 한 줄씩 아래로(`renderProductList`, 마지막 줄 "+ 제품"). 제품 색 = 순서대로 `_prodColor(i)`(`_PCOLS`)
