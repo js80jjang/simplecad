@@ -8385,23 +8385,16 @@ function _3dPiecePanel(sc){
   var hd='<div id="v3d-fold" style="font-weight:bold;color:#90CAF9;cursor:pointer;user-select:none'+(fold?'':';margin-bottom:4px')+'" title="'+(fold?'펴기':'접기')+'">'+(fold?'▸':'▾')+' 조각 구분 ('+sc.pieces.length+')</div>';
   function bindFold(){document.getElementById('v3d-fold').onclick=function(){_3dFold=!fold;try{localStorage.setItem('scd_3d_fold',_3dFold?'1':'0');}catch(e){}_3dPiecePanel(sc);};}
   if(fold){box.innerHTML=hd;bindFold();return;}
+  // 한 줄 = 번호·크기 + 종류 버튼 (+ 3D에서 옮겼으면 ↺). 자리·방향·높이·무늬 면은 모두 3D에서 마우스로
   box.innerHTML=hd+sc.pieces.map(function(pc,i){
-    var row='<div data-row="'+i+'" style="display:flex;align-items:center;gap:4px;margin:3px 0;padding:1px 3px;border-radius:3px"><span data-pick="'+i+'" style="min-width:74px;color:#ECEFF1;cursor:pointer" title="누르면 3D에서 이 조각 선택">'+(i+1)+'. '+pc.label+'</span>'
-      +T.map(function(t){var on=pc.type===t[0];return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#42A5F5':'#546E7A')+';background:'+(on?'#1565C0':'#263545')+';color:#fff">'+t[1]+'</button>';}).join('')+'</div>';
-    // 미드웨이(상판+미드웨이로 보는 중일 때)·전면판·측판 자리 조절
-    if((pc.type==='mid'||_3dIsPanel(pc.type))&&pc.mid&&sc.edges&&sc.edges.length){
-      var k=sc.edges.indexOf(pc.mid.edge);
-      row+='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin:0 0 6px 14px;max-width:540px;color:#B0BEC5">'
-        +'벽 <button data-i="'+i+'" data-a="e-" style="'+bs+'">◀</button><span style="min-width:30px;text-align:center">'+(k>=0?(k+1)+'/'+sc.edges.length:'-')+'</span><button data-i="'+i+'" data-a="e+" style="'+bs+'">▶</button>'
-        +' 위치 <button data-i="'+i+'" data-a="p-" style="'+bs+'">◀</button><button data-i="'+i+'" data-a="p+" style="'+bs+'">▶</button>'
-        +' <button data-i="'+i+'" data-a="sw" style="'+bs+'" title="길이와 높이 바꾸기">↻ 가로/세로</button>'
-        +(pc.mid.panel?'':' <button data-i="'+i+'" data-a="fl" style="'+bs+(pc.mid.floor?';background:#1565C0;border-color:#42A5F5':'')+'" title="상판 위에 세우기 / 바닥부터 세우기(키 큰 판, 상판 옆)">'+(pc.mid.floor?'바닥부터':'상판 위')+'</button>')
-        +' <button data-i="'+i+'" data-a="fc" style="'+bs+'" title="무늬가 보이는 면 바꾸기 (앞 → 뒤 → 양면, 3D에서 더블클릭도 됨)">'+_3D_FACES[_3dFaceOf(_3dKey(pc.shape))]+'</button>'
-        +' 높이 <button data-i="'+i+'" data-a="h-" style="'+bs+'" title="100mm 내리기">▼</button><span style="min-width:44px;text-align:center" title="바닥에서 아랫변까지">'+Math.round(pc.mid.y0)+'</span><button data-i="'+i+'" data-a="h+" style="'+bs+'" title="100mm 올리기">▲</button>'
-        +(pc.mid.manual?' <button data-i="'+i+'" data-a="au" style="'+bs+'">자동</button>':'')+'</div>';
-    }
-    return row;
-  }).join('')+'<div style="color:#78909C;font-size:10px;margin-top:4px;line-height:1.4">미드웨이 = 처음엔 상판 뒷변(앞면이 아닌 변)에 자동으로 세움<br><b style="color:#FFD740">3D에서 조각을 끌어 옮기고, 오른쪽 클릭으로 돌림<br>Shift+미드웨이 끌기 = 위아래로 (바닥·상판 높이에 딱 맞춤)</b><br>높이 ▼▲ = 100mm씩 (숫자 = 바닥에서 아랫변까지)<br>무늬 앞/뒤/양면 = 무늬가 보이는 면 (미드웨이 더블클릭도 됨)<br>전면판·측판 = 하부장 앞·옆에 바닥부터 상판 밑까지 (도면에서 상판 변에 붙여 그리면 그 자리)<br>벽 ◀▶ = 다른 상판 변으로 · 위치 ◀▶ = 변 따라 100mm씩 · 기타 = 3D 안 그림</div>';
+    var key=_3dKey(pc.shape),moved=key.pos3d||key.mid3d||key.midFace!=null;
+    return '<div data-row="'+i+'" style="display:flex;align-items:center;gap:4px;margin:2px 0;padding:1px 3px;border-radius:3px"><span data-pick="'+i+'" style="min-width:78px;color:#ECEFF1;cursor:pointer" title="누르면 3D에서 이 조각 선택">'+(i+1)+'. '+pc.label+'</span>'
+      +T.map(function(t){var on=pc.type===t[0];return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#42A5F5':'#546E7A')+';background:'+(on?'#1565C0':'#263545')+';color:#fff">'+t[1]+'</button>';}).join('')
+      +'<button data-i="'+i+'" data-a="au" style="'+bs+';visibility:'+(moved?'visible':'hidden')+'" title="이 조각만 처음 자리·무늬로">↺</button></div>';
+  }).join('')+'<div style="color:#78909C;font-size:10px;margin-top:5px;line-height:1.5">'
+    +'<b style="color:#FFD740">끌기</b> = 옮기기 (바닥 라인에 놓으면 바닥부터) · <b style="color:#FFD740">Shift+끌기</b> = 위아래<br>'
+    +'<b style="color:#FFD740">오른쪽 클릭</b> = 돌리기·가로/세로 · <b style="color:#FFD740">더블클릭</b> = 무늬 면(앞/뒤/양면)<br>'
+    +'전면판·측판 = 하부장 앞·옆 바닥~상판 밑 · 기타 = 3D 안 그림</div>';
   bindFold();
   // 목록 줄에 마우스 올림 = 3D에서 그 조각 파랑, 번호·이름 누르기 = 선택(주황)
   box.querySelectorAll('[data-row]').forEach(function(rw){var k=_3dKey(sc.pieces[+rw.dataset.row].shape);
@@ -8410,17 +8403,8 @@ function _3dPiecePanel(sc){
   box.querySelectorAll('[data-pick]').forEach(function(sp){sp.onclick=function(){if(!_3d)return;var k=_3dKey(sc.pieces[+sp.dataset.pick].shape);_3d.sel=_3d.sel===k?null:k;_3dRender();};});
   try{_3dLabels();}catch(err){console.error(err);}
   box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
-  box.querySelectorAll('button[data-a]').forEach(function(b){b.onclick=function(){
-    var pc=sc.pieces[+b.dataset.i];if(!pc||!pc.mid)return;var key=_3dKey(pc.shape),m=pc.mid,E=sc.edges,a=b.dataset.a;
-    if(a==='fc'){_3dFlipFace(key);return;}
-    var c={edge:m.edge,off:m.off,swap:m.swap,floor:m.floor,y0:m.y0};
-    if(a==='e-'||a==='e+'){var k=E.indexOf(m.edge);k=(k<0?0:k+(a==='e+'?1:-1)+E.length)%E.length;c.edge=E[k];c.off=0;}
-    else if(a==='p-'||a==='p+')c.off=Math.max(0,m.off+(a==='p+'?100:-100));
-    else if(a==='sw')c.swap=!m.swap;
-    else if(a==='fl'){c.floor=!m.floor;delete c.y0;} // 상판 위 ↔ 바닥부터 = 그 높이에서 다시
-    else if(a==='h-'||a==='h+')c.y0=Math.max(0,Math.round(m.y0)+(a==='h+'?100:-100));
-    if(a==='au')delete key.mid3d;else key.mid3d=c;
-    _3dRebuild(0);
+  box.querySelectorAll('button[data-a="au"]').forEach(function(b){b.onclick=function(){ // ↺ 이 조각만 처음 자리·무늬로
+    var pc=sc.pieces[+b.dataset.i];if(!pc)return;var key=_3dKey(pc.shape);delete key.pos3d;delete key.mid3d;delete key.midFace;_3dRebuild(0);
   };});
 }
 // 미드웨이 무늬 면 돌려 바꾸기: 앞 → 뒤 → 양면 (도형 midFace, 파일에 저장)
@@ -8532,6 +8516,7 @@ function show3D(){
       _3d.prev=null;_3d.dragTo=null;_3dRegeom();_3dPiecePanel(_3d.scene);return;
     }
     if(d.vert){_3dRegeom();_3dPiecePanel(_3d.scene);return;}
+    if(d.top&&d.moved){_3dRegeom();_3dPiecePanel(_3d.scene);return;} // 상판 옮김 → 목록에 ↺
     if(_3d.prev){_3d.prev=null;_3d.dragTo=null;_3dRender();}
     if(d.btn===2&&!d.moved&&d.pk)rotatePiece(d.pk); // 오른쪽 클릭(끌지 않음) = 돌리기
   });
