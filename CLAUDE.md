@@ -8,7 +8,8 @@
 - 앱 설치(PWA): `manifest.webmanifest` + `sw.js`(서비스 워커) + `icons/`. GitHub Pages 주소에서 크롬/엣지 "앱 설치"(툴바 `#btn-install`,
   `beforeinstallprompt` 때만 보임) → 별도 창 앱. sw.js는 앱 파일 "네트워크 먼저"(온라인이면 항상 최신, 오프라인이면 저장본),
   `mall-img/`는 저장본 먼저, 다른 사이트(Firebase 등) 요청은 안 건드림. file://에선 등록 안 함. 브라우저 패널은 서비스 워커 미지원 → 확인은 실제 크롬에서
-  - 아이콘은 Pillow 스크립트로 만든 것(상판·싱크볼·수전·절단선). 바꾸려면 PNG 4개(192/512/maskable-512/apple-touch 180) 교체
+  - 아이콘 = 사용자가 준 로고 PNG(512, 둥근 사각형·ㄱ자 상판·치수·연필, 2026-10-26)를 PowerShell System.Drawing으로 줄인 것. 192/512는 투명 모서리 그대로,
+    apple-touch 180·maskable-512는 네이비 그라데이션 바탕(maskable은 로고 94%). 바꾸려면 PNG 4개 교체. 머리글 로고는 같은 그림의 SVG(index.html 안)
 - 패치 노트: `patch-notes.js`(`window._PATCH_NOTES`, 맨 위가 최신 `{v:'날짜', groups:[{t,items}]}`). 앱을 열 때 안 본 버전이 있으면 팝업
   (`showPatchNotes`, 본 버전 `scd_patch_seen`), 도구줄 "📢 새 소식"으로 전체 보기. **사용자에게 보이는 변경을 올릴 때 맨 위에 새 버전 추가**
 - 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(index.html 열기만). 제품 목록은 윤현몰(`mall-catalog.js`)만 씀 — 엑셀 목록 기능은 없앰
