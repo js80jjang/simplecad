@@ -8147,7 +8147,7 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   // 볼록한 루프(싱크볼·쿡탑 사각형)를 높이 y의 면으로 (부채꼴 삼각형)
   function fan(a,L,y,ny){var c=[0,0];L.forEach(function(q){c[0]+=q[0]/L.length;c[1]+=q[1]/L.length;});for(var i=0;i<L.length;i++){var p=L[i],q=L[(i+1)%L.length];v(a,c[0],y,c[1],0,ny,0,0,0);v(a,p[0],y,p[1],0,ny,0,0,0);v(a,q[0],y,q[1],0,ny,0,0,0);}}
   var marks=shapes.filter(function(m){return (m.kind==='grindregion'||m.kind==='gosramark')&&!m.groupId;});
-  var backs=[],allEdges=[],topY=furn?_3D_H:12,midDraw=[],midInfo=[]; // backs: 상판 뒷변(앞면이 아닌 변) — 미드웨이 자동 자리, allEdges: 손으로 고를 수 있는 모든 상판 변
+  var backs=[],allEdges=[],topY=_3D_H,midDraw=[],midInfo=[]; // backs: 상판 뒷변(앞면이 아닌 변) — 미드웨이 자동 자리, allEdges: 손으로 고를 수 있는 모든 상판 변
   function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
   function texOf(c){var t=_3dGLC.tex.get(c);if(t)return t;t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
     [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(function(w){gl.texParameteri(gl.TEXTURE_2D,w,gl.CLAMP_TO_EDGE);});
@@ -8165,7 +8165,7 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   }
   scene.pieces.forEach(function(pc){
     if(pc.type!=='top')return; // 미드웨이는 아래에서 상판 뒷변에 세움, 기타는 안 그림
-    var bb=pc.bb,th=pc.th,top=[],side=[],line=[],y0=furn?_3D_H-th:0,y1=y0+th; // 가구를 보이면 상판 윗면 = 900
+    var bb=pc.bb,th=pc.th,top=[],side=[],line=[],y0=_3D_H-th,y1=y0+th; // 상판 윗면 = 900 (하부장을 꺼도 그 높이 — 전면판·측판·미드웨이가 그대로 보이게)
     // 3D에서 옮기거나 돌린 자리(pos3d: dx, dz mm, rot = 90°×n, 조각 가운데 기준) — 도면(2D)은 그대로
     var key=_3dKey(pc.shape),ps=key.pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cxp=(bb.l+bb.r)/2,czp=(bb.t+bb.b)/2;
     function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+(ps.dx||0),czp+x*si+z*co+(ps.dz||0)];}
@@ -8290,7 +8290,7 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   // 상부장(머리줄 "상부장" 체크, 하부장을 켰을 때만): 미드웨이 위에 같은 폭으로 · 미드웨이가 없으면 상판마다 가장 긴 벽 쪽 변(앞면 아님·다른 상판과 안 맞붙음·600 이상)에 상판 윗면 + 600
   //   깊이 350(벽에서 상판 쪽으로), 높이 700, 민자 도어 약 500씩 (하부장과 같은 색)
   var upOn=false; // 상부장을 하나라도 그렸으면 시점을 그 높이까지
-  if(furn&&upper){
+  if(upper){
     var spans=upSpans.slice();upOn=spans.length>0;
     if(!spans.length){var byTop={};backs.forEach(function(b){if(b.joint||b.len<600)return;var t=b.id.split(':')[0];if(!byTop[t]||b.len>byTop[t].len)byTop[t]=b;});
       Object.keys(byTop).forEach(function(t){var b=byTop[t];spans.push({A:b.a,B:[b.a[0]+b.ux*b.len,b.a[1]+b.uz*b.len],nx:b.nx,nz:b.nz,y:b.y+_3D_UPGAP});});}
@@ -8311,10 +8311,10 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   }
   scene.edges=allEdges.map(function(x){return x.id;});
   if(!draws.length&&!midDraw.length)return null;
-  var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500,furn?(upOn?2300:_3D_H*1.4):0),G=size*2.2; // 상부장이 있으면 높이까지 보이게
+  var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500,upOn?2300:_3D_H*1.4),G=size*2.2; // 상부장이 있으면 높이까지 보이게
   var ground=buf([cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz+G,0,1,0,0,0]);
-  var fb=null;if(furn&&(furnDraw.body.length||furnDraw.sink.length||furnDraw.cook.length))fb={body:buf(furnDraw.body),kick:buf(furnDraw.kick),door:buf(furnDraw.door),gap:buf(furnDraw.gap),sink:buf(furnDraw.sink),cook:buf(furnDraw.cook)};
-  return{gl:gl,A:A,U:U,draws:draws,mids:midDraw,midInfo:midInfo,tops:tops,edges:allEdges,topY:topY,buf:buf,bufs:bufs,ground:ground,furn:fb,center:[cx,furn?(upOn?(_3D_H+_3D_UPGAP+_3D_UPH)*0.45:_3D_H*0.5):6,cz],size:size};
+  var fb=null;if((furnDraw.body.length||furnDraw.sink.length||furnDraw.cook.length))fb={body:buf(furnDraw.body),kick:buf(furnDraw.kick),door:buf(furnDraw.door),gap:buf(furnDraw.gap),sink:buf(furnDraw.sink),cook:buf(furnDraw.cook)};
+  return{gl:gl,A:A,U:U,draws:draws,mids:midDraw,midInfo:midInfo,tops:tops,edges:allEdges,topY:topY,buf:buf,bufs:bufs,ground:ground,furn:fb,center:[cx,upOn?(_3D_H+_3D_UPGAP+_3D_UPH)*0.45:_3D_H*0.5,cz],size:size};
 }
 function _3dRender(){
   var st=_3d;if(!st||!st.r)return;var R=st.r,gl=R.gl,cv=st.cv,cam=st.cam;
