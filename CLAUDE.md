@@ -174,6 +174,8 @@
   = 버퍼만 다시(텍스처·GL 프로그램은 `_3dGLC`에 캐시), 미드웨이는 미리보기 → 놓을 때 `mid3d`), 빈 곳 = 돌리기, 오른쪽/가운데/Shift 끌기 = 옮기기,
   기준선 `_3d.guide`(선 정점 배열, 끄는 동안만, mouseup에서 지움): `_3dSnap`이 맞춘 꼭짓점 쌍을 잇는 선(높이 다르면 세로로 이음), Shift 위아래는 900·바닥·다른 상판 윗면에 맞추고 `_3dHGuide`(그 높이 수평 테두리)
   → `_3dLabels`가 `#v3d-labels` 위 SVG 분홍 점선으로 그림(WebGL 선은 1px라 안 씀),
+  되돌리기(`_3dUndo`, Ctrl+Z는 3D `onKey` capture에서, 머리줄 `#v3d-undo`): 편집 화면과 같은 `_hist` — 끌기는 mousedown `drag.snap`(`_3dHistSnap`)을 바뀌었을 때 mouseup에서 기록,
+  돌리기·무늬 면·조각 구분·↺·처음 배치로는 `saveHistory()` 먼저. 창 열 때 `_3d.histBase`까지만 되돌림, undo 뒤 `_3dRebuild`(도형 객체가 바뀜)
   오른쪽 클릭(안 움직임) = 상판 rot+1 / 미드웨이 swap, R 키 = 선택 조각 돌리기, 올림 `_3d.hover` 파랑·선택 주황 외곽선. "↺ 처음 배치로" = `_3dResetLayout`(pos3d·mid3d 지움)
   조각 번호표 `_3dLabels`(`_3dRender` 끝마다): `#v3d-labels`(캔버스 위 HTML, 이미지 저장엔 안 들어감)에 목록 번호(scene.pieces 순서) — 상판 윗면 안쪽 점·미드웨이/판 상자 가운데, 올림 파랑·선택 주황.
   목록 줄 `data-row` 올림 → `_3d.hover`, 번호·이름 `data-pick` 누르면 `_3d.sel`, 3D 올림·선택이면 목록 줄 배경 강조

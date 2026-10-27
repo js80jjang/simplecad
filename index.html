@@ -5695,7 +5695,7 @@ document.addEventListener('keydown',function(e){
     if(_lineKey(e)){e.preventDefault();e.stopPropagation();return;}
   }
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
-  if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();drawStart=null;selBox=null;undo();return;}
+  if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();if(_3d){_3dUndo();return;}drawStart=null;selBox=null;undo();return;} // 3D 창이 열려 있으면 3D 되돌리기
   if((e.ctrlKey||e.metaKey)&&e.code==='KeyS'){e.preventDefault();if(e.shiftKey)saveProjectAs();else saveProject();return;} // Ctrl+S 저장 / Ctrl+Shift+S 다른 이름으로
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key==='c'||e.key==='C')&&selectedShapes.length){
     e.preventDefault();
@@ -8714,8 +8714,16 @@ function _3dHGuide(me,y,other){
   return L;
 }
 // 처음 배치로: 3D에서 옮긴 상판·미드웨이 자리를 모두 지움 (도면 그대로)
+// 3D 되돌리기 (Ctrl+Z, 머리줄 ↶): 편집 화면과 같은 기록(_hist)을 씀 — 3D에서 바꾼 것(자리·높이·돌리기·무늬 면·조각 구분)도 바꾸기 전에 기록
+function _3dHistSnap(){return JSON.stringify(shapes.map(function(s){return Object.assign({},s);}));}
+function _3dUndo(){
+  // 3D 창을 연 뒤 바꾼 것만 (그 전 편집은 창을 닫고 되돌리기)
+  if(!_3d)return;if(_hist.length<=(_3d.histBase||0)){if(_3d.msg){_3d.msg.textContent='더 되돌릴 것이 없습니다.';setTimeout(function(){if(_3d&&_3d.msg&&_3d.msg.textContent==='더 되돌릴 것이 없습니다.')_3d.msg.textContent='';},1500);}return;}
+  undo();_3d.sel=null;_3d.hover=null;_3dRebuild(0); // undo가 도형을 새 객체로 바꾸므로 장면을 다시 만듦
+}
 function _3dResetLayout(){
   if(!_3d||!_3d.scene)return;
+  saveHistory();
   _3d.scene.pieces.forEach(function(pc){var k=_3dKey(pc.shape);delete k.pos3d;delete k.mid3d;});
   _3d.sel=null;_3dRebuild(0);
 }
@@ -8748,15 +8756,15 @@ function _3dPiecePanel(sc){
     rw.onmouseleave=function(){if(_3d&&_3d.hover===k){_3d.hover=null;_3dRender();}};});
   box.querySelectorAll('[data-pick]').forEach(function(sp){sp.onclick=function(){if(!_3d)return;var k=_3dKey(sc.pieces[+sp.dataset.pick].shape);_3d.sel=_3d.sel===k?null:k;_3dRender();};});
   try{_3dLabels();}catch(err){console.error(err);}
-  box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
+  box.querySelectorAll('button[data-t]').forEach(function(b){b.onclick=function(){var pc=sc.pieces[+b.dataset.i];if(!pc)return;saveHistory();_3dSetType(pc.shape,b.dataset.t);_3dRebuild(0);};});
   box.querySelectorAll('button[data-a="au"]').forEach(function(b){b.onclick=function(){ // ↺ 이 조각만 처음 자리·무늬로
-    var pc=sc.pieces[+b.dataset.i];if(!pc)return;var key=_3dKey(pc.shape);delete key.pos3d;delete key.mid3d;delete key.midFace;_3dRebuild(0);
+    var pc=sc.pieces[+b.dataset.i];if(!pc)return;saveHistory();var key=_3dKey(pc.shape);delete key.pos3d;delete key.mid3d;delete key.midFace;_3dRebuild(0);
   };});
 }
 // 미드웨이 무늬 면 돌려 바꾸기: 앞 → 뒤 → 양면 (도형 midFace, 파일에 저장)
 var _3D_FACES=['무늬 앞','무늬 뒤','무늬 양면'];
 function _3dFlipFace(key){
-  if(!_3d)return;var f=(_3dFaceOf(key)+1)%3;key.midFace=f; // 판은 기본이 1(바깥)이라 0도 그대로 저장
+  if(!_3d)return;saveHistory();var f=(_3dFaceOf(key)+1)%3;key.midFace=f; // 판은 기본이 1(바깥)이라 0도 그대로 저장
   _3d.sel=key;_3dRegeom();_3dPiecePanel(_3d.scene);
   _3d.msg.textContent=_3D_FACES[f]+' (미드웨이 더블클릭으로 바꿈)';
 }
@@ -8778,6 +8786,7 @@ function show3D(){
     +'<button style="'+bs+'" data-mode="top">상판만</button><button style="'+bs+'" data-mode="mid">상판+미드웨이</button><span style="width:6px"></span>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn" checked> 하부장 (높이 900)</label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper" checked> 상부장</label>'
+    +'<button style="'+bs+'" id="v3d-undo" title="되돌리기 (Ctrl+Z)">↶ 되돌리기</button>'
     +'<button style="'+bs+'" id="v3d-reset" title="3D에서 옮기고 돌린 상판·미드웨이를 도면 자리로">↺ 처음 배치로</button>'
     +'<button style="'+bs+'" data-v="iso">비스듬히</button><button style="'+bs+'" data-v="top">위에서</button><button style="'+bs+'" data-v="front">앞에서</button>'
     +'<button id="v3d-save" style="'+bs.replace('#121D33','#1F3F7A')+'">💾 이미지 저장</button><button id="v3d-close" style="'+bs+'">✕ 닫기</button></div>'
@@ -8795,6 +8804,8 @@ function show3D(){
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
   document.getElementById('v3d-close').onclick=close3D;
   document.getElementById('v3d-reset').onclick=_3dResetLayout;
+  document.getElementById('v3d-undo').onclick=_3dUndo;
+  _3d.histBase=_hist.length; // 되돌리기는 여기까지
   document.getElementById('v3d-save').onclick=save3DImage;
   // 마우스 (최대한 클릭·끌기로):
   //   조각 위 왼쪽 누르기 = 선택 + 끌기 (상판 = 바닥에서 자유롭게, 이웃 상판 꼭짓점에 가로·세로로 맞춤 / 미드웨이 = 가장 가까운 상판 변 따라)
@@ -8803,6 +8814,7 @@ function show3D(){
   function regeomSoon(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;_3dRegeom();});}
   function panBy(dx,dy){var c=_3d.cam,k=c.d/600,sy=Math.sin(c.yaw),cy=Math.cos(c.yaw);c.t[0]-=(cy*dx-sy*dy*Math.sin(c.pitch))*k;c.t[2]-=(-sy*dx-cy*dy*Math.sin(c.pitch))*k;c.t[1]+=dy*Math.cos(c.pitch)*k;}
   function rotatePiece(pk){ // 오른쪽 클릭 돌리기
+    saveHistory();
     if(pk.kind==='top'){var p=pk.key.pos3d||{};pk.key.pos3d={dx:p.dx||0,dz:p.dz||0,rot:((p.rot||0)+1)%4,dy:p.dy||0};}
     else{var pc=_3d.scene.pieces.filter(function(q){return _3dKey(q.shape)===pk.key;})[0],md=pc&&pc.mid;if(!md)return;pk.key.mid3d={edge:md.edge,off:md.off,swap:!md.swap,floor:md.floor,y0:md.y0};}
     _3d.sel=pk.key;_3dRegeom();_3dPiecePanel(_3d.scene);
@@ -8810,7 +8822,7 @@ function show3D(){
   cv.addEventListener('contextmenu',function(e){e.preventDefault();});
   cv.addEventListener('mousedown',function(e){
     var ray=_3dRay(e.clientX,e.clientY),pk=_3dPick(ray);
-    drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,btn:e.button,pk:pk,moved:false};
+    drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,btn:e.button,pk:pk,moved:false,snap:pk?_3dHistSnap():null};
     if(e.button===0&&e.shiftKey&&pk&&pk.kind==='mid'){ // Shift+끌기 = 미드웨이 위아래로 (화면을 향한 세로 평면에서 높이 차이)
       var pcm=_3d.scene.pieces.filter(function(q){return _3dKey(q.shape)===pk.key;})[0],mm=pk.m,N=[ray.d[0],ray.d[2]],nl=Math.hypot(N[0],N[1]);
       if(pcm&&pcm.mid&&pcm.mid.edge&&nl>1e-6){
@@ -8884,6 +8896,8 @@ function show3D(){
   });
   window.addEventListener('mouseup',_3d.onUp=function(e){
     var d=drag;drag=null;if(!_3d)return;_3d.cv.style.cursor='grab';if(!d)return;
+    // 되돌리기: 누를 때 찍어 둔 상태를, 실제로 옮겼으면 기록 (Ctrl+Z = _3dUndo)
+    if(d.snap&&((d.mid&&_3d.dragTo)||d.vert||d.vertTop||(d.top&&d.moved))&&d.snap!==_3dHistSnap()){_hist.push(d.snap);if(_hist.length>50)_hist.shift();}
     if(_3d.guide){_3d.guide=null;if(!(d.top&&d.moved)&&!d.vertTop)_3dRender();} // 기준선은 끄는 동안만
     if(d.mid&&_3d.dragTo){ // 미드웨이 놓은 자리 저장
       var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:d.mid.swap,floor:!!tg.floor};
@@ -8904,7 +8918,8 @@ function show3D(){
     if(pk&&pk.kind==='mid'){_3dFlipFace(pk.key);return;}
     if(!pk)_3dSetView('iso');
   });
-  document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close3D();}},true);
+  document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close3D();}
+    else if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){e.stopPropagation();e.preventDefault();_3dUndo();}},true); // Ctrl+Z = 3D 되돌리기
   window.addEventListener('resize',_3d.onResize=_3dResize);
   var r=cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;cv.width=Math.max(10,Math.round(r.width*dp));cv.height=Math.max(10,Math.round(r.height*dp));
   _3dRebuild(0);
