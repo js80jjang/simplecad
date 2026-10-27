@@ -54,7 +54,9 @@
 ## 코드 구조 (index.html 안 주요 함수)
 - 상태: `shapes`(도형 배열), `nextId`, `products`, 단가 입력칸(`su-/du-/ru-/cu-/xt-` + `TIER_KEYS`)
 - 제품: 작업 정보 줄에 제품마다 한 줄씩 아래로(`renderProductList`, 마지막 줄 "+ 제품"). 제품 색 = 순서대로 `_prodColor(i)`(`_PCOLS`)
-  - **도형마다 제품**(`s.label`=제품 이름, 안 정하면 첫 제품 — `_shapeProdIdx`/`_itemProd`): 도형 선택 → 제품 줄 앞 ●(`assignProduct`).
+  - 제품 구분 이름 `_prodNames()` = 제품명, 같은 이름이 둘 이상이면 "제품명 (사이즈)"(사이즈도 같으면 ` #번호`). 구분 이름이 바뀌면(이름·사이즈 수정, 제품 추가·삭제)
+    `_prodKeyWas`(WeakMap)로 알아채 도형 `s.label`·저장 배치 `boardProds`를 옮김. 이름으로 제품 찾기는 `_prodIdxOf/_prodOf`(예전 파일의 제품명도 첫 같은 이름으로)
+  - **도형마다 제품**(`s.label`=제품 구분 이름, 안 정하면 첫 제품 — `_shapeProdIdx`/`_itemProd`): 도형 선택 → 제품 줄 앞 ●(`assignProduct`).
     그룹(싱크볼 등)·이어진 선 조각 전체가 같이 바뀜, 지정하면 저장된 온장 배치는 초기화. 제품 이름 바꾸면 도형도 따라감(`_setProdName`), 제품 빼면 첫 제품으로
   - 편집 화면: 제품 2개 이상이면 조각을 제품 색으로 옅게 + 왼쪽 아래 제품명(`_drawProdTints`), ●에 마우스 올리면 그 제품만 진하게(`_hoverProd`). 도형 속성창의 제품 선택은 없앰
   - 온장 배치: 제품별로 장을 따로(`_packBoardItems` 그룹 = `_itemProd`), 장 머리글 `_boardTitle`="온장 N · 제품명", 온장 사진도 그 제품(`_boardLabel`).

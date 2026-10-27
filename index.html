@@ -628,7 +628,7 @@ function _mallIdFor(name,size){
 }
 // 제품 이름(배치 그룹 이름) → 불러온 Image, 아직 없으면 null (불러오기 시작, 다 되면 온장 배치 창 다시 그림)
 function _slabImgFor(label){
-  var p=products.filter(function(q){return (q.name||'').trim()&&(q.name||'').trim()===label;})[0]||products[0];
+  var p=_prodOf(label)||products[0];
   var id=p&&p.name?_mallIdFor(p.name,p.size):null;if(!id)return null;
   if(_slabImgs[id])return _slabImgs[id].img||null;
   var ent=_slabImgs[id]={},sc=document.createElement('script');
@@ -642,15 +642,15 @@ function _slabImgFor(label){
 }
 // 장 하나의 제품 이름: 그 장 조각들의 제품(도형에 정한 제품, _itemProd) → 배치 때 정한 board.prod → 첫 제품
 function _boardLabel(board){
-  var names=products.map(function(p){return (p.name||'').trim();}).filter(Boolean);
+  var names=_prodNames().filter(Boolean);
   for(var i=0;i<board.length;i++){var sh=board[i].item&&board[i].item.shape;if(sh)return _itemProd(sh);}
-  if(board.prod&&names.indexOf(board.prod)>=0)return board.prod;
+  if(board.prod){var j=_prodIdxOf(board.prod);if(j>=0)return _prodNames()[j];}
   return names[0]||'';
 }
 // 제품의 온장 크기(mm, 긴 쪽이 가로): 제품 사이즈 칸(예: 1600×3200×12T)에서, 없으면 도구줄 온장 칸
 //   제품마다 사이즈가 다르면 장마다 크기가 다름 → board.bw/bh (_boardDims)
 function _prodBoardSize(name){
-  var p=products.filter(function(q){return (q.name||'').trim()===name;})[0];
+  var p=_prodOf(name);
   var m=p&&/(\d{3,4})\s*[x×X*]\s*(\d{3,4})/.exec(p.size||'');
   if(m){var a=+m[1],b=+m[2];return{bw:Math.max(a,b),bh:Math.min(a,b)};}
   return{bw:parseFloat((document.getElementById('board-w')||{}).value)||3200,bh:parseFloat((document.getElementById('board-h')||{}).value)||1600};
@@ -724,18 +724,43 @@ function _selectCatalogItem(i,name,size){
 // 도형마다 s.label = 제품 이름. 안 정한 도형(또는 없는 제품 이름)은 첫 제품. 지정: 도형 선택 → 제품 줄 앞 ● 누름(assignProduct)
 // 제품 색은 제품 순서대로(같은 색 겹치지 않게): 편집 화면 도형 칠·● 색이 같음
 var _prodPopOpen=false,_hoverProd=-1;
-function _prodNames(){return products.map(function(p){return (p.name||'').trim();});}
+// 제품 구분 이름(s.label·장 제품): 보통 제품명, 같은 이름이 둘 이상이면 "제품명 (사이즈)" (사이즈도 같으면 뒤에 #번호)
+//   제품명·사이즈를 고치거나 제품을 넣고 빼서 구분 이름이 바뀌면 그 제품으로 정한 도형·저장 배치도 따라감 (_prodKeyWas = 지난번 구분 이름)
+var _prodKeyWas=new WeakMap();
+function _prodNames(){
+  var nm=products.map(function(p){return (p.name||'').trim();});
+  var keys=nm.map(function(n,i){
+    if(!n||!nm.some(function(m,j){return j!==i&&m===n;}))return n;
+    return n+' ('+((products[i].size||'').trim()||(i+1))+')';
+  });
+  keys=keys.map(function(k,i){return k&&keys.indexOf(k)!==i?k+' #'+(i+1):k;});
+  var map=null;
+  products.forEach(function(p,i){var was=_prodKeyWas.get(p);if(was&&was!==keys[i]){map=map||{};map[was]=keys[i];}_prodKeyWas.set(p,keys[i]);});
+  if(map){
+    shapes.forEach(function(s){if(s.label&&map.hasOwnProperty(s.label)){if(map[s.label])s.label=map[s.label];else delete s.label;}});
+    if(_savedBoardLayout&&_savedBoardLayout.boardProds)_savedBoardLayout.boardProds=_savedBoardLayout.boardProds.map(function(b){return map.hasOwnProperty(b)?map[b]:b;});
+  }
+  return keys;
+}
+// 구분 이름(또는 예전 파일의 제품명) → 제품 번호, 없으면 -1
+function _prodIdxOf(label){
+  if(!label)return -1;
+  var k=_prodNames(),i=k.indexOf(label);if(i>=0)return i;
+  for(var j=0;j<products.length;j++)if((products[j].name||'').trim()===label)return j;
+  return -1;
+}
+function _prodOf(label){var i=_prodIdxOf(label);return i>=0?products[i]:null;}
 var _PCOLS=['#1F3F7A','#2E7D32','#6A1B9A','#D84315','#00838F','#AD1457','#4527A0','#827717'];
 function _prodColor(i){return _PCOLS[i%_PCOLS.length];}
-function _shapeProdIdx(s){var n=_prodNames(),i=s&&s.label?n.indexOf(s.label):-1;if(i>=0)return i;for(var k=0;k<n.length;k++)if(n[k])return k;return 0;}
+function _shapeProdIdx(s){var n=_prodNames(),i=s?_prodIdxOf(s.label):-1;if(i>=0)return i;for(var k=0;k<n.length;k++)if(n[k])return k;return 0;}
 // 온장 배치 조각(it.shape: rect/circle/ellipse/linegroup)의 제품 이름
 function _itemProd(sh){
   var n=_prodNames();
-  if(sh.kind==='linegroup'){for(var i=0;i<sh.lines.length;i++){var l=sh.lines[i].label;if(l&&n.indexOf(l)>=0)return l;}return n[_shapeProdIdx(null)]||'';}
+  if(sh.kind==='linegroup'){for(var i=0;i<sh.lines.length;i++){var j=_prodIdxOf(sh.lines[i].label);if(j>=0)return n[j];}return n[_shapeProdIdx(null)]||'';}
   return n[_shapeProdIdx(sh)]||'';
 }
 function assignProduct(i){
-  var name=(products[i].name||'').trim();
+  var name=_prodNames()[i];
   if(!name){alert('이 줄에 제품명을 먼저 넣어 주세요.');return;}
   if(!selectedShapes.length){alert('제품을 정할 도형을 먼저 선택하세요.\n(클릭 · Ctrl+클릭 · 드래그 · Ctrl+드래그로 여러 개)\n그다음 이 제품 앞의 ● 을 누르면 지정됩니다.');return;}
   saveHistory();
@@ -750,12 +775,11 @@ function assignProduct(i){
   _savedBoardLayout=null;_savedBoardImg=null; // 제품이 바뀌면 온장 배치는 새로
   redraw();calcCost();
 }
-// 제품 이름을 고치면 그 제품으로 정한 도형도 따라감
+// 제품 이름을 고치면 그 제품으로 정한 도형도 따라감 (_prodNames가 구분 이름 바뀐 것을 옮김)
 function _setProdName(i,v){
-  var old=(products[i].name||'').trim(),nv=(v||'').trim();
-  if(old&&old!==nv)shapes.forEach(function(s){if(s.label===old){if(nv)s.label=nv;else delete s.label;}});
-  if(old&&old!==nv&&_savedBoardLayout&&_savedBoardLayout.boardProds)_savedBoardLayout.boardProds=_savedBoardLayout.boardProds.map(function(b){return b===old?nv:b;});
+  _prodNames();
   products[i].name=v;
+  _prodNames();
 }
 // 작업 정보 줄의 제품 한 줄 (제품마다 한 줄씩 아래로, renderProductList)
 function _prodRow(i){
@@ -773,7 +797,7 @@ function _prodRow(i){
   }
   // 제품명 바로 옆 ✕: 제품이 여러 개면 그 줄 빼기, 하나뿐이면 제품명·사이즈 비우기
   if(products.length>1||p.name||p.size)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="'+(products.length>1?'이 제품 빼기':'제품명·사이즈 지우기')+'">✕</button>';
-  h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="products['+i+'].size=this.value">';
+  h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="_prodNames();products['+i+'].size=this.value;_prodNames();redraw()">';
   h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="온장 배치 장수 (도형에 따라 자동)">';
   h+='<input type="text" id="pq-'+i+'" value="'+(p.qty||0)+'" readonly tabindex="-1" style="width:34px;border-radius:2px!important;cursor:default"><span class="wb-lbl" style="margin-left:3px">장</span></span>';
   return h+'</div>';
@@ -808,7 +832,7 @@ function addProduct(){
   var rows=document.querySelectorAll('#product-list .wb-prod');if(rows.length){var inp=rows[rows.length-1].querySelector('input[type=text]');if(inp)inp.focus();} // 새 제품 이름 칸으로
 }
 function removeProduct(i){
-  var gone=(products[i].name||'').trim();
+  var gone=_prodNames()[i];
   if(products.length<=1)products[0]={name:'',size:'',qty:products[0].qty||0}; // 하나뿐이면 비우기
   else products.splice(i,1);
   if(gone&&_prodNames().indexOf(gone)<0){shapes.forEach(function(s){if(s.label===gone)delete s.label;});_savedBoardLayout=null;_savedBoardImg=null;} // 그 제품 도형은 첫 제품으로
@@ -5595,9 +5619,9 @@ function _updateBoardQty(){
     else{var pk=_packBoardItems(items,bw-20,bh-20,3);boards=pk.boards;groups=pk.groups;}
   }
   products.forEach(function(p){p.qty=0;});
-  function add(label,n){var i=-1;products.forEach(function(p,k){if(i<0&&(p.name||'').trim()&&(p.name||'').trim()===label)i=k;});products[Math.max(0,i)].qty+=n;}
+  function add(label,n){var i=_prodIdxOf(label);products[Math.max(0,i)].qty+=n;}
   boards.forEach(function(b){if(b&&b.length)add(_boardLabel(b),1);}); // 장마다 고른 제품별로 셈
-  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor((p.name||'').trim());}); // 온장 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
+  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor(_prodNames()[i]);}); // 온장 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
 }
 function deleteSelected(){
   if(!selectedShapes.length)return;
@@ -7932,7 +7956,7 @@ function exportDrawingA4(){
   var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
     var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
     if(id)((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).forEach(function(c){if(c.id===id)cat=c;});
-    if(id)_slabImgFor(nm); // 아직 안 불러왔으면 지금 불러오기 시작
+    if(id)_slabImgFor(_prodNames()[products.indexOf(p)]); // 아직 안 불러왔으면 지금 불러오기 시작
     return{i:i,name:nm,size:p.size||(cat&&cat.size)||'',en:cat&&cat.en||'',qty:p.qty,id:id};
   });
   // 제품마다 한 쪽씩 (사진을 크게): 제품이 여러 개면 "사용 제품 1/3"처럼
@@ -7982,7 +8006,7 @@ document.addEventListener('keydown',function(e){
 // 좌표: X = 도면 x, Z = 도면 y(아래가 +), Y = 위. 단위 mm
 var _3d=null;
 function _3dThick(shape){
-  var nm=_itemProd(shape),p=(products||[]).filter(function(q){return (q.name||'').trim()===nm;})[0]||products[0];
+  var nm=_itemProd(shape),p=_prodOf(nm)||products[0];
   var m=p&&/(\d+(?:\.\d+)?)\s*T/i.exec(p.size||'');return m?+m[1]:12;
 }
 function _3dPoly(cx,cy,rx,ry,n){var o=[];for(var i=0;i<n;i++){var a=i/n*2*Math.PI;o.push([cx+rx*Math.cos(a),cy+ry*Math.sin(a)]);}return o;}
