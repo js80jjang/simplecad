@@ -150,6 +150,9 @@
   머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`).
   조각 구분 목록은 한 줄씩(번호·크기·종류 버튼 + 옮겼으면 ↺ = 그 조각 pos3d·mid3d·midFace 지움)만 — 자리·방향·높이·무늬 조절은 모두 3D 마우스(목록 조절 버튼은 없앰)
   미드웨이 자리 손으로: 도형(`_3dKey`) `mid3d={edge:'상판도형id:변번호', off:mm, swap}` (끌기로 정함, `scene.edges` = 모든 상판 변). 장면이 지금 자리를 `pc.mid`로 돌려줌.
+  판 면에 붙이기(2026-10-27): 그린 판·미드웨이마다 평면 네 변을 `allEdges`에 `{id:'p도형id:i', pan:true, y:그 판 아랫변, n:판 바깥}`으로 넣음 → edge가 'p…'면 그 판 다음에 그림(`_3dPanelOrder`),
+  자동 자리·`_3dMidContact`에는 안 씀. off는 변 밖으로 넘어도 됨(끝 min(20,len/2,Lm/2)만 걸치면). 끌기 자석 `_3dMagnet`(변 끝·상판 꼭짓점·다른 판 모서리 `midInfo.c`, 변에서 1500 안) + 기준선,
+  Shift 위아래(drag.vert)도 바닥·상판 윗/밑면·다른 판 yA/yB에 맞춤
   끌기: mousedown에서 `_3dRay`(화면 → 광선, `_m4Inv`·`_3d.M`) + `_3dPickMid`(미드웨이 상자 `R.midInfo`) → 끄는 동안 `_3dDragTarget`(상판 윗면 평면 교점 → 가장 가까운 상판 변, 커서 가운데)
   노란 테두리 미리보기(`_3d.prev`, `_3dMidBox`) → 놓으면 `mid3d` 저장 후 `_3dRebuild`
   미드웨이 자동 자리(mid3d 없을 때): `_3dMidContact` = 도면에서 상판 변(`ed.o` = 옮기기 전 자리) 바깥쪽에 붙은 미드웨이 변 중 가장 길게 겹친 것 → 그 변·위치(s0),

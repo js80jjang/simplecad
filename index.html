@@ -8258,13 +8258,47 @@ function _3dDragTarget(m,ray){
   var st=_3d;if(!st||!st.r||!ray||Math.abs(ray.d[1])<1e-6)return null;
   var t=(st.r.topY-ray.o[1])/ray.d[1];if(t<0)return null;
   // 상판 윗면 높이와 바닥(0) 두 평면에서 각각 가장 가까운 변 → 상판 위를 가리키거나 윗면 쪽 변이 더 가까우면 상판 위, 아니면 바닥 라인부터
+  var own='p'+_3dKey(m.shape).id+':'; // 끌고 있는 판 자기 면은 제외
   function near(y){var P=_3dPlane(ray,y);if(!P)return null;var best=null,bd=Infinity;
-    st.r.edges.forEach(function(e){var b=[e.a[0]+e.ux*e.len,e.a[1]+e.uz*e.len],d=ptLD(P[0],P[1],e.a[0],e.a[1],b[0],b[1]);if(d<bd){bd=d;best=e;}});
+    st.r.edges.forEach(function(e){if(e.id&&e.id.indexOf(own)===0)return;var b=[e.a[0]+e.ux*e.len,e.a[1]+e.uz*e.len],d=ptLD(P[0],P[1],e.a[0],e.a[1],b[0],b[1]);if(d<bd){bd=d;best=e;}});
     return best&&{e:best,d:bd,P:P};}
   var T=near(st.r.topY),F=st.r.topY>50?near(0):null,onTop=T&&st.r.tops.some(function(tp){return _3dInside(tp.loops,T.P[0],T.P[1]);});
   var h=(!F||onTop||(T&&T.d<=F.d))?T:F;if(!h)return null;
-  var e=h.e,s=(h.P[0]-e.a[0])*e.ux+(h.P[1]-e.a[1])*e.uz,s0=Math.max(0,Math.min(s-m.Lm/2,e.len-m.Lm));
-  return{e:e,s0:s0,floor:h===F};
+  // 변보다 긴 판·변 끝을 넘는 자리도 됨(끝 20은 걸쳐 있게) → 자석 맞춤
+  var e=h.e,s=(h.P[0]-e.a[0])*e.ux+(h.P[1]-e.a[1])*e.uz,ov=Math.min(20,e.len/2,m.Lm/2),s0=Math.max(ov-m.Lm,Math.min(s-m.Lm/2,e.len-ov));
+  var mg=_3dMagnet(e,s0,m);
+  return{e:e,s0:mg.s0,floor:h===F&&!e.pan,guide:mg.guide};
+}
+// 판 끌기 자석: 놓을 변 방향으로 판의 시작·끝이 변 끝·다른 상판 꼭짓점·다른 판 모서리와 같은 자리면 딱 맞춤 (변에서 1500 안쪽 것만)
+//   → {s0, guide(기준선 — _3dLabels가 분홍 점선으로)}
+function _3dMagnet(e,s0,m){
+  var st=_3d,tol=Math.max(20,st.cam.d/60),pts=[[e.a[0],e.y,e.a[1]],[e.a[0]+e.ux*e.len,e.y,e.a[1]+e.uz*e.len]];
+  st.r.tops.forEach(function(tp){tp.loops.outer.forEach(function(p){pts.push([p[0],tp.y,p[1]]);});});
+  st.r.midInfo.forEach(function(mi){if(mi.shape===m.shape||!mi.c)return;mi.c.forEach(function(p){pts.push([p[0],mi.yA,p[1]]);});});
+  var best=null;
+  pts.forEach(function(p){
+    var dx=p[0]-e.a[0],dz=p[2]-e.a[1];if(Math.abs(dx*e.nx+dz*e.nz)>1500)return;
+    var sp=dx*e.ux+dz*e.uz;
+    [[sp,sp],[sp-m.Lm,sp]].forEach(function(c){var d=Math.abs(c[0]-s0);if(d<tol&&(!best||d<best.d))best={d:d,s0:c[0],at:c[1],p:p};});
+  });
+  if(!best)return{s0:s0,guide:null};
+  var q=[e.a[0]+e.ux*best.at,e.y,e.a[1]+e.uz*best.at],p=best.p,L=[];
+  function seg(a,b){L.push(a[0],a[1],a[2],0,1,0,0,0,b[0],b[1],b[2],0,1,0,0,0);}
+  var ext=Math.max(100,st.cam.d/30),dx=p[0]-q[0],dz=p[2]-q[2],dl=Math.hypot(dx,dz);
+  if(dl>1)seg([q[0]-dx/dl*ext,q[1],q[2]-dz/dl*ext],[p[0]+dx/dl*ext,q[1],p[2]+dz/dl*ext]); // 판 끝 ↔ 맞춘 점 (같은 높이로)
+  else seg([q[0]-e.nx*ext,q[1],q[2]-e.nz*ext],[q[0]+e.nx*ext,q[1],q[2]+e.nz*ext]); // 변 끝에 맞춤: 변에 직각으로
+  if(Math.abs(p[1]-q[1])>1)seg([p[0],p[1],p[2]],[p[0],q[1],p[2]]);
+  return{s0:best.s0,guide:L};
+}
+// 판 그리는 순서: 다른 판 면(mid3d.edge = 'p도형id:…')에 붙인 판은 그 판 다음에
+function _3dPanelOrder(list){
+  var out=[],done=new Set(),rest=list.slice(),ids=new Set(list.map(function(pc){return _3dKey(pc.shape).id;}));
+  for(var round=0;rest.length&&round<list.length+1;round++){
+    rest=rest.filter(function(pc){var ed=(_3dKey(pc.shape).mid3d||{}).edge,m=typeof ed==='string'&&/^p(\d+):/.exec(ed);
+      if(m&&ids.has(+m[1])&&!done.has(+m[1]))return true; // 붙일 판이 아직이면 다음 차례
+      out.push(pc);done.add(_3dKey(pc.shape).id);return false;});
+  }
+  return out.concat(rest); // 서로 붙인 고리 등 남은 것
 }
 // 미드웨이 위아래 끌기: 광선이 V.C를 지나는 세로 평면(법선 V.N = 누를 때 시선의 수평 방향)과 만나는 높이
 function _3dVertH(V,ray){if(!ray)return null;var dn=ray.d[0]*V.N[0]+ray.d[2]*V.N[1];if(Math.abs(dn)<1e-6)return null;
@@ -8289,7 +8323,7 @@ function _3dFloorEdge(e){return{id:e.id,a:e.a,ux:e.ux,uz:e.uz,len:e.len,nx:-e.nx
 // 미드웨이 자동 자리: 도면에서 상판 변 바깥쪽에 붙어 있으면 그 변(붙은 길이가 가장 긴 것) → {e, s0(변 시작에서 mm), along(벽 따라가는 도면 축 x|z)}
 function _3dMidContact(pc,edges){
   var L=pc.loops&&pc.loops.outer;if(!L||L.length<3)return null;var best=null,cx=(pc.bb.l+pc.bb.r)/2,cz=(pc.bb.t+pc.bb.b)/2;
-  edges.forEach(function(e){var o=e.o;
+  edges.forEach(function(e){var o=e.o;if(!o)return; // 판 면(pan)은 도면 자리가 없어 자동으로 안 붙임
     if((cx-o.a[0])*o.nx+(cz-o.a[1])*o.nz>0)return; // 미드웨이가 상판 바깥쪽에 있어야
     for(var i=0;i<L.length;i++){var p=L[i],q=L[(i+1)%L.length],dx=q[0]-p[0],dz=q[1]-p[1],len=Math.hypot(dx,dz);if(len<100)continue;
       if(Math.abs(dx/len*o.uz-dz/len*o.ux)>0.02)continue; // 평행
@@ -8417,23 +8451,23 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
     if(Math.min(a.len,Math.max(s1,s2))-Math.max(0,Math.min(s1,s2))>50)a.joint=true;
   });});
   if(scene.pieces.some(function(pc){return _3dIsPanel(pc.type)||(pc.type==='mid'&&mode!=='top');})){
-    scene.pieces.filter(function(pc){return _3dIsPanel(pc.type)||(pc.type==='mid'&&mode!=='top');}).sort(function(p,q){return Math.max(q.bb.r-q.bb.l,q.bb.b-q.bb.t)-Math.max(p.bb.r-p.bb.l,p.bb.b-p.bb.t);}).forEach(function(pc){
+    _3dPanelOrder(scene.pieces.filter(function(pc){return _3dIsPanel(pc.type)||(pc.type==='mid'&&mode!=='top');}).sort(function(p,q){return Math.max(q.bb.r-q.bb.l,q.bb.b-q.bb.t)-Math.max(p.bb.r-p.bb.l,p.bb.b-p.bb.t);})).forEach(function(pc){
       // 손으로 정한 자리(mid3d: edge=상판 변 id, off=변 시작에서 mm, swap=가로/세로 바꿈)가 있으면 그대로, 없으면 자동
       // 자동 = 도면에서 상판 변에 붙어 있으면 그 변·그 위치에 (붙은 변 따라 = 벽 따라, 다른 쪽 = 높이, 높이가 _3D_TALL 넘으면 바닥부터 세운 키 큰 판)
       var isP=_3dIsPanel(pc.type),cfg=_3dKey(pc.shape).mid3d||{},bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,man=cfg.edge!=null,ct=man?null:_3dMidContact(pc,allEdges);
       var e=null,s0;
       if(man)allEdges.forEach(function(x){if(x.id===cfg.edge)e=x;});
       if(isP&&!e&&!ct){ // 전면판 = 앞면 변, 측판 = 앞면 아닌 짧은 변 (아직 판이 없는 변부터)
-        var cands=allEdges.filter(function(x){return !x.usedP&&!x.wall&&!x.joint&&(pc.type==='front'?x.front:(!x.front&&x.len<=1000));});
+        var cands=allEdges.filter(function(x){return !x.pan&&!x.usedP&&!x.wall&&!x.joint&&(pc.type==='front'?x.front:(!x.front&&x.len<=1000));});
         cands.sort(function(p,q){return pc.type==='front'?q.len-p.len:p.len-q.len;});
-        e=cands[0]||allEdges.filter(function(x){return !x.usedP;})[0]||null;if(e)e.usedP=true;
+        e=cands[0]||allEdges.filter(function(x){return !x.pan&&!x.usedP;})[0]||null;if(e)e.usedP=true;
       }
       var defA=bw>=bh?'x':'z',autoA=ct?ct.along:defA;
       if(isP&&!ct&&e){var yu=e.y0||0;autoA=Math.abs(bh-yu)<Math.abs(bw-yu)?'x':'z';} // 판: 상판 밑면 높이에 가까운 쪽 = 높이
       var along=man?(cfg.swap?(defA==='x'?'z':'x'):defA):autoA,land=along==='x';
       var Lm=land?bw:bh,Hm=land?bh:bw,tm=pc.th,floor=isP||(man?!!cfg.floor:(!!ct&&Hm>_3D_TALL));
       if(isP&&e&&!man&&!ct)s0=Math.max(0,(e.len-Lm)/2);
-      else if(e)s0=Math.max(0,Math.min(cfg.off||0,e.len-Lm));
+      else if(e){var ov=Math.min(20,e.len/2,Lm/2);s0=Math.max(ov-Lm,Math.min(cfg.off||0,e.len-ov));} // 손으로 놓은 자리: 변보다 길거나 변 끝을 넘어도 됨 (끝 조금은 걸쳐 있게)
       else if(ct){e=ct.e;s0=ct.s0;if(!floor)e.used=Math.max(e.used,s0+Lm);}
       var onObj=isP&&e&&e.obj; // 오브제에 붙인 판 = 상판 밑면에 매달림 (오브제를 옮기거나 위아래로 움직이면 같이)
       if(isP&&e&&e.y0!=null){if(e.y0<(onObj?1:50))return;Hm=Math.min(Hm,e.y0);} // 판 높이 ≤ 상판 밑면, 하부장을 끄면(상판이 바닥에) 판 없음
@@ -8446,12 +8480,18 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       var sw=along!==defA,eid=e.id||null;
       if(onObj){e=Object.assign({},e,{y:e.y0-Hm});e.obj.hang=Math.max(e.obj.hang,Hm);}
       else{
-        if(isP)e=_3dPanelEdge(e);else if(floor)e=_3dFloorEdge(e);
+        if(e.pan){} // 다른 판의 면에 붙임: 그 판 아랫변 높이부터, 그 판 바깥쪽으로
+        else if(isP)e=_3dPanelEdge(e);else if(floor)e=_3dFloorEdge(e);
         if(man&&cfg.y0!=null)e=Object.assign({},e,{y:Math.max(0,cfg.y0)}); // 위아래로 옮긴 높이(y0 = 바닥에서 아랫변까지 mm)
       }
       pc.mid={edge:eid,off:s0,swap:sw,floor:floor,panel:isP,y0:e.y,manual:man&&!!eid}; // 목록 조절 버튼이 지금 자리에서 시작하도록 (swap = 기본(긴 변이 벽 따라)과 다름)
       var bx=_3dMidBox(e,s0,Lm,Hm,tm),W0=bx.W0,W1=bx.W1,F0=bx.F0,F1=bx.F1,yA=bx.yA,yB=bx.yB,front=[],rest=[],ln=[];
-      midInfo.push({shape:pc.shape,Lm:Lm,Hm:Hm,tm:tm,swap:sw,panel:isP,min:[Math.min(W0[0],W1[0],F0[0],F1[0]),yA,Math.min(W0[1],W1[1],F0[1],F1[1])],max:[Math.max(W0[0],W1[0],F0[0],F1[0]),yB,Math.max(W0[1],W1[1],F0[1],F1[1])]}); // 끌기용
+      // 이 판의 평면 네 변 = 다른 판·미드웨이를 붙일 수 있는 자리 (id 'p도형id:변번호', 법선 = 판 바깥, 높이 = 이 판 아랫변)
+      var pPoly=[W0,W1,F1,F0],pcx=(W0[0]+W1[0]+F0[0]+F1[0])/4,pcz=(W0[1]+W1[1]+F0[1]+F1[1])/4;
+      pPoly.forEach(function(a,i){var b=pPoly[(i+1)%4],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(L<1)return;
+        var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(((a[0]+b[0])/2-pcx)*nx+((a[1]+b[1])/2-pcz)*nz<0){nx=-nx;nz=-nz;}
+        allEdges.push({id:'p'+_3dKey(pc.shape).id+':'+i,a:a,ux:ux,uz:uz,len:L,nx:nx,nz:nz,used:0,y:yA,pan:true});});
+      midInfo.push({shape:pc.shape,Lm:Lm,Hm:Hm,tm:tm,swap:sw,panel:isP,c:pPoly,yA:yA,yB:yB,min:[Math.min(W0[0],W1[0],F0[0],F1[0]),yA,Math.min(W0[1],W1[1],F0[1],F1[1])],max:[Math.max(W0[0],W1[0],F0[0],F1[0]),yB,Math.max(W0[1],W1[1],F0[1],F1[1])]}); // 끌기용
       function uv(a,h){return land?[a,1-h]:[1-h,a];} // 평면에서 긴 쪽 = 벽 따라
       function fq(arr,P,Q,ya,yb,nx,ny,nz,tx){var t00=tx?uv(0,0):[0,0],t10=tx?uv(1,0):[0,0],t11=tx?uv(1,1):[0,0],t01=tx?uv(0,1):[0,0];
         v(arr,P[0],ya,P[1],nx,ny,nz,t00[0],t00[1]);v(arr,Q[0],ya,Q[1],nx,ny,nz,t10[0],t10[1]);v(arr,Q[0],yb,Q[1],nx,ny,nz,t11[0],t11[1]);
@@ -8793,14 +8833,21 @@ function show3D(){
     }
     if(drag.vert){ // 미드웨이 위아래: 바닥(0)·상판 윗면 가까이면 딱 맞춤
       var V=drag.vert,h=_3dVertH(V,_3dRay(e.clientX,e.clientY));if(h==null||V.h0==null)return;
-      var y=Math.max(0,V.y0+h-V.h0),tol=Math.max(20,_3d.cam.d/80);[0,_3d.r.topY].forEach(function(s){if(Math.abs(y-s)<tol)y=s;});
+      // 아랫변·윗변이 바닥·상판 윗면/밑면·다른 판 아랫변/윗변 높이에 가까우면 딱 맞춤 (+ 그 높이에 기준선)
+      var y=Math.max(0,V.y0+h-V.h0),tol=Math.max(20,_3d.cam.d/80),RR=_3d.r,mi=null,lv=[0,RR.topY],bv=null;
+      RR.midInfo.forEach(function(x){if(_3dKey(x.shape)===V.key)mi=x;else lv.push(x.yA,x.yB);});
+      RR.tops.forEach(function(tp){lv.push(tp.y,tp.y-(tp.th||12));});
+      var Hh=mi?mi.Hm:0;lv.forEach(function(s){[[s,s],[s-Hh,s]].forEach(function(c){var d=Math.abs(y-c[0]);if(c[0]>=0&&d<tol&&(!bv||d<bv.d))bv={d:d,y:c[0],at:c[1]};});});
+      if(bv)y=bv.y;
+      _3d.guide=null;if(bv&&mi&&mi.c){var Lg=[],c4=mi.c,ex=Math.max(150,_3d.cam.d/25),cx=(c4[0][0]+c4[2][0])/2,cz=(c4[0][1]+c4[2][1])/2;
+        Lg.push(cx-ex*3,bv.at,cz,0,1,0,0,0,cx+ex*3,bv.at,cz,0,1,0,0,0,cx,bv.at,cz-ex*3,0,1,0,0,0,cx,bv.at,cz+ex*3,0,1,0,0,0);_3d.guide=Lg;}
       var md=V.mid;V.key.mid3d={edge:md.edge,off:Math.round(md.off),swap:md.swap,floor:md.floor,y0:Math.round(y)};regeomSoon();return;
     }
     if(drag.mid){ // 미드웨이 끌기: 놓일 자리 미리보기 (노란 테두리)
       var tg=_3dDragTarget(drag.mid,_3dRay(e.clientX,e.clientY));if(!tg)return;
-      var m=drag.mid,b=_3dMidBox(m.panel?(tg.e.obj?Object.assign({},tg.e,{y:tg.e.y0-Math.min(m.Hm,tg.e.y0)}):_3dPanelEdge(tg.e)):(tg.floor?_3dFloorEdge(tg.e):tg.e),tg.s0,m.Lm,m.panel&&tg.e.obj?Math.min(m.Hm,tg.e.y0):m.Hm,m.tm),Pp=[[b.W0,b.yA],[b.W1,b.yA],[b.F1,b.yA],[b.F0,b.yA],[b.W0,b.yB],[b.W1,b.yB],[b.F1,b.yB],[b.F0,b.yB]],L=[];
+      var m=drag.mid,b=_3dMidBox(tg.e.pan?tg.e:m.panel?(tg.e.obj?Object.assign({},tg.e,{y:tg.e.y0-Math.min(m.Hm,tg.e.y0)}):_3dPanelEdge(tg.e)):(tg.floor?_3dFloorEdge(tg.e):tg.e),tg.s0,m.Lm,m.panel&&tg.e.obj?Math.min(m.Hm,tg.e.y0):m.Hm,m.tm),Pp=[[b.W0,b.yA],[b.W1,b.yA],[b.F1,b.yA],[b.F0,b.yA],[b.W0,b.yB],[b.W1,b.yB],[b.F1,b.yB],[b.F0,b.yB]],L=[];
       [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(function(q){[Pp[q[0]],Pp[q[1]]].forEach(function(p){L.push(p[0][0],p[1],p[0][1],0,1,0,0,0);});});
-      _3d.prev=L;_3d.dragTo=tg;_3dRender();return;
+      _3d.prev=L;_3d.dragTo=tg;_3d.guide=tg.guide;_3dRender();return;
     }
     var dx=e.clientX-drag.x,dy=e.clientY-drag.y,c=_3d.cam;drag.x=e.clientX;drag.y=e.clientY;
     if(drag.pan)panBy(dx,dy);
