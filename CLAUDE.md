@@ -139,7 +139,10 @@
   싱크볼 구멍 아래 스테인리스 볼(깊이 200), 쿡탑 구멍에 검은 유리판(`fan`)
   상부장(머리줄 "상부장" 체크 `_3d.upper`, 하부장 체크와 무관, `_3dSetupGL` 5번째 인자): 미드웨이마다(`upSpans`, 바닥부터·판 제외) 그 벽 구간 위(미드웨이 윗변부터),
   미드웨이가 없으면 상판마다 가장 긴 `backs`(맞붙은 변 제외, 600 이상) 위 `_3D_UPGAP`(600). 깊이 `_3D_UPD` 350·높이 `_3D_UPH` 700, 도어 `_3dDoorSplit(L,[])`, 하부장 몸통·도어 배열에 같이(`furnDraw`)
-  조각 구분(`_3dGetType/_3dSetType`, 도형 `piece3d` = top|mid|etc, 선 조각은 선마다, 기본 = 폭 300 미만 etc·나머지 top, 3D 창 왼쪽 `_3dPiecePanel`, 머리글 누르면 접기 `_3dFold`/localStorage `scd_3d_fold`):
+  조각 구분(`_3dGetType/_3dSetType`, 도형 `piece3d` = top|obj|mid|front|side|etc(목록 이름 "삭제" = 3D에서만 안 그림), 선 조각은 선마다, 기본 = 폭 300 미만 etc·나머지 top,
+  오브제 obj(2026-10-27, 선반·벤치 등 가구 아닌 상판) = 상판처럼 그리고 끌기·위아래(pos3d)도 같지만 하부장 없음·`backs`(미드웨이·상부장 자리) 아님,
+  그 변(`ed.obj` = tops 항목)에 붙은 전면판·측판은 바닥부터가 아니라 오브제 밑면에 매달림(y = y0-Hm, 판의 mid3d.y0 무시) → tops 항목 `hang` = 매달린 판 높이,
+  Shift 위아래의 바닥 맞춤 = 판이 바닥에 닿는 높이(`drag.vertTop.hang`), 3D 창 왼쪽 `_3dPiecePanel`, 머리글 누르면 접기 `_3dFold`/localStorage `scd_3d_fold`):
   미드웨이 = 상판 뒷변(`backs`: 앞면 아닌 300 이상 변, 긴 것부터)을 따라 상판 위에 세운 판(긴 변=벽 따라·짧은 변=높이·앞면 무늬), 기타 = 안 그림.
   머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`).
   조각 구분 목록은 한 줄씩(번호·크기·종류 버튼 + 옮겼으면 ↺ = 그 조각 pos3d·mid3d·midFace 지움)만 — 자리·방향·높이·무늬 조절은 모두 3D 마우스(목록 조절 버튼은 없앰)
