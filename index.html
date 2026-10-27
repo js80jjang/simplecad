@@ -920,7 +920,7 @@ function syncGroupShapes(s){
   if(!s.groupId||s.kind!=='rect')return;
   var _hw=s.w/2,_hh=s.h/2,_f=_rectXf(s);
   function _sg(dx,dy){var p=_f(dx,dy);return[p.x,p.y];}
-  getGroupShapes(s).forEach(function(gs){
+  shapes.filter(function(gs){return gs.groupId===s.groupId;}).forEach(function(gs){ // 싱크볼·쿡탑 자기 그룹만 (사용자 그룹은 제외)
     if(gs===s)return;
     var r=gs.groupRole,a,b;
     if(r==='top'){a=_sg(-_hw,-_hh);b=_sg(_hw,-_hh);}
@@ -1071,7 +1071,17 @@ function _findCornerAttach(x1,y1,x2,y2){
 }
 function getGroupShapes(s){
   if(!s)return [];
-  if(s.userGroupId)return shapes.filter(function(sh){return sh.userGroupId===s.userGroupId;});
+  if(s.userGroupId){
+    // 사용자 그룹 + 들어 있는 도형의 싱크볼·쿡탑 그룹 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전에 그룹화할 때 빠진 것)
+    var set=new Set(shapes.filter(function(sh){return sh.userGroupId===s.userGroupId;})),gids=new Set();
+    set.forEach(function(sh){if(sh.groupId)gids.add(sh.groupId);});
+    shapes.forEach(function(sh){
+      if(sh.groupId&&sh.groupRole==='main'&&sh.kind==='rect'&&!gids.has(sh.groupId)&&!sh.userGroupId)
+        set.forEach(function(p){if(p.kind==='rect'&&!p.groupId&&isInsideRect(sh,p))gids.add(sh.groupId);});
+    });
+    if(gids.size)shapes.forEach(function(sh){if(sh.groupId&&gids.has(sh.groupId))set.add(sh);});
+    return shapes.filter(function(sh){return set.has(sh);});
+  }
   if(!s.groupId)return [s];
   return shapes.filter(function(sh){return sh.groupId===s.groupId;});
 }
@@ -5880,12 +5890,12 @@ function updatePropsPanel(){
 function groupSelected(){
   if(selectedShapes.length<2){alert('2개 이상 선택 후 그룹화하세요.');return;}
   // 이미 같은 그룹에 속한 도형이 있으면 그룹 해제 후 재그룹화
-  var newGid='ug'+(nextId++);
+  var used=new Set(shapes.map(function(s){return s.userGroupId;})),newGid;
+  do{newGid='ug'+(nextId++);}while(used.has(newGid)); // 불러온 파일의 그룹 번호와 겹치지 않게 (겹치면 다른 그룹과 합쳐짐)
   saveHistory();
-  selectedShapes.forEach(function(s){
-    // 기존 sink/cooktop 전용 그룹(groupRole 있는 것)은 건드리지 않음
-    if(!s.groupRole){s.userGroupId=newGid;}
-  });
+  // 싱크볼·쿡탑은 자기 그룹(groupId)을 그대로 두고 그 그룹 전체를 사용자 그룹에도 넣음 → 그룹째 옮기면 같이 이동
+  var gids=new Set();selectedShapes.forEach(function(s){if(s.groupId)gids.add(s.groupId);});
+  shapes.forEach(function(s){if(selectedShapes.indexOf(s)>=0||(s.groupId&&gids.has(s.groupId)))s.userGroupId=newGid;});
   redraw();
 }
 function ungroupSelected(){
