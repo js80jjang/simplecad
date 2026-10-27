@@ -151,7 +151,8 @@
   하부장 전면판·측판: `piece3d` front|side(`_3dIsPanel`), 미드웨이 고리에서 같이 그림(상판만 보기에서도) — `_3dPanelEdge`(상판 변 그대로·y=0 → 바깥면 = 상판 끝, 두께만큼 안쪽), 높이 ≤ 상판 밑면(`ed.y0`, 하부장 끄면 안 그림).
   자동 = `_3dMidContact`, 없으면 전면판 = 앞면 변(`ed.front`, 긴 것부터) · 측판 = 앞면 아닌 1000 이하 변(짧은 것부터), 벽 변(`ed.wall` = 미드웨이가 붙은 변)·맞붙은 변(`ed.joint`)·이미 쓴 변(`usedP`) 제외, 변 가운데.
   판 높이 축 = 상판 밑면 높이에 가까운 치수. `pc.mid.panel`/`midInfo.panel` → 끌기 미리보기도 `_3dPanelEdge`(바닥 라인 판정 무시, 항상 바닥부터)
-  상판 자리 손으로: 도형(`_3dKey`) `pos3d={dx,dz,rot}`(rot = 조각 상자 가운데 기준 90°×n), `_3dSetupGL`이 외곽·구멍·윗면 사각형·하부장에 적용, `R.tops[]={key,loops,y,pos}`.
+  상판 자리 손으로: 도형(`_3dKey`) `pos3d={dx,dz,rot,dy}`(rot = 조각 상자 가운데 기준 90°×n, dy = 900에서 위아래 mm — Shift+상판 끌기 `drag.vertTop`,
+  0·바닥에 맞춤·바닥 밑 안 감, dy≠0이면 그 조각 하부장 안 그림 = 주방 상판이 아닌 선반·테이블 등), `_3dSetupGL`이 외곽·구멍·윗면 사각형·하부장에 적용, `R.tops[]={key,loops,y,pos}`.
   마우스(`show3D`): 왼쪽 = 조각 위면 선택(`_3d.sel`) + 끌기(`_3dPick` → 상판은 `_3dPlane` 평면 교점 차이 + `_3dSnap`(다른 상판 꼭짓점 x/z tol 안 맞춤) → `pos3d`, rAF로 `_3dRegeom`
   = 버퍼만 다시(텍스처·GL 프로그램은 `_3dGLC`에 캐시), 미드웨이는 미리보기 → 놓을 때 `mid3d`), 빈 곳 = 돌리기, 오른쪽/가운데/Shift 끌기 = 옮기기,
   오른쪽 클릭(안 움직임) = 상판 rot+1 / 미드웨이 swap, R 키 = 선택 조각 돌리기, 올림 `_3d.hover` 파랑·선택 주황 외곽선. "↺ 처음 배치로" = `_3dResetLayout`(pos3d·mid3d 지움)

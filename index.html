@@ -8256,13 +8256,14 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   }
   scene.pieces.forEach(function(pc){
     if(pc.type!=='top')return; // 미드웨이는 아래에서 상판 뒷변에 세움, 기타는 안 그림
-    var bb=pc.bb,th=pc.th,top=[],side=[],line=[],y0=_3D_H-th,y1=y0+th; // 상판 윗면 = 900 (하부장을 꺼도 그 높이 — 전면판·측판·미드웨이가 그대로 보이게)
-    // 3D에서 옮기거나 돌린 자리(pos3d: dx, dz mm, rot = 90°×n, 조각 가운데 기준) — 도면(2D)은 그대로
-    var key=_3dKey(pc.shape),ps=key.pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cxp=(bb.l+bb.r)/2,czp=(bb.t+bb.b)/2;
+    // 3D에서 옮기거나 돌린 자리(pos3d: dx, dz mm, rot = 90°×n, 조각 가운데 기준, dy = 900에서 위아래 mm) — 도면(2D)은 그대로
+    var bb=pc.bb,key=_3dKey(pc.shape),ps=key.pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cxp=(bb.l+bb.r)/2,czp=(bb.t+bb.b)/2;
+    // 상판 윗면 = 900 (하부장을 꺼도 그 높이 — 전면판·측판·미드웨이가 그대로 보이게), 주방 상판이 아닌 조각은 Shift+끌기로 위아래(ps.dy)
+    var th=pc.th,top=[],side=[],line=[],dyp=ps.dy||0,y0=_3D_H-th+dyp,y1=y0+th;
     function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+(ps.dx||0),czp+x*si+z*co+(ps.dz||0)];}
     var loops={outer:pc.loops.outer.map(X),holes:pc.loops.holes.map(function(h){return h.map(X);}),kinds:pc.loops.kinds};
-    var front=_3dFrontEdges(pc.loops.outer,marks);topY=y1; // 앞면 판정은 도면 자리로(변 번호는 같음)
-    tops.push({key:key,loops:loops,y:y1,pos:[ps.dx||0,ps.dz||0]}); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준)
+    var front=_3dFrontEdges(pc.loops.outer,marks); // 앞면 판정은 도면 자리로(변 번호는 같음)
+    tops.push({key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0]}); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준)
     loops.outer.forEach(function(a,i){ // 상판 변(200 이상) = 미드웨이를 세울 수 있는 자리, 안쪽(상판 쪽) 법선과 함께. 뒷변 = 앞면이 아닌 300 이상 변
       var b=loops.outer[(i+1)%loops.outer.length],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(L<200)return;
       var nx=dz/L,nz=-dx/L;if(!_3dInside(loops,(a[0]+b[0])/2+nx,(a[1]+b[1])/2+nz)){nx=-nx;nz=-nz;}
@@ -8280,8 +8281,8 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       walls(side,L,loops,y0,y1);
       for(var i=0;i<L.length;i++){var a=L[i],b=L[(i+1)%L.length];v(line,a[0],y1+0.3,a[1],0,1,0,0,0);v(line,b[0],y1+0.3,b[1],0,1,0,0,0);}
     });
-    // 하부장: 상판 외곽에서 20 들인 몸통(걸레받이 위~상판 아래), 걸레받이(50 더 들임), 앞면 변에 민자 도어(폭 약 500씩 나눔)
-    if(furn&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){
+    // 하부장: 상판 외곽에서 20 들인 몸통(걸레받이 위~상판 아래), 걸레받이(50 더 들임), 앞면 변에 민자 도어(폭 약 500씩 나눔) — 위아래로 옮긴 조각은 없음
+    if(furn&&!dyp&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){
       var body=_3dInset(loops.outer,_3D_SET),kick=_3dInset(loops.outer,_3D_SET+_3D_KICKSET);
       walls(furnDraw.body,body,{outer:body,holes:[]},_3D_KICK,y0);
       walls(furnDraw.kick,kick,{outer:kick,holes:[]},0,_3D_KICK);
@@ -8594,7 +8595,7 @@ function show3D(){
     +'<div style="flex:1;position:relative;min-height:0"><canvas id="v3d-cv" style="position:absolute;inset:0;width:100%;height:100%;cursor:grab"></canvas>'
     +'<div id="v3d-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>'
     +'<div id="v3d-pieces" style="position:absolute;left:10px;top:10px;background:rgba(13,24,34,0.88);border:1px solid #16233D;border-radius:4px;padding:8px 10px;font-size:11px;max-height:70%;overflow:auto"></div>'
-    +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+미드웨이 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점 · Esc = 닫기</div></div>';
+    +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점 · Esc = 닫기</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
   _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null,furn:true,upper:true,mode:'mid'};
@@ -8613,7 +8614,7 @@ function show3D(){
   function regeomSoon(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;_3dRegeom();});}
   function panBy(dx,dy){var c=_3d.cam,k=c.d/600,sy=Math.sin(c.yaw),cy=Math.cos(c.yaw);c.t[0]-=(cy*dx-sy*dy*Math.sin(c.pitch))*k;c.t[2]-=(-sy*dx-cy*dy*Math.sin(c.pitch))*k;c.t[1]+=dy*Math.cos(c.pitch)*k;}
   function rotatePiece(pk){ // 오른쪽 클릭 돌리기
-    if(pk.kind==='top'){var p=pk.key.pos3d||{};pk.key.pos3d={dx:p.dx||0,dz:p.dz||0,rot:((p.rot||0)+1)%4};}
+    if(pk.kind==='top'){var p=pk.key.pos3d||{};pk.key.pos3d={dx:p.dx||0,dz:p.dz||0,rot:((p.rot||0)+1)%4,dy:p.dy||0};}
     else{var pc=_3d.scene.pieces.filter(function(q){return _3dKey(q.shape)===pk.key;})[0],md=pc&&pc.mid;if(!md)return;pk.key.mid3d={edge:md.edge,off:md.off,swap:!md.swap,floor:md.floor,y0:md.y0};}
     _3d.sel=pk.key;_3dRegeom();_3dPiecePanel(_3d.scene);
   }
@@ -8629,9 +8630,17 @@ function show3D(){
         _3d.sel=pk.key;cv.style.cursor='ns-resize';_3dRender();e.preventDefault();return;
       }
     }
+    if(e.button===0&&e.shiftKey&&pk&&pk.kind==='top'){ // Shift+끌기 = 상판 위아래로 (주방 상판이 아닌 선반·테이블 등)
+      var N2=[ray.d[0],ray.d[2]],nl2=Math.hypot(N2[0],N2[1]),O=pk.top.loops.outer;
+      if(nl2>1e-6){
+        var C2=O.reduce(function(s,p){return[s[0]+p[0]/O.length,s[1]+p[1]/O.length];},[0,0]),p0=pk.key.pos3d||{};
+        drag.vertTop={key:pk.key,N:[N2[0]/nl2,N2[1]/nl2],C:[C2[0],pk.top.y,C2[1]],dy0:p0.dy||0,th:pk.top.th||12,h0:null};drag.vertTop.h0=_3dVertH(drag.vertTop,ray);
+        _3d.sel=pk.key;cv.style.cursor='ns-resize';_3dRender();e.preventDefault();return;
+      }
+    }
     if(e.button===0&&!e.shiftKey&&pk){
       _3d.sel=pk.key;
-      if(pk.kind==='top'){var p=pk.key.pos3d||{};drag.top={start:{dx:p.dx||0,dz:p.dz||0,rot:p.rot||0},p0:_3dPlane(ray,pk.top.y),y:pk.top.y};}
+      if(pk.kind==='top'){var p=pk.key.pos3d||{};drag.top={start:{dx:p.dx||0,dz:p.dz||0,rot:p.rot||0,dy:p.dy||0},p0:_3dPlane(ray,pk.top.y),y:pk.top.y};}
       else drag.mid=pk.m;
       cv.style.cursor='move';_3dRender();
     } else if(e.button===0&&!e.shiftKey){_3d.sel=null;drag.orbit=true;cv.style.cursor='grabbing';_3dRender();}
@@ -8642,14 +8651,20 @@ function show3D(){
     if(!_3d||!_3d.cam)return;
     if(!drag){ // 마우스 올림: 잡을 수 있는 조각이면 파란 테두리 + 손 모양
       if(e.target!==cv)return;var pk=_3dPick(_3dRay(e.clientX,e.clientY)),hk=pk?pk.key:null;
-      cv.style.cursor=pk?(e.shiftKey&&pk.kind==='mid'?'ns-resize':'move'):'grab';if(hk!==_3d.hover){_3d.hover=hk;_3dRender();}return;
+      cv.style.cursor=pk?(e.shiftKey?'ns-resize':'move'):'grab';if(hk!==_3d.hover){_3d.hover=hk;_3dRender();}return;
     }
     if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>3)drag.moved=true;
     if(drag.top){ // 상판 끌기: 바닥에서 따라 움직이고 이웃 상판에 맞춤
       var T=drag.top,P=_3dPlane(_3dRay(e.clientX,e.clientY),T.y);if(!P||!T.p0)return;
       var s=T.start,ndx=s.dx+P[0]-T.p0[0],ndz=s.dz+P[1]-T.p0[1];
       var sn=_3dSnap(drag.pk.key,ndx,ndz);
-      drag.pk.key.pos3d={dx:Math.round(ndx+sn[0]),dz:Math.round(ndz+sn[1]),rot:s.rot};regeomSoon();return;
+      drag.pk.key.pos3d={dx:Math.round(ndx+sn[0]),dz:Math.round(ndz+sn[1]),rot:s.rot,dy:s.dy};regeomSoon();return;
+    }
+    if(drag.vertTop){ // 상판 위아래: 900(주방 높이)·바닥에 가까우면 딱 맞춤, 바닥 밑으로는 안 감
+      var VT=drag.vertTop,h2=_3dVertH(VT,_3dRay(e.clientX,e.clientY));if(h2==null||VT.h0==null)return;
+      var dy=VT.dy0+h2-VT.h0,tol2=Math.max(20,_3d.cam.d/80),floorDy=VT.th-_3D_H;
+      [0,floorDy].forEach(function(s){if(Math.abs(dy-s)<tol2)dy=s;});dy=Math.max(floorDy,dy);
+      var pp=VT.key.pos3d||{};VT.key.pos3d={dx:pp.dx||0,dz:pp.dz||0,rot:pp.rot||0,dy:Math.round(dy)};regeomSoon();return;
     }
     if(drag.vert){ // 미드웨이 위아래: 바닥(0)·상판 윗면 가까이면 딱 맞춤
       var V=drag.vert,h=_3dVertH(V,_3dRay(e.clientX,e.clientY));if(h==null||V.h0==null)return;
@@ -8673,7 +8688,7 @@ function show3D(){
       var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:d.mid.swap,floor:!!tg.floor};
       _3d.prev=null;_3d.dragTo=null;_3dRegeom();_3dPiecePanel(_3d.scene);return;
     }
-    if(d.vert){_3dRegeom();_3dPiecePanel(_3d.scene);return;}
+    if(d.vert||d.vertTop){_3dRegeom();_3dPiecePanel(_3d.scene);return;}
     if(d.top&&d.moved){_3dRegeom();_3dPiecePanel(_3d.scene);return;} // 상판 옮김 → 목록에 ↺
     if(_3d.prev){_3d.prev=null;_3d.dragTo=null;_3dRender();}
     if(d.btn===2&&!d.moved&&d.pk)rotatePiece(d.pk); // 오른쪽 클릭(끌지 않음) = 돌리기
