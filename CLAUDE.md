@@ -76,7 +76,9 @@
   `deliv-date`/`deliv-time`(직접 입력 → `_normDate` 2026.10.28 / `_normTime` 14:00). 업체명·주소 최근 15개는 localStorage
   — 도면화·DXF에는 `_companySite()`("업체명 - 주소"), 저장 파일 이름은 `_saveBaseName()`(업체명-주소-20261021)
   — 저장 창 `_pickSaveFile(kind,기본위치,opts)`: 처음은 바탕화면(.ceramic)/문서(DXF), 그다음은 지난번 저장 파일 핸들(IndexedDB `scd-files`, kind별)의 폴더 + picker `id`.
-    불러오기 `loadProject`도 `showOpenFilePicker`로 지난번 불러온 폴더('open', 없으면 'save' → 바탕화면), 없는 브라우저는 파일 칸 → `_loadProjectFile`
+    불러오기 `loadProject`도 `showOpenFilePicker`로 지난번 불러온 폴더('open', 없으면 'save' → 바탕화면), 없는 브라우저는 파일 칸 → `_loadProjectFile(file,핸들)`
+  — "💾 저장"(`saveProject`, `#btn-save`, Ctrl+S) = 지금 파일 핸들 `_curFile`(`_setCurFile`: 열기 창으로 불러온 .ceramic·다른 이름으로 저장한 파일, 새로만들기·DXF·파일 칸 불러오기면 없음)에 창 없이 덮어씀(권한 `requestPermission`),
+    없으면 "다른 이름으로 저장"(`saveProjectAs`, `#btn-save-as`, Ctrl+Shift+S = 예전 저장 창 → 고른 파일이 `_curFile`)
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,

@@ -329,7 +329,8 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" style="background:#2E7D32;color:#fff" onclick="newProject()" title="도형·작업 정보(업체명·주소·제품·출고일)·기타 비용·온장 배치를 비우고 새 도면 시작 (단가는 그대로)">📄 새로만들기</button>
     <button class="canvas-btn red" onclick="clearAll()">전체삭제</button>
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
-    <button class="canvas-btn" style="background:#1F3F7A;color:#fff" onclick="saveProject()">💾 저장</button>
+    <button class="canvas-btn" id="btn-save" style="background:#1F3F7A;color:#fff" onclick="saveProject()" title="저장 (Ctrl+S) — 처음엔 파일 이름·위치를 고름">💾 저장</button>
+    <button class="canvas-btn" id="btn-save-as" style="background:#121D33;border:1px solid #2A4F92;color:#D9DFEA" onclick="saveProjectAs()" title="다른 이름으로 저장 (Ctrl+Shift+S) — 파일 이름·위치를 새로 고름">다른 이름으로 저장</button>
     <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#E3B861" onclick="loadProject()" title="저장한 도면(.ceramic) 또는 오토캐드 DXF(.dxf) 불러오기">📂 불러오기</button>
     <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#A5D6A7" onclick="exportDxf()" title="기본 양식(가공의뢰서)에 넣어 DXF로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button><button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#A5D6A7;padding-left:6px;padding-right:6px;margin-left:-4px" onclick="dxfFormSettings()" title="DXF 양식 설정: 기본 양식 바꾸기 / 양식 없이 내보내기">⚙</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#121D33;border:1px solid #16233D;color:#E3B861" onclick="toggleShapeNumbers()">번호</button>
@@ -2884,7 +2885,7 @@ function newProject(){
   _setSiteInfo('','');
   document.getElementById('deliv-date').value='';document.getElementById('deliv-time').value='';
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
-  _savedBoardLayout=null;_savedBoardImg=null;
+  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null); // 새 도면은 처음 저장 때 이름을 고름
   offsetX=60;offsetY=60;
   renderProductList();updatePropsPanel();redraw();calcCost();
 }
@@ -2940,7 +2941,27 @@ async function _pickSaveFile(kind,defStart,opts){
   _lastDirSet(kind,fh);
   return fh;
 }
+// 지금 열린 도면 파일(불러왔거나 저장한 .ceramic 핸들). "💾 저장"은 여기에 바로 덮어쓰고, 없으면 다른 이름으로 저장
+var _curFile=null;
+function _setCurFile(fh){
+  _curFile=fh||null;
+  var b=document.getElementById('btn-save');
+  if(b)b.title=_curFile?'불러온 파일에 그대로 저장 (Ctrl+S): '+_curFile.name:'저장 (Ctrl+S) — 처음엔 파일 이름·위치를 고름';
+}
+function _savedFlash(id){var btn=document.getElementById(id);if(btn){var orig=btn.textContent;btn.textContent='✓ 저장됨';setTimeout(function(){btn.textContent=orig;},1500);}}
 async function saveProject(){
+  if(!_curFile)return saveProjectAs();
+  rememberHist('siteinfo',(document.getElementById('site-info')||{}).value);
+  try{
+    if(_curFile.requestPermission&&(await _curFile.requestPermission({mode:'readwrite'}))!=='granted')return saveProjectAs();
+    var w=await _curFile.createWritable();await w.write(_makeProjectData());await w.close();
+    _savedFlash('btn-save');
+  }catch(err){
+    if(err.name==='AbortError')return;
+    alert('불러온 파일에 저장하지 못했습니다 ('+(err.message||err.name)+').\n다른 이름으로 저장합니다.');saveProjectAs();
+  }
+}
+async function saveProjectAs(){
   var defaultName=_saveBaseName(); // 업체명-주소-작성일(20261021)
   var data=_makeProjectData();
   rememberHist('siteinfo',(document.getElementById('site-info')||{}).value);
@@ -2955,8 +2976,8 @@ async function saveProject(){
       var writable=await fh.createWritable();
       await writable.write(data);
       await writable.close();
-      var btn=document.querySelector('[onclick="saveProject()"]');
-      if(btn){var orig=btn.textContent;btn.textContent='✓ 저장됨';setTimeout(function(){btn.textContent=orig;},1500);}
+      _setCurFile(fh); // 다음 "저장"은 이 파일에 그대로
+      _savedFlash('btn-save-as');
       return;
     }catch(err){
       if(err.name==='AbortError')return;
@@ -4008,19 +4029,20 @@ async function loadProject(){
       types:[{description:'세라믹 도면 · 오토캐드 DXF',accept:{'application/json':['.ceramic','.json'],'application/dxf':['.dxf']}}]},hs;
     try{hs=await window.showOpenFilePicker(Object.assign({},opts,{startIn:last||'desktop'}));}
     catch(err){if(err.name==='AbortError')return;try{hs=await window.showOpenFilePicker(Object.assign({},opts,{startIn:'desktop'}));}catch(e2){if(e2.name==='AbortError')return;hs=null;}}
-    if(hs&&hs[0]){_lastDirSet('open',hs[0]);var f=await hs[0].getFile();_loadProjectFile(f);return;}
+    if(hs&&hs[0]){_lastDirSet('open',hs[0]);var f=await hs[0].getFile();_loadProjectFile(f,/\.dxf$/i.test(f.name)?null:hs[0]);return;}
   }
   var inp=document.createElement('input');
   inp.type='file';inp.accept='.ceramic,.json,.dxf';
   inp.onchange=function(){if(inp.files[0])_loadProjectFile(inp.files[0]);};
   inp.click();
 }
-function _loadProjectFile(file){
+function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸들 → "💾 저장"이 그 파일에 그대로
     var reader=new FileReader();
     reader.onload=function(e){
-      if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
+      if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);_setCurFile(null);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
         var data=JSON.parse(e.target.result);
+        _setCurFile(fh);
         saveHistory();
         shapes=data.shapes||[];
         // 새로 그리는 도형 id가 불러온 도형과 겹치지 않도록
@@ -5664,6 +5686,7 @@ document.addEventListener('keydown',function(e){
   }
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();drawStart=null;selBox=null;undo();return;}
+  if((e.ctrlKey||e.metaKey)&&e.code==='KeyS'){e.preventDefault();if(e.shiftKey)saveProjectAs();else saveProject();return;} // Ctrl+S 저장 / Ctrl+Shift+S 다른 이름으로
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key==='c'||e.key==='C')&&selectedShapes.length){
     e.preventDefault();
     _clipboard=selectedShapes.map(function(s){return JSON.parse(JSON.stringify(s));});
