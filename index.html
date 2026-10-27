@@ -1155,14 +1155,14 @@ function toggleGrind100(){
   if(grind100mode){grind150mode=false;var b150=document.getElementById('grind-150-btn');if(b150)b150.style.background='#16233D';}
   var btn=document.getElementById('grind-100-btn');
   if(btn)btn.style.background=grind100mode?'#00838F':'#16233D';
-  if(grind100mode)document.getElementById('grind-depth').value=100;
+  document.getElementById('grind-depth').value=grind100mode?100:50; // 끄면 기본 50으로
 }
 function toggleGrind150(){
   grind150mode=!grind150mode;
   if(grind150mode){grind100mode=false;var b100=document.getElementById('grind-100-btn');if(b100)b100.style.background='#16233D';}
   var btn=document.getElementById('grind-150-btn');
   if(btn)btn.style.background=grind150mode?'#FF8F00':'#16233D';
-  if(grind150mode)document.getElementById('grind-depth').value=150;
+  document.getElementById('grind-depth').value=grind150mode?150:50; // 끄면 기본 50으로
 }
 function toggleSnap(){var b=document.getElementById('snap-body'),h=document.getElementById('snap-hd');var open=b.style.display!=='none';b.style.display=open?'none':'';h.classList.toggle('open',!open);}
 function snapPoints(excl){
@@ -5756,7 +5756,9 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
     // 도구별 보조 칸: 고른 도구 것만 보이기
     Object.keys(_TOOL_SUBS).forEach(function(k){document.getElementById(_TOOL_SUBS[k]).style.display=(tool===k)?'block':'none';});
     if(tool==='note'||tool==='arrow'||tool==='linkmark')_renderAnnCols();
-    if(tool!=='grind'){grind150mode=false;grind100mode=false;['grind-150-btn','grind-100-btn'].forEach(function(id){var gb=document.getElementById(id);if(gb)gb.style.background='#16233D';});}
+    // 밑면연마 도구를 (다시) 고르면 깊이는 기본 50, 100·150 모드도 끔
+    grind150mode=false;grind100mode=false;['grind-150-btn','grind-100-btn'].forEach(function(id){var gb=document.getElementById(id);if(gb)gb.style.background='#16233D';});
+    if(tool==='grind')document.getElementById('grind-depth').value=50;
     // 숫자부터 입력하는 도구는 입력칸에 바로 커서
     if(_TOOL_FOCUS[tool])setTimeout(function(){var fi=document.getElementById(_TOOL_FOCUS[tool]);if(fi){fi.focus();fi.select();}},50);
   };
