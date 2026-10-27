@@ -365,9 +365,6 @@ canvas{display:block;cursor:crosshair}
   </div>
   <!-- 온장 배치 모달 -->
   <div id="board-modal">
-    <!-- 장 넘기기: 창 좌우 가운데 큰 화살표 (← → 키로도) -->
-    <button class="board-side-btn" id="board-prev-btn" onclick="goBoardPage(-1)" title="이전 쪽 (←)" style="left:14px">&#10094;</button>
-    <button class="board-side-btn" id="board-next-btn" onclick="goBoardPage(1)" title="다음 쪽 (→)" style="right:14px">&#10095;</button>
     <div id="board-modal-inner">
       <div id="board-modal-header">
         <h3>온장 배치</h3>
@@ -385,6 +382,9 @@ canvas{display:block;cursor:crosshair}
       </div>
       <div id="board-canvas-wrap">
         <canvas id="board-cv"></canvas>
+        <!-- 장 넘기기: 배치 그림 안쪽 좌우 가운데 큰 화살표 (← → 키로도) -->
+        <button class="board-side-btn" id="board-prev-btn" onclick="goBoardPage(-1)" title="이전 쪽 (←)" style="left:14px">&#10094;</button>
+        <button class="board-side-btn" id="board-next-btn" onclick="goBoardPage(1)" title="다음 쪽 (→)" style="right:14px">&#10095;</button>
       </div>
     </div>
   </div>
