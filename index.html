@@ -8542,6 +8542,13 @@ function _3dLabels(){
   });
   st.r.midInfo.forEach(function(m){pts.push({key:_3dKey(m.shape),p:proj((m.min[0]+m.max[0])/2,(m.min[1]+m.max[1])/2,(m.min[2]+m.max[2])/2)});});
   var html='';
+  if(st.guide){ // 상판 끌 때 맞춘 기준선 (_3dSnap/_3dHGuide): 자홍 굵은 점선, 조각에 가려져도 보이게 캔버스 위에
+    var g=st.guide,sv='';
+    for(var gi=0;gi+15<g.length;gi+=16){var p1=proj(g[gi],g[gi+1],g[gi+2]),p2=proj(g[gi+8],g[gi+9],g[gi+10]);if(!p1||!p2)continue;
+      sv+='<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'"/>';}
+    html+='<svg style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none"><g stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.7">'+sv
+      +'</g><g stroke="#E91E8C" stroke-width="2.5" stroke-dasharray="10 6">'+sv+'</g></svg>';
+  }
   pts.forEach(function(o){if(!o.p||!idx.has(o.key))return;var on=o.key===st.sel,hv=o.key===st.hover;
     html+='<div style="position:absolute;left:'+o.p[0].toFixed(1)+'px;top:'+o.p[1].toFixed(1)+'px;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:flex;align-items:center;justify-content:center;'
       +'background:'+(on?'#EF6C00':(hv?'#1E88E5':'rgba(13,24,34,0.82)'))+';color:#fff;font:bold 12px/1 Arial,sans-serif;font-variant-numeric:tabular-nums;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4)">'+(idx.get(o.key)+1)+'</div>';});
@@ -8585,15 +8592,40 @@ function _3dPick(ray){
 // 광선과 수평면(y) 교점 [x,z]
 function _3dPlane(ray,y){if(!ray||Math.abs(ray.d[1])<1e-6)return null;var t=(y-ray.o[1])/ray.d[1];if(t<0)return null;return[ray.o[0]+ray.d[0]*t,ray.o[2]+ray.d[2]*t];}
 // 상판 끌기 맞추기: 옮길 조각 꼭짓점이 다른 상판 꼭짓점과 가로·세로로 tol 안이면 딱 맞춤 → 보정 [dx,dz]
+//   + _3d.guide = 맞춘 꼭짓점끼리 잇는 기준선(맞춘 뒤 같은 x 또는 z, 양쪽으로 조금 더 길게) — _3dRender가 그림
 function _3dSnap(key,ndx,ndz){ // ndx,ndz = 옮기려는 pos3d
-  var st=_3d,R=st.r,me=null,others=[],tol=Math.max(15,st.cam.d/70);
-  R.tops.forEach(function(tp){if(tp.key===key)me=tp;else others.push.apply(others,tp.loops.outer);});
+  var st=_3d,R=st.r,me=null,others=[],tol=Math.max(15,st.cam.d/70);st.guide=null;
+  R.tops.forEach(function(tp){if(tp.key===key)me=tp;else tp.loops.outer.forEach(function(o){others.push([o[0],o[1],tp.y]);});});
   if(!me||!others.length)return[0,0];
   var sx=ndx-me.pos[0],sz=ndz-me.pos[1];
   var bx=null,bz=null;
   me.loops.outer.forEach(function(p){var x=p[0]+sx,z=p[1]+sz;others.forEach(function(o){
     var ex=o[0]-x,ez=o[1]-z;if(Math.abs(ex)<tol&&(bx===null||Math.abs(ex)<Math.abs(bx)))bx=ex;if(Math.abs(ez)<tol&&(bz===null||Math.abs(ez)<Math.abs(bz)))bz=ez;});});
+  // 기준선: 맞춘 뒤 x(또는 z)가 같은 꼭짓점 쌍 중 가장 가까운 것 (축마다 하나)
+  var fx=sx+(bx||0),fz=sz+(bz||0),ext=Math.max(150,st.cam.d/25),L=[];
+  function seg(a,b){L.push(a[0],a[1],a[2],0,1,0,0,0,b[0],b[1],b[2],0,1,0,0,0);}
+  [[bx,0],[bz,1]].forEach(function(ax){
+    if(ax[0]===null)return;var i=ax[1],j=1-i,best=null;
+    me.loops.outer.forEach(function(p){var q=[p[0]+fx,p[1]+fz];others.forEach(function(o){
+      if(Math.abs(o[i]-q[i])>0.5)return;var dd=Math.abs(o[j]-q[j]);if(!best||dd<best.dd)best={dd:dd,q:q,o:o};});});
+    if(!best)return;
+    var lo=Math.min(best.q[j],best.o[j])-ext,hi=Math.max(best.q[j],best.o[j])+ext,c=best.o[i],y=Math.max(me.y,best.o[2])+1;
+    function P(v){return i===0?[c,y,v]:[v,y,c];}
+    seg(P(lo),P(hi));
+    if(Math.abs(me.y-best.o[2])>1){var bq=i===0?[c,0,best.q[1]]:[best.q[0],0,c],bo=i===0?[c,0,best.o[1]]:[best.o[0],0,c];
+      seg([bq[0],me.y,bq[2]],[bq[0],y,bq[2]]);seg([bo[0],best.o[2],bo[2]],[bo[0],y,bo[2]]);} // 높이가 다르면 세로로 이어 줌
+  });
+  st.guide=L.length?L:null;
   return[bx||0,bz||0];
+}
+// 상판 위아래 맞추기 기준선: 높이 y에 옮기는 조각 가운데 → 맞춘 다른 상판 가운데(없으면 900/바닥 표시로 조각 둘레 십자)
+function _3dHGuide(me,y,other){
+  var L=[],ext=Math.max(150,_3d.cam.d/25);function seg(a,b){L.push(a[0],a[1],a[2],0,1,0,0,0,b[0],b[1],b[2],0,1,0,0,0);}
+  function box(lp){var x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;lp.forEach(function(p){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1]);});return[x0,x1,z0,z1];}
+  var a=box(me.loops.outer),b=other?box(other.loops.outer):a;
+  var x0=Math.min(a[0],b[0])-ext,x1=Math.max(a[1],b[1])+ext,z0=Math.min(a[2],b[2])-ext,z1=Math.max(a[3],b[3])+ext;
+  seg([x0,y,z0],[x1,y,z0]);seg([x1,y,z0],[x1,y,z1]);seg([x1,y,z1],[x0,y,z1]);seg([x0,y,z1],[x0,y,z0]); // 그 높이의 수평 기준 테두리
+  return L;
 }
 // 처음 배치로: 3D에서 옮긴 상판·미드웨이 자리를 모두 지움 (도면 그대로)
 function _3dResetLayout(){
@@ -8732,8 +8764,12 @@ function show3D(){
     }
     if(drag.vertTop){ // 상판 위아래: 900(주방 높이)·바닥에 가까우면 딱 맞춤, 바닥 밑으로는 안 감
       var VT=drag.vertTop,h2=_3dVertH(VT,_3dRay(e.clientX,e.clientY));if(h2==null||VT.h0==null)return;
-      var dy=VT.dy0+h2-VT.h0,tol2=Math.max(20,_3d.cam.d/80),floorDy=VT.th-_3D_H;
-      [0,floorDy].forEach(function(s){if(Math.abs(dy-s)<tol2)dy=s;});dy=Math.max(floorDy,dy);
+      var dy=VT.dy0+h2-VT.h0,tol2=Math.max(20,_3d.cam.d/80),floorDy=VT.th-_3D_H,me=null,hit=null,bd=tol2;
+      // 900·바닥·다른 상판 윗면 높이에 가까우면 딱 맞춤 + 그 높이에 기준선
+      var cands=[{dy:0},{dy:floorDy}];_3d.r.tops.forEach(function(tp){if(tp.key===VT.key)me=tp;else cands.push({dy:tp.y-_3D_H,tp:tp});});
+      cands.forEach(function(c){var e=Math.abs(dy-c.dy);if(e<bd){bd=e;hit=c;}});
+      if(hit)dy=hit.dy;dy=Math.max(floorDy,dy);
+      _3d.guide=(hit&&me)?_3dHGuide(me,_3D_H+dy+1,hit.tp):null;
       var pp=VT.key.pos3d||{};VT.key.pos3d={dx:pp.dx||0,dz:pp.dz||0,rot:pp.rot||0,dy:Math.round(dy)};regeomSoon();return;
     }
     if(drag.vert){ // 미드웨이 위아래: 바닥(0)·상판 윗면 가까이면 딱 맞춤
@@ -8754,6 +8790,7 @@ function show3D(){
   });
   window.addEventListener('mouseup',_3d.onUp=function(e){
     var d=drag;drag=null;if(!_3d)return;_3d.cv.style.cursor='grab';if(!d)return;
+    if(_3d.guide){_3d.guide=null;if(!(d.top&&d.moved)&&!d.vertTop)_3dRender();} // 기준선은 끄는 동안만
     if(d.mid&&_3d.dragTo){ // 미드웨이 놓은 자리 저장
       var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:d.mid.swap,floor:!!tg.floor};
       _3d.prev=null;_3d.dragTo=null;_3dRegeom();_3dPiecePanel(_3d.scene);return;
