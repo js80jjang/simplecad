@@ -3466,7 +3466,7 @@ function _dxfCollect(H){
       if(_rightAngle(s.rotation)){
         var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),Bt=q.y+Math.abs(q.h),hd=s.hideDims||{};
         if(cut){if(!hd.w)dim([L,T],[R,T],[0,1],H*2.2,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[1,0],H*2.2,_fmtDim(Bt-T));}
-        else{var ff=_fullBoardFit(s,R-L,Bt-T); // 온장 그대로 사이즈 표기
+        else{var ff=_fullBoardFit(s); // 온장 그대로 사이즈 표기 (온장 배치에서 그 방향으로 놓았을 때만)
           if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L)+(ff.w?' '+_FULL_TXT:''));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T)+(ff.h?' '+_FULL_TXT:''));}
       }
       if(!cut&&s.pieceName){
@@ -5525,6 +5525,7 @@ function loadAllTierPrices(){
   });
 }
 function calcCost(){
+  _fullVer++; // 온장 그대로 판정 다시
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
   var cnt={sink:0,cook:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
   shapes.forEach(function(s){
@@ -5533,9 +5534,10 @@ function calcCost(){
         if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
-        var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s,Math.abs(s.w),Math.abs(s.h));
-        // 온장 그대로 사이즈인 방향의 양쪽 면은 온장 원래 끝면이라 절단비 없음 (w가 온장 폭이면 h 길이 두 면)
-        if(_ff.w)_rl-=2*Math.abs(s.h);if(_ff.h)_rl-=2*Math.abs(s.w);
+        var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s),_vb=s.rotation?getBBox(s):null;
+        var _vw=_vb?_vb.r-_vb.l:Math.abs(s.w),_vh=_vb?_vb.b-_vb.t:Math.abs(s.h);
+        // 온장 배치에서 온장 그대로 사이즈인 방향의 양쪽 면은 온장 원래 끝면이라 절단비 없음 (w가 온장 폭이면 h 길이 두 면)
+        if(_ff.w)_rl-=2*_vh;if(_ff.h)_rl-=2*_vw;
         lenMm.rect+=Math.max(0,_rl);
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
       }
@@ -6023,14 +6025,41 @@ function _lineDimPlan(lines){
   });
   return plan;
 }
-// 온장 그대로 사이즈: 조각 한 변(w 또는 h)이 그 제품 온장의 폭/길이와 같으면(다른 변은 온장 안) 그 방향은 온장 원래 끝면 그대로
-//   → 온장 배치는 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "온장 그대로 사이즈"
+// 온장 그대로 사이즈: 사각 조각을 온장 배치에서 온장 가로(세로)와 같은 길이의 변이 온장 가로(세로) 방향이 되게 놓았을 때만
+//   (1600×3200 온장에 1600 변을 1600 방향으로) 그 방향은 온장 원래 끝면 그대로
+//   → 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "온장 그대로 사이즈". 1600 변을 3200 방향으로 놓으면 보통 조각
 var _FULL_TXT='온장 그대로 사이즈';
-function _fullBoardFit(s,w,h){
-  var sz=_prodBoardSize(_itemProd(s)),A=sz.bw,B=sz.bh;
-  function eq(a,b){return Math.abs(a-b)<0.5;}
-  function fits(d,o){return (eq(d,B)&&o<=A+0.5)||(eq(d,A)&&o<=B+0.5);}
-  return{w:fits(w,h),h:fits(h,w)};
+// 조각 한 변이 그 제품 온장의 폭이나 길이와 같은지 (실제로 온장 그대로인지는 배치 방향으로 정함: _placeDims)
+function _fullElig(s,w,h){
+  var sz=_prodBoardSize(_itemProd(s));
+  return [w,h].some(function(d){return Math.abs(d-sz.bw)<0.5||Math.abs(d-sz.bh)<0.5;});
+}
+// 배치 칸 크기(유효 영역 ew×eh 기준): 온장 가로(ew+여백 20)와 같은 변을 가로로 놓으면 그 방향은 온장 그대로 → 칸은 ew. 세로도 같음
+function _placeDims(it,rotated,ew,eh){
+  var dx=rotated?it.h:it.w,dy=rotated?it.w:it.h,fx=false,fy=false;
+  if(it.full){fx=Math.abs(dx-ew-20)<0.5&&dy<=eh+20.5;fy=Math.abs(dy-eh-20)<0.5&&dx<=ew+20.5;}
+  return{pw:fx?ew:dx,ph:fy?eh:dy,fx:fx,fy:fy};
+}
+// 배치된 조각이 온장 그대로인 방향(온장 x/y): 칸이 조각 실제 크기보다 작으면 그 방향
+function _pFull(p){
+  var it=p.item;if(!it||!it.full)return{x:false,y:false};
+  var dx=p.rotated?it.h:it.w,dy=p.rotated?it.w:it.h;
+  return{x:p.pw<dx-0.5,y:p.ph<dy-0.5};
+}
+function _pLabel(p){var f=_pFull(p);return (p.item.label||'')+(f.x||f.y?' '+_FULL_TXT:'');}
+// 도형이 지금 온장 배치(손으로 고친 배치, 없으면 자동)에서 온장 그대로인 방향 — 도형 화면 상자 w/h 기준
+var _fullCache=null,_fullVer=0; // calcCost마다 _fullVer++ → 다시 계산
+function _fullBoardFit(s){
+  var key=_fullVer+'|'+_boardSizeSig();
+  if(!_fullCache||_fullCache.key!==key||_fullCache.saved!==_savedBoardLayout){
+    var m={};
+    _drawingBoards().boards.forEach(function(b){(b||[]).forEach(function(p){
+      var sh=p.item&&p.item.shape,f=_pFull(p);
+      if(sh&&sh.id!=null&&(f.x||f.y))m[sh.id]=p.rotated?{w:f.y,h:f.x}:{w:f.x,h:f.y};
+    });});
+    _fullCache={key:key,saved:_savedBoardLayout,map:m};
+  }
+  return _fullCache.map[s.id]||{w:false,h:false};
 }
 // 선이 사각형 안에 드는지: 두 끝이 사각형 범위 안 + 사각형 변 위에 놓인 선(가로선이 위·아래 변, 세로선이 왼·오른 변)이 아님
 function _lineInRect(s,r){
@@ -6099,13 +6128,8 @@ function _collectBoardItems(){
       w=Math.abs(s.w);h=Math.abs(s.h);
       if(s.rotation){var _rb=getBBox(s);w=_rb.r-_rb.l;h=_rb.b-_rb.t;} // 돌린 사각형은 화면에 보이는 상자 크기로 (그리는 모양과 맞춤)
       label=Math.round(w)+'×'+Math.round(h);
-      // 온장 그대로 사이즈: 그 방향은 여백(양쪽 10)만큼 줄여서 배치 칸에 넣고, 그릴 때 온장 끝까지 늘림(_boardPiece)
-      var _ff=_fullBoardFit(s,w,h);
-      if(_ff.w||_ff.h){
-        var _fi={shape:s,w:_ff.w?w-20:w,h:_ff.h?h-20:h,label:label+' '+_FULL_TXT};
-        if(_ff.w)_fi.fw=true;if(_ff.h)_fi.fh=true;
-        return _fi;
-      }
+      // 온장 그대로 사이즈가 될 수 있는 조각: 그 방향으로 놓으면 배치 칸을 여백만큼 줄이고(_placeDims), 그릴 때 온장 끝까지 늘림(_boardPiece)
+      if(_fullElig(s,w,h))return{shape:s,w:w,h:h,label:label,full:true};
     }
     else if(s.kind==='circle'||s.kind==='hole'){w=s.r*2;h=s.r*2;label='Φ'+w.toFixed(0);}
     else if(s.kind==='ellipse'){w=s.rx*2;h=s.ry*2;label=w.toFixed(0)+'×'+h.toFixed(0);}
@@ -6143,6 +6167,12 @@ function _packBoardItems(items,ew,eh,gap){
     var grpItems=_grpMap[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});
     var sz=_prodBoardSize(lbl); // 제품마다 온장 크기가 다를 수 있음
     var grpBoards=packBoards(grpItems,sz.bw-20,sz.bh-20,gap);
+    // 온장 그대로 방향으로 놓는 게 장수를 늘리면, 보통 조각처럼(실제 크기로) 배치한 쪽이 장수가 적을 때 그쪽으로
+    if(grpItems.some(function(it){return it.full;})){
+      var _orig=new Map(),_plain=grpItems.map(function(it){if(!it.full)return it;var c=Object.assign({},it,{full:false});_orig.set(c,it);return c;});
+      var _alt=packBoards(_plain,sz.bw-20,sz.bh-20,gap);
+      if(_alt.length<grpBoards.length){_alt.forEach(function(b){b.forEach(function(p){if(_orig.has(p.item))p.item=_orig.get(p.item);});});grpBoards=_alt;}
+    }
     var startBi=allBoards.length;
     grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;b.bw=sz.bw;b.bh=sz.bh;allBoards.push(b);}); // 장 제품 = 그 장 조각들의 제품
     groupMeta.push({label:lbl,color:_grpCols[gi%_grpCols.length],startBi:startBi,count:grpBoards.length});
@@ -6155,7 +6185,9 @@ function _restoreSavedBoards(saved,items){
   if(!saved||!saved.boards)return null;
   var used=[],ok=true,count=0;
   function take(pred){for(var k=0;k<items.length;k++){if(!used[k]&&pred(items[k])){used[k]=true;return items[k];}}return null;}
-  var boards=saved.boards.map(function(board){
+  var mg=saved.margin||10;
+  var boards=saved.boards.map(function(board,bi){
+    var bsz=(saved.boardSizes&&saved.boardSizes[bi])||{bw:saved.bw,bh:saved.bh};
     return board.map(function(p){
       count++;
       var _w=p.rotated?p.ph:p.pw,_h=p.rotated?p.pw:p.ph;
@@ -6165,7 +6197,15 @@ function _restoreSavedBoards(saved,items){
       else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
       if(!it){ok=false;return null;}
       var _it={shape:it.shape,w:_w,h:_h,label:it.label||p.label};
-      if(it.fw)_it.fw=true;if(it.fh)_it.fh=true; // 온장 그대로 사이즈
+      if(it.full){ // 온장 그대로 사이즈가 될 수 있는 조각: 그 방향이면 칸이 여백만큼 작음
+        // 칸 크기가 지금 규칙과 다르면(방향과 상관없이 줄여 두던 예전 파일) 같은 자리에 지금 규칙 크기로 — 온장 밖·겹침이면 아래에서 새로 배치
+        var aw=bsz.bw-2*mg,ah=bsz.bh-2*mg,d=_placeDims(it,!!p.rotated,aw,ah);
+        if(Math.abs(d.pw-p.pw)>1||Math.abs(d.ph-p.ph)>1){
+          var nx=Math.min(p.x,aw-d.pw),ny=Math.min(p.y,ah-d.ph);if(nx<-0.5||ny<-0.5){ok=false;return null;}
+          return{item:{shape:it.shape,w:it.w,h:it.h,label:it.label,full:true},x:Math.max(0,nx),y:Math.max(0,ny),pw:d.pw,ph:d.ph,rotated:p.rotated||false,_adj:true};
+        }
+        return{item:{shape:it.shape,w:it.w,h:it.h,label:it.label,full:true},x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false};
+      }
       if(p.rot!=null&&it.shape.kind==='linegroup'){ // 사용자가 각도를 지정해 돌린 조각
         var rb=_rotBox(it.shape.lines,p.rot);
         if(Math.abs(rb.w-_w)>1||Math.abs(rb.h-_h)>1){ok=false;return null;}
@@ -6178,6 +6218,10 @@ function _restoreSavedBoards(saved,items){
     });
   });
   if(!ok||count!==items.length)return null;
+  // 크기를 고친 조각(_adj)이 다른 조각과 겹치면 저장 배치는 버리고 새로
+  if(boards.some(function(b){return b.some(function(p){return p._adj&&b.some(function(o){
+    return o!==p&&p.x<o.x+o.pw-0.5&&o.x<p.x+p.pw-0.5&&p.y<o.y+o.ph-0.5&&o.y<p.y+p.ph-0.5;});});}))return null;
+  boards.forEach(function(b){b.forEach(function(p){delete p._adj;});});
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
     var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 온장 크기
@@ -6255,8 +6299,9 @@ function packOneBoard(items,ew,eh,gap){
   for(var i=0;i<items.length;i++){
     var it=items[i];
     var cands=[];
-    if(it.w<=ew&&it.h<=eh)cands.push({pw:it.w,ph:it.h,rot:false});
-    if(Math.round(it.w)!==Math.round(it.h)&&it.h<=ew&&it.w<=eh)cands.push({pw:it.h,ph:it.w,rot:true});
+    var d0=_placeDims(it,false,ew,eh),d1=_placeDims(it,true,ew,eh); // 온장 그대로 방향이면 칸이 여백만큼 작아짐
+    if(d0.pw<=ew&&d0.ph<=eh)cands.push({pw:d0.pw,ph:d0.ph,rot:false});
+    if(Math.round(it.w)!==Math.round(it.h)&&d1.pw<=ew&&d1.ph<=eh)cands.push({pw:d1.pw,ph:d1.ph,rot:true});
     if(!cands.length){unplaced.push(it);continue;}
     var best=null,bestScore=Infinity;
     for(var fi=0;fi<free.length;fi++){
@@ -6391,7 +6436,7 @@ function _bsInitEvents(){
       p.item.w=rb.w;p.item.h=rb.h;p.item.label=Math.round(rb.w)+'×'+Math.round(rb.h);
       p.rotated=false;p.pw=rb.w;p.ph=rb.h;
     } else {
-      var newPw=p.ph,newPh=p.pw;
+      var nd=_placeDims(p.item,!p.rotated,EW,EH),newPw=nd.pw,newPh=nd.ph; // 온장 그대로 방향이 바뀌면 칸 크기도
       if(newPw>EW+0.01||newPh>EH+0.01)return; // 초과 시 무시
       p.pw=newPw;p.ph=newPh;p.rotated=!p.rotated;
     }
@@ -6810,6 +6855,7 @@ function closeBoardModal(){
   }
   document.getElementById('board-modal').classList.remove('show');
   _updateBoardQty(); // 손으로 고친 배치 장수를 수량에
+  calcCost(); // 온장 그대로 사이즈는 배치 방향에 따라 절단비가 달라짐
 }
 function resetBoardLayout(){
   _savedBoardLayout=null;_savedBoardImg=null;
@@ -7279,7 +7325,8 @@ function _drawCleanExport(){
     var s=p.s,col=p.col[0],hd=s.hideDims||{};
     if(s.kind==='rect'){
       var g=_expRectGeo(s),bx=pieceBoxesPx[pi],band=DOFF+70;
-      var ff=_fullBoardFit(s,g.w,g.h),tW=_fmtDim(g.w)+(ff.w?' '+_FULL_TXT:''),tH=_fmtDim(g.h)+(ff.h?' '+_FULL_TXT:''); // 온장 그대로 사이즈 표기
+      var ff=_fullBoardFit(s);if(Math.abs(Math.sin(g.rot||0))>0.5)ff={w:ff.h,h:ff.w}; // ff는 화면 상자 기준 → 도형 w/h 기준으로
+      var tW=_fmtDim(g.w)+(ff.w?' '+_FULL_TXT:''),tH=_fmtDim(g.h)+(ff.h?' '+_FULL_TXT:''); // 온장 그대로 사이즈 표기
       if(_rightAngle(s.rotation)){ // 화면상 상자 기준 (90° 돌렸으면 폭·높이 글자를 바꿔서)
         var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),B=q.y+Math.abs(q.h),sw=Math.abs(Math.sin(g.rot))>0.5;
         var hdW=sw?hd.h:hd.w,hdH=sw?hd.w:hd.h;
@@ -7530,7 +7577,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
   var ox0=ox,oy0=oy;
   // 온장 그대로 사이즈: 그 방향은 배치 칸을 여백(10)만큼 양쪽으로 늘려 온장 끝에 붙여 그림
-  var _fx=p.rotated?p.item.fh:p.item.fw,_fy=p.rotated?p.item.fw:p.item.fh;
+  var _pf=_pFull(p),_fx=_pf.x,_fy=_pf.y;
   if(_fx)ox-=10*sc;if(_fy)oy-=10*sc;
   var pw=(p.pw+(_fx?20:0))*sc,ph=(p.ph+(_fy?20:0))*sc;
   // 도형 좌표(mm) → 배치 위치(px). 회전 배치는 90° 회전
@@ -7557,7 +7604,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
   }
   // 이름 + 크기 (회전 배치는 ↻)
-  var nm=pc?_expPieceName(pc.s):'',sz=p.item.label||(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
+  var nm=pc?_expPieceName(pc.s):'',sz=p.item.label?_pLabel(p):(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
   if(rot){var _dg=-rot*180/Math.PI+(p.rotated?90:0);_dg=Math.round(((_dg%360)+360)%360*10)/10;sz+=' ↻'+_dg+'°';}
   else if(p.rotated)sz+=' ↻';
   var lines=nm?[nm,sz]:[sz],minF=12*k;
@@ -8034,7 +8081,7 @@ function _afInv(m){var d=m[0]*m[3]-m[1]*m[2];return[m[3]/d,-m[1]/d,-m[2]/d,m[0]/
 // 온장 배치의 조각 자리: 도면 좌표 → 온장 좌표(mm). _boardPiece의 M과 같은 계산 (sc=1)
 function _3dWorldToBoard(bp,bb,margin){
   var it=bp.item,rot=it.rot||0,cr=Math.cos(rot),sr=Math.sin(rot),iw=rot?it.w:bb.r-bb.l;
-  var fx=bp.rotated?it.fh:it.fw,fy=bp.rotated?it.fw:it.fh,ox=margin+bp.x-(fx?10:0),oy=margin+bp.y-(fy?10:0);
+  var pf=_pFull(bp),fx=pf.x,fy=pf.y,ox=margin+bp.x-(fx?10:0),oy=margin+bp.y-(fy?10:0);
   function M(x,y){var u=rot?x*cr-y*sr-it.rx0:x-bb.l,v=rot?x*sr+y*cr-it.ry0:y-bb.t;return bp.rotated?[ox+v,oy+(iw-u)]:[ox+u,oy+v];}
   var o=M(0,0),ax=M(1,0),ay=M(0,1);
   return[ax[0]-o[0],ax[1]-o[1],ay[0]-o[0],ay[1]-o[1],o[0],o[1]];
