@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-10-27",
+"updated":"2026-10-29",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -901,7 +901,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004989/image/list/1000004989_list_092.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004989/image/list/1000004989_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004989",
 "cate":"009003"
 },
@@ -2386,7 +2386,7 @@ window._MALL_CATALOG={
 "size":"1200×2400×6.5T",
 "price":313600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003860/image/list/1000003860_list_018.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003860/image/list/1000003860_list_089.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003860",
 "cate":"009001"
 },
