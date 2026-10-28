@@ -9305,6 +9305,25 @@ function _3dIcon(kind,v,hc){
   }
   return '<svg width="30" height="39" viewBox="0 0 40 52">'+D+s+'</svg>';
 }
+// 도어 마감 견본 칸: q(검색어) 없으면 고른 분류 목록(list), 있으면 모든 브랜드에서 이름·품번·브랜드·분류(+유광)에 단어가 모두 든 마감 + 견본 아래 이름
+function _3dFinGrid(list,q,cur){
+  var words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean),srch=words.length>0;
+  if(srch)list=_3D_FINISH.filter(function(f){
+    if(f.grp==='body')return false;
+    var b=(_3D_BRANDS.filter(function(x){return x.id===f.brand;})[0]||{}).name||'',g=((_3D_GRPS.filter(function(x){return x[0]===f.grp;})[0]||[])[1])||'';
+    var hay=(f.name+' '+(f.code||'')+' '+b+' '+g+(f.gloss?' 유광':'')).toLowerCase(),hay2=hay.replace(/\s+/g,'');
+    return words.every(function(w){return hay.indexOf(w)>=0||hay2.indexOf(w)>=0;});
+  });
+  var h=srch?'<div style="color:#75839C;font-size:11px;margin:0 0 4px 2px">'+(list.length?list.length+'개':'찾는 마감이 없습니다')+'</div>':'';
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:'+(srch?'6px 5px':'5px')+';max-height:260px;overflow:auto;padding:2px">'+list.map(function(f){var on=f.id===cur;
+    var sw='<div data-fin="'+f.id+'" title="'+f.name+(f.code?' '+f.code:'')+'" style="aspect-ratio:1;border-radius:3px;cursor:pointer;'+_doorFinishSwatch(f.id)+';outline:'+(on?'3px solid #E3B861':'1px solid #1C2A47')+';outline-offset:-1px"></div>';
+    if(!srch)return sw;
+    var b=(_3D_BRANDS.filter(function(x){return x.id===f.brand;})[0]||{}).name||'';
+    return '<div style="min-width:0">'+sw+'<div title="'+f.name+'" style="font-size:9.5px;line-height:1.25;color:#D9DFEA;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all">'+f.name+'</div>'
+      +'<div style="font-size:9px;color:#75839C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b+'</div></div>';
+  }).join('')+'</div>';
+  return h;
+}
 function _3dStylePanel(){
   var box=document.getElementById('v3d-style');if(!box||!_3d)return;var S=_3dStyle;
   var hdr='font-weight:bold;color:#E3B861;margin:9px 0 4px',btn='padding:3px 7px;border-radius:3px;cursor:pointer;font-size:11px;color:#fff;border:1px solid ';
@@ -9345,10 +9364,12 @@ function _3dStylePanel(){
     return '<span data-mtab="'+t[0]+'" style="'+tab+'background:'+(on?'#121D33':'#0A1222')+';color:'+(on?'#fff':'#75839C')+'">'+t[1]+'</span>';}).join('')+'</div>';
   h+='<div style="border:1px solid #2A4F92;border-radius:0 4px 4px 4px;padding:6px;background:#121D33">';
   if(U.tab==='sel'){
-    h+='<select id="v3d-coll" style="width:100%;background:#0A1222;color:#D9DFEA;border:1px solid #1C2A47;border-radius:3px;padding:3px;font-size:11.5px;margin-bottom:6px">'
+    // 검색(2026-10-28 사용자 요청 "종류가 너무 많아"): 이름·품번·브랜드·분류, 여러 단어는 모두 포함 — 검색어가 있으면 모든 브랜드에서, 견본 아래 이름
+    h+='<div style="position:relative;margin-bottom:6px"><input id="v3d-fq" type="text" value="'+escHtml(U.q||'')+'" placeholder="🔍 마감 검색 (이름·품번·브랜드, 예: 화이트 우드)" style="width:100%;box-sizing:border-box;background:#0A1222;color:#D9DFEA;border:1px solid #2A4F92;border-radius:3px;padding:5px 24px 5px 7px;font-size:11.5px">'
+      +'<span id="v3d-fq-x" title="검색 지우기" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:#75839C;display:'+(U.q?'':'none')+'">✕</span></div>';
+    h+='<select id="v3d-coll" style="width:100%;background:#0A1222;color:#D9DFEA;border:1px solid #1C2A47;border-radius:3px;padding:3px;font-size:11.5px;margin-bottom:6px'+(U.q?';opacity:.45':'')+'">'
       +colls.map(function(c){return '<option value="'+c[0]+'"'+(c[0]===U.coll?' selected':'')+'>'+c[1]+'</option>';}).join('')+'</select>';
-    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:260px;overflow:auto;padding:2px">'+list.map(function(f){var on=f.id===T.finish;
-      return '<div data-fin="'+f.id+'" title="'+f.name+(f.code?' '+f.code:'')+'" style="aspect-ratio:1;border-radius:3px;cursor:pointer;'+_doorFinishSwatch(f.id)+';outline:'+(on?'3px solid #E3B861':'1px solid #1C2A47')+';outline-offset:-1px"></div>';}).join('')+'</div>';
+    h+='<div id="v3d-fgrid">'+_3dFinGrid(list,U.q,T.finish)+'</div>';
   } else { // 편집: 마감 대신 직접 색
     h+='<div style="color:#A9B4C8;margin-bottom:4px">직접 색 (고르면 마감 대신 이 색)</div>'+sw('door',T.door);
   }
@@ -9392,11 +9413,19 @@ function _3dStylePanel(){
   function tgtObj(){if(tgt==='upper'&&S.upper.same){S.upper.same=false;S.upper.door=S.lower.door;S.upper.finish=S.lower.finish;}return S[tgt];}
   box.querySelectorAll('[data-col]').forEach(function(e){e.onclick=function(){var o=tgtObj();o.door=e.dataset.v;o.finish='';changed(true);};}); // 직접 색 = 마감 끔
   box.querySelectorAll('[data-colin]').forEach(function(e){e.oninput=function(){var o=tgtObj(),g=!!o.finish;o.door=e.value;o.finish='';if(g)_3dRegeom();else _3dRender();};e.onchange=function(){_3dStylePanel();};});
-  box.querySelectorAll('[data-fin]').forEach(function(e){e.onclick=function(){tgtObj().finish=e.dataset.fin;changed(true);};}); // 마감 = 결 좌표·텍스처라 모양 다시
+  function bindFin(){box.querySelectorAll('[data-fin]').forEach(function(e){e.onclick=function(){tgtObj().finish=e.dataset.fin;changed(true);};});} // 마감 = 결 좌표·텍스처라 모양 다시
+  bindFin();
+  var fq=document.getElementById('v3d-fq');
+  if(fq){ // 칠 때마다 견본 칸만 다시 (창 전체를 다시 그리면 입력 칸 포커스가 사라짐)
+    var fx=document.getElementById('v3d-fq-x'),cs=document.getElementById('v3d-coll');
+    fq.oninput=function(){U.q=fq.value;document.getElementById('v3d-fgrid').innerHTML=_3dFinGrid(list,U.q,T.finish);bindFin();fx.style.display=U.q?'':'none';if(cs)cs.style.opacity=U.q?'.45':'';};
+    fq.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape'){fq.value='';fq.oninput();}}; // 3D 창 단축키(R·Delete 등)로 안 넘김
+    fx.onclick=function(){fq.value='';fq.oninput();fq.focus();};
+  }
   box.querySelectorAll('[data-opt]').forEach(function(e){e.onclick=function(){setPath(e.dataset.opt,e.dataset.v);changed(true);};});
   box.querySelectorAll('[data-tgt]').forEach(function(e){e.onclick=function(){U.tgt=e.dataset.tgt;_3dStylePanel();};});
   box.querySelectorAll('[data-mtab]').forEach(function(e){e.onclick=function(){U.tab=e.dataset.mtab;_3dStylePanel();};});
-  var csel=document.getElementById('v3d-coll');if(csel)csel.onchange=function(){U.coll=csel.value;_3dStylePanel();};
+  var csel=document.getElementById('v3d-coll');if(csel)csel.onchange=function(){U.coll=csel.value;U.q='';_3dStylePanel();}; // 분류를 고르면 검색은 지움
   var usame=document.getElementById('v3d-up-same');if(usame)usame.onchange=function(e){S.upper.same=e.target.checked;if(!S.upper.same){S.upper.door=S.lower.door;S.upper.finish=S.lower.finish;}changed(true);};
   var uh0=document.getElementById('v3d-up-h0');if(uh0)uh0.onclick=function(){S.upOff={};S.upDel={};S.unitDel={};if(_3d)_3d.fOps=[];changed(true);};
   document.getElementById('v3d-style-reset').onclick=function(){var p=S.prod,uo=S.upOff,ud=S.upDel,un=S.unitDel;_3dStyleLoad(null);_3dStyle.prod=p;_3dStyle.upOff=uo;_3dStyle.upDel=ud;_3dStyle.unitDel=un;changed(true);};
