@@ -631,6 +631,10 @@ function _mallIdFor(name,size){
 function _slabImgFor(label){
   var p=_prodOf(label)||products[0];
   var id=p&&p.name?_mallIdFor(p.name,p.size):null;if(!id)return null;
+  return _slabImgById(id);
+}
+// 상품번호로 온장 사진 (3D 제품 바꿔 보기도 씀)
+function _slabImgById(id){
   if(_slabImgs[id])return _slabImgs[id].img||null;
   var ent=_slabImgs[id]={},sc=document.createElement('script');
   sc.src='mall-img/'+id+'.js';
@@ -2895,7 +2899,7 @@ function newProject(){
   _setSiteInfo('','');
   document.getElementById('deliv-date').value='';document.getElementById('deliv-time').value='';
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
-  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정도 기본
+  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null);_3dStyleLoad(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정·3D 디자인도 기본
   offsetX=60;offsetY=60;
   renderProductList();updatePropsPanel();redraw();calcCost();
 }
@@ -2935,6 +2939,7 @@ function _makeProjectData(){
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
     view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
+    view3d:_3dStyle, // 3D 디자인(가구 색·도어·손잡이·제품 바꿔 보기·상부장 높이·지운 가구 칸)
     saved:new Date().toISOString()
   });
 }
@@ -4053,7 +4058,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
       if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);_setCurFile(null);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
         var data=JSON.parse(e.target.result);
-        _setCurFile(fh);_3dOptsLoad(data.view3dOpts); // 3D 보기 설정 (예전 파일은 기본: 하부장·상부장 켬)
+        _setCurFile(fh);_3dOptsLoad(data.view3dOpts);_3dStyleLoad(data.view3d); // 3D 보기 설정(예전 파일은 기본: 하부장·상부장 켬) · 3D 디자인 설정
         saveHistory();
         shapes=data.shapes||[];
         // 새로 그리는 도형 id가 불러온 도형과 겹치지 않도록
@@ -8191,7 +8196,7 @@ function _3dBuildScene(){
   DB.boards.forEach(function(b,bi){b.forEach(function(bp){if(bp.item&&bp.item.shape)place.set(key(bp.item.shape),{bp:bp,bi:bi});});});
   function slabCanvas(bi){ // 온장 한 장 = 사진을 온장 크기로 (_drawSlab), 장마다 한 번만
     if(boardCv[bi]!==undefined)return boardCv[bi];
-    var b=DB.boards[bi],img=_slabImgFor(_boardLabel(b));if(!img)return null; // 아직 불러오는 중이면 다음에
+    var b=DB.boards[bi],pid=_3dProdId(_boardLabel(b)),img=pid?_slabImgById(pid):null;if(!img)return null; // 아직 불러오는 중이면 다음에 (제품 바꿔 보기면 그 제품 사진)
     var d=_boardDims(b),s=Math.min(2048,Math.max(img.width,img.height))/Math.max(d.bw,d.bh),c=document.createElement('canvas');
     c.width=Math.round(d.bw*s);c.height=Math.round(d.bh*s);_drawSlab(c.getContext('2d'),img,0,0,c.width,c.height);
     var t=document.createElement('canvas');t.width=t.height=1;var tg=t.getContext('2d');tg.drawImage(c,0,0,1,1);var px=tg.getImageData(0,0,1,1).data;
@@ -8207,7 +8212,7 @@ function _3dBuildScene(){
     [loops.outer].concat(loops.holes).forEach(function(L){L.forEach(function(q,i){if(i)g.lineTo(q[0],q[1]);else g.moveTo(q[0],q[1]);});g.closePath();});
     g.save();g.clip('evenodd');
     var pl=place.get(key(p.s)),sc=pl?slabCanvas(pl.bi):null,side=[0.86,0.85,0.82];
-    if(pl&&!sc&&_mallIdFor(_boardLabel(DB.boards[pl.bi]),'')!=null)waiting=true;
+    if(pl&&!sc&&_3dProdId(_boardLabel(DB.boards[pl.bi]))!=null)waiting=true;
     if(sc){
       var W2B=_3dWorldToBoard(pl.bp,bb,DB.margin),M=_afMul(_afMul(T,_afInv(W2B)),[1/sc.s,0,0,1/sc.s,0,0]);
       g.setTransform(M[0],M[1],M[2],M[3],M[4],M[5]);g.drawImage(sc.c,0,0);side=sc.avg;
@@ -8229,6 +8234,192 @@ function _m4Mul(a,b){var o=new Array(16);for(var c=0;c<4;c++)for(var r=0;r<4;r++
 // ── 하부장(가구): 상판 아래 일반적인 싱크대 하부장 ──
 var _3D_H=900,_3D_KICK=100,_3D_SET=20,_3D_KICKSET=50,_3D_DOOR=500,_3D_TALL=1000; // 상판 윗면 높이·걸레받이 높이·몸통 들임(상판 끝에서)·걸레받이 추가 들임·도어 폭 기준·이보다 높은 미드웨이는 바닥부터(mm)
 var _3D_UPGAP=600,_3D_UPD=350,_3D_UPH=700; // 상부장: 미드웨이 없을 때 상판 윗면에서 띄움·깊이·높이(mm)
+// ── 3D 디자인: 상·하부장 컬러·도어 디자인·손잡이·제품 바꿔 보기 → 도면 파일 view3d로 저장 ──
+var _3D_SWATCH=[['화이트','#F4F3EF'],['웜화이트','#ECE4D6'],['라이트그레이','#CFCFCA'],['웜그레이','#9C968D'],['샌드베이지','#CDB698'],['세이지그린','#9AA78E'],
+  ['딥그린','#2F4A3C'],['네이비','#27344E'],['차콜','#3A3B3F'],['블랙','#1C1C1E'],['오크','#B48C5E'],['월넛','#6B4A33']];
+var _3D_DESIGNS=[['flat','민자'],['shaker','쉐이커'],['slim','슬림 쉐이커'],['louver','루바'],['ribbed','리브드'],['groove','그루브'],['glass','유리장']]; // 유리장은 상부장만
+var _3D_HANDLES=[['none','없음(푸시)'],['bar','바'],['knob','사각 노브'],['round','둥근 노브'],['line','라인(J)'],['gola','골라(C채널)'],['edge','엣지'],['recess','매립형']];
+var _3D_HLEN=[['128','128'],['160','160'],['192','192'],['256','256'],['full','전체']],_3D_HDIR=[['v','세로'],['h','가로']];
+var _3D_HCOL={silver:['실버','#B9BCC0'],black:['블랙','#1E1E20'],gold:['골드','#C2A15A'],bronze:['브론즈','#7A5B3E'],gunmetal:['건메탈','#4A4D52']};
+// 손잡이 쪽: 나란한 도어를 둘씩 짝지어 문이 맞닿는 쪽 (짝 없는 마지막 한 짝은 오른쪽)
+function _3dHandleSide(k,n){return k%2===1?'l':'r';}
+function _3dStyleDef(){return{lower:{door:'#F4F3EF',body:'#D7D6D2',kick:'#4C4E53',design:'flat',finish:''},upper:{door:'#F4F3EF',body:'#D7D6D2',design:'flat',same:true,finish:''},handle:{type:'none',color:'silver',len:'160',dir:'v'},prod:{},upOff:{},upDel:{},unitDel:{}};} // finish = 도어 마감 id ('' = 색만), upOff = 상부장마다 위아래 옮긴 mm, upDel = 지운 상부장(예전), unitDel = 지운 가구 칸(도어 단위)
+var _3dStyle=_3dStyleDef();
+function _3dStyleLoad(v){var d=_3dStyleDef();if(v){['lower','upper','handle'].forEach(function(k){Object.assign(d[k],v[k]||{});});d.prod=Object.assign({},v.prod||{});d.upOff=Object.assign({},v.upOff||{});d.upDel=Object.assign({},v.upDel||{});d.unitDel=Object.assign({},v.unitDel||{});}_3dStyle=d;}
+function _hex3(h){var n=parseInt(String(h||'#cccccc').slice(1),16);return[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255];}
+// 3D 무늬에 쓸 상품번호: 제품 바꿔 보기(_3dStyle.prod[제품 구분 이름] = 상품번호)가 있으면 그것, 없으면 도면 제품
+function _3dProdId(label){var o=_3dStyle.prod[label];if(o)return o;var p=_prodOf(label)||products[0];return p&&p.name?_mallIdFor(p.name,p.size):null;}
+function _3dUp(){var u=_3dStyle.upper;return u.same?Object.assign({},u,{door:_3dStyle.lower.door,body:_3dStyle.lower.body,finish:_3dStyle.lower.finish}):u;} // 상부장 색 (하부장과 같게면 하부장 색·마감)
+// ARCKIT 도어 마감 (ARCKIT 맵핑 소스 .skp의 solid-/Wood-/Stone- 재질): 색 + 결 이미지(door-tex/*.js) 위에 그 색을 입힘 (스케치업 색 입히기처럼)
+//   tex: wood = wood5 결, wood2 = orange wood 결, stone = 네오리스 무늬 / tw·th = 결 이미지 한 장이 덮는 크기(mm, 스케치업 재질 크기)
+var _3D_FINISH=[
+  ['clean-white','Clean White','solid',[236,233,228]],['soft-white','Soft White','solid',[235,230,223]],['powder','Powder','solid',[212,206,194]],
+  ['pebble','Pebble','solid',[191,174,155]],['soft-grey','Soft Grey','solid',[203,200,194]],['iron','Iron','solid',[134,122,110]],
+  ['clean-white-wood','Clean White Wood','wood',[228,225,220],'wood',1500,3500],['powder-wood','Powder Wood','wood',[210,201,182],'wood',1500,3500],
+  ['basic-oak','Basic Oak','wood',[206,186,154],'wood',1700,3700],['white-natural','White Natural','wood',[199,184,166],'wood',1700,3700],
+  ['pebble-wood','Pebble Wood','wood',[165,156,134],'wood',1500,3500],['ash-natural','Ash Natural','wood',[162,148,127],'wood',1700,3700],
+  ['natural-oak','Natural Oak','wood',[155,119,83],'wood',1700,3700],['scarlet-oak','Scarlet Oak','wood',[129,88,64],'wood',1500,3500],
+  ['dark-oak','Dark Oak','wood',[111,79,61],'wood',1500,3500],['ash-brown','Ash Brown','wood',[108,94,79],'wood',1700,3700],
+  ['ash-maroon','Ash Maroon','wood',[105,87,73],'wood',1700,3700],['gentle-oak','Gentle Oak','wood',[102,81,68],'wood',1700,3700],
+  ['ash-dark-brown','Ash Dark Brown','wood',[86,80,71],'wood',1500,3500],['dusty-orange-wood','Dusty Orange Wood','wood',[186,101,59],'wood2',1800,1800],
+  ['deep-burgundy-wood','Deep Burgundy Wood','wood',[89,58,52],'wood2',1800,1800],['deep-olive-wood','Deep Olive Wood','wood',[67,79,47],'wood2',1500,1500],
+  ['white-concrete','White Concrete','stone',[232,228,222],'stone',727,3500],['ash-concrete','Ash Concrete','stone',[216,212,198],'stone',727,3500],
+  ['beige-concrete','Beige Concrete','stone',[211,204,187],'stone',727,3500]
+].map(function(a){return{id:a[0],name:a[1],grp:a[2],rgb:a[3],tex:a[4]||null,tw:a[5]||0,th:a[6]||0,brand:'arckit'};});
+// 브랜드 (맵핑 소스): 새 브랜드는 여기에 하나 + _3D_FINISH에 brand가 그 id인 마감들(결 이미지는 door-tex/에)
+// 한솔 스토리보드 도어 (2026-10-28, 사용자가 준 "한솔도어.pdf" 카탈로그 견본에서 추출): 이름·품번·대표색(견본 중앙값),
+//   무늬 있는 것(럭셔리 PET·프리미엄 PP)은 견본을 잘라 만든 door-tex/hs-품번.js를 색 입히지 않고 그대로(raw, 거울 반복), HG = 유광. 바디 PET(grp body)는 도어 목록엔 안 나오고 몸통 자동 색에만
+_3D_FINISH=_3D_FINISH.concat([
+  {id:'hs-HSB12270',name:'이지클린화이트',code:'HSB12270',grp:'hpl',rgb:[255,255,255]},{id:'hs-HSB12272',name:'이지클린그레이',code:'HSB12272',grp:'hpl',rgb:[221,222,224]},
+  {id:'hs-HSB12274',name:'이지클린토프',code:'HSB12274',grp:'hpl',rgb:[151,142,135]},{id:'hs-HSB12276',name:'이지클린블랙',code:'HSB12276',grp:'hpl',rgb:[40,40,40]},
+  {id:'hs-HSB122000',name:'크라프트화이트',code:'HSB122000',grp:'lpet',rgb:[218,217,213],tex:'hs-HSB122000',tw:600,th:600,raw:1},
+  {id:'hs-HSB122001',name:'렌소이스화이트',code:'HSB122001',grp:'lpet',rgb:[214,215,213],tex:'hs-HSB122001',tw:600,th:600,raw:1},
+  {id:'hs-HSB122005',name:'헤센골드',code:'HSB122005',grp:'lpet',rgb:[144,137,121],tex:'hs-HSB122005',tw:600,th:600,raw:1},
+  {id:'hs-HSB122003',name:'타히티블랙',code:'HSB122003',grp:'lpet',rgb:[91,91,91],tex:'hs-HSB122003',tw:600,th:600,raw:1},
+  {id:'hs-HSB122007',name:'헤센브라운',code:'HSB122007',grp:'lpet',rgb:[98,85,71],tex:'hs-HSB122007',tw:600,th:600,raw:1},
+  {id:'hs-HSB122013',name:'플루트실버',code:'HSB122013',grp:'lpet',rgb:[199,195,191],tex:'hs-HSB122013',tw:600,th:600,raw:1},
+  {id:'hs-HSB122015',name:'플루트브라운',code:'HSB122015',grp:'lpet',rgb:[71,62,55],tex:'hs-HSB122015',tw:600,th:600,raw:1},
+  {id:'hs-HSB122017',name:'펄그레이지',code:'HSB122017',grp:'lpet',rgb:[150,140,138],tex:'hs-HSB122017',tw:600,th:600,raw:1},
+  {id:'hs-HSB122019',name:'펄쉐도우',code:'HSB122019',grp:'lpet',rgb:[89,85,83],tex:'hs-HSB122019',tw:600,th:600,raw:1},
+  {id:'hs-HSB122009',name:'로렌헤어라인실버',code:'HSB122009',grp:'lpet',rgb:[129,117,111],tex:'hs-HSB122009',tw:600,th:600,raw:1},
+  {id:'hs-HSB122011',name:'로렌샤틴골드',code:'HSB122011',grp:'lpet',rgb:[157,149,139],tex:'hs-HSB122011',tw:600,th:600,raw:1},
+  {id:'hs-HSB122404',name:'쉘화이트우드',code:'HSB122404',grp:'pp',rgb:[238,231,223],tex:'hs-HSB122404',tw:600,th:930,raw:1},
+  {id:'hs-HSB122406',name:'쉘그레이우드',code:'HSB122406',grp:'pp',rgb:[217,210,198],tex:'hs-HSB122406',tw:600,th:930,raw:1},
+  {id:'hs-HSB122408',name:'칼프브라운우드',code:'HSB122408',grp:'pp',rgb:[70,60,51],tex:'hs-HSB122408',tw:600,th:930,raw:1},
+  {id:'hs-HSB122410',name:'칼프블랙우드',code:'HSB122410',grp:'pp',rgb:[41,41,41],tex:'hs-HSB122410',tw:600,th:930,raw:1},
+  {id:'hs-HSB122400',name:'베이라이트오크',code:'HSB122400',grp:'pp',rgb:[205,184,161],tex:'hs-HSB122400',tw:600,th:600,raw:1},
+  {id:'hs-HSB122402',name:'베이내츄럴오크',code:'HSB122402',grp:'pp',rgb:[177,147,109],tex:'hs-HSB122402',tw:600,th:600,raw:1},
+  {id:'hs-HSB121409',name:'메종라이트오크',code:'HSB121409',grp:'pp',rgb:[177,146,116],tex:'hs-HSB121409',tw:600,th:600,raw:1},
+  {id:'hs-HSB119401',name:'시에라오크',code:'HSB119401',grp:'pp',rgb:[161,128,96],tex:'hs-HSB119401',tw:600,th:600,raw:1},
+  {id:'hs-HSB121407',name:'내츄럴크랙오크',code:'HSB121407',grp:'pp',rgb:[147,111,77],tex:'hs-HSB121407',tw:600,th:600,raw:1},
+  {id:'hs-HSB119402',name:'시에라월넛',code:'HSB119402',grp:'pp',rgb:[94,69,43],tex:'hs-HSB119402',tw:600,th:600,raw:1},
+  {id:'hs-HSB121411',name:'콘크리트화이트',code:'HSB121411',grp:'pp',rgb:[231,221,211],tex:'hs-HSB121411',tw:600,th:600,raw:1},
+  {id:'hs-HSB121413',name:'콘크리트샌드',code:'HSB121413',grp:'pp',rgb:[216,203,186],tex:'hs-HSB121413',tw:600,th:600,raw:1},
+  {id:'hs-HSB120401',name:'피칸화이트우드',code:'HSB120401',grp:'pp',rgb:[227,224,219],tex:'hs-HSB120401',tw:600,th:600,raw:1},
+  {id:'hs-HSB121401',name:'피칸웜그레이우드',code:'HSB121401',grp:'pp',rgb:[178,170,157],tex:'hs-HSB121401',tw:600,th:600,raw:1},
+  {id:'hs-HSB121403',name:'피칸그레이우드',code:'HSB121403',grp:'pp',rgb:[148,135,124],tex:'hs-HSB121403',tw:600,th:600,raw:1},
+  {id:'hs-HSB121405',name:'세레나딥오크',code:'HSB121405',grp:'pp',rgb:[80,66,54],tex:'hs-HSB121405',tw:600,th:600,raw:1},
+  {id:'hs-HSB117002',name:'퍼펙트화이트 SM',code:'HSB117002',grp:'spet',rgb:[249,248,246]},{id:'hs-HSB117001',name:'퍼펙트화이트 HG',code:'HSB117001',grp:'spet',rgb:[249,248,246],gloss:1},
+  {id:'hs-HSB122002',name:'클린화이트 SM',code:'HSB122002',grp:'spet',rgb:[251,249,243]},{id:'hs-HSB117007',name:'트루펄화이트 HG',code:'HSB117007',grp:'spet',rgb:[230,228,223],gloss:1},
+  {id:'hs-HSB117004',name:'크림화이트 SM',code:'HSB117004',grp:'spet',rgb:[250,247,236]},{id:'hs-HSB117003',name:'크림화이트 HG',code:'HSB117003',grp:'spet',rgb:[250,247,235],gloss:1},
+  {id:'hs-HSB121002',name:'포그그레이 SM',code:'HSB121002',grp:'spet',rgb:[229,219,210]},{id:'hs-HSB120004',name:'라이트그레이 SM',code:'HSB120004',grp:'spet',rgb:[199,194,190]},
+  {id:'hs-HSB117008',name:'샌드그레이 SM',code:'HSB117008',grp:'spet',rgb:[193,183,174]},{id:'hs-HSB122021',name:'샌드그레이 HG',code:'HSB122021',grp:'spet',rgb:[184,173,163],gloss:1},
+  {id:'hs-HSB121004',name:'새틴베이지 SM',code:'HSB121004',grp:'spet',rgb:[179,167,155]},{id:'hs-HSB118024',name:'애쉬베이지 SM',code:'HSB118024',grp:'spet',rgb:[158,142,129]},
+  {id:'hs-HSB120002',name:'도브화이트 SM',code:'HSB120002',grp:'spet',rgb:[255,254,253]},{id:'hs-HSB119032',name:'코튼블루 SM',code:'HSB119032',grp:'spet',rgb:[208,210,202]},
+  {id:'hs-HSB117010',name:'모노그레이 SM',code:'HSB117010',grp:'spet',rgb:[148,143,139]},{id:'hs-HSB122023',name:'모노그레이 HG',code:'HSB122023',grp:'spet',rgb:[139,133,130],gloss:1},
+  {id:'hs-HSB117006',name:'다크그레이 SM',code:'HSB117006',grp:'spet',rgb:[77,73,70]},{id:'hs-HSB117005',name:'다크그레이 HG',code:'HSB117005',grp:'spet',rgb:[72,68,65],gloss:1},
+  {id:'hs-HSB120008',name:'바살트그레이 SM',code:'HSB120008',grp:'spet',rgb:[59,57,58]},{id:'hs-HSB119028',name:'믹스블랙 SM',code:'HSB119028',grp:'spet',rgb:[46,44,45]},
+  {id:'hs-HSB119030',name:'로지핑크 SM',code:'HSB119030',grp:'spet',rgb:[220,200,189]},{id:'hs-HSB121006',name:'로투스핑크 SM',code:'HSB121006',grp:'spet',rgb:[213,176,154]},
+  {id:'hs-HSB117012',name:'미스트그린 SM',code:'HSB117012',grp:'spet',rgb:[176,179,158]},{id:'hs-HSB121008',name:'재스퍼그린 SM',code:'HSB121008',grp:'spet',rgb:[153,149,114]},
+  {id:'hs-HSB120006',name:'스모키올리브 SM',code:'HSB120006',grp:'spet',rgb:[76,82,78]},{id:'hs-HSB117016',name:'인디고 SM',code:'HSB117016',grp:'spet',rgb:[48,55,65]},
+  {id:'hs-HSB119502',name:'밀키화이트',code:'HSB119502',grp:'asa',rgb:[255,254,253]},{id:'hs-HSB122500',name:'실키화이트',code:'HSB122500',grp:'asa',rgb:[242,233,224]},
+  {id:'hs-HSB122502',name:'미스트그레이',code:'HSB122502',grp:'asa',rgb:[204,201,194]},{id:'hs-HSB119506',name:'그레이지',code:'HSB119506',grp:'asa',rgb:[167,160,154]},
+  {id:'hs-HSB120508',name:'쿨그레이',code:'HSB120508',grp:'asa',rgb:[177,177,179]},{id:'hs-HSB120512',name:'모카그레이',code:'HSB120512',grp:'asa',rgb:[145,137,126]},
+  {id:'hs-HSB119508',name:'스톤그레이',code:'HSB119508',grp:'asa',rgb:[94,87,79]},{id:'hs-HSB119504',name:'차콜그레이',code:'HSB119504',grp:'asa',rgb:[80,78,79]},
+  {id:'hs-HSB120504',name:'소프트베이지',code:'HSB120504',grp:'asa',rgb:[204,191,174]},{id:'hs-HSB120506',name:'세이지그린',code:'HSB120506',grp:'asa',rgb:[177,183,169]},
+  {id:'hs-HSB122504',name:'올리브',code:'HSB122504',grp:'asa',rgb:[77,75,63]},{id:'hs-HSB120514',name:'네이비',code:'HSB120514',grp:'asa',rgb:[55,65,77]},
+  {id:'hs-HSB322000',name:'스팀화이트',code:'HSB322000',grp:'body',rgb:[254,253,248]},{id:'hs-HSB322002',name:'모닝그레이',code:'HSB322002',grp:'body',rgb:[230,220,211]},
+  {id:'hs-HSB322200',name:'스텔라화이트',code:'HSB322200',grp:'body',rgb:[247,244,239]},{id:'hs-HSB322202',name:'스텔라베이지',code:'HSB322202',grp:'body',rgb:[242,232,224]},
+  {id:'hs-HSB322008',name:'버터크림',code:'HSB322008',grp:'body',rgb:[240,209,162]},{id:'hs-HSB322004',name:'피치핑크',code:'HSB322004',grp:'body',rgb:[249,210,195]},
+  {id:'hs-HSB322012',name:'바질올리브',code:'HSB322012',grp:'body',rgb:[63,64,48]},{id:'hs-HSB322010',name:'테라코타',code:'HSB322010',grp:'body',rgb:[115,66,49]},
+  {id:'hs-HSB322006',name:'웨일그레이',code:'HSB322006',grp:'body',rgb:[90,86,85]},{id:'hs-HSB322014',name:'로얄네이비',code:'HSB322014',grp:'body',rgb:[45,50,56]}
+].map(function(o){o.brand='hansol';o.tex=o.tex||null;o.tw=o.tw||0;o.th=o.th||0;return o;}));
+// 영림 인테리어필름 (2026-10-28, 사용자가 준 "영림도어.pdf" 203~206쪽에서 추출, 쪽 사이 겹치는 견본은 하나만): 솔리드 엠보·우드·스톤·발렌 = 견본 무늬 그대로(raw),
+//   소프트매트·솔리드 = 견본 중앙값 색. 몸통 자동 색은 이 브랜드 무늬 없는 마감(소프트매트·솔리드) 중에서
+_3D_FINISH=_3D_FINISH.concat([
+  {id:'yl-PS103',name:'솔리드엠보 PS103',code:'PS103',grp:'emb',rgb:[249,247,242],tex:'yl-PS103',tw:600,th:330,raw:1},
+  {id:'yl-PS104',name:'솔리드엠보 PS104',code:'PS104',grp:'emb',rgb:[235,229,217],tex:'yl-PS104',tw:600,th:330,raw:1},
+  {id:'yl-PSM211',name:'버터크림',code:'PSM211',grp:'sm',rgb:[237,226,208]},
+  {id:'yl-PWE1502',name:'피노아',code:'PWE1502',grp:'wood',rgb:[188,166,150],tex:'yl-PWE1502',tw:600,th:330,raw:1},
+  {id:'yl-PWE1502-1',name:'에센셜우드 PWE1502-1',code:'PWE1502-1',grp:'wood',rgb:[179,146,111],tex:'yl-PWE1502-1',tw:600,th:330,raw:1},
+  {id:'yl-PWE1502-2',name:'에센셜우드 PWE1502-2',code:'PWE1502-2',grp:'wood',rgb:[63,52,44],tex:'yl-PWE1502-2',tw:600,th:330,raw:1},
+  {id:'yl-PW973',name:'모스',code:'PW973',grp:'wood',rgb:[197,165,130],tex:'yl-PW973',tw:600,th:330,raw:1},
+  {id:'yl-PW973-1',name:'우드 PW973-1',code:'PW973-1',grp:'wood',rgb:[209,182,151],tex:'yl-PW973-1',tw:600,th:330,raw:1},
+  {id:'yl-PW974',name:'우드 PW974',code:'PW974',grp:'wood',rgb:[195,157,115],tex:'yl-PW974',tw:600,th:330,raw:1},
+  {id:'yl-PW974-1',name:'우드 PW974-1',code:'PW974-1',grp:'wood',rgb:[195,165,133],tex:'yl-PW974-1',tw:600,th:330,raw:1},
+  {id:'yl-PW975',name:'우드 PW975',code:'PW975',grp:'wood',rgb:[171,134,100],tex:'yl-PW975',tw:600,th:330,raw:1},
+  {id:'yl-PW975-1',name:'우드 PW975-1',code:'PW975-1',grp:'wood',rgb:[145,120,103],tex:'yl-PW975-1',tw:600,th:330,raw:1},
+  {id:'yl-PX456',name:'타르탄 포실',code:'PX456',grp:'stone',rgb:[220,205,186],tex:'yl-PX456',tw:600,th:330,raw:1},
+  {id:'yl-PX456-1',name:'타르탄 뮤트',code:'PX456-1',grp:'stone',rgb:[239,230,214],tex:'yl-PX456-1',tw:600,th:330,raw:1},
+  {id:'yl-PX457',name:'드라이필드 그레이',code:'PX457',grp:'stone',rgb:[220,209,194],tex:'yl-PX457',tw:600,th:330,raw:1},
+  {id:'yl-PX457-1',name:'드라이필드 화이트',code:'PX457-1',grp:'stone',rgb:[239,233,215],tex:'yl-PX457-1',tw:600,th:330,raw:1},
+  {id:'yl-PX450-4',name:'발렌무디 화이트',code:'PX450-4',grp:'valen',rgb:[244,238,232],tex:'yl-PX450-4',tw:400,th:400,raw:1},
+  {id:'yl-PX450',name:'발렌무디 크림',code:'PX450',grp:'valen',rgb:[248,243,230],tex:'yl-PX450',tw:400,th:400,raw:1},
+  {id:'yl-PX450-1',name:'발렌무디 샌드',code:'PX450-1',grp:'valen',rgb:[233,217,200],tex:'yl-PX450-1',tw:400,th:400,raw:1},
+  {id:'yl-PX450-2',name:'발렌무디 애쉬',code:'PX450-2',grp:'valen',rgb:[204,194,184],tex:'yl-PX450-2',tw:400,th:400,raw:1},
+  {id:'yl-PX450-3',name:'발렌무디 다크',code:'PX450-3',grp:'valen',rgb:[147,133,123],tex:'yl-PX450-3',tw:400,th:400,raw:1},
+  {id:'yl-PX451',name:'화이트스톤',code:'PX451',grp:'stone',rgb:[230,223,214],tex:'yl-PX451',tw:400,th:400,raw:1},
+  {id:'yl-PX451-1',name:'라이트스톤',code:'PX451-1',grp:'stone',rgb:[222,212,196],tex:'yl-PX451-1',tw:400,th:400,raw:1},
+  {id:'yl-PX451-2',name:'그레이스톤',code:'PX451-2',grp:'stone',rgb:[150,135,124],tex:'yl-PX451-2',tw:400,th:400,raw:1},
+  {id:'yl-PX454',name:'선셋스톤',code:'PX454',grp:'stone',rgb:[242,234,220],tex:'yl-PX454',tw:400,th:400,raw:1},
+  {id:'yl-PX454-1',name:'데이브레이크',code:'PX454-1',grp:'stone',rgb:[236,224,213],tex:'yl-PX454-1',tw:400,th:400,raw:1},
+  {id:'yl-PX450-5',name:'발렌무디 미스트',code:'PX450-5',grp:'valen',rgb:[224,214,200],tex:'yl-PX450-5',tw:400,th:400,raw:1},
+  {id:'yl-PX449',name:'발렌 블랑',code:'PX449',grp:'valen',rgb:[242,238,229],tex:'yl-PX449',tw:400,th:400,raw:1},
+  {id:'yl-PX449-1',name:'발렌 베이지',code:'PX449-1',grp:'valen',rgb:[229,211,191],tex:'yl-PX449-1',tw:400,th:400,raw:1},
+  {id:'yl-PX449-2',name:'발렌 포그',code:'PX449-2',grp:'valen',rgb:[224,215,197],tex:'yl-PX449-2',tw:400,th:400,raw:1},
+  {id:'yl-PX449-3',name:'발렌 디머',code:'PX449-3',grp:'valen',rgb:[201,188,175],tex:'yl-PX449-3',tw:400,th:400,raw:1},
+  {id:'yl-PWE1501',name:'팔콘',code:'PWE1501',grp:'wood',rgb:[91,74,62],tex:'yl-PWE1501',tw:400,th:400,raw:1},
+  {id:'yl-PWE1500',name:'보니타',code:'PWE1500',grp:'wood',rgb:[168,139,122],tex:'yl-PWE1500',tw:400,th:400,raw:1},
+  {id:'yl-PW970',name:'윌로우',code:'PW970',grp:'wood',rgb:[173,143,120],tex:'yl-PW970',tw:400,th:400,raw:1},
+  {id:'yl-PSM190',name:'포슬린',code:'PSM190',grp:'sm',rgb:[254,250,248]},
+  {id:'yl-PSM195',name:'캐시미어',code:'PSM195',grp:'sm',rgb:[240,235,227]},
+  {id:'yl-PSM196',name:'라이트그레이',code:'PSM196',grp:'sm',rgb:[224,217,210]},
+  {id:'yl-PSM197',name:'로즈그레이',code:'PSM197',grp:'sm',rgb:[213,199,190]},
+  {id:'yl-PSM198',name:'포그그레이지',code:'PSM198',grp:'sm',rgb:[244,237,226]},
+  {id:'yl-PW969',name:'헤이즈오크',code:'PW969',grp:'wood',rgb:[210,185,153],tex:'yl-PW969',tw:400,th:400,raw:1},
+  {id:'yl-PW968',name:'체스트넛',code:'PW968',grp:'wood',rgb:[187,146,109],tex:'yl-PW968',tw:400,th:400,raw:1},
+  {id:'yl-AFV2007',name:'리체',code:'AFV2007',grp:'wood',rgb:[174,138,110],tex:'yl-AFV2007',tw:400,th:400,raw:1},
+  {id:'yl-AFV2005',name:'로우',code:'AFV2005',grp:'wood',rgb:[133,102,77],tex:'yl-AFV2005',tw:400,th:400,raw:1},
+  {id:'yl-PS100',name:'퓨어화이트',code:'PS100',grp:'emb',rgb:[250,248,241],tex:'yl-PS100',tw:400,th:400,raw:1},
+  {id:'yl-PS101',name:'크림화이트',code:'PS101',grp:'emb',rgb:[248,245,237],tex:'yl-PS101',tw:400,th:400,raw:1},
+  {id:'yl-PS102',name:'회벽화이트',code:'PS102',grp:'emb',rgb:[246,241,233],tex:'yl-PS102',tw:400,th:400,raw:1},
+  {id:'yl-PS160',name:'주백색',code:'PS160',grp:'solid',rgb:[248,241,232]},
+  {id:'yl-PS170',name:'회백색',code:'PS170',grp:'solid',rgb:[249,247,236]}
+].map(function(o){o.brand='younglim';o.tex=o.tex||null;o.tw=o.tw||0;o.th=o.th||0;return o;}));
+var _3D_BRANDS=[{id:'arckit',name:'ARCKIT'},{id:'hansol',name:'한솔 스토리보드'},{id:'younglim',name:'영림 인테리어필름'}],
+  _3D_GRPS=[['solid','단색'],['wood','우드'],['stone','스톤'],['hpl','이지클린 HPL'],['lpet','럭셔리 PET'],['pp','프리미엄 PP'],['spet','스페셜 PET'],['asa','ASA'],['emb','솔리드 엠보'],['sm','소프트매트'],['valen','발렌·발렌무디'],['body','바디 PET']];
+// sRGB(0~255) → CIE Lab (D65) — 색 차이를 사람 눈에 가깝게
+function _rgbLab(c){
+  var v=c.map(function(x){x/=255;return x>0.04045?Math.pow((x+0.055)/1.055,2.4):x/12.92;});
+  var X=(v[0]*0.4124+v[1]*0.3576+v[2]*0.1805)/0.95047,Y=v[0]*0.2126+v[1]*0.7152+v[2]*0.0722,Z=(v[0]*0.0193+v[1]*0.1192+v[2]*0.9505)/1.08883;
+  function f(t){return t>0.008856?Math.cbrt(t):7.787*t+16/116;}var fx=f(X),fy=f(Y),fz=f(Z);
+  return[116*fy-16,500*(fx-fy),200*(fy-fz)];
+}
+// 몸통·걸레받이 자동 색: 고른 도어 마감(또는 직접 고른 색)과 가장 비슷한 단색(그 브랜드 단색 중, 없으면 모든 단색) — 걸레받이는 같은 색을 조금 어둡게
+function _3dAutoBase(S){
+  var f=_3dFinish(S.finish),c=f?f.rgb:_hex3(S.door).map(function(v){return Math.round(v*255);});
+  // 후보: 그 브랜드의 바디(몸통용) 단색 → 없으면 그 브랜드 무늬 없는 마감 → 없으면 모든 무늬 없는 마감. 바디가 없는 브랜드에서 단색 도어면 그 색 그대로
+  var br=f?f.brand:null,sol=_3D_FINISH.filter(function(x){return x.grp==='body'&&x.brand===br;}),hasBody=sol.length>0;
+  if(!hasBody)sol=_3D_FINISH.filter(function(x){return !x.tex&&x.grp!=='body'&&(!br||x.brand===br);});if(!sol.length)sol=_3D_FINISH.filter(function(x){return !x.tex;});
+  var best=f&&!f.tex&&!hasBody?f:null,bd=Infinity;
+  var cl=_rgbLab(c);if(!best)sol.forEach(function(x){var l=_rgbLab(x.rgb),d=Math.pow(l[0]-cl[0],2)+Math.pow(l[1]-cl[1],2)+Math.pow(l[2]-cl[2],2);if(d<bd){bd=d;best=x;}}); // 사람 눈 기준 색 차이(Lab ΔE)
+  var b=best?best.rgb:c;return{body:_3dRgbHex(b),kick:_3dRgbHex(b.map(function(v){return Math.round(v*0.78);})),name:best?best.name:''};
+}
+function _3dFinish(id){for(var i=0;i<_3D_FINISH.length;i++)if(_3D_FINISH[i].id===id)return _3D_FINISH[i];return null;}
+function _3dRgbHex(c){return '#'+c.map(function(v){return ('0'+v.toString(16)).slice(-2);}).join('');}
+var _doorTexImgs={},_doorFinCv={};
+function _doorTexImg(key){ // 결 이미지 (불러오는 중이면 null, 다 되면 3D·디자인 창 다시)
+  var e=_doorTexImgs[key];if(e)return e.img||null;e=_doorTexImgs[key]={};
+  var sc=document.createElement('script');sc.src='door-tex/'+key+'.js';
+  sc.onload=function(){var d=window._DOOR_TEX&&window._DOOR_TEX[key];if(!d)return;var im=new Image();im.onload=function(){e.img=im;if(_3d&&_3d.r){_3dRegeom();var p=document.getElementById('v3d-style');if(p&&p.style.display!=='none')_3dStylePanel();}};im.src=d;};
+  document.head.appendChild(sc);return null;
+}
+// 마감 캔버스: 결 이미지의 밝기 변화를 마감 색에 입힘 (결 대비 70%) — 결이 없거나 아직이면 null
+function _doorFinishCanvas(id){
+  var f=_3dFinish(id);if(!f||!f.tex)return null;if(_doorFinCv[id])return _doorFinCv[id];
+  var im=_doorTexImg(f.tex);if(!im)return null;
+  var c=document.createElement('canvas');c.width=im.width;c.height=im.height;var g=c.getContext('2d');g.drawImage(im,0,0);
+  if(f.raw)return _doorFinCv[id]=c; // 견본을 그대로 자른 무늬 (색 입히지 않음)
+  var d=g.getImageData(0,0,c.width,c.height),p=d.data,sum=0,n=p.length/4;
+  for(var i=0;i<p.length;i+=4)sum+=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+  var avg=Math.max(1,sum/n);
+  for(var i=0;i<p.length;i+=4){var k=1+((0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])/avg-1)*0.7;p[i]=Math.min(255,f.rgb[0]*k);p[i+1]=Math.min(255,f.rgb[1]*k);p[i+2]=Math.min(255,f.rgb[2]*k);}
+  g.putImageData(d,0,0);return _doorFinCv[id]=c;
+}
+// 견본 작은 그림 (디자인 창) — 결 있으면 그 일부, 아니면 색
+function _doorFinishSwatch(id){var f=_3dFinish(id),c=_doorFinishCanvas(id);if(!c)return 'background:'+_3dRgbHex(f.rgb);
+  if(!f._sw){var s=document.createElement('canvas');s.width=s.height=96;s.getContext('2d').drawImage(c,0,0,Math.min(c.width,256),Math.min(c.height,256),0,0,96,96);f._sw=s.toDataURL('image/jpeg',0.85);}
+  return 'background:url('+f._sw+') center/cover';}
 // 다각형을 안쪽으로 d만큼 줄임 (변마다 평행 이동한 직선끼리 교점). i번째 변 = 원래 i번째 변을 옮긴 것
 function _3dInset(pts,d){
   var n=pts.length,A=0;for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n];A+=p[0]*q[1]-q[0]*p[1];}
@@ -8412,7 +8603,119 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   gl.useProgram(_3dGLC.prog);
   var A=_3dGLC.A,U=_3dGLC.U,bufs=[];
   function buf(arr){var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);bufs.push(b);return{b:b,n:arr.length/8};}
-  var lo=Infinity,hi=-Infinity,zl=Infinity,zh=-Infinity,draws=[],furnDraw={body:[],kick:[],door:[],gap:[],sink:[],cook:[]};
+  var lo=Infinity,hi=-Infinity,zl=Infinity,zh=-Infinity,draws=[],furnDraw={body:[],kick:[],door:[],gap:[],sink:[],cook:[],uBody:[],uDoor:[],uGap:[],glass:[],handle:[],groove:[]}; // u* = 상부장 (색을 따로)
+  // 도어 한 장 (3D 디자인): P·Q = 도어 아래 왼·오른 끝(몸통 앞면에서 2 띄운 자리), dy0~dy1 높이, n = 바깥 법선
+  //   design: flat 민자 / shaker 테두리 60+안쪽 판 들어감 / slim 슬림 쉐이커(테두리 25) / louver 세로로 오목한 홈 / ribbed 세로로 볼록한 반원 줄
+  //           / groove 가로 V홈 두 줄 / glass 테두리+유리(상부장)
+  //   손잡이 _3dStyle.handle {type, color, len(128·160·192·256·full), dir(v 세로·h 가로)}: 하부장 = 위쪽, 상부장 = 아래쪽,
+  //   side = 손잡이 쪽 ('r' 오른쪽 끝·'l' 왼쪽 끝 — 양문은 문이 맞닿는 쪽, 'c' 가운데)
+  //   ang = 열린 각도(°, 더블클릭, 최대 90) — 경첩 = 손잡이 반대쪽 세로 모서리(도어 앞면), 바깥(n)쪽으로 열림
+  function door(F,P,Q,dy0,dy1,nx,nz,design,isUp,side,ang){
+    var w=Math.hypot(Q[0]-P[0],Q[1]-P[1]);if(w<1)return;var ux=(Q[0]-P[0])/w,uz=(Q[1]-P[1])/w,HS=_3dStyle.handle,hd=HS.type;
+    var DK=['door','gap','glass','handle','groove'],st0={};DK.forEach(function(k){st0[k]=F[k].length;});
+    if(hd==='gola'){if(isUp)dy0+=35;else dy1-=35;} // 골라(C채널): 도어를 35 줄이고 그 자리에 알루미늄 홈
+    var H=dy1-dy0;
+    function pt(s,d){return[P[0]+ux*s+nx*d,P[1]+uz*s+nz*d];}
+    // 비스듬한 세로 띠 (s0,d0)→(s1,d1): 루바 홈·리브드 곡면 (법선은 띠에 수직, 무늬 좌표는 quad와 같게)
+    function strip(arr,s0,d0,s1,d1,y0,y1){var a=pt(s0,d0),b=pt(s1,d1),ts=s1-s0,td=d1-d0,ln=Math.hypot(ts,td)||1,cx=(nx*ts-ux*td)/ln,cz=(nz*ts-uz*td)/ln,tx=arr===F.door&&F.tw,
+      u0=tx?s0/F.tw+uo:0,u1=tx?s1/F.tw+uo:0,w0=tx?-y0/F.th:0,w1=tx?-y1/F.th:0;
+      v(arr,a[0],y0,a[1],cx,0,cz,u0,w0);v(arr,b[0],y0,b[1],cx,0,cz,u1,w0);v(arr,b[0],y1,b[1],cx,0,cz,u1,w1);v(arr,a[0],y0,a[1],cx,0,cz,u0,w0);v(arr,b[0],y1,b[1],cx,0,cz,u1,w1);v(arr,a[0],y1,a[1],cx,0,cz,u0,w1);}
+    var uo=Math.abs(P[0]*0.00071+P[1]*0.00113)%1; // 도어마다 결 시작을 조금씩 다르게
+    function quad(arr,s0,s1,y0,y1,d){var a=pt(s0,d),b=pt(s1,d),tx=arr===F.door&&F.tw, // 마감 결: u = 폭 방향 mm / 결 폭, v = 높이 mm / 결 높이 (결이 세로)
+      u0=tx?s0/F.tw+uo:0,u1=tx?s1/F.tw+uo:0,w0=tx?-y0/F.th:0,w1=tx?-y1/F.th:0;
+      v(arr,a[0],y0,a[1],nx,0,nz,u0,w0);v(arr,b[0],y0,b[1],nx,0,nz,u1,w0);v(arr,b[0],y1,b[1],nx,0,nz,u1,w1);v(arr,a[0],y0,a[1],nx,0,nz,u0,w0);v(arr,b[0],y1,b[1],nx,0,nz,u1,w1);v(arr,a[0],y1,a[1],nx,0,nz,u0,w1);}
+    function lines(s0,s1,y0,y1,d){var a=pt(s0,d),b=pt(s1,d);[[a,y0,b,y0],[b,y0,b,y1],[b,y1,a,y1],[a,y1,a,y0]].forEach(function(e){v(F.gap,e[0][0],e[1],e[0][1],0,1,0,0,0);v(F.gap,e[2][0],e[3],e[2][1],0,1,0,0,0);});}
+    function q3(arr,a,b,c,d,n){[a,b,c,a,c,d].forEach(function(p){v(arr,p[0],p[1],p[2],n[0],n[1],n[2],0,0);});}
+    function box(arr,s0,s1,y0,y1,d0,d1){function P3(s,y,d){var p=pt(s,d);return[p[0],y,p[1]];}
+      q3(arr,P3(s0,y0,d1),P3(s1,y0,d1),P3(s1,y1,d1),P3(s0,y1,d1),[nx,0,nz]);
+      q3(arr,P3(s0,y1,d0),P3(s1,y1,d0),P3(s1,y1,d1),P3(s0,y1,d1),[0,1,0]);q3(arr,P3(s0,y0,d0),P3(s1,y0,d0),P3(s1,y0,d1),P3(s0,y0,d1),[0,-1,0]);
+      q3(arr,P3(s0,y0,d0),P3(s0,y1,d0),P3(s0,y1,d1),P3(s0,y0,d1),[-ux,0,-uz]);q3(arr,P3(s1,y0,d0),P3(s1,y1,d0),P3(s1,y1,d1),P3(s1,y0,d1),[ux,0,uz]);}
+    if(design==='shaker'||design==='slim'||design==='glass'){ // 테두리(앞) + 안쪽 판(1.5 들어감)
+      var fr=design==='slim'?Math.min(25,w/6,H/6):Math.min(60,w/5,H/5);
+      quad(design==='glass'?F.glass:F.door,fr,w-fr,dy0+fr,dy1-fr,-1.5);
+      quad(F.door,0,fr,dy0,dy1,0);quad(F.door,w-fr,w,dy0,dy1,0);quad(F.door,fr,w-fr,dy0,dy0+fr,0);quad(F.door,fr,w-fr,dy1-fr,dy1,0);
+      lines(0,w,dy0,dy1,0.5);lines(fr,w-fr,dy0+fr,dy1-fr,0.3);
+    } else if(design==='louver'){ // 세로로 오목한 V홈: 간격 40, 홈 폭 12·깊이 4 (양쪽 끝 30은 평평)
+      var s=0,m0=30,m1=w-30,P2=40,gw=12;
+      quad(F.door,0,Math.min(m0,w),dy0,dy1,0);
+      for(s=m0;s+P2<=m1;s+=P2){quad(F.door,s,s+P2-gw,dy0,dy1,0);strip(F.door,s+P2-gw,0,s+P2-gw/2,-4,dy0,dy1);strip(F.door,s+P2-gw/2,-4,s+P2,0,dy0,dy1);}
+      quad(F.door,s,w,dy0,dy1,0);lines(0,w,dy0,dy1,0.5);
+    } else if(design==='ribbed'){ // 세로로 볼록한 반원 줄: 폭 30, 높이 6, 줄마다 6조각
+      var RW=30,n=Math.max(1,Math.floor(w/RW)),rw=w/n;
+      for(var k=0;k<n;k++){var c0=k*rw;for(var j=0;j<6;j++){var a0=Math.PI*j/6,a1=Math.PI*(j+1)/6;
+        strip(F.door,c0+rw*(1-Math.cos(a0))/2,6*Math.sin(a0),c0+rw*(1-Math.cos(a1))/2,6*Math.sin(a1),dy0,dy1);}}
+      lines(0,w,dy0,dy1,0.5);
+    } else {
+      quad(F.door,0,w,dy0,dy1,0);lines(0,w,dy0,dy1,0.5);
+      if(design==='groove')[1/3,2/3].forEach(function(f){var gy=dy0+H*f;quad(F.groove,0,w,gy-3,gy+3,0.4);}); // 가로 V홈 두 줄 (어두운 6mm 띠)
+    }
+    // ── 손잡이 ──
+    var L2=HS.len==='full'?Infinity:(+HS.len||160),vert=HS.dir!=='h'&&hd!=='edge',edgeS=side==='l'?45:side==='r'?w-45:w/2;
+    function onePull(len){ // 바·매립형이 놓일 자리: 세로면 손잡이 쪽 끝에서 45 안쪽 · 위(하부장)/아래(상부장)에서 50, 가로면 가운데 · 위/아래에서 45
+      if(vert){var Lv=Math.min(len,H-100),ya=isUp?dy0+50:dy1-50-Lv;return{s0:edgeS-6,s1:edgeS+6,y0:ya,y1:ya+Lv,L:Lv};}
+      var Lh=Math.min(len,w-90),hy=isUp?dy0+45:dy1-45;return{s0:w/2-Lh/2,s1:w/2+Lh/2,y0:hy-6,y1:hy+6,L:Lh};}
+    if(hd==='bar'){var b=onePull(L2); // 손잡이 막대 + 양 끝 다리
+      box(F.handle,b.s0,b.s1,b.y0,b.y1,10,22);
+      if(vert){box(F.handle,b.s0+1,b.s1-1,b.y0+6,b.y0+16,0,10);box(F.handle,b.s0+1,b.s1-1,b.y1-16,b.y1-6,0,10);}
+      else{box(F.handle,b.s0+6,b.s0+16,b.y0+1,b.y1-1,0,10);box(F.handle,b.s1-16,b.s1-6,b.y0+1,b.y1-1,0,10);}}
+    else if(hd==='knob'||hd==='round'){var ky=isUp?dy0+55:dy1-55,ks=vert?edgeS:w/2;
+      if(hd==='knob')box(F.handle,ks-14,ks+14,ky-14,ky+14,0,24);
+      else{var N=16,R=15;function C3(a,d){var p=pt(ks+R*Math.cos(a),d);return[p[0],ky+R*Math.sin(a),p[1]];} // 둥근 노브 = 원기둥 + 앞면
+        for(var i2=0;i2<N;i2++){var a0=2*Math.PI*i2/N,a1=2*Math.PI*(i2+1)/N,am=(a0+a1)/2,nn=[ux*Math.cos(am),Math.sin(am),uz*Math.cos(am)],cf=pt(ks,26);
+          q3(F.handle,C3(a0,0),C3(a1,0),C3(a1,24),C3(a0,24),nn);
+          [C3(a0,26),C3(a1,26),[cf[0],ky,cf[1]]].forEach(function(p){v(F.handle,p[0],p[1],p[2],nx,0,nz,0,0);});
+          q3(F.handle,C3(a0,24),C3(a1,24),C3(a1,26),C3(a0,26),[nx,0,nz]);}}}
+    else if(hd==='line')quad(F.groove,0,w,isUp?dy0:dy1-22,isUp?dy0+22:dy1,0.6); // J형: 도어 위(상부장은 아래) 따낸 홈
+    else if(hd==='gola'){ // C채널: 줄인 35 자리에 알루미늄 홈 (몸통 앞면 바로 앞 = 도어보다 들어가 보임) + 도어 쪽 턱
+      var g0=isUp?dy0-35:dy1,g1=isUp?dy0:dy1+35;
+      quad(F.handle,-1.5,w+1.5,g0,g1,-1.6);
+      function P3g(s,y,d){var p=pt(s,d);return[p[0],y,p[1]];}
+      q3(F.handle,P3g(-1.5,isUp?g1:g0,-1.6),P3g(w+1.5,isUp?g1:g0,-1.6),P3g(w+1.5,isUp?g1:g0,0),P3g(-1.5,isUp?g1:g0,0),[0,isUp?-1:1,0]);}
+    else if(hd==='edge'){var Le=Math.min(L2,w-40),es=side==='l'?20:side==='r'?w-20-Le:w/2-Le/2; // 엣지(립): 도어 끝면에 얇은 금속 띠가 앞으로 16
+      if(isUp)box(F.handle,es,es+Le,dy0-2,dy0+20,-2,16);else box(F.handle,es,es+Le,dy1-20,dy1+2,-2,16);}
+    else if(hd==='recess'){var r=onePull(vert?140:140); // 매립형: 도어 안 오목 홈(어둡게) + 위쪽 금속 턱
+      var rs0=vert?edgeS-15:r.s0,rs1=vert?edgeS+15:r.s1,ry0=vert?r.y0:r.y0-12,ry1=vert?r.y1:r.y1+12;
+      quad(F.groove,rs0,rs1,ry0,ry1,0.5);
+      if(vert)box(F.handle,rs0,rs0+3,ry0,ry1,0,3);else box(F.handle,rs0,rs1,ry1-3,ry1,0,3);}
+    if(ang>0.5){ // 열린 도어: 두께 18(뒷면·옆면) + 경첩 축으로 돌림
+      var TD=18;
+      function P3d(s,y,d){var p=pt(s,d);return[p[0],y,p[1]];}
+      q3(F.door,P3d(0,dy0,-TD),P3d(w,dy0,-TD),P3d(w,dy1,-TD),P3d(0,dy1,-TD),[-nx,0,-nz]);
+      q3(F.door,P3d(0,dy0,-TD),P3d(0,dy1,-TD),P3d(0,dy1,0),P3d(0,dy0,0),[-ux,0,-uz]);q3(F.door,P3d(w,dy0,-TD),P3d(w,dy1,-TD),P3d(w,dy1,0),P3d(w,dy0,0),[ux,0,uz]);
+      q3(F.door,P3d(0,dy1,-TD),P3d(w,dy1,-TD),P3d(w,dy1,0),P3d(0,dy1,0),[0,1,0]);q3(F.door,P3d(0,dy0,-TD),P3d(w,dy0,-TD),P3d(w,dy0,0),P3d(0,dy0,0),[0,-1,0]);
+      var hs=side==='l'?w:0,H0=pt(hs,0), // 경첩 축 = 도어 앞면 바깥 모서리 → 90°로 열면 도어가 자기 칸 폭 안에 섬 (옆 도어와 안 겹침)
+ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
+      DK.forEach(function(k){var a=F[k];for(var i=st0[k];i<a.length;i+=8){
+        var rx=a[i]-H0[0],rz=a[i+2]-H0[1],aa=rx*ux+rz*uz,bb=rx*nx+rz*nz,a2=aa*cs-bb*sn,b2=aa*sn+bb*cs;
+        a[i]=H0[0]+a2*ux+b2*nx;a[i+2]=H0[1]+a2*uz+b2*nz;
+        var na=a[i+3]*ux+a[i+5]*uz,nb=a[i+3]*nx+a[i+5]*nz,na2=na*cs-nb*sn,nb2=na*sn+nb*cs;a[i+3]=na2*ux+nb2*nx;a[i+5]=na2*uz+nb2*nz;}});
+    }
+  }
+  // 가구 한 칸(도어 하나 단위): 앞 선 F0(s=0, 바깥 법선 n) 기준 s0~s1, 깊이 d(안쪽), yb~yt — 뒷판·양옆·밑판·윗판 + 가로 선반 2단(1/3·2/3 높이, 두께 18)
+  function bay(arr,F0,ux,uz,nx,nz,s0,s1,d,yb,yt,top){
+    function P3(s,dd,y){return[F0[0]+ux*s+nx*dd,y,F0[1]+uz*s+nz*dd];}
+    function q(a,b,c,e,n){[a,b,c,a,c,e].forEach(function(p){v(arr,p[0],p[1],p[2],n[0],n[1],n[2],0,0);});}
+    q(P3(s0,-d,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s0,-d,yt),[nx,0,nz]); // 뒷판 (안쪽을 봄)
+    q(P3(s0,0,yb),P3(s0,-d,yb),P3(s0,-d,yt),P3(s0,0,yt),[-ux,0,-uz]);q(P3(s1,0,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s1,0,yt),[ux,0,uz]); // 옆판
+    q(P3(s0,0,yb),P3(s1,0,yb),P3(s1,-d,yb),P3(s0,-d,yb),[0,1,0]);if(top)q(P3(s0,0,yt),P3(s1,0,yt),P3(s1,-d,yt),P3(s0,-d,yt),[0,-1,0]);
+    [1/3,2/3].forEach(function(f){var y=yb+(yt-yb)*f,a=s0+1,b=s1-1,dd=-d+1,df=-20; // 선반 (앞에서 20 들임)
+      q(P3(a,df,y+9),P3(b,df,y+9),P3(b,dd,y+9),P3(a,dd,y+9),[0,1,0]);q(P3(a,df,y-9),P3(b,df,y-9),P3(b,dd,y-9),P3(a,dd,y-9),[0,-1,0]);
+      q(P3(a,df,y-9),P3(b,df,y-9),P3(b,df,y+9),P3(a,df,y+9),[nx,0,nz]);});
+  }
+  // 몸통 안쪽으로 깊이: 앞 변 가운데 M에서 안쪽(-n)으로 가다 몸통 다각형 다른 변에 닿는 거리
+  function depthIn(poly,M,nx,nz){var best=Infinity;for(var i=0;i<poly.length;i++){var a=poly[i],b=poly[(i+1)%poly.length],ex=b[0]-a[0],ez=b[1]-a[1],den=(-nx)*ez-(-nz)*ex;if(Math.abs(den)<1e-9)continue;
+      var t=((a[0]-M[0])*ez-(a[1]-M[1])*ex)/den,s=((a[0]-M[0])*(-nz)-(a[1]-M[1])*(-nx))/den;if(t>1&&s>=-1e-6&&s<=1+1e-6&&t<best)best=t;}return best<Infinity?Math.min(best,1500):560;}
+  var unitInfo=[],uDel=_3dStyle.unitDel||{},dAng=(_3d&&_3d.doorAng)||{}; // 가구 칸 (고르기·삭제·문 열기)
+  function unitPush(key,up,F0,ux,uz,nx,nz,s0,s1,d,yb,yt){var c=[[0,2],[0,-d],[1,-d],[1,2]].map(function(q){var s=q[0]?s1:s0;return[F0[0]+ux*s+nx*q[1],F0[1]+uz*s+nz*q[1]];});
+    unitInfo.push({key:key,up:up,c:c,y0:yb,y1:yt,min:[Math.min(c[0][0],c[1][0],c[2][0],c[3][0]),yb,Math.min(c[0][1],c[1][1],c[2][1],c[3][1])],max:[Math.max(c[0][0],c[1][0],c[2][0],c[3][0]),yt,Math.max(c[0][1],c[1][1],c[2][1],c[3][1])]});}
+  var LF={door:furnDraw.door,gap:furnDraw.gap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove},UF={door:furnDraw.uDoor,gap:furnDraw.uGap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove};
+  // ARCKIT 마감 결: 결 이미지가 준비됐으면 도어에 무늬 좌표(tw·th mm마다 한 장, 반복) + 반복 텍스처
+  var lFin=_3dFinish(_3dStyle.lower.finish),uFin=_3dFinish(_3dUp().finish),lCv=lFin?_doorFinishCanvas(lFin.id):null,uCv=uFin?_doorFinishCanvas(uFin.id):null;
+  if(lCv){LF.tw=lFin.tw;LF.th=lFin.th;}if(uCv){UF.tw=uFin.tw;UF.th=uFin.th;}
+  function texRep(c,mirror){var t=_3dGLC.tex.get(c);if(t)return t;t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
+    var wr=mirror?gl.MIRRORED_REPEAT:gl.REPEAT; // 견본을 자른 무늬(이음매 있음)는 거울 반복으로 이음매 안 보이게
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wr);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wr);gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);_3dGLC.tex.set(c,t);return t;} // 결 이미지는 2의 거듭제곱 크기
   // 볼록한 루프(싱크볼·쿡탑 사각형)를 높이 y의 면으로 (부채꼴 삼각형)
   function fan(a,L,y,ny){var c=[0,0];L.forEach(function(q){c[0]+=q[0]/L.length;c[1]+=q[1]/L.length;});for(var i=0;i<L.length;i++){var p=L[i],q=L[(i+1)%L.length];v(a,c[0],y,c[1],0,ny,0,0,0);v(a,p[0],y,p[1],0,ny,0,0,0);v(a,q[0],y,q[1],0,ny,0,0,0);}}
   var marks=shapes.filter(function(m){return (m.kind==='grindregion'||m.kind==='gosramark')&&!m.groupId;});
@@ -8443,8 +8746,11 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
     // 3D에서 옮기거나 돌린 자리(pos3d: dx, dz mm, rot = 90°×n, 조각 가운데 기준, dy = 900에서 위아래 mm) — 도면(2D)은 그대로
     var bb=pc.bb,key=_3dKey(pc.shape),ps=key.pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cxp=(bb.l+bb.r)/2,czp=(bb.t+bb.b)/2;
     // 상판 윗면 = 900 (하부장을 꺼도 그 높이 — 전면판·측판·미드웨이가 그대로 보이게), 주방 상판이 아닌 조각은 Shift+끌기로 위아래(ps.dy)
-    var th=pc.th,top=[],side=[],line=[],dyp=ps.dy||0,y0=_3D_H-th+dyp,y1=y0+th;
-    function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+(ps.dx||0),czp+x*si+z*co+(ps.dz||0)];}
+    var th=pc.th,top=[],side=[],line=[],dyF=ps.dy||0,dyp=dyF,y0=_3D_H-th+dyp,y1=y0+th;
+    var AP=_3dAnimPh(),pdx=(ps.dx||0)*AP.s,pdz=(ps.dz||0)*AP.s; // 첫 화면: 도면 자리(바닥) → 3D 자리
+    if(AP.s<1){var ra=(rot===3?-1:rot)*Math.PI/2*AP.s;co=Math.cos(ra);si=Math.sin(ra);}
+    if(AP.r<1){dyp=(th-_3D_H)+(dyF-(th-_3D_H))*AP.r;y0=_3D_H-th+dyp;y1=y0+th;}
+    function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+pdx,czp+x*si+z*co+pdz];}
     var loops={outer:pc.loops.outer.map(X),holes:pc.loops.holes.map(function(h){return h.map(X);}),kinds:pc.loops.kinds};
     var front=_3dFrontEdges(pc.loops.outer,marks); // 앞면 판정은 도면 자리로(변 번호는 같음)
     var tpE={key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0],obj:isObj,hang:0};tops.push(tpE); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준), hang = 매달린 판 높이(오브제)
@@ -8476,10 +8782,11 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       for(var i=0;i<L.length;i++){var a=L[i],b=L[(i+1)%L.length];v(line,a[0],y1+0.3,a[1],0,1,0,0,0);v(line,b[0],y1+0.3,b[1],0,1,0,0,0);}
     });
     // 하부장: 상판 외곽에서 20 들인 몸통(걸레받이 위~상판 아래), 걸레받이(50 더 들임), 앞면 변에 민자 도어(폭 약 500씩 나눔) — 위아래로 옮긴 조각은 없음
-    if(furn&&!dyp&&!isObj&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){
+    if(furn&&!dyF&&y0>_3D_KICK+60&&!isObj&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){ // (첫 화면에서 올라가는 동안은 상판 밑까지 자람)
       var body=_3dInset(loops.outer,_3D_SET),kick=_3dInset(loops.outer,_3D_SET+_3D_KICKSET);
-      walls(furnDraw.body,body,{outer:body,holes:[]},_3D_KICK,y0);
-      walls(furnDraw.kick,kick,{outer:kick,holes:[]},0,_3D_KICK);
+      // 몸통: 도어가 붙는 앞면 변이 있으면 도어마다 한 칸(bay) — 칸 단위로 지우고(Delete) 문을 열면(더블클릭) 선반이 보임. 앞면 변이 없으면 예전처럼 외곽 벽 하나
+      var hasDoor=front.some(function(f,i){if(!f)return false;var A=body[i],B=body[(i+1)%body.length];return A&&B&&Math.hypot(B[0]-A[0],B[1]-A[1])>=150;});
+      if(!hasDoor){walls(furnDraw.body,body,{outer:body,holes:[]},_3D_KICK,y0);walls(furnDraw.kick,kick,{outer:kick,holes:[]},0,_3D_KICK);}
       // 싱크볼 = 구멍 아래 스테인리스 볼(깊이 200), 쿡탑 = 구멍에 검은 유리판(상판 윗면 바로 아래)
       loops.holes.forEach(function(H,hi2){
         var kd=loops.kinds[hi2];
@@ -8503,11 +8810,15 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
         var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(A[0]+B[0])/2+nx,(A[1]+B[1])/2+nz)){nx=-nx;nz=-nz;}
         var parts=_3dDoorSplit(L,appAt[i]||[]);
         for(var k=0;k<parts.length;k++){
+          var uk='L'+key.id+':'+i+':'+k;if(uDel[uk])continue; // 3D에서 지운 칸
+          var bd=depthIn(body,[A[0]+ux*(parts[k][0]+parts[k][1])/2,A[1]+uz*(parts[k][0]+parts[k][1])/2],nx,nz);
+          bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,y0,false);
+          var K0=[A[0]-nx*_3D_KICKSET,A[1]-nz*_3D_KICKSET],kb=Math.max(0,bd-_3D_KICKSET); // 걸레받이: 칸 앞에서 50 들임 + 양 끝
+          [[parts[k][0],parts[k][1],0,0],[parts[k][0],parts[k][0],0,-kb],[parts[k][1],parts[k][1],0,-kb]].forEach(function(q){var a=[K0[0]+ux*q[0]+nx*q[2],K0[1]+uz*q[0]+nz*q[2]],b=[K0[0]+ux*q[1]+nx*q[3],K0[1]+uz*q[1]+nz*q[3]],en=q[0]===q[1]?[(q[0]===parts[k][0]?-1:1)*ux,(q[0]===parts[k][0]?-1:1)*uz]:[nx,nz];
+            [[a,0],[b,0],[b,_3D_KICK],[a,0],[b,_3D_KICK],[a,_3D_KICK]].forEach(function(p){v(furnDraw.kick,p[0][0],p[1],p[0][1],en[0],0,en[1],0,0);});});
+          unitPush(uk,null,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,0,y0);
           var s0=parts[k][0]+1.5,s1=parts[k][1]-1.5,P=[A[0]+ux*s0+nx*2,A[1]+uz*s0+nz*2],Q=[A[0]+ux*s1+nx*2,A[1]+uz*s1+nz*2];
-          v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy0,Q[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);
-          v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);v(furnDraw.door,P[0],dy1,P[1],nx,0,nz,0,0);
-          // 도어 테두리 = 문 사이 틈
-          [[P,dy0,Q,dy0],[Q,dy0,Q,dy1],[Q,dy1,P,dy1],[P,dy1,P,dy0]].forEach(function(e){v(furnDraw.gap,e[0][0]+nx*0.5,e[1],e[0][1]+nz*0.5,0,1,0,0,0);v(furnDraw.gap,e[2][0]+nx*0.5,e[3],e[2][1]+nz*0.5,0,1,0,0,0);});
+          door(LF,P,Q,dy0,dy1,nx,nz,_3dStyle.lower.design==='glass'?'shaker':_3dStyle.lower.design,false,_3dHandleSide(k,parts.length),dAng[uk]||0); // 하부장은 유리장 없음
         }
       }
     }
@@ -8547,7 +8858,8 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       else if(e){var ov=Math.min(20,e.len/2,Lm/2);s0=Math.max(ov-Lm,Math.min(cfg.off||0,e.len-ov));} // 손으로 놓은 자리: 변보다 길거나 변 끝을 넘어도 됨 (끝 조금은 걸쳐 있게)
       else if(ct){e=ct.e;s0=ct.s0;if(!floor)e.used=Math.max(e.used,s0+Lm);}
       var onObj=isP&&e&&e.obj; // 오브제에 붙인 판 = 상판 밑면에 매달림 (오브제를 옮기거나 위아래로 움직이면 같이)
-      if(isP&&e&&e.y0!=null){if(e.y0<(onObj?1:50))return;Hm=Math.min(Hm,e.y0);} // 판 높이 ≤ 상판 밑면, 하부장을 끄면(상판이 바닥에) 판 없음
+      var inAnim=!!(_3d&&_3d.anim)&&!onObj; // 첫 화면: 상판이 아직 바닥 가까이 있어도 판은 다 놓였을 때 높이로 (눕힌 데서 세움)
+      if(isP&&e&&e.y0!=null){if(e.y0<(onObj?1:50)&&!inAnim)return;Hm=Math.min(Hm,inAnim?Math.max(e.y0,_3D_H-tm):e.y0);} // 판 높이 ≤ 상판 밑면, 하부장을 끄면(상판이 바닥에) 판 없음
       if(!e){
         backs.forEach(function(b){if(!e&&b.len-b.used>=Lm-5)e=b;});
         if(!e)backs.forEach(function(b){if(!e||b.len-b.used>e.len-e.used)e=b;});
@@ -8593,29 +8905,36 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       q4(rest,O[3],O[2],I[2],I[3],false);q4(rest,O[0],O[1],I[1],I[0],false); // 윗면·밑면
       [[fF[0],fF[1]],[fF[1],fF[2]],[fF[2],fF[3]],[fF[3],fF[0]]].forEach(function(q){var k=0.4;v(ln,q[0][0]+e.nx*k,q[0][1],q[0][2]+e.nz*k,0,1,0,0,0);v(ln,q[1][0]+e.nx*k,q[1][1],q[1][2]+e.nz*k,0,1,0,0,0);});
       lo=Math.min(lo,W0[0],W1[0],F0[0],F1[0]);hi=Math.max(hi,W0[0],W1[0],F0[0],F1[0]);zl=Math.min(zl,W0[1],W1[1],F0[1],F1[1]);zh=Math.max(zh,W0[1],W1[1],F0[1],F1[1]);
+      var gM=_3dAnimPh().m; // 첫 화면: 도면 자리에 눕힌 판(두께 = 위로) → 세운 자리로 정점마다 옮김 (무늬 좌표는 그대로)
+      if(gM<1)[front,rest,ln].forEach(function(a){for(var i=0;i<a.length;i+=8){
+        var rx=a[i]-e.a[0],rz=a[i+2]-e.a[1],s=rx*e.ux+rz*e.uz,d=rx*e.nx+rz*e.nz,tt=uv((s-s0)/Lm,(a[i+1]-yA)/Hm),sx=pb.l+tt[0]*bw,sz=pb.t+tt[1]*bh,sy=Math.abs(d);
+        a[i]=sx+(a[i]-sx)*gM;a[i+1]=sy+(a[i+1]-sy)*gM;a[i+2]=sz+(a[i+2]-sz)*gM;lo=Math.min(lo,a[i]);hi=Math.max(hi,a[i]);zl=Math.min(zl,a[i+2]);zh=Math.max(zh,a[i+2]);}});
       midDraw.push({front:buf(front),rest:buf(rest),line:buf(ln),tex:texOf(pc.tex),col:pc.side,key:_3dKey(pc.shape),gloss:pc.gloss});
-      if(!isP&&!floor)upSpans.push({A:W0,B:W1,nx:e.nx,nz:e.nz,y:yB}); // 상부장 = 이 미드웨이 위, 같은 벽 구간
+      if(!isP&&!floor)upSpans.push({A:W0,B:W1,nx:e.nx,nz:e.nz,y:yB,key:'m'+_3dKey(pc.shape).id}); // 상부장 = 이 미드웨이 위, 같은 벽 구간 (key = 높이 조절값 이름)
     });
   }
   // 상부장(머리줄 "상부장" 체크, 하부장을 켰을 때만): 미드웨이 위에 같은 폭으로 · 미드웨이가 없으면 상판마다 가장 긴 벽 쪽 변(앞면 아님·다른 상판과 안 맞붙음·600 이상)에 상판 윗면 + 600
   //   깊이 350(벽에서 상판 쪽으로), 높이 700, 민자 도어 약 500씩 (하부장과 같은 색)
-  var upOn=false; // 상부장을 하나라도 그렸으면 시점을 그 높이까지
+  var upOn=false,upInfo=[]; // 상부장을 하나라도 그렸으면 시점을 그 높이까지 / upInfo = 끌어서 위아래 옮길 상부장 상자
   if(upper){
     var spans=upSpans.slice();upOn=spans.length>0;
     if(!spans.length){var byTop={};backs.forEach(function(b){if(b.joint||b.len<600)return;var t=b.id.split(':')[0];if(!byTop[t]||b.len>byTop[t].len)byTop[t]=b;});
-      Object.keys(byTop).forEach(function(t){var b=byTop[t];spans.push({A:b.a,B:[b.a[0]+b.ux*b.len,b.a[1]+b.uz*b.len],nx:b.nx,nz:b.nz,y:b.y+_3D_UPGAP});});}
+      Object.keys(byTop).forEach(function(t){var b=byTop[t];spans.push({A:b.a,B:[b.a[0]+b.ux*b.len,b.a[1]+b.uz*b.len],nx:b.nx,nz:b.nz,y:b.y+_3D_UPGAP,key:'e'+b.id});});}
     spans.forEach(function(sp){
       var A=sp.A,B=sp.B,L=Math.hypot(B[0]-A[0],B[1]-A[1]);if(L<150)return;
-      var ux=(B[0]-A[0])/L,uz=(B[1]-A[1])/L,nx=sp.nx,nz=sp.nz,D=_3D_UPD,y0u=sp.y,y1u=sp.y+_3D_UPH;
+      // 높이 = 자동 자리(미드웨이 윗변 / 상판 윗면+600) + 손으로 옮긴 만큼(_3dStyle.upOff[key], 3D에서 상부장 끌기)
+      if((_3dStyle.upDel||{})[sp.key])return; // 3D에서 Delete로 지운 상부장
+      var gU=_3dAnimPh().g;if(gU<=0.01)return; // 첫 화면: 위에서 내려앉음
+      var off=((_3dStyle.upOff||{})[sp.key]||0)+(1-gU)*500,ux=(B[0]-A[0])/L,uz=(B[1]-A[1])/L,nx=sp.nx,nz=sp.nz,D=_3D_UPD,y0u=Math.max(0,sp.y+off),y1u=y0u+_3D_UPH;
       var C=[B[0]+nx*D,B[1]+nz*D],Dd=[A[0]+nx*D,A[1]+nz*D],ring=[A,B,C,Dd];
-      walls(furnDraw.body,ring,{outer:ring,holes:[]},y0u,y1u);
-      [[y0u,-1],[y1u,1]].forEach(function(f){var y=f[0],ny=f[1];v(furnDraw.body,A[0],y,A[1],0,ny,0,0,0);v(furnDraw.body,B[0],y,B[1],0,ny,0,0,0);v(furnDraw.body,C[0],y,C[1],0,ny,0,0,0);v(furnDraw.body,A[0],y,A[1],0,ny,0,0,0);v(furnDraw.body,C[0],y,C[1],0,ny,0,0,0);v(furnDraw.body,Dd[0],y,Dd[1],0,ny,0,0,0);});
-      var dy0=y0u+3,dy1=y1u-3;
-      _3dDoorSplit(L,[]).forEach(function(pt){ // 도어 = 상판 쪽 앞면(벽에서 깊이 D)에 2mm 띄워서
+      upInfo.push({key:sp.key,base:sp.y,off:off,y0:y0u,y1:y1u,c:ring,min:[Math.min(A[0],B[0],C[0],Dd[0]),y0u,Math.min(A[1],B[1],C[1],Dd[1])],max:[Math.max(A[0],B[0],C[0],Dd[0]),y1u,Math.max(A[1],B[1],C[1],Dd[1])]});
+      var dy0=y0u+3,dy1=y1u-3,UF0=[A[0]+nx*D,A[1]+nz*D];
+      var uParts=_3dDoorSplit(L,[]);
+      uParts.forEach(function(pt,k){ // 칸마다 몸통(선반 2단) + 도어 = 상판 쪽 앞면(벽에서 깊이 D)에 2mm 띄워서
+        var uk='U'+sp.key+':'+k;if(uDel[uk])return; // 3D에서 지운 칸
+        bay(furnDraw.uBody,UF0,ux,uz,nx,nz,pt[0],pt[1],D,y0u,y1u,true);unitPush(uk,sp.key,UF0,ux,uz,nx,nz,pt[0],pt[1],D,y0u,y1u);
         var s0=pt[0]+1.5,s1=pt[1]-1.5,P=[A[0]+ux*s0+nx*(D+2),A[1]+uz*s0+nz*(D+2)],Q=[A[0]+ux*s1+nx*(D+2),A[1]+uz*s1+nz*(D+2)];
-        v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy0,Q[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);
-        v(furnDraw.door,P[0],dy0,P[1],nx,0,nz,0,0);v(furnDraw.door,Q[0],dy1,Q[1],nx,0,nz,0,0);v(furnDraw.door,P[0],dy1,P[1],nx,0,nz,0,0);
-        [[P,dy0,Q,dy0],[Q,dy0,Q,dy1],[Q,dy1,P,dy1],[P,dy1,P,dy0]].forEach(function(g){v(furnDraw.gap,g[0][0]+nx*0.5,g[1],g[0][1]+nz*0.5,0,1,0,0,0);v(furnDraw.gap,g[2][0]+nx*0.5,g[3],g[2][1]+nz*0.5,0,1,0,0,0);});
+        door(UF,P,Q,dy0,dy1,nx,nz,_3dStyle.upper.design,true,_3dHandleSide(k,uParts.length),dAng[uk]||0);
       });
     });
   }
@@ -8623,8 +8942,9 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   if(!draws.length&&!midDraw.length)return null;
   var cx=(lo+hi)/2,cz=(zl+zh)/2,size=Math.max(hi-lo,zh-zl,500,upOn?2300:_3D_H*1.4),G=size*2.2; // 상부장이 있으면 높이까지 보이게
   var ground=buf([cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz-G,0,1,0,0,0, cx+G,-1,cz+G,0,1,0,0,0, cx-G,-1,cz+G,0,1,0,0,0]);
-  var fb=null;if((furnDraw.body.length||furnDraw.sink.length||furnDraw.cook.length))fb={body:buf(furnDraw.body),kick:buf(furnDraw.kick),door:buf(furnDraw.door),gap:buf(furnDraw.gap),sink:buf(furnDraw.sink),cook:buf(furnDraw.cook)};
-  return{gl:gl,A:A,U:U,draws:draws,mids:midDraw,midInfo:midInfo,tops:tops,edges:allEdges,topY:topY,buf:buf,bufs:bufs,ground:ground,furn:fb,center:[cx,upOn?(_3D_H+_3D_UPGAP+_3D_UPH)*0.45:_3D_H*0.5,cz],size:size};
+  var fb=null;if((furnDraw.body.length||furnDraw.uBody.length||furnDraw.sink.length||furnDraw.cook.length)){fb={};Object.keys(furnDraw).forEach(function(k){fb[k]=buf(furnDraw[k]);});
+    fb.doorTex={l:lCv?texRep(lCv,lFin.raw):null,u:uCv?texRep(uCv,uFin.raw):null};} // 마감 결 텍스처 (없으면 색)
+  return{gl:gl,A:A,U:U,draws:draws,mids:midDraw,midInfo:midInfo,upInfo:upInfo,unitInfo:unitInfo,tops:tops,edges:allEdges,topY:topY,buf:buf,bufs:bufs,ground:ground,furn:fb,center:[cx,upOn?(_3D_H+_3D_UPGAP+_3D_UPH)*0.45:_3D_H*0.5,cz],size:size};
 }
 function _3dRender(){
   var st=_3d;if(!st||!st.r)return;var R=st.r,gl=R.gl,cv=st.cv,cam=st.cam;
@@ -8642,13 +8962,24 @@ function _3dRender(){
     gl.drawArrays(mode,0,b.n);}
   gl.uniform1f(R.U.tex,0);gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.80,0.83,0.86);draw(R.ground,gl.TRIANGLES); // 바닥
   if(R.furn){ // 하부장: 몸통(밝은 회색) · 걸레받이(진회색) · 민자 도어(흰색) · 도어 틈(선)
+    // 색 = 3D 디자인 설정(_3dStyle): 하부장 도어·몸통·걸레받이, 상부장 도어·몸통(하부장과 같게 가능), 손잡이
+    var LS=_3dStyle.lower,US=_3dUp();function col(h,k){var c=_hex3(h);k=k||1;gl.uniform3f(R.U.c,c[0]*k,c[1]*k,c[2]*k);}
+    function dr(b,mode){if(b&&b.n)draw(b,mode);}
     gl.uniform1f(R.U.lit,1);
-    gl.uniform3f(R.U.c,0.84,0.84,0.83);if(R.furn.body.n)draw(R.furn.body,gl.TRIANGLES);
-    gl.uniform3f(R.U.c,0.30,0.31,0.33);if(R.furn.kick.n)draw(R.furn.kick,gl.TRIANGLES);
-    gl.uniform3f(R.U.c,0.97,0.97,0.96);if(R.furn.door.n)draw(R.furn.door,gl.TRIANGLES);
-    gl.uniform3f(R.U.c,0.70,0.72,0.74);if(R.furn.sink.n)draw(R.furn.sink,gl.TRIANGLES); // 스테인리스 싱크볼
-    gl.uniform3f(R.U.c,0.07,0.07,0.08);if(R.furn.cook.n)draw(R.furn.cook,gl.TRIANGLES); // 쿡탑 검은 유리
-    gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.45,0.46,0.48);if(R.furn.gap.n)draw(R.furn.gap,gl.LINES);
+    var LB=_3dAutoBase(LS),UB=_3dAutoBase(US); // 몸통·걸레받이 = 도어 마감에 가장 가까운 단색 (자동)
+    col(LB.body);dr(R.furn.body,gl.TRIANGLES);col(UB.body);dr(R.furn.uBody,gl.TRIANGLES);
+    col(LB.kick);dr(R.furn.kick,gl.TRIANGLES);
+    // 도어: ARCKIT 마감 결이 있으면 그 텍스처, 결 없는 마감(solid)·아직 불러오는 중이면 마감 색, 마감 없으면 고른 색
+    function dHex(S){var f=_3dFinish(S.finish);return f?_3dRgbHex(f.rgb):S.door;}
+    function doorDr(b,S,t){if(!b||!b.n)return;var gf=_3dFinish(S.finish);gl.uniform1f(R.U.g,gf&&gf.gloss?1:0);drIn(b,S,t);gl.uniform1f(R.U.g,0);} // HG(유광) 마감은 반사광
+    function drIn(b,S,t){if(t){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,t);gl.uniform1f(R.U.tex,1);draw(b,gl.TRIANGLES);gl.uniform1f(R.U.tex,0);}else{col(dHex(S));draw(b,gl.TRIANGLES);}}
+    var DT=R.furn.doorTex||{};doorDr(R.furn.door,LS,DT.l);doorDr(R.furn.uDoor,US,DT.u);
+    gl.uniform3f(R.U.c,0.36,0.42,0.44);dr(R.furn.glass,gl.TRIANGLES); // 유리장 유리 (어두운 청회색)
+    col((_3D_HCOL[_3dStyle.handle.color]||_3D_HCOL.silver)[1]);dr(R.furn.handle,gl.TRIANGLES);
+    gl.uniform3f(R.U.c,0.70,0.72,0.74);dr(R.furn.sink,gl.TRIANGLES); // 스테인리스 싱크볼
+    gl.uniform3f(R.U.c,0.07,0.07,0.08);dr(R.furn.cook,gl.TRIANGLES); // 쿡탑 검은 유리
+    gl.uniform1f(R.U.lit,0);gl.uniform3f(R.U.c,0.12,0.12,0.13);dr(R.furn.groove,gl.TRIANGLES); // 라인 손잡이 홈
+    col(dHex(LS),0.55);dr(R.furn.gap,gl.LINES);col(dHex(US),0.55);dr(R.furn.uGap,gl.LINES); // 도어 틈 = 도어 색보다 어둡게
   }
   function lineCol(d){var on=d.key===st.sel,hv=d.key===st.hover;gl.uniform3f(R.U.c,on?1:(hv?0.1:0.25),on?0.45:(hv?0.55:0.27),on?0:(hv?0.95:0.29));} // 선택 = 주황, 마우스 올림 = 파랑
   R.draws.forEach(function(d){
@@ -8707,6 +9038,26 @@ function _3dLabels(){
 }
 var _3D_VIEWS={iso:{yaw:-0.65,pitch:0.62},top:{yaw:0,pitch:1.5},front:{yaw:0,pitch:0.22}};
 function _3dSetView(name){var st=_3d;if(!st||!st.r)return;var v=_3D_VIEWS[name]||_3D_VIEWS.iso,asp=st.cv.width/st.cv.height;st.cam={yaw:v.yaw,pitch:v.pitch,d:st.r.size*1.35*Math.max(1,1.5/asp),t:st.r.center.slice()};_3dRender();} // 세로로 좁은 창이면 더 멀리서
+// 3D 창을 열 때 첫 화면 (약 1.8초): 위에서 본 도면 자리(바닥에 눕힘) → 상판이 3D 자리로 미끄러지며 돌고 → 900 높이로 올라가며 하부장이 자라고
+//   → 미드웨이·판이 위로 자라고 상부장이 내려앉음. 시점은 위에서 → 비스듬히. 마우스를 누르면 바로 끝 (_3d.anim = {t} → _3dSetupGL이 읽음)
+function _3dIntro(){
+  var st=_3d;if(!st||!st.r)return;
+  st.anim=null;_3dRegeom();_3dSetView('iso');var c1=JSON.parse(JSON.stringify(st.cam)); // 끝 시점 = 다 놓인 장면을 비스듬히
+  st.anim={t:0};_3dRegeom();_3dSetView('top');var c0=JSON.parse(JSON.stringify(st.cam)); // 처음 시점 = 도면 자리 전체를 위에서
+  var T=1800,t0=performance.now(),dyaw=c1.yaw-c0.yaw;dyaw=Math.atan2(Math.sin(dyaw),Math.cos(dyaw));
+  function ease(x){return x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+  st.anim={t:0};
+  (function step(){
+    if(_3d!==st)return;var f=st.animStop?1:Math.min(1,(performance.now()-t0)/T);st.anim=f<1?{t:f}:null;
+    var e=ease(Math.min(1,f/0.85)),L=function(a,b){return a+(b-a)*e;};
+    st.cam={yaw:c0.yaw+dyaw*e,pitch:L(c0.pitch,c1.pitch),d:L(c0.d,c1.d),t:[L(c0.t[0],c1.t[0]),L(c0.t[1],c1.t[1]),L(c0.t[2],c1.t[2])]};
+    _3dRegeom();if(f<1)requestAnimationFrame(step);else st.animStop=false;
+  })();
+}
+// 첫 화면 단계 (0~1): s = 3D 자리로 미끄러짐·돌기, r = 올라감(하부장 자람), g = 미드웨이·판 자람·상부장 내려앉음
+//   m = 미드웨이·판이 도면 자리에 누운 채로 → 세운 자리로
+function _3dAnimPh(){var a=_3d&&_3d.anim;if(!a)return{s:1,r:1,g:1,m:1};function c(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);}
+  return{s:c(a.t/0.45),r:c((a.t-0.3)/0.4),m:c((a.t-0.35)/0.45),g:c((a.t-0.7)/0.3)};}
 function _3dResize(){var st=_3d;if(!st)return;var r=st.cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;st.cv.width=Math.max(10,Math.round(r.width*dp));st.cv.height=Math.max(10,Math.round(r.height*dp));_3dRender();}
 // 장면을 (다시) 만들기 — 온장 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
 function _3dRebuild(tries){
@@ -8728,6 +9079,12 @@ function _3dRegeom(first){
   return r;
 }
 // 마우스 아래 가장 가까운 조각: 미드웨이(상자) 또는 상판(윗면 높이에서 조각 모양 안) → {kind, m|top, t}
+// 고른 가구 칸 노란 테두리 (_3d.prev 선 배열)
+function _3dUnitOutline(key){
+  var u=((_3d&&_3d.r&&_3d.r.unitInfo)||[]).filter(function(x){return x.key===key;})[0];if(!u)return null;
+  var c=u.c,L=[];[u.y0,u.y1].forEach(function(y){for(var i=0;i<4;i++){var a=c[i],b=c[(i+1)%4];L.push(a[0],y,a[1],0,1,0,0,0,b[0],y,b[1],0,1,0,0,0);}});
+  c.forEach(function(a){L.push(a[0],u.y0,a[1],0,1,0,0,0,a[0],u.y1,a[1],0,1,0,0,0);});return L;
+}
 function _3dPick(ray){
   var st=_3d;if(!st||!st.r||!ray)return null;var best=null;
   if(st.mode!=='top'){var m=_3dPickMid(ray);if(m){var c=[(m.min[0]+m.max[0])/2,(m.min[1]+m.max[1])/2,(m.min[2]+m.max[2])/2];best={kind:'mid',m:m,key:_3dKey(m.shape),t:Math.hypot(c[0]-ray.o[0],c[1]-ray.o[1],c[2]-ray.o[2])};}}
@@ -8735,6 +9092,15 @@ function _3dPick(ray){
     if(Math.abs(ray.d[1])<1e-6)return;var t=(tp.y-ray.o[1])/ray.d[1];if(t<0)return;
     var x=ray.o[0]+ray.d[0]*t,z=ray.o[2]+ray.d[2]*t;if(!_3dInside(tp.loops,x,z))return;
     if(!best||t<best.t)best={kind:'top',top:tp,key:tp.key,t:t};
+  });
+  (st.r.unitInfo||[]).forEach(function(n){ // 가구 칸 (도어 하나 단위): 상부장 칸 = 'upper'(끌면 그 상부장 전체 위아래), 하부장 칸 = 'unit'
+    var t0=0,t1=Infinity,ok=true;
+    for(var k=0;k<3&&ok;k++){var lo=n.min[k],hi=n.max[k];
+      if(Math.abs(ray.d[k])<1e-9){if(ray.o[k]<lo||ray.o[k]>hi)ok=false;}
+      else{var ta=(lo-ray.o[k])/ray.d[k],tb=(hi-ray.o[k])/ray.d[k];if(ta>tb){var x=ta;ta=tb;tb=x;}t0=Math.max(t0,ta);t1=Math.min(t1,tb);if(t0>t1)ok=false;}}
+    if(!ok||(best&&t0>=best.t))return;
+    var u=n.up?(st.r.upInfo||[]).filter(function(x){return x.key===n.up;})[0]:null;
+    best={kind:u?'upper':'unit',u:u,unit:n,key:'unit:'+n.key,t:t0};
   });
   return best;
 }
@@ -8779,7 +9145,31 @@ function _3dHGuide(me,y,other){
 // 처음 배치로: 3D에서 옮긴 상판·미드웨이 자리를 모두 지움 (도면 그대로)
 // 3D 되돌리기 (Ctrl+Z, 머리줄 ↶): 편집 화면과 같은 기록(_hist)을 씀 — 3D에서 바꾼 것(자리·높이·돌리기·무늬 면·조각 구분)도 바꾸기 전에 기록
 function _3dHistSnap(){return JSON.stringify(shapes.map(function(s){return Object.assign({},s);}));}
+// 가구 칸 지우기·상부장 높이 되돌리기: _3d.fOps = [{t:'del'|'off', key, prev, h(그때 _hist 길이)}] — 그 뒤 도형을 안 바꿨을 때(h = 지금 _hist 길이) 먼저 되돌림
+function _3dFOp(op){if(!_3d)return;op.h=_hist.length;(_3d.fOps=_3d.fOps||[]).push(op);if(_3d.fOps.length>50)_3d.fOps.shift();}
+function _3dUnitDelete(key){
+  if(!_3d||!key)return;(_3dStyle.unitDel=_3dStyle.unitDel||{})[key]=1;_3dFOp({t:'del',key:key});
+  if(_3d.doorAng)delete _3d.doorAng[key];_3d.selUnit=null;_3d.prev=null;_3dRegeom();
+  if(_3d.msg)_3d.msg.textContent='칸을 지웠습니다 — Ctrl+Z(↶)로 되돌리기';
+  var sb=document.getElementById('v3d-style');if(sb&&sb.offsetParent)_3dStylePanel();
+}
+// 더블클릭 = 그 칸 도어 열기/닫기 (0.35초 동안 돌아감, 파일에는 저장 안 함)
+function _3dDoorToggle(key){
+  var st=_3d;if(!st)return;st.doorAng=st.doorAng||{};st.doorOpen=st.doorOpen||{};st.doorOpen[key]=!st.doorOpen[key];
+  var from=st.doorAng[key]||0,to=st.doorOpen[key]?90:0,t0=performance.now();
+  (function step(){if(_3d!==st)return;var f=Math.min(1,(performance.now()-t0)/350),e=f<0.5?2*f*f:1-2*(1-f)*(1-f);
+    st.doorAng[key]=from+(to-from)*e;if(!st.doorAng[key])delete st.doorAng[key];_3dRegeom();if(st.selUnit){st.prev=_3dUnitOutline(st.selUnit);_3dRender();}
+    if(f<1)requestAnimationFrame(step);})();
+}
 function _3dUndo(){
+  var op=_3d&&_3d.fOps&&_3d.fOps[_3d.fOps.length-1];
+  if(op&&op.h===_hist.length){ // 가구 칸 지우기·상부장 높이 (그 뒤 도형은 안 바꿈)
+    _3d.fOps.pop();
+    if(op.t==='del')delete (_3dStyle.unitDel||{})[op.key];
+    else if(op.t==='off'){if(op.prev)_3dStyle.upOff[op.key]=op.prev;else delete _3dStyle.upOff[op.key];}
+    _3d.selUnit=null;_3d.prev=null;_3dRegeom();if(_3d.msg)_3d.msg.textContent='';
+    var sb=document.getElementById('v3d-style');if(sb&&sb.offsetParent)_3dStylePanel();return;
+  }
   // 3D 창을 연 뒤 바꾼 것만 (그 전 편집은 창을 닫고 되돌리기)
   if(!_3d)return;if(_hist.length<=(_3d.histBase||0)){if(_3d.msg){_3d.msg.textContent='더 되돌릴 것이 없습니다.';setTimeout(function(){if(_3d&&_3d.msg&&_3d.msg.textContent==='더 되돌릴 것이 없습니다.')_3d.msg.textContent='';},1500);}return;}
   undo();_3d.sel=null;_3d.hover=null;_3dRebuild(0); // undo가 도형을 새 객체로 바꾸므로 장면을 다시 만듦
@@ -8791,16 +9181,24 @@ function _3dResetLayout(){
   _3d.sel=null;_3dRebuild(0);
 }
 // 3D 창 왼쪽 "조각 구분" 목록: 조각마다 상판·오브제·미드웨이·전면판·측판·삭제 (누르면 도형에 저장하고 다시 그림)
-var _3dFold=null; // 목록 접힘 (처음 한 번 localStorage scd_3d_fold에서)
+// 3D 창 양옆 서랍: 왼쪽 = 조각 구분, 오른쪽 = 디자인 — 가장자리 탭을 누르면 열고 닫음 (이 PC에 기억: scd_3d_side_l / scd_3d_side_r, 처음은 왼쪽 열림·오른쪽 닫힘)
+function _3dSideOpen(s){var k='scd_3d_side_'+s,v=null;try{v=localStorage.getItem(k);}catch(e){}if(v==null&&s==='l'){try{v=localStorage.getItem('scd_3d_fold')==='1'?'0':null;}catch(e){}}return v==null?s==='l':v==='1';}
+function _3dSideSet(s,open){
+  try{localStorage.setItem('scd_3d_side_'+s,open?'1':'0');}catch(e){}
+  var d=document.getElementById('v3d-side-'+s),t=document.getElementById('v3d-tab-'+s);if(!d)return;
+  var tw=t?t.offsetWidth:26; // 닫으면 탭만 보이게 (서랍 폭 - 탭 폭만큼 밀어냄)
+  d.style.transform=open?'none':(s==='l'?'translateX(calc(-100% + '+tw+'px))':'translateX(calc(100% - '+tw+'px))');d.dataset.open=open?'1':'';
+  if(t)t.querySelector('i').textContent=s==='l'?(open?'◂':'▸'):(open?'▸':'◂');
+  if(open&&s==='r')_3dStylePanel();
+}
+function _3dTabCss(s){var L=s==='l';return 'pointer-events:auto;align-self:center;writing-mode:vertical-rl;cursor:pointer;user-select:none;padding:12px 5px;gap:6px;display:flex;align-items:center;'
+  +'background:#16233D;border:1px solid #2A4F92;'+(L?'border-left:none;border-radius:0 6px 6px 0;margin-left:-1px':'border-right:none;border-radius:6px 0 0 6px;margin-right:-1px')+';color:#E3B861;font-weight:bold;font-size:12px;letter-spacing:1px;box-shadow:0 2px 6px rgba(0,0,0,.35)';}
 function _3dPiecePanel(sc){
   var box=document.getElementById('v3d-pieces');if(!box||!_3d)return;
   var T=[['top','상판'],['obj','오브제'],['mid','미드웨이'],['panel','하부판'],['etc','삭제']];
   var bs='padding:1px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #56647E;background:#121D33;color:#fff';
-  // 머리글 누르면 접기/펴기 (이 PC에 기억)
-  if(_3dFold==null){_3dFold=false;try{_3dFold=localStorage.getItem('scd_3d_fold')==='1';}catch(e){}}var fold=_3dFold;
-  var hd='<div id="v3d-fold" style="font-weight:bold;color:#E3B861;cursor:pointer;user-select:none'+(fold?'':';margin-bottom:4px')+'" title="'+(fold?'펴기':'접기')+'">'+(fold?'▸':'▾')+' 조각 구분 ('+sc.pieces.length+')</div>';
-  function bindFold(){document.getElementById('v3d-fold').onclick=function(){_3dFold=!fold;try{localStorage.setItem('scd_3d_fold',_3dFold?'1':'0');}catch(e){}_3dPiecePanel(sc);};}
-  if(fold){box.innerHTML=hd;bindFold();return;}
+  // 열고 닫기는 왼쪽 서랍 탭 (_3dSideSet)
+  var hd='<div style="font-weight:bold;color:#E3B861;margin-bottom:4px">조각 구분 ('+sc.pieces.length+')</div>';
   // 한 줄 = 번호·크기 + 종류 버튼 (+ 3D에서 옮겼으면 ↺). 자리·방향·높이·무늬 면은 모두 3D에서 마우스로
   box.innerHTML=hd+sc.pieces.map(function(pc,i){
     var key=_3dKey(pc.shape),moved=key.pos3d||key.mid3d||key.midFace!=null;
@@ -8812,7 +9210,6 @@ function _3dPiecePanel(sc){
     +'<b style="color:#FFD740">오른쪽 클릭</b> = 돌리기·가로/세로 · <b style="color:#FFD740">더블클릭</b> = 무늬 면(앞/뒤/양면)<br>'
     +'미드웨이 = 상판 위로(벽 쪽) · 하부판 = 바닥~상판 밑(앞·옆 어디든)<br>'
     +'오브제 = 가구 없는 상판(붙인 하부판이 밑에 매달려 같이 움직임) · 삭제 = 3D에서만 안 그림</div>';
-  bindFold();
   // 목록 줄에 마우스 올림 = 3D에서 그 조각 파랑, 번호·이름 누르기 = 선택(주황)
   box.querySelectorAll('[data-row]').forEach(function(rw){var k=_3dKey(sc.pieces[+rw.dataset.row].shape);
     rw.onmouseenter=function(){if(_3d&&_3d.hover!==k){_3d.hover=k;_3dRender();}};
@@ -8839,6 +9236,156 @@ function _3dSetMode(md){
   _3d.m.querySelectorAll('[data-mode]').forEach(function(b){var on=b.dataset.mode===md;b.style.background=on?'#00695C':'#121D33';b.style.borderColor=on?'#26A69A':'#56647E';});
   _3dRebuild(0);
 }
+// 3D 디자인 창(오른쪽): 하부장·상부장 색(견본 + 직접 고르기)·도어 디자인·손잡이, 제품 바꿔 보기(3D 화면만, "도면에 적용"으로 실제 제품 변경)
+var _3dMatUI={tgt:'lower',coll:'arckit:all',tab:'sel',pOpen:-1,pSame:true}; // 디자인 창 화면 상태 (고르는 쪽·보는 목록·탭·제품 목록 연 줄·같은 두께만)
+// 디자인 창 그림 단추 (40×52 SVG): kind = design(도어 디자인) | handle(손잡이) | dir(방향), v = 값, hc = 손잡이 색
+function _3dIcon(kind,v,hc){
+  var D='<rect x="4" y="2" width="32" height="48" rx="1" fill="#C9D1DE" stroke="#56647E" stroke-width="1.2"/>',s='',H=hc||'#2B3240';
+  if(kind==='design'){
+    if(v==='shaker')s='<rect x="10" y="8" width="20" height="36" fill="#BCC5D3" stroke="#56647E"/>';
+    else if(v==='slim')s='<rect x="7" y="5" width="26" height="42" fill="#BCC5D3" stroke="#56647E"/>';
+    else if(v==='louver')for(var x=8;x<=32;x+=4)s+='<line x1="'+x+'" y1="4" x2="'+x+'" y2="48" stroke="#6E7A8C" stroke-width="1.2"/>';
+    else if(v==='ribbed')for(var x=5;x<=33;x+=4)s+='<rect x="'+x+'" y="3" width="3" height="46" rx="1.5" fill="#E6EBF2" stroke="#8A95A6" stroke-width=".6"/>';
+    else if(v==='groove')s='<line x1="4" y1="18" x2="36" y2="18" stroke="#2B3240" stroke-width="2"/><line x1="4" y1="34" x2="36" y2="34" stroke="#2B3240" stroke-width="2"/>';
+    else if(v==='glass')s='<rect x="8" y="6" width="24" height="40" fill="#7FA3B5" stroke="#56647E"/><line x1="12" y1="40" x2="26" y2="12" stroke="#E8F2F7" stroke-width="2" opacity=".8"/>';
+  } else if(kind==='handle'){
+    if(v==='none')s='<circle cx="29" cy="14" r="3.5" fill="none" stroke="#56647E" stroke-dasharray="2 1.5"/>';
+    else if(v==='bar')s='<rect x="28" y="6" width="3" height="18" rx="1" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+    else if(v==='knob')s='<rect x="26.5" y="11" width="6" height="6" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+    else if(v==='round')s='<circle cx="29.5" cy="14" r="3.5" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+    else if(v==='line')s='<rect x="4" y="2" width="32" height="5" fill="#2B3240"/>';
+    else if(v==='gola'){D='<rect x="4" y="9" width="32" height="41" rx="1" fill="#C9D1DE" stroke="#56647E" stroke-width="1.2"/>';s='<rect x="3" y="2" width="34" height="6" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/><line x1="3" y1="7.5" x2="37" y2="7.5" stroke="#2B3240"/>';}
+    else if(v==='edge')s='<rect x="12" y="0.5" width="16" height="3.5" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+    else if(v==='recess')s='<rect x="26.5" y="6" width="5" height="16" rx="2.5" fill="#2B3240"/><rect x="26.5" y="6" width="1.5" height="16" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+  } else if(kind==='dir'){
+    s=v==='h'?'<rect x="12" y="7" width="16" height="3" rx="1" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>':'<rect x="28" y="6" width="3" height="18" rx="1" fill="'+H+'" stroke="#2B3240" stroke-width=".7"/>';
+  }
+  return '<svg width="30" height="39" viewBox="0 0 40 52">'+D+s+'</svg>';
+}
+function _3dStylePanel(){
+  var box=document.getElementById('v3d-style');if(!box||!_3d)return;var S=_3dStyle;
+  var hdr='font-weight:bold;color:#E3B861;margin:9px 0 4px',btn='padding:3px 7px;border-radius:3px;cursor:pointer;font-size:11px;color:#fff;border:1px solid ';
+  function sw(path,cur){ // 견본 + 직접 고르기
+    return '<div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">'+_3D_SWATCH.map(function(s){var on=s[1].toLowerCase()===String(cur).toLowerCase();
+      return '<span data-col="'+path+'" data-v="'+s[1]+'" title="'+s[0]+'" style="width:18px;height:18px;border-radius:3px;cursor:pointer;background:'+s[1]+';border:2px solid '+(on?'#E3B861':'#1C2A47')+'"></span>';}).join('')
+      +'<input type="color" data-colin="'+path+'" value="'+cur+'" title="직접 고르기" style="width:26px;height:20px;padding:0;border:none;background:none;cursor:pointer"></div>';
+  }
+  function opts(path,list,cur){return '<div style="display:flex;flex-wrap:wrap;gap:3px">'+list.map(function(o){var on=o[0]===cur;
+    return '<button data-opt="'+path+'" data-v="'+o[0]+'" style="'+btn+(on?'#2A4F92;background:#1F3F7A':'#1C2A47;background:#121D33')+'">'+o[1]+'</button>';}).join('')+'</div>';}
+  // ── 도어 마감 고르기 (스케치업 재질 창처럼): 하부장/상부장 → 큰 미리보기·이름 → 선택(브랜드·분류 목록 + 큰 견본 칸) / 편집(직접 색) ──
+  //   몸통·걸레받이는 고르지 않음 = 고른 마감에 가장 가까운 단색 자동(_3dAutoBase)
+  ['wood','wood2','stone'].forEach(_doorTexImg); // 결 이미지 미리 (다 되면 이 창을 다시 그림)
+  var U=_3dMatUI,tgt=U.tgt,T=(tgt==='upper'&&S.upper.same)?S.lower:S[tgt],cf=_3dFinish(T.finish),ab=_3dAutoBase(T);
+  var colls=[];_3D_BRANDS.forEach(function(b){colls.push([b.id+':all',b.name+' — 전체']);_3D_GRPS.forEach(function(g){if(g[0]!=='body'&&_3D_FINISH.some(function(f){return f.brand===b.id&&f.grp===g[0];}))colls.push([b.id+':'+g[0],b.name+' — '+g[1]]);});}); // 바디 PET은 몸통 자동 색 전용
+  if(!colls.some(function(c){return c[0]===U.coll;}))U.coll=colls[0][0];
+  var cb=U.coll.split(':'),list=_3D_FINISH.filter(function(f){return f.brand===cb[0]&&f.grp!=='body'&&(cb[1]==='all'||f.grp===cb[1]);});
+  var tab='padding:4px 10px;cursor:pointer;font-size:11.5px;border:1px solid #2A4F92;border-bottom:none;border-radius:4px 4px 0 0;margin-right:2px;';
+  var h='<div style="display:flex;align-items:center"><b style="color:#F1D69A;font-size:13px">🎨 3D 디자인</b><span style="flex:1"></span><button id="v3d-style-reset" style="'+btn+'#1C2A47;background:#121D33" title="가구 마감·디자인을 처음대로 (제품 바꿔 보기는 그대로)">기본값</button></div>';
+  h+='<div style="display:flex;margin-top:8px">'+[['lower','하부장 도어'],['upper','상부장 도어']].map(function(t){var on=t[0]===tgt;
+    return '<span data-tgt="'+t[0]+'" style="'+tab+'background:'+(on?'#1F3F7A':'#0A1222')+';color:'+(on?'#fff':'#A9B4C8')+'">'+t[1]+'</span>';}).join('')+'</div>';
+  h+='<div style="border:1px solid #2A4F92;border-radius:0 4px 4px 4px;padding:8px;background:#0A1222">';
+  if(tgt==='upper'){h+='<label style="display:flex;gap:4px;align-items:center;cursor:pointer;margin-bottom:6px"><input type="checkbox" id="v3d-up-same"'+(S.upper.same?' checked':'')+'> 하부장과 같게</label>';
+    // 상부장 높이: 3D에서 상부장을 끌면 위아래로 (S.upOff)
+    h+='<div style="margin-bottom:6px;color:#75839C;font-size:11px">3D에서 상부장을 끌면 위아래로 옮겨집니다</div>';}
+  // 가구 칸(도어 하나 단위): 누르고 Delete = 삭제 · 더블클릭 = 문 열기 · Ctrl+Z = 하나씩 되돌리기
+  var nUp=Object.keys(S.upOff||{}).length+Object.keys(S.upDel||{}).length+Object.keys(S.unitDel||{}).length;
+  h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;color:#75839C;font-size:11px">칸 누르고 Delete = 삭제 · 더블클릭 = 문 열기 · Ctrl+Z = 되돌리기'
+    +(nUp?' <button id="v3d-up-h0" title="옮긴 상부장 높이·지운 칸을 모두 처음대로" style="margin-left:auto;background:#16233D;color:#D9DFEA;border:1px solid #1C2A47;border-radius:3px;padding:2px 6px;cursor:pointer;font-size:11px;white-space:nowrap">가구 처음대로</button>':'')+'</div>';
+  // 미리보기 + 이름 (+ 자동 몸통·걸레받이)
+  h+='<div style="display:flex;gap:8px;align-items:flex-start">'
+    +'<div style="width:84px;height:84px;flex:none;border-radius:4px;border:1px solid #1C2A47;'+(cf?_doorFinishSwatch(cf.id):'background:'+T.door)+'"></div>'
+    +'<div style="flex:1;min-width:0"><div style="background:#121D33;border:1px solid #1C2A47;border-radius:3px;padding:4px 6px;color:#fff;font-weight:bold;word-break:break-all">'+(cf?cf.name:'직접 고른 색')+'</div>'
+    +'<div style="color:#75839C;margin:3px 0">'+(cf?((_3D_BRANDS.filter(function(b){return b.id===cf.brand;})[0]||{}).name+' · '+((_3D_GRPS.filter(function(g){return g[0]===cf.grp;})[0]||[])[1]||'')+(cf.code?' · '+cf.code:'')+(cf.gloss?' · 유광':'')):T.door)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:4px;color:#A9B4C8"><span style="width:14px;height:14px;border-radius:2px;background:'+ab.body+';border:1px solid #1C2A47"></span><span style="width:14px;height:14px;border-radius:2px;background:'+ab.kick+';border:1px solid #1C2A47"></span>몸통·걸레받이 '+(ab.name||'')+' (자동)</div></div></div>';
+  // 선택 / 편집 탭
+  h+='<div style="display:flex;margin-top:8px">'+[['sel','선택'],['edit','편집']].map(function(t){var on=t[0]===U.tab;
+    return '<span data-mtab="'+t[0]+'" style="'+tab+'background:'+(on?'#121D33':'#0A1222')+';color:'+(on?'#fff':'#75839C')+'">'+t[1]+'</span>';}).join('')+'</div>';
+  h+='<div style="border:1px solid #2A4F92;border-radius:0 4px 4px 4px;padding:6px;background:#121D33">';
+  if(U.tab==='sel'){
+    h+='<select id="v3d-coll" style="width:100%;background:#0A1222;color:#D9DFEA;border:1px solid #1C2A47;border-radius:3px;padding:3px;font-size:11.5px;margin-bottom:6px">'
+      +colls.map(function(c){return '<option value="'+c[0]+'"'+(c[0]===U.coll?' selected':'')+'>'+c[1]+'</option>';}).join('')+'</select>';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-height:260px;overflow:auto;padding:2px">'+list.map(function(f){var on=f.id===T.finish;
+      return '<div data-fin="'+f.id+'" title="'+f.name+(f.code?' '+f.code:'')+'" style="aspect-ratio:1;border-radius:3px;cursor:pointer;'+_doorFinishSwatch(f.id)+';outline:'+(on?'3px solid #E3B861':'1px solid #1C2A47')+';outline-offset:-1px"></div>';}).join('')+'</div>';
+  } else { // 편집: 마감 대신 직접 색
+    h+='<div style="color:#A9B4C8;margin-bottom:4px">직접 색 (고르면 마감 대신 이 색)</div>'+sw('door',T.door);
+  }
+  h+='</div></div>';
+  // 그림 단추: 도어 디자인·손잡이·방향은 모양 그림(작은 이름은 아래), 색은 금속 느낌 동그라미
+  var hcol=(_3D_HCOL[S.handle.color]||_3D_HCOL.silver)[1];
+  function iconOpts(path,list,cur,kind){return '<div style="display:flex;flex-wrap:wrap;gap:4px">'+list.map(function(o){var on=o[0]===cur;
+    return '<div data-opt="'+path+'" data-v="'+o[0]+'" title="'+o[1]+'" style="width:52px;padding:3px 0 2px;border-radius:4px;cursor:pointer;text-align:center;background:'+(on?'#1F3F7A':'#121D33')+';border:1px solid '+(on?'#E3B861':'#1C2A47')+'">'
+      +_3dIcon(kind,o[0],hcol)+'<div style="font-size:9.5px;color:'+(on?'#F1D69A':'#A9B4C8')+';line-height:1.15;margin-top:1px;white-space:nowrap;overflow:hidden">'+o[1]+'</div></div>';}).join('')+'</div>';}
+  function colorDots(cur){return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+Object.keys(_3D_HCOL).map(function(k){var on=k===cur,c=_3D_HCOL[k][1];
+    return '<div data-opt="handle.color" data-v="'+k+'" title="'+_3D_HCOL[k][0]+'" style="width:26px;height:26px;border-radius:50%;cursor:pointer;background:radial-gradient(circle at 35% 30%,#fff 0,'+c+' 45%,'+c+' 70%,#000 140%);box-shadow:0 0 0 '+(on?'3px #E3B861':'1px #1C2A47')+'"></div>';}).join('')+'</div>';}
+  h+='<div style="'+hdr+'">도어 디자인 <span style="font-weight:normal;color:#75839C">('+(tgt==='upper'?'상부장':'하부장')+')</span></div>'+iconOpts(tgt+'.design',tgt==='upper'?_3D_DESIGNS:_3D_DESIGNS.filter(function(d){return d[0]!=='glass';}),S[tgt].design,'design');
+  var ht=S.handle.type,sub='color:#75839C;width:30px;flex:none',row='display:flex;align-items:center;gap:4px;margin-top:6px';
+  h+='<div style="'+hdr+'">손잡이 <span style="font-weight:normal;color:#75839C">(상·하부장 같이)</span></div>'+iconOpts('handle.type',_3D_HANDLES,ht,'handle');
+  if(ht==='bar'||ht==='edge')h+='<div style="'+row+'"><span style="'+sub+'">길이</span>'+opts('handle.len',_3D_HLEN,S.handle.len||'160')+'</div>'; // mm, 전체 = 도어 높이(가로면 폭)만큼
+  if(ht==='bar'||ht==='recess'||ht==='knob'||ht==='round')h+='<div style="'+row+'"><span style="'+sub+'">방향</span>'+iconOpts('handle.dir',_3D_HDIR,S.handle.dir||'v','dir')+'</div>'; // 세로 = 문 맞닿는 쪽 끝, 가로 = 가운데
+  if(ht!=='none'&&ht!=='line')h+='<div style="'+row+'"><span style="'+sub+'">색</span>'+colorDots(S.handle.color)+'</div>';
+  // 제품 바꿔 보기
+  var names=_prodNames().filter(Boolean),cat=(window._MALL_CATALOG&&window._MALL_CATALOG.items)||[];
+  h+='<div style="'+hdr+'">제품 바꿔 보기 <span style="font-weight:normal;color:#75839C">(3D만 · 두께는 도면 제품 그대로)</span></div>';
+  // 제품마다: 지금 3D에 보이는 제품 사진·이름 + "바꿔 보기" → 윤현몰 제품 사진 목록(같은 두께만 기본, 검색)에서 눌러 고름
+  function catById(id){return cat.filter(function(c){return String(c.id)===String(id);})[0];}
+  names.forEach(function(nm,i){
+    var oid=S.prod[nm],it=oid&&catById(oid),pi=_prodIdxOf(nm),pp=products[pi]||{},cur=it||catById(_mallIdFor(pp.name,pp.size)),open=U.pOpen===i;
+    h+='<div style="border:1px solid '+(open?'#2A4F92':'#1C2A47')+';border-radius:4px;padding:6px;margin-bottom:6px">'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<div style="width:64px;height:32px;flex:none;border-radius:3px;border:1px solid #1C2A47;background:#121D33 '+(cur&&cur.img?'url('+cur.img+') center/cover':'')+'"></div>'
+      +'<div style="flex:1;min-width:0"><div style="color:#75839C;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(nm)+'</div>'
+      +'<div style="color:'+(it?'#F1D69A':'#D9DFEA')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(it?'→ '+escHtml(it.name):'도면 제품 그대로')+'</div></div>'
+      +'<button data-popen="'+i+'" style="'+btn+(open?'#2A4F92;background:#1F3F7A':'#1C2A47;background:#121D33')+'">'+(open?'닫기':'바꿔 보기')+'</button></div>'
+      +(it?'<div style="display:flex;gap:4px;margin-top:5px"><button data-prst="'+i+'" style="'+btn+'#1C2A47;background:#121D33">원래대로</button><button data-papply="'+i+'" style="'+btn+'#2A4F92;background:#1F3F7A" title="도면의 제품을 이 제품으로 바꿈 (견적·온장 배치도 바뀜)">도면에 적용</button></div>':'');
+    if(open)h+='<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input data-psearch="'+i+'" placeholder="검색 (한글·영문·사이즈)" style="flex:1;min-width:0;background:#121D33;border:1px solid #1C2A47;color:#D9DFEA;border-radius:3px;padding:3px 5px;font-size:11px">'
+      +'<label style="display:flex;gap:3px;align-items:center;color:#A9B4C8;font-size:10.5px;cursor:pointer;white-space:nowrap"><input type="checkbox" data-psame'+(U.pSame?' checked':'')+'>같은 두께</label></div>'
+      +'<div data-pgrid="'+i+'" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;max-height:330px;overflow:auto;margin-top:5px;padding:1px"></div>';
+    h+='</div>';
+  });
+  box.innerHTML=h;
+  function setPath(p,v){var k=p.split('.');S[k[0]][k[1]]=v;}
+  function changed(geo){if(geo)_3dRegeom();else _3dRender();_3dStylePanel();}
+  // 고르는 쪽 도어 (상부장이 "하부장과 같게"였으면 하부장 것을 이어받아 따로)
+  function tgtObj(){if(tgt==='upper'&&S.upper.same){S.upper.same=false;S.upper.door=S.lower.door;S.upper.finish=S.lower.finish;}return S[tgt];}
+  box.querySelectorAll('[data-col]').forEach(function(e){e.onclick=function(){var o=tgtObj();o.door=e.dataset.v;o.finish='';changed(true);};}); // 직접 색 = 마감 끔
+  box.querySelectorAll('[data-colin]').forEach(function(e){e.oninput=function(){var o=tgtObj(),g=!!o.finish;o.door=e.value;o.finish='';if(g)_3dRegeom();else _3dRender();};e.onchange=function(){_3dStylePanel();};});
+  box.querySelectorAll('[data-fin]').forEach(function(e){e.onclick=function(){tgtObj().finish=e.dataset.fin;changed(true);};}); // 마감 = 결 좌표·텍스처라 모양 다시
+  box.querySelectorAll('[data-opt]').forEach(function(e){e.onclick=function(){setPath(e.dataset.opt,e.dataset.v);changed(true);};});
+  box.querySelectorAll('[data-tgt]').forEach(function(e){e.onclick=function(){U.tgt=e.dataset.tgt;_3dStylePanel();};});
+  box.querySelectorAll('[data-mtab]').forEach(function(e){e.onclick=function(){U.tab=e.dataset.mtab;_3dStylePanel();};});
+  var csel=document.getElementById('v3d-coll');if(csel)csel.onchange=function(){U.coll=csel.value;_3dStylePanel();};
+  var usame=document.getElementById('v3d-up-same');if(usame)usame.onchange=function(e){S.upper.same=e.target.checked;if(!S.upper.same){S.upper.door=S.lower.door;S.upper.finish=S.lower.finish;}changed(true);};
+  var uh0=document.getElementById('v3d-up-h0');if(uh0)uh0.onclick=function(){S.upOff={};S.upDel={};S.unitDel={};if(_3d)_3d.fOps=[];changed(true);};
+  document.getElementById('v3d-style-reset').onclick=function(){var p=S.prod,uo=S.upOff,ud=S.upDel,un=S.unitDel;_3dStyleLoad(null);_3dStyle.prod=p;_3dStyle.upOff=uo;_3dStyle.upDel=ud;_3dStyle.unitDel=un;changed(true);};
+  box.querySelectorAll('[data-popen]').forEach(function(b){b.onclick=function(){var i=+b.dataset.popen;U.pOpen=U.pOpen===i?-1:i;_3dStylePanel();};});
+  // 제품 사진 목록 (연 줄 하나): 같은 두께만(도면 제품 사이즈의 nT) · 검색어(여러 단어 모두 포함) — 사진은 윤현몰 목록 이미지, 보일 때 불러옴
+  var pg=box.querySelector('[data-pgrid]');
+  if(pg){
+    var gi=+pg.dataset.pgrid,inp=box.querySelector('[data-psearch]'),gpp=products[_prodIdxOf(names[gi])]||{},th=(/(\d+(?:\.\d+)?)\s*T/i.exec(gpp.size||'')||[])[1];
+    function fillGrid(){
+      var q=(inp.value||'').trim().toLowerCase().split(/\s+/).filter(Boolean),selId=S.prod[names[gi]]||_mallIdFor(gpp.name,gpp.size);
+      var hit=cat.filter(function(c){if(U.pSame&&th&&(/(\d+(?:\.\d+)?)\s*T/i.exec(c.size||'')||[])[1]!==th)return false;
+        var t=((c.name||'')+' '+(c.en||'')+' '+(c.size||'')).toLowerCase();return q.every(function(w){return t.indexOf(w)>=0;});});
+      pg.innerHTML=hit.map(function(c){var on=String(c.id)===String(selId);
+        return '<div data-pick="'+c.id+'" title="'+escHtml(c.name+' '+(c.size||''))+'" style="cursor:pointer;border-radius:4px;overflow:hidden;background:#121D33;outline:'+(on?'3px solid #E3B861':'1px solid #1C2A47')+';outline-offset:-1px">'
+          +'<img src="'+c.img+'" loading="lazy" style="display:block;width:100%;aspect-ratio:2/1;object-fit:cover;background:#0A1222">'
+          +'<div style="padding:3px 4px 4px;font-size:10.5px;color:#D9DFEA;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(c.name)+'</div>'
+          +'<div style="padding:0 4px 4px;font-size:9.5px;color:#75839C">'+escHtml(c.size||'')+'</div></div>';}).join('')||'<div style="color:#75839C;padding:6px;grid-column:1/3">찾는 제품이 없습니다</div>';
+      pg.querySelectorAll('[data-pick]').forEach(function(d){d.onclick=function(){S.prod[names[gi]]=d.dataset.pick;_3dRebuild(0);_3dStylePanel();};});
+    }
+    inp.onkeydown=function(e){e.stopPropagation();}; // 3D 단축키(R 등)와 안 겹치게
+    inp.oninput=fillGrid;
+    box.querySelector('[data-psame]').onchange=function(e){U.pSame=e.target.checked;fillGrid();};
+    fillGrid();
+  }
+  box.querySelectorAll('[data-prst]').forEach(function(b){b.onclick=function(){delete S.prod[names[+b.dataset.prst]];_3dRebuild(0);_3dStylePanel();};});
+  box.querySelectorAll('[data-papply]').forEach(function(b){b.onclick=function(){
+    var nm=names[+b.dataset.papply],oid=S.prod[nm],it=cat.filter(function(c){return String(c.id)===String(oid);})[0],pi=_prodIdxOf(nm);if(!it||pi<0)return;
+    if(!confirm('도면의 "'+nm+'" 제품을\n"'+it.name+' '+(it.size||'')+'"(으)로 바꿀까요?\n견적·온장 배치도 새 제품 기준으로 바뀝니다.'))return;
+    _prodNames();products[pi].name=it.name;products[pi].size=it.size||products[pi].size;_prodNames(); // 구분 이름이 바뀌면 도형 제품도 따라감
+    delete S.prod[nm];renderProductList();calcCost();_3dRebuild(0);_3dStylePanel();
+  };});
+}
 function show3D(){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   close3D();
@@ -8858,7 +9405,13 @@ function show3D(){
     +'<button id="v3d-save" style="'+bs.replace('#121D33','#1F3F7A')+'">💾 이미지 저장</button><button id="v3d-close" style="'+bs+'">✕ 닫기</button></div>'
     +'<div style="flex:1;position:relative;min-height:0"><canvas id="v3d-cv" style="position:absolute;inset:0;width:100%;height:100%;cursor:grab"></canvas>'
     +'<div id="v3d-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>'
-    +'<div id="v3d-pieces" style="position:absolute;left:10px;top:10px;background:rgba(13,24,34,0.88);border:1px solid #16233D;border-radius:4px;padding:8px 10px;font-size:11px;max-height:70%;overflow:auto"></div>'
+    // 양옆 서랍 (서랍 상자는 마우스를 통과, 안 패널·탭만 받음) — 탭 = 서랍 바깥 가장자리 가운데 세로 손잡이
+    +'<div id="v3d-side-l" style="position:absolute;left:0;top:10px;bottom:40px;display:flex;align-items:flex-start;pointer-events:none;transition:transform .22s ease">'
+    +'<div id="v3d-pieces" style="pointer-events:auto;margin-left:10px;background:rgba(13,24,34,0.92);border:1px solid #2A4F92;border-radius:4px;padding:8px 10px;font-size:11px;max-height:100%;overflow:auto;box-sizing:border-box"></div>'
+    +'<div id="v3d-tab-l" title="조각 구분 열기/닫기" style="'+_3dTabCss('l')+'"><i style="font-style:normal">◂</i>조각 구분</div></div>'
+    +'<div id="v3d-side-r" style="position:absolute;right:0;top:10px;bottom:40px;display:flex;flex-direction:row-reverse;align-items:flex-start;pointer-events:none;transition:transform .22s ease">'
+    +'<div id="v3d-style" style="pointer-events:auto;margin-right:10px;width:290px;background:rgba(10,18,34,0.95);border:1px solid #2A4F92;border-radius:6px;padding:10px 12px;font-size:11.5px;color:#D9DFEA;max-height:100%;overflow:auto;box-sizing:border-box"></div>'
+    +'<div id="v3d-tab-r" title="디자인(상·하부장 컬러·도어·손잡이·제품 바꿔 보기) 열기/닫기" style="'+_3dTabCss('r')+'"><i style="font-style:normal">▸</i>🎨 디자인</div></div>'
     +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
@@ -8873,6 +9426,8 @@ function show3D(){
   document.getElementById('v3d-undo').onclick=_3dUndo;
   _3d.histBase=_hist.length; // 되돌리기는 여기까지
   document.getElementById('v3d-save').onclick=save3DImage;
+  ['l','r'].forEach(function(s){document.getElementById('v3d-tab-'+s).onclick=function(){_3dSideSet(s,!document.getElementById('v3d-side-'+s).dataset.open);};
+    var d=document.getElementById('v3d-side-'+s);d.style.transition='none';_3dSideSet(s,_3dSideOpen(s));requestAnimationFrame(function(){requestAnimationFrame(function(){d.style.transition='transform .22s ease';});});}); // 창 열 때는 미끄러지지 않게
   // 마우스 (최대한 클릭·끌기로):
   //   조각 위 왼쪽 누르기 = 선택 + 끌기 (상판 = 바닥에서 자유롭게, 이웃 상판 꼭짓점에 가로·세로로 맞춤 / 미드웨이 = 가장 가까운 상판 변 따라)
   //   조각 위 오른쪽 클릭 = 돌리기 (상판 90°, 미드웨이 가로/세로) · 빈 곳 왼쪽 끌기 = 화면 돌리기 · 오른쪽/가운데(또는 Shift) 끌기 = 화면 이동 · 휠 = 확대
@@ -8887,8 +9442,23 @@ function show3D(){
   }
   cv.addEventListener('contextmenu',function(e){e.preventDefault();});
   cv.addEventListener('mousedown',function(e){
+    if(_3d.anim){_3d.animStop=true;e.preventDefault();return;} // 첫 화면 움직이는 중 = 누르면 바로 끝
     var ray=_3dRay(e.clientX,e.clientY),pk=_3dPick(ray);
-    drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,btn:e.button,pk:pk,moved:false,snap:pk?_3dHistSnap():null};
+    var isU=pk&&(pk.kind==='upper'||pk.kind==='unit');
+    if(_3d.selUnit&&!isU){_3d.selUnit=null;_3d.prev=null;} // 가구 칸 고름 풀기
+    drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,btn:e.button,pk:pk,moved:false,snap:pk&&!isU?_3dHistSnap():null};
+    if(e.button===0&&isU){ // 가구 칸 누르기 = 고름(노란 테두리, Delete = 그 칸 삭제, 더블클릭 = 문 열기)
+      _3d.selUnit=pk.unit.key;_3d.sel=null;_3d.prev=_3dUnitOutline(pk.unit.key);_3dRender();
+      if(_3d.msg)_3d.msg.textContent=(pk.kind==='upper'?'상부장: 끌면 위아래 · ':'하부장: ')+'Delete = 이 칸 삭제 · 더블클릭 = 문 열기/닫기';
+    }
+    if(e.button===0&&pk&&pk.kind==='upper'){ // 상부장 끌기(Shift 상관없이) = 위아래로만 — 높이는 _3dStyle.upOff[자리]
+      var Nu=[ray.d[0],ray.d[2]],nlu=Math.hypot(Nu[0],Nu[1]),u=pk.u;
+      if(nlu>1e-6){
+        drag.upper={u:u,N:[Nu[0]/nlu,Nu[1]/nlu],C:[(u.min[0]+u.max[0])/2,(u.min[1]+u.max[1])/2,(u.min[2]+u.max[2])/2],off0:u.off,h0:null};drag.upper.h0=_3dVertH(drag.upper,ray);
+        cv.style.cursor='ns-resize';e.preventDefault();return;
+      }
+    }
+    if(e.button===0&&pk&&pk.kind==='unit'){drag.orbit=true;cv.style.cursor='grabbing';e.preventDefault();return;} // 하부장 칸: 고르고 끌면 돌려 보기
     if(e.button===0&&e.shiftKey&&pk&&pk.kind==='mid'){ // Shift+끌기 = 미드웨이 위아래로 (화면을 향한 세로 평면에서 높이 차이)
       var pcm=_3d.scene.pieces.filter(function(q){return _3dKey(q.shape)===pk.key;})[0],mm=pk.m,N=[ray.d[0],ray.d[2]],nl=Math.hypot(N[0],N[1]);
       if(pcm&&pcm.mid&&pcm.mid.edge&&nl>1e-6){
@@ -8918,9 +9488,22 @@ function show3D(){
     if(!_3d||!_3d.cam)return;
     if(!drag){ // 마우스 올림: 잡을 수 있는 조각이면 파란 테두리 + 손 모양
       if(e.target!==cv)return;var pk=_3dPick(_3dRay(e.clientX,e.clientY)),hk=pk?pk.key:null;
-      cv.style.cursor=pk?(e.shiftKey?'ns-resize':'move'):'grab';if(hk!==_3d.hover){_3d.hover=hk;_3dRender();}return;
+      cv.style.cursor=pk?(e.shiftKey||pk.kind==='upper'?'ns-resize':'move'):'grab';if(hk!==_3d.hover){_3d.hover=hk;_3dRender();}return;
     }
     if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>3)drag.moved=true;
+    if(drag.upper){ // 상부장 위아래: 아랫변을 자동 자리·미드웨이 윗변·상판 윗면+600·다른 상부장 아랫변/윗변에 맞춤 (+ 기준선)
+      var UP=drag.upper,hu=_3dVertH(UP,_3dRay(e.clientX,e.clientY));if(hu==null||UP.h0==null)return;
+      var u0=UP.u,y0n=Math.max(0,u0.base+UP.off0+hu-UP.h0),tolu=Math.max(20,_3d.cam.d/80),R3=_3d.r,lvu=[u0.base],bu=null;
+      R3.midInfo.forEach(function(x){if(!x.panel)lvu.push(x.yB);});
+      R3.tops.forEach(function(tp){lvu.push(tp.y+_3D_UPGAP);});
+      (R3.upInfo||[]).forEach(function(x){if(x.key!==u0.key){lvu.push(x.y0);lvu.push(x.y1-_3D_UPH);lvu.push(x.y1);}});
+      lvu.forEach(function(s){var d=Math.abs(y0n-s);if(s>=0&&d<tolu&&(!bu||d<bu.d))bu={d:d,y:s};});
+      if(bu)y0n=bu.y;
+      _3d.guide=null;if(bu){var exu=Math.max(150,_3d.cam.d/25),cxu=UP.C[0],czu=UP.C[2],yy=bu.y;
+        _3d.guide=[cxu-exu*3,yy,czu,0,1,0,0,0,cxu+exu*3,yy,czu,0,1,0,0,0,cxu,yy,czu-exu*3,0,1,0,0,0,cxu,yy,czu+exu*3,0,1,0,0,0];}
+      var nOff=Math.round(y0n-u0.base);if(nOff)_3dStyle.upOff[u0.key]=nOff;else delete _3dStyle.upOff[u0.key];
+      regeomSoon();return;
+    }
     if(drag.top){ // 상판 끌기: 바닥에서 따라 움직이고 이웃 상판에 맞춤
       var T=drag.top,P=_3dPlane(_3dRay(e.clientX,e.clientY),T.y);if(!P||!T.p0)return;
       var s=T.start,ndx=s.dx+P[0]-T.p0[0],ndz=s.dz+P[1]-T.p0[1];
@@ -8969,10 +9552,12 @@ function show3D(){
       var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:d.mid.swap,floor:!!tg.floor};
       _3d.prev=null;_3d.dragTo=null;_3dRegeom();_3dPiecePanel(_3d.scene);return;
     }
+    if(d.upper){var nOff=_3dStyle.upOff[d.upper.u.key]||0;if(nOff!==(d.upper.off0||0))_3dFOp({t:'off',key:d.upper.u.key,prev:d.upper.off0||0}); // 되돌리기
+      _3dRegeom();if(_3d.selUnit){_3d.prev=_3dUnitOutline(_3d.selUnit);_3dRender();}var sb=document.getElementById('v3d-style');if(sb&&sb.offsetParent)_3dStylePanel();return;} // 디자인 창이 열려 있으면 "높이 처음대로" 단추
     if(d.vert||d.vertTop){_3dRegeom();_3dPiecePanel(_3d.scene);return;}
     if(d.top&&d.moved){_3dRegeom();_3dPiecePanel(_3d.scene);return;} // 상판 옮김 → 목록에 ↺
-    if(_3d.prev){_3d.prev=null;_3d.dragTo=null;_3dRender();}
-    if(d.btn===2&&!d.moved&&d.pk)rotatePiece(d.pk); // 오른쪽 클릭(끌지 않음) = 돌리기
+    if(_3d.prev&&!_3d.selUnit){_3d.prev=null;_3d.dragTo=null;_3dRender();} // 고른 가구 칸 테두리는 남김
+    if(d.btn===2&&!d.moved&&d.pk&&d.pk.kind!=='upper')rotatePiece(d.pk); // 오른쪽 클릭(끌지 않음) = 돌리기
   });
   document.addEventListener('keydown',_3d.onKey2=function(e){ // R = 선택한 조각 돌리기
     if(!_3d||!_3d.sel||/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||''))return;
@@ -8982,14 +9567,17 @@ function show3D(){
   cv.addEventListener('dblclick',function(e){ // 미드웨이 위 더블클릭 = 무늬 면 바꾸기(앞 → 뒤 → 양면), 빈 곳 = 처음 시점
     var pk=_3dPick(_3dRay(e.clientX,e.clientY));
     if(pk&&pk.kind==='mid'){_3dFlipFace(pk.key);return;}
+    if(pk&&pk.unit){_3dDoorToggle(pk.unit.key);return;} // 가구 칸 = 문 열기/닫기
     if(!pk)_3dSetView('iso');
   });
   document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();} // Esc로는 닫지 않음 (사용자 요청, 닫기는 ✕ 버튼) — 뒤 편집 화면에도 안 넘김
-    else if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){e.stopPropagation();e.preventDefault();_3dUndo();}},true); // Ctrl+Z = 3D 되돌리기
+    else if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){e.stopPropagation();e.preventDefault();_3dUndo();}
+    else if((e.key==='Delete'||e.key==='Backspace')&&_3d&&_3d.selUnit&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){ // 고른 가구 칸 삭제 (3D에서만, 뒤 편집 화면에 안 넘김)
+      e.stopPropagation();e.preventDefault();_3dUnitDelete(_3d.selUnit);}},true); // Ctrl+Z = 3D 되돌리기
   window.addEventListener('resize',_3d.onResize=_3dResize);
   var r=cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;cv.width=Math.max(10,Math.round(r.width*dp));cv.height=Math.max(10,Math.round(r.height*dp));
   _3dRebuild(0);
-  requestAnimationFrame(function(){if(_3d&&_3d.cv===cv){_3dResize();_3dSetView('iso');}}); // 창이 그려진 뒤 크기를 다시 재고 전체가 보이게
+  requestAnimationFrame(function(){if(_3d&&_3d.cv===cv){_3dResize();_3dIntro();}}); // 창이 그려진 뒤 크기를 다시 재고 → 도면 자리에서 3D 배치로 움직이는 첫 화면
 }
 function close3D(){
   var st=_3d;if(!st)return;_3d=null;

@@ -148,7 +148,7 @@
   조각 구분(`_3dGetType/_3dSetType`, 도형 `piece3d` = top|obj|mid|panel(하부판, 예전 front|side)|etc(목록 이름 "삭제" = 3D에서만 안 그림), 선 조각은 선마다, 기본 = 폭 300 미만 etc·나머지 top,
   오브제 obj(2026-10-27, 선반·벤치 등 가구 아닌 상판) = 상판처럼 그리고 끌기·위아래(pos3d)도 같지만 하부장 없음·`backs`(미드웨이·상부장 자리) 아님,
   그 변(`ed.obj` = tops 항목)에 붙은 전면판·측판은 바닥부터가 아니라 오브제 밑면에 매달림(y = y0-Hm, 판의 mid3d.y0 무시) → tops 항목 `hang` = 매달린 판 높이,
-  Shift 위아래의 바닥 맞춤 = 판이 바닥에 닿는 높이(`drag.vertTop.hang`), 3D 창 왼쪽 `_3dPiecePanel`, 머리글 누르면 접기 `_3dFold`/localStorage `scd_3d_fold`):
+  Shift 위아래의 바닥 맞춤 = 판이 바닥에 닿는 높이(`drag.vertTop.hang`), 3D 창 왼쪽 서랍 `_3dPiecePanel` — 아래 "3D 디자인"의 양옆 탭):
   미드웨이 = 상판 뒷변(`backs`: 앞면 아닌 300 이상 변, 긴 것부터)을 따라 상판 위에 세운 판(긴 변=벽 따라·짧은 변=높이·앞면 무늬), 기타 = 안 그림.
   머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`). 하부장·상부장 체크·보기 방식은 `_3dOpts`(창 닫아도 유지, 도면 파일 `view3dOpts`, `_3dOptsLoad` — 불러오기·새로만들기에서)
   — 3d-design 브랜치의 `view3d`(가구 디자인)와 다른 키
@@ -186,6 +186,20 @@
   유광(2026-10-28): `_3dGloss(도형)` → `_prodGloss(제품 구분 이름)` = 제품명·몰 상품명/영문명에 유광|폴리시드|루시도|polish|gloss… → 1, 라파토|lappato|반광 → 0.5, 그 밖 0 → 장면 조각 `gloss` → 그리기 `d.gloss`.
   셰이더 `uG`(광택)·`uE`(눈 위치)·`vW`: 무늬 면(상판 윗면·미드웨이/판 무늬 면, 옆면은 0.6배)에만 하이라이트 + 반사 광선이 높이 2600 천장 일자 라인 조명(z 방향, 폭 약 70, x 2800 간격 — 사용자 요청 "조명이 너무 많다")에 닿는 곳 밝게 + 프레넬. 다른 면은 uG=0
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
+- **3D 디자인**(2026-10-28 개발판 `3d-design.html`에서 만들어 본판에 합침 — 브랜치 `3d-design`·작업 폴더 `..\simplecad-3d`는 그 기록):
+  - 설정 `_3dStyle`(`_3dStyleDef/_3dStyleLoad/_3dUp`) = 도면 파일 `view3d`: lower/upper {door 색, design, finish 마감 id, upper.same}, handle {type,color,len,dir}, prod(제품 바꿔 보기), upOff(상부장 높이), unitDel(지운 칸), upDel(예전)
+  - 3D 창 양옆 서랍: 왼쪽 조각 구분 `#v3d-side-l`·오른쪽 디자인 `#v3d-side-r`, 가장자리 세로 탭 `#v3d-tab-l/r`(`_3dSideOpen/_3dSideSet`, localStorage `scd_3d_side_l/r`, 처음은 왼쪽 열림·오른쪽 닫힘)
+  - 디자인 창 `_3dStylePanel`(`_3dMatUI`): 하부장/상부장 도어 탭 → 스케치업 재질 창 모양(미리보기 + "선택" 브랜드·분류 견본 / "편집" 직접 색). 몸통·걸레받이는 고르지 않고 `_3dAutoBase`(Lab ΔE `_rgbLab`로 가장 비슷한 단색, 걸레받이 78%)
+    도어 디자인 `_3D_DESIGNS`(민자·쉐이커·슬림·루바·리브드·그루브, 상부장 유리장), 손잡이 `_3D_HANDLES`(없음·바·노브·둥근 노브·라인·골라·엣지·매립형 + 길이·방향·색 `_3D_HCOL`), 그림 단추 `_3dIcon`
+    제품 바꿔 보기 = 윤현몰 사진 2칸 격자(같은 두께·검색) → 3D 무늬만(`_3dProdId` → `_slabImgById`) / "도면에 적용"
+  - 마감 `_3D_FINISH`(id·name·grp·rgb·tex·tw·th·raw·gloss·code·brand) · `_3D_BRANDS`(ARCKIT·한솔 스토리보드·영림 인테리어필름) · `_3D_GRPS`, 무늬 `door-tex/*.js`(`_doorTexImg`, `_doorFinishCanvas` 색 입힘·raw는 그대로 거울 반복).
+    브랜드 더하기 = `_3D_BRANDS` + `_3D_FINISH` 항목 + door-tex 이미지 (한솔·영림은 사용자 PDF 카탈로그에서 Windows.Data.Pdf로 쪽을 그려 견본을 잘라 만듦, ARCKIT은 사용자 .skp 재질)
+  - `_3dSetupGL` 가구: 도어 `door(F,P,Q,dy0,dy1,nx,nz,design,isUp,side,ang)`(손잡이 쪽 `_3dHandleSide`, ang = 열린 각도 → 두께 18 + 경첩(손잡이 반대쪽 앞 모서리) 축 회전),
+    몸통 = 도어마다 칸 `bay`(뒷판·옆판·밑판(상부장 윗판) + 선반 2단, 하부장 깊이 `depthIn`, 앞면 변 없는 조각은 예전 외곽 벽) → `R.unitInfo`(key 하부장 `L상판id:변:번호`/상부장 `U자리key:번호`)
+    `_3dPick` kind 'unit'(하부장 칸)/'upper'(상부장 칸, 끌면 그 상부장 전체 위아래 → `upOff[자리key]`, 자석·기준선) → 누르면 `_3d.selUnit` 노란 테두리 `_3dUnitOutline`, Delete = `_3dUnitDelete`,
+    더블클릭 = `_3dDoorToggle`(0↔90°, 파일 저장 안 함). 되돌리기 `_3d.fOps`(지우기·상부장 높이, 그때 `_hist` 길이) — `_3dUndo`가 먼저 처리, "가구 처음대로" = 모두
+  - 첫 화면 `_3dIntro`(약 1.8초): `_3d.anim={t}` → `_3dAnimPh()` s(상판 3D 자리로 미끄러짐·돌기)·r(900으로 올라감, 하부장 같이 자람)·m(미드웨이·판 눕힌 데서 세움, 정점 보간)·g(상부장 내려앉음), 시점 위에서 → 비스듬히, 누르면 끝
+  - door-tex 이미지는 외부 카탈로그 자료 — 공개 저장소에 올려도 되는지 사용자 확인 후 올림
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
 
