@@ -6776,6 +6776,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       // 스냅 인접 피스 테두리
       if(isSnapNb&&!isSnap){bctx.strokeStyle='#FFB300';bctx.lineWidth=2;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
     }
+    _boardSheen(bctx,ox,oy,_bd.bw*sc,_bd.bh*sc,_prodGloss(_boardLabel(placed)),k); // 유광이면 반사 띠 + 표
 
     // ── 스냅 터치 경계선 ──
     if(_bs&&_bs.snapState&&_bs.snapState.active&&_bs.snapState.bi===bi){
@@ -7583,6 +7584,7 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전
     var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:d.bw*sc,h:d.bh*sc,board:board};
     _boardFrame(g,bx,by,_boardTitle(board,bi0+bi),board,d.bw,d.bh,sc,1,img);
     board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});
+    _boardSheen(g,bx,by,d.bw*sc,d.bh*sc,_prodGloss(_boardLabel(board)),1); // 유광이면 반사 띠 + 표
   });
 }
 // ── 온장 배치 그리기 공통 (도면화 2쪽 · 온장 배치 창이 같은 모양) ── k: 글자·선 크기 배율(도면화=1)
@@ -7605,6 +7607,23 @@ function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
   // 온장 사진은 실제 밝기 그대로, 남는 부분만 살짝 어둡게 (조각이 실제 색으로 도드라지게)
   if(img){_drawSlab(g,img,bx,by,bw*sc,bh*sc);g.fillStyle='rgba(0,0,0,0.32)';g.fillRect(bx,by,bw*sc,bh*sc);}
   g.strokeStyle='#555';g.lineWidth=3*k;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
+}
+// 유광 온장 표시 (온장 배치 창·도면화 온장 배치 쪽): 조각까지 다 그린 뒤 온장 위에 비스듬한 반사 띠 두 줄 + 오른쪽 위 "유광"/"반광" 표
+//   gloss = _prodGloss(장 제품): 1 유광 · 0.5 반광(라파토) · 0 무광(아무것도 안 그림)
+function _boardSheen(g,bx,by,w,h,gloss,k){
+  if(!gloss)return;
+  g.save();g.beginPath();g.rect(bx,by,w,h);g.clip();
+  [[0.24,0.11,0.42],[0.64,0.05,0.26]].forEach(function(b){ // [띠 가운데(가로 비율), 띠 폭(대각 비율), 밝기]
+    var L=w+h,c=bx+w*b[0],gr=g.createLinearGradient(c-L*b[1],by,c+L*b[1],by+h*0.35);
+    gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(0.5,'rgba(255,255,255,'+(b[2]*gloss).toFixed(3)+')');gr.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=gr;g.fillRect(bx,by,w,h);
+  });
+  g.restore();
+  var t=gloss>=1?'✦ 유광':'✧ 반광',fs=Math.round(22*k);g.font='bold '+fs+'px '+_EXP_FONT;
+  var tw=g.measureText(t).width,px=bx+w-tw-22*k,py=by+10*k;
+  g.fillStyle='rgba(255,255,255,0.9)';g.strokeStyle='#C9A24A';g.lineWidth=2*k;g.beginPath();
+  if(g.roundRect)g.roundRect(px-8*k,py,tw+16*k,fs+10*k,6*k);else g.rect(px-8*k,py,tw+16*k,fs+10*k);g.fill();g.stroke();
+  g.fillStyle='#8A6A1E';g.textAlign='left';g.textBaseline='middle';g.fillText(t,px,py+(fs+10*k)/2);
 }
 // 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
 // tex: {img,bx,by,w,h} 제품 온장 사진과 온장 상자(px) — 있으면 조각을 무늬로 채움
@@ -8114,9 +8133,10 @@ function _3dThick(shape){
   var nm=_itemProd(shape),p=_prodOf(nm)||products[0];
   var m=p&&/(\d+(?:\.\d+)?)\s*T/i.exec(p.size||'');return m?+m[1]:12;
 }
-// 제품 광택(3D 반사 효과): 제품명·윤현몰 상품명/영문명에 유광·폴리시드·루시도·POLISHED·GLOSS → 1, 라파토·LAPPATO·반광 → 0.5, 그 밖(매트·사틴·실크·레더 등) → 0
-function _3dGloss(shape){
-  var p=_prodOf(_itemProd(shape))||products[0];if(!p)return 0;
+// 제품 광택(3D 반사 효과·온장 배치 광택 표시): 제품명·윤현몰 상품명/영문명에 유광·폴리시드·루시도·POLISHED·GLOSS → 1, 라파토·LAPPATO·반광 → 0.5, 그 밖(매트·사틴·실크·레더 등) → 0
+function _3dGloss(shape){return _prodGloss(_itemProd(shape));}
+function _prodGloss(label){
+  var p=_prodOf(label)||products[0];if(!p)return 0;
   var id=p.name?_mallIdFor(p.name,p.size):null,it=id&&((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).filter(function(c){return c.id===id;})[0];
   var t=[p.name,it&&it.name,it&&it.en].filter(Boolean).join(' ');
   if(/유광|폴리시드|폴리싱|루시도|하이그로시|광택|polish|lucido|gloss/i.test(t))return 1;

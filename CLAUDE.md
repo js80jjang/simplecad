@@ -112,6 +112,7 @@
     온장 안을 훑어 다른 조각·다른 바깥 글자와 안 겹치고 화살표가 다른 조각을 지나지 않는 자리, 없으면 캔버스 안(잘리지 않게).
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
   - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
+  - 유광 온장 표시 `_boardSheen`(배치 창·도면화 온장 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
   - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
 - 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`): `exportDrawingA4('one')` = 한 쪽에 모든 조각을 `_compactPageShapes`로 모아(온장별 상세 없음, 2026-10-28 사용자 요청),
   `exportDrawingA4('detail')` = 아래 예전 방식. `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
@@ -182,7 +183,7 @@
   오른쪽 클릭(안 움직임) = 상판 rot+1 / 미드웨이 swap, R 키 = 선택 조각 돌리기, 올림 `_3d.hover` 파랑·선택 주황 외곽선. "↺ 처음 배치로" = `_3dResetLayout`(pos3d·mid3d 지움)
   조각 번호표 `_3dLabels`(`_3dRender` 끝마다): `#v3d-labels`(캔버스 위 HTML, 이미지 저장엔 안 들어감)에 목록 번호(scene.pieces 순서) — 상판 윗면 안쪽 점·미드웨이/판 상자 가운데, 올림 파랑·선택 주황.
   목록 줄 `data-row` 올림 → `_3d.hover`, 번호·이름 `data-pick` 누르면 `_3d.sel`, 3D 올림·선택이면 목록 줄 배경 강조
-  유광(2026-10-28): `_3dGloss(도형)` = 제품명·몰 상품명/영문명에 유광|폴리시드|루시도|polish|gloss… → 1, 라파토|lappato|반광 → 0.5, 그 밖 0 → 장면 조각 `gloss` → 그리기 `d.gloss`.
+  유광(2026-10-28): `_3dGloss(도형)` → `_prodGloss(제품 구분 이름)` = 제품명·몰 상품명/영문명에 유광|폴리시드|루시도|polish|gloss… → 1, 라파토|lappato|반광 → 0.5, 그 밖 0 → 장면 조각 `gloss` → 그리기 `d.gloss`.
   셰이더 `uG`(광택)·`uE`(눈 위치)·`vW`: 무늬 면(상판 윗면·미드웨이/판 무늬 면, 옆면은 0.6배)에만 하이라이트 + 반사 광선이 높이 2600 천장 일자 라인 조명(z 방향, 폭 약 70, x 2800 간격 — 사용자 요청 "조명이 너무 많다")에 닿는 곳 밝게 + 프레넬. 다른 면은 uG=0
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
