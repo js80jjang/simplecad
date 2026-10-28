@@ -113,6 +113,8 @@
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
   - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
   - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
+- 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`): `exportDrawingA4('one')` = 한 쪽에 모든 조각을 `_compactPageShapes`로 모아(온장별 상세 없음, 2026-10-28 사용자 요청),
+  `exportDrawingA4('detail')` = 아래 예전 방식. `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
 - 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(온장 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "온장 N" 번호 유지)
   + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
   - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 온장 2장 이상이면 2쪽부터 **온장마다 상세 한 쪽**("상세 · 온장 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,

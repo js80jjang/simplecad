@@ -342,7 +342,7 @@ canvas{display:block;cursor:crosshair}
       <input type="number" id="board-h" value="1600" min="100" step="10" title="온장 높이(mm)" oninput="_scheduleBoardQty()">
       <label style="color:#56647E">mm</label>
       <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
-      <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="exportDrawingA4()">📐 도면화</button>
+      <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="drawingMenu(this)" title="도면화(PDF) — 한 장에 모아 보기 / 전체 + 온장별 상세">📐 도면화 ▾</button>
       <button class="bp-btn" style="background:#00695C;margin-left:6px" onclick="show3D()" title="조각을 두께·구멍·온장 무늬까지 3D로 보기 (돌리기·확대·이미지 저장)">🧊 3D 보기</button>
     </div>
     <span id="canvas-hint">드래그=다중선택 / Ctrl+클릭·드래그=선택 추가 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
@@ -7834,7 +7834,9 @@ function _renderDrawingImage(pageLine){
   mainCv.width=Math.round(isPort?_capLong*_capRatio:_capLong);
   mainCv.height=Math.round(isPort?_capLong:_capLong/_capRatio);
   // 여백: 치수(약 120px) + 위쪽 현장정보/아래쪽 범례 자리. 여백이 클수록 도면이 작아져 글자가 몰리므로 필요한 만큼만
-  var padX=170,padT=pageLine?220:190,padB=210;
+  // 위 여백 = 왼쪽 위 글자(업체·주소 39px + 제품마다 32px + 쪽 설명 37px) 아래로 치수 자리(약 120px)만큼 — 위쪽 치수가 글자에 닿지 않게
+  var _hdrN=(products||[]).filter(function(p){return p.name||p.size;}).length,_hdrH=24+(_companySite()?39:0)+_hdrN*32+(pageLine?37:0);
+  var padX=170,padT=Math.max(pageLine?220:190,_hdrH+125),padB=210;
   var newSc=Math.min((mainCv.width-2*padX)/mmW,(mainCv.height-padT-padB)/mmH,20);
   scale=newSc;
   offsetX=padX+(mainCv.width-2*padX-mmW*newSc)/2-allBB.l*newSc;
@@ -7920,13 +7922,32 @@ function _compactPageShapes(list,pmap,items){
   });
   return out;
 }
-function exportDrawingA4(){
+// 도면화 버튼: 방식 고르기 (지난번 고른 것 먼저, 이 PC에 기억)
+//   one = 한 장에 (조각을 원래 자리 대신 줄 맞춰 모아 크게, 온장별 상세 없음) / detail = 전체 도면(원래 자리) + 온장별 상세
+function drawingMenu(btn){
+  var old=document.getElementById('drw-menu');if(old){old.remove();return;}
+  var last='one';try{last=localStorage.getItem('scd_drw_mode')||'one';}catch(e){}
+  var m=document.createElement('div');m.id='drw-menu';
+  var r=btn.getBoundingClientRect();
+  m.style.cssText='position:fixed;z-index:9999;left:'+Math.round(r.left)+'px;top:'+Math.round(r.bottom+4)+'px;background:#0A1222;border:1px solid #2A4F92;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:5px;box-shadow:0 6px 18px rgba(0,0,0,.5);min-width:250px';
+  [['one','한 장에 모아 보기','조각을 줄 맞춰 모아 크게 · 온장별 상세 없음'],['detail','전체 도면 + 온장별 상세','1쪽은 원래 자리, 2쪽부터 온장마다 한 쪽']].forEach(function(o){
+    var b=document.createElement('button');var on=o[0]===last;
+    b.style.cssText='text-align:left;padding:7px 10px;border-radius:4px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#1C2A47')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#D9DFEA;font-size:12px';
+    b.innerHTML='<b style="color:#E3B861">'+o[1]+'</b><br><span style="font-size:10.5px;color:#A9B4C8">'+o[2]+'</span>';
+    b.onclick=function(){m.remove();try{localStorage.setItem('scd_drw_mode',o[0]);}catch(e){}exportDrawingA4(o[0]);};
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  setTimeout(function(){document.addEventListener('mousedown',function h(e){if(!m.contains(e.target)){m.remove();document.removeEventListener('mousedown',h);}});},0);
+}
+function exportDrawingA4(mode){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
-  // ── 도면 쪽 나누기: 온장 2장 이상이면 장마다 한 쪽 ──
-  var pagesDef=[];
-  if(boards.length>1){
-    var pmap=_shapePieceMap(items),onBoard={};
+  // ── 도면 쪽 나누기: 한 장 방식이면 모든 조각을 모아 한 쪽, 아니면 온장 2장 이상일 때 장마다 한 쪽 ──
+  var pagesDef=[],pmap=null;
+  if(mode==='one'){pmap=_shapePieceMap(items);pagesDef=[{list:shapes.slice(),label:'',bw:null,bh:null}];}
+  else if(boards.length>1){
+    pmap=_shapePieceMap(items);var onBoard={};
     boards.forEach(function(b,bi){
       var idx=[];b.forEach(function(p){var k=items.findIndex(function(it){return it.shape===p.item.shape;});if(k>=0){idx.push(k);onBoard[k]=1;}});
       var d=_boardDims(b),nm=_boardLabel(b);
@@ -7940,7 +7961,8 @@ function exportDrawingA4(){
   }
   var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');
   // 첫 쪽은 언제나 모든 도형이 원래 자리 그대로 들어간 전체 도면, 온장이 2장 이상이면 다음 쪽부터 장별 상세 도면
-  if(pagesDef.length<2)pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];
+  if(mode==='one'){pagesDef[0].bw=d0.bw;pagesDef[0].bh=d0.bh;}
+  else if(pagesDef.length<2)pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];
   else pagesDef.unshift({list:null,label:'전체 도면 (다음 쪽부터 온장별 상세)',bw:d0.bw,bh:d0.bh});
   // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
   var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
