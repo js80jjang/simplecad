@@ -182,7 +182,7 @@
   조각 번호표 `_3dLabels`(`_3dRender` 끝마다): `#v3d-labels`(캔버스 위 HTML, 이미지 저장엔 안 들어감)에 목록 번호(scene.pieces 순서) — 상판 윗면 안쪽 점·미드웨이/판 상자 가운데, 올림 파랑·선택 주황.
   목록 줄 `data-row` 올림 → `_3d.hover`, 번호·이름 `data-pick` 누르면 `_3d.sel`, 3D 올림·선택이면 목록 줄 배경 강조
   유광(2026-10-28): `_3dGloss(도형)` = 제품명·몰 상품명/영문명에 유광|폴리시드|루시도|polish|gloss… → 1, 라파토|lappato|반광 → 0.5, 그 밖 0 → 장면 조각 `gloss` → 그리기 `d.gloss`.
-  셰이더 `uG`(광택)·`uE`(눈 위치)·`vW`: 무늬 면(상판 윗면·미드웨이/판 무늬 면, 옆면은 0.6배)에만 하이라이트 + 반사 광선이 높이 2600 천장 조명 칸(2000×1600 격자)에 닿는 곳 밝게 + 프레넬. 다른 면은 uG=0
+  셰이더 `uG`(광택)·`uE`(눈 위치)·`vW`: 무늬 면(상판 윗면·미드웨이/판 무늬 면, 옆면은 0.6배)에만 하이라이트 + 반사 광선이 높이 2600 천장 일자 라인 조명(z 방향, 폭 약 70, x 2800 간격 — 사용자 요청 "조명이 너무 많다")에 닿는 곳 밝게 + 프레넬. 다른 면은 uG=0
   카메라 yaw/pitch/거리(`_3dSetView` iso/top/front), 좌표 X=도면 x·Z=도면 y·Y=위. 사진 불러오는 중이면 300ms마다 다시(`_3dRebuild`). PNG 저장은 `_pickSaveFile('img')`
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`

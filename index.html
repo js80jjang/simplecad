@@ -8373,15 +8373,15 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   if(!_3dGLC||_3dGLC.gl!==gl){
     var sh=function(type,src){var o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);return o;},prog=gl.createProgram();
     gl.attachShader(prog,sh(gl.VERTEX_SHADER,'attribute vec3 aP;attribute vec3 aN;attribute vec2 aT;uniform mat4 uM;varying vec3 vN;varying vec2 vT;varying vec3 vW;void main(){gl_Position=uM*vec4(aP,1.0);vN=aN;vT=aT;vW=aP;}'));
-    // uG = 광택(0 무광 · 0.5 반광 라파토 · 1 유광): 반사 하이라이트 + 천장 조명 비침(반사 광선이 높이 2600 천장의 조명 칸에 닿는 곳만 밝게 — 보는 방향 따라 움직임) + 비스듬히 볼 때 하늘 반사 + 무늬 조금 더 진하게
+    // uG = 광택(0 무광 · 0.5 반광 라파토 · 1 유광): 반사 하이라이트 + 천장 조명 비침(반사 광선이 높이 2600 천장의 일자 라인 조명(폭 약 70, 2800 간격, z 방향)에 닿는 곳만 밝게 — 보는 방향 따라 움직임) + 비스듬히 볼 때 하늘 반사 + 무늬 조금 더 진하게
     gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 vN;varying vec2 vT;varying vec3 vW;uniform sampler2D uS;uniform float uTex;uniform vec3 uC;uniform vec3 uL;uniform float uLit;uniform vec3 uE;uniform float uG;'
       +'void main(){vec4 c=uTex>0.5?texture2D(uS,vT):vec4(uC,1.0);if(c.a<0.5)discard;vec3 n=normalize(vN);float d=max(dot(n,uL),0.0);float k=mix(1.0,0.58+0.5*d,uLit);'
       +'vec3 col=pow(c.rgb,vec3(1.0+0.18*uG))*k;'
       +'if(uG>0.0&&uLit>0.5){vec3 v=normalize(uE-vW);vec3 h=normalize(uL+v);float nh=max(dot(n,h),0.0);vec3 r=reflect(-v,n);'
       +'float sp=pow(nh,120.0)*0.8;'
-      +'float win=0.0;if(r.y>0.05){vec2 hp=(vW+r*((2600.0-vW.y)/r.y)).xz;vec2 g=abs(fract(hp/vec2(2000.0,1600.0))-0.5);win=(1.0-smoothstep(0.06,0.09,g.x))*(1.0-smoothstep(0.24,0.28,g.y));}'
+      +'float win=0.0;if(r.y>0.05){vec2 hp=(vW+r*((2600.0-vW.y)/r.y)).xz;float g=abs(fract(hp.x/2800.0)-0.5)*2800.0;win=1.0-smoothstep(28.0,45.0,g);}'
       +'float fr=pow(1.0-max(dot(n,v),0.0),5.0);'
-      +'col=mix(col,vec3(0.90,0.93,0.97),fr*0.30*uG)+vec3((sp+win*0.34)*uG);}'
+      +'col=mix(col,vec3(0.90,0.93,0.97),fr*0.30*uG)+vec3((sp+win*0.40)*uG);}'
       +'gl_FragColor=vec4(col,1.0);}'));
     gl.linkProgram(prog);
     _3dGLC={gl:gl,prog:prog,tex:new Map(),
