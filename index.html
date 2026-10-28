@@ -8143,12 +8143,13 @@ function _3dWorldToBoard(bp,bb,margin){
   var o=M(0,0),ax=M(1,0),ay=M(0,1);
   return[ax[0]-o[0],ax[1]-o[1],ay[0]-o[0],ay[1]-o[1],o[0],o[1]];
 }
-// 조각 구분 (3D 보기): 'top'=상판 · 'obj'=오브제(가구 없는 상판 — 선반·벤치 등, 붙인 전면판·측판이 상판 밑에 매달려 같이 움직임)
+// 조각 구분 (3D 보기): 'top'=상판 · 'obj'=오브제(가구 없는 상판 — 선반·벤치 등, 붙인 하부판이 상판 밑에 매달려 같이 움직임)
+//   · 'panel'=하부판(바닥~상판 밑, 2026-10-28 전면판 front·측판 side를 합침 — 예전 값도 하부판)
 //   · 'mid'=미드웨이(벽에 세움) · 'etc'=삭제(3D에서만 안 그림, 도면·온장은 그대로). 도형에 piece3d로 저장(선 조각은 선마다)
 //   정하지 않았으면 폭 300 미만은 삭제, 나머지는 상판
 function _3dKey(sh){return sh&&sh.kind==='linegroup'?sh.lines[0]:sh;}
 function _3dGetType(sh,bb){var t=_3dKey(sh).piece3d;if(t)return t;return Math.min(bb.r-bb.l,bb.b-bb.t)<300?'etc':'top';}
-function _3dIsPanel(t){return t==='front'||t==='side';} // 하부장 전면판·측판
+function _3dIsPanel(t){return t==='panel'||t==='front'||t==='side';} // 하부판 (예전 파일의 전면판 front·측판 side도 하부판으로)
 function _3dFaceOf(key){return key.midFace!=null?key.midFace:(_3dIsPanel(key.piece3d)?1:0);} // 무늬 면 (판은 기본 1 = 바깥)
 // 판 자리: 상판 변 그대로(법선 = 상판 안쪽) 바닥 0부터 → 바깥면이 상판 끝과 같은 선, 두께만큼 안쪽으로
 function _3dPanelEdge(e){return Object.assign({},e,{y:0});}
@@ -8476,7 +8477,7 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   });
   // 미드웨이: 상판 뒷변을 따라 상판 위에 세움 (긴 변 = 벽 따라, 짧은 변 = 높이, 두께 = 제품 두께). 긴 것부터 남은 길이가 맞는 뒷변에 차례로
   // 하부장 전면판·측판(_3dIsPanel): 같은 방식이지만 바닥(0)부터 상판 밑면까지, 상판 변 안쪽에 바깥면을 맞춰 세움 (상판만 보기에서도 보임)
-  //   자동 자리 = 도면에서 붙은 상판 변, 없으면 전면판 = 앞면 변(긴 것부터) · 측판 = 앞면 아닌 짧은 변(1000 이하, 짧은 것부터)
+  //   자동 자리 = 도면에서 붙은 상판 변, 없으면 판 길이와 가장 비슷한 변(같으면 앞면 변 먼저)
   backs.sort(function(p,q){return q.len-p.len;});
   var upSpans=[]; // 상부장 자리 (미드웨이마다 벽 구간)
   // 판 자동 자리용: 벽 쪽 변(도면에서 미드웨이가 붙은 변)·다른 상판과 맞붙은 변은 빼기
@@ -8494,9 +8495,10 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       var isP=_3dIsPanel(pc.type),cfg=_3dKey(pc.shape).mid3d||{},bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,man=cfg.edge!=null,ct=man?null:_3dMidContact(pc,allEdges);
       var e=null,s0;
       if(man)allEdges.forEach(function(x){if(x.id===cfg.edge)e=x;});
-      if(isP&&!e&&!ct){ // 전면판 = 앞면 변, 측판 = 앞면 아닌 짧은 변 (아직 판이 없는 변부터)
-        var cands=allEdges.filter(function(x){return !x.pan&&!x.usedP&&!x.wall&&!x.joint&&(pc.type==='front'?x.front:(!x.front&&x.len<=1000));});
-        cands.sort(function(p,q){return pc.type==='front'?q.len-p.len:p.len-q.len;});
+      if(isP&&!e&&!ct){ // 하부판(예전 전면판·측판): 판 길이(높이 = 상판 밑면에 가까운 치수, 나머지 = 길이)와 가장 비슷한 변, 같으면 앞면 변 먼저 (아직 판이 없는 변부터)
+        var cands=allEdges.filter(function(x){return !x.pan&&!x.usedP&&!x.wall&&!x.joint;});
+        function score(x){var yu=x.y0||_3D_H,len=Math.abs(bh-yu)<Math.abs(bw-yu)?bw:bh;return Math.abs(x.len-len)-(x.front?1:0);}
+        cands.sort(function(p,q){return score(p)-score(q);});
         e=cands[0]||allEdges.filter(function(x){return !x.pan&&!x.usedP;})[0]||null;if(e)e.usedP=true;
       }
       var defA=bw>=bh?'x':'z',autoA=ct?ct.along:defA;
@@ -8753,7 +8755,7 @@ function _3dResetLayout(){
 var _3dFold=null; // 목록 접힘 (처음 한 번 localStorage scd_3d_fold에서)
 function _3dPiecePanel(sc){
   var box=document.getElementById('v3d-pieces');if(!box||!_3d)return;
-  var T=[['top','상판'],['obj','오브제'],['mid','미드웨이'],['front','전면판'],['side','측판'],['etc','삭제']];
+  var T=[['top','상판'],['obj','오브제'],['mid','미드웨이'],['panel','하부판'],['etc','삭제']];
   var bs='padding:1px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #56647E;background:#121D33;color:#fff';
   // 머리글 누르면 접기/펴기 (이 PC에 기억)
   if(_3dFold==null){_3dFold=false;try{_3dFold=localStorage.getItem('scd_3d_fold')==='1';}catch(e){}}var fold=_3dFold;
@@ -8764,13 +8766,13 @@ function _3dPiecePanel(sc){
   box.innerHTML=hd+sc.pieces.map(function(pc,i){
     var key=_3dKey(pc.shape),moved=key.pos3d||key.mid3d||key.midFace!=null;
     return '<div data-row="'+i+'" style="display:flex;align-items:center;gap:4px;margin:2px 0;padding:1px 3px;border-radius:3px"><span data-pick="'+i+'" style="min-width:78px;color:#ECEFF1;cursor:pointer" title="누르면 3D에서 이 조각 선택">'+(i+1)+'. '+pc.label+'</span>'
-      +T.map(function(t){var on=pc.type===t[0];return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#56647E')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#fff">'+t[1]+'</button>';}).join('')
+      +T.map(function(t){var on=pc.type===t[0]||(t[0]==='panel'&&_3dIsPanel(pc.type));return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#56647E')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#fff">'+t[1]+'</button>';}).join('')
       +'<button data-i="'+i+'" data-a="au" style="'+bs+';visibility:'+(moved?'visible':'hidden')+'" title="이 조각만 처음 자리·무늬로">↺</button></div>';
   }).join('')+'<div style="color:#75839C;font-size:10px;margin-top:5px;line-height:1.5">'
     +'<b style="color:#FFD740">끌기</b> = 옮기기 (바닥 라인에 놓으면 바닥부터) · <b style="color:#FFD740">Shift+끌기</b> = 위아래<br>'
     +'<b style="color:#FFD740">오른쪽 클릭</b> = 돌리기·가로/세로 · <b style="color:#FFD740">더블클릭</b> = 무늬 면(앞/뒤/양면)<br>'
-    +'오브제 = 가구 없는 상판(붙인 전면판·측판이 밑에 매달려 같이 움직임)<br>'
-    +'전면판·측판 = 하부장 앞·옆 바닥~상판 밑 · 삭제 = 3D에서만 안 그림</div>';
+    +'미드웨이 = 상판 위로(벽 쪽) · 하부판 = 바닥~상판 밑(앞·옆 어디든)<br>'
+    +'오브제 = 가구 없는 상판(붙인 하부판이 밑에 매달려 같이 움직임) · 삭제 = 3D에서만 안 그림</div>';
   bindFold();
   // 목록 줄에 마우스 올림 = 3D에서 그 조각 파랑, 번호·이름 누르기 = 선택(주황)
   box.querySelectorAll('[data-row]').forEach(function(rw){var k=_3dKey(sc.pieces[+rw.dataset.row].shape);
