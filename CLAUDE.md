@@ -149,7 +149,8 @@
   그 변(`ed.obj` = tops 항목)에 붙은 전면판·측판은 바닥부터가 아니라 오브제 밑면에 매달림(y = y0-Hm, 판의 mid3d.y0 무시) → tops 항목 `hang` = 매달린 판 높이,
   Shift 위아래의 바닥 맞춤 = 판이 바닥에 닿는 높이(`drag.vertTop.hang`), 3D 창 왼쪽 `_3dPiecePanel`, 머리글 누르면 접기 `_3dFold`/localStorage `scd_3d_fold`):
   미드웨이 = 상판 뒷변(`backs`: 앞면 아닌 300 이상 변, 긴 것부터)을 따라 상판 위에 세운 판(긴 변=벽 따라·짧은 변=높이·앞면 무늬), 기타 = 안 그림.
-  머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`).
+  머리줄 "상판만 / 상판+미드웨이"(`_3d.mode`, `_3dSetMode`). 하부장·상부장 체크·보기 방식은 `_3dOpts`(창 닫아도 유지, 도면 파일 `view3dOpts`, `_3dOptsLoad` — 불러오기·새로만들기에서)
+  — 3d-design 브랜치의 `view3d`(가구 디자인)와 다른 키
   조각 구분 목록은 한 줄씩(번호·크기·종류 버튼 + 옮겼으면 ↺ = 그 조각 pos3d·mid3d·midFace 지움)만 — 자리·방향·높이·무늬 조절은 모두 3D 마우스(목록 조절 버튼은 없앰)
   미드웨이 자리 손으로: 도형(`_3dKey`) `mid3d={edge:'상판도형id:변번호', off:mm, swap}` (끌기로 정함, `scene.edges` = 모든 상판 변). 장면이 지금 자리를 `pc.mid`로 돌려줌.
   판 면에 붙이기(2026-10-27): 그린 판·미드웨이마다 평면 네 변을 `allEdges`에 `{id:'p도형id:i', pan:true, y:그 판 아랫변, n:판 바깥}`으로 넣음 → edge가 'p…'면 그 판 다음에 그림(`_3dPanelOrder`),

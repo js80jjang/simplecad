@@ -2895,7 +2895,7 @@ function newProject(){
   _setSiteInfo('','');
   document.getElementById('deliv-date').value='';document.getElementById('deliv-time').value='';
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
-  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null); // 새 도면은 처음 저장 때 이름을 고름
+  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정도 기본
   offsetX=60;offsetY=60;
   renderProductList();updatePropsPanel();redraw();calcCost();
 }
@@ -2934,6 +2934,7 @@ function _makeProjectData(){
     boardLayout:_savedBoardLayout,
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
+    view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
     saved:new Date().toISOString()
   });
 }
@@ -4052,7 +4053,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
       if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);_setCurFile(null);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
         var data=JSON.parse(e.target.result);
-        _setCurFile(fh);
+        _setCurFile(fh);_3dOptsLoad(data.view3dOpts); // 3D 보기 설정 (예전 파일은 기본: 하부장·상부장 켬)
         saveHistory();
         shapes=data.shapes||[];
         // 새로 그리는 도형 id가 불러온 도형과 겹치지 않도록
@@ -8810,8 +8811,11 @@ function _3dFlipFace(key){
   _3d.sel=key;_3dRegeom();_3dPiecePanel(_3d.scene);
   _3d.msg.textContent=_3D_FACES[f]+' (미드웨이 더블클릭으로 바꿈)';
 }
+// 3D 보기 설정(하부장·상부장 켜기, 상판만/상판+미드웨이): 창을 닫았다 열어도 그대로, 도면 파일에도 저장(view3dOpts)
+var _3dOpts={furn:true,upper:true,mode:'mid'};
+function _3dOptsLoad(o){_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid'};}
 function _3dSetMode(md){
-  if(!_3d)return;_3d.mode=md;
+  if(!_3d)return;_3d.mode=md;_3dOpts.mode=md;
   _3d.m.querySelectorAll('[data-mode]').forEach(function(b){var on=b.dataset.mode===md;b.style.background=on?'#00695C':'#121D33';b.style.borderColor=on?'#26A69A':'#56647E';});
   _3dRebuild(0);
 }
@@ -8826,8 +8830,8 @@ function show3D(){
     +'<b style="color:#E3B861;font-size:14px">🧊 3D 보기</b><span style="color:#A9B4C8;font-size:12px">'+escHtml(nm)+'</span>'
     +'<span id="v3d-msg" style="color:#FFD740;font-size:11px"></span><span style="flex:1"></span>'
     +'<button style="'+bs+'" data-mode="top">상판만</button><button style="'+bs+'" data-mode="mid">상판+미드웨이</button><span style="width:6px"></span>'
-    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn" checked> 하부장 (높이 900)</label>'
-    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper" checked> 상부장</label>'
+    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn"'+(_3dOpts.furn?' checked':'')+'> 하부장 (높이 900)</label>'
+    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper"'+(_3dOpts.upper?' checked':'')+'> 상부장</label>'
     +'<button style="'+bs+'" id="v3d-undo" title="되돌리기 (Ctrl+Z)">↶ 되돌리기</button>'
     +'<button style="'+bs+'" id="v3d-reset" title="3D에서 옮기고 돌린 상판·미드웨이를 도면 자리로">↺ 처음 배치로</button>'
     +'<button style="'+bs+'" data-v="iso">비스듬히</button><button style="'+bs+'" data-v="top">위에서</button><button style="'+bs+'" data-v="front">앞에서</button>'
@@ -8838,11 +8842,11 @@ function show3D(){
     +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
-  _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null,furn:true,upper:true,mode:'mid'};
+  _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null,furn:_3dOpts.furn,upper:_3dOpts.upper,mode:_3dOpts.mode}; // 지난번 설정 그대로
   m.querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){_3dSetMode(b.dataset.mode);};});
-  m.querySelector('[data-mode="mid"]').style.background='#00695C';m.querySelector('[data-mode="mid"]').style.borderColor='#26A69A';
-  document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
-  document.getElementById('v3d-upper').onchange=function(e){if(!_3d)return;_3d.upper=e.target.checked;_3dRegeom();}; // 상부장 켜기/끄기 (시점 그대로)
+  m.querySelector('[data-mode="'+_3d.mode+'"]').style.background='#00695C';m.querySelector('[data-mode="'+_3d.mode+'"]').style.borderColor='#26A69A';
+  document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=_3dOpts.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
+  document.getElementById('v3d-upper').onchange=function(e){if(!_3d)return;_3d.upper=_3dOpts.upper=e.target.checked;_3dRegeom();}; // 상부장 켜기/끄기 (시점 그대로)
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
   document.getElementById('v3d-close').onclick=close3D;
   document.getElementById('v3d-reset').onclick=_3dResetLayout;
