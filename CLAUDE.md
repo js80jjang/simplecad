@@ -114,8 +114,11 @@
   - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
   - 유광 온장 표시 `_boardSheen`(배치 창·도면화 온장 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
   - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
-- 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`): `exportDrawingA4('one')` = 한 쪽에 모든 조각을 `_compactPageShapes`로(온장별 상세 없음, 2026-10-28 사용자 요청),
-  `exportDrawingA4('detail')` = 아래 예전 방식. `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
+- 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`, 예전 값 'one'은 'area'로):
+  `exportDrawingA4('area')`(2026-10-28 사용자 확정) = 1쪽 전체 도면 **모양만**(`_expShapeOnly` → `_drawCleanExport`가 밑면연마·고스라·치수·사용자 치수선·졸리컷·각도·R/Φ·범례를 건너뜀, 외곽·싱크볼/쿡탑·타공·이름·번호·도면 글자만)
+  + 구역별 상세 `_areaPages(items)`: 같은 제품이고 상자 사이 `_AREA_TOUCH`(300mm) 이하인 조각끼리 union-find → 제품 순·위→아래·왼→오른쪽, 같은 제품 다음 구역과 합쳐도 배율이 25% 넘게 안 줄면 한 쪽에(작은 판 쪽이 따로 안 생기게).
+  다른 제품은 항상 다른 쪽. 이 방식은 번호 보기와 상관없이 조각 번호를 넣음(`showShapeNumbers` 잠시 켬).
+  `exportDrawingA4('detail')` = 아래 예전 방식(1쪽 전체 도면에 치수 포함 + 온장별 상세). `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
 - 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(온장 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "온장 N" 번호 유지)
   + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
   - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 온장 2장 이상이면 2쪽부터 **온장마다 상세 한 쪽**("상세 · 온장 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
