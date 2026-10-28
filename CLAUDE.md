@@ -195,7 +195,9 @@
   - 설정 `_3dStyle`(`_3dStyleDef/_3dStyleLoad/_3dUp`) = 도면 파일 `view3d`: lower/upper {door 색, design, finish 마감 id, upper.same}, handle {type,color,len,dir}, prod(제품 바꿔 보기), upOff(상부장 높이), unitDel(지운 칸), upDel(예전)
   - 3D 창 양옆 서랍: 왼쪽 조각 구분 `#v3d-side-l`·오른쪽 디자인 `#v3d-side-r`, 가장자리 세로 탭 `#v3d-tab-l/r`(`_3dSideOpen/_3dSideSet`, localStorage `scd_3d_side_l/r`, 처음은 왼쪽 열림·오른쪽 닫힘)
   - 디자인 창 `_3dStylePanel`(`_3dMatUI`): 하부장/상부장 도어 탭 → 스케치업 재질 창 모양(미리보기 + "선택" 브랜드·분류 견본 / "편집" 직접 색).
-    "선택" 위 검색 칸 `#v3d-fq`(`_3dMatUI.q`, 2026-10-28): `_3dFinGrid(list,q,cur)` = 검색어 있으면 모든 브랜드에서 이름·품번·브랜드·분류(+유광)에 단어 모두 포함 + 견본 아래 이름·브랜드. 칠 때는 `#v3d-fgrid`만 다시(포커스 유지), 분류 고르면 검색 지움 몸통·걸레받이는 고르지 않고 `_3dAutoBase`(Lab ΔE `_rgbLab`로 가장 비슷한 단색, 걸레받이 78%)
+    "선택" 위 검색 칸 `#v3d-fq`(`_3dMatUI.q`, 2026-10-28): `_3dFinGrid(list,q,cur)` = 검색어 있으면 모든 브랜드에서 이름·품번·브랜드·분류(+유광)에 단어 모두 포함 + 견본 아래 이름·브랜드. 칠 때는 0.15초 뒤 `#v3d-fgrid`만 다시(포커스 유지, `window._3dFinGridRefresh`), 분류 고르면 검색 지움.
+    무늬 도착 `_doorTexArrived`: 0.12초 묶어서, 지금 도어에 쓰는 무늬일 때만 `_3dRegeom`, 창은 견본 칸만(쓰는 무늬 + 검색 칸 안 쓰는 중이면 창 전체).
+    견본 `_doorFinishSwatch`는 결 이미지 왼쪽 위 256px를 96px로 줄여 그 위에만 색 입힘(`_doorFinishCanvas` 원본 크기 계산은 3D 텍스처용) 몸통·걸레받이는 고르지 않고 `_3dAutoBase`(Lab ΔE `_rgbLab`로 가장 비슷한 단색, 걸레받이 78%)
     도어 디자인 `_3D_DESIGNS`(민자·쉐이커·슬림·루바·리브드·그루브, 상부장 유리장), 손잡이 `_3D_HANDLES`(없음·바·노브·둥근 노브·라인·골라·엣지·매립형 + 길이·방향·색 `_3D_HCOL`), 그림 단추 `_3dIcon`
     제품 바꿔 보기 = 윤현몰 사진 2칸 격자(같은 두께·검색) → 3D 무늬만(`_3dProdId` → `_slabImgById`) / "도면에 적용"
   - 마감 `_3D_FINISH`(id·name·grp·rgb·tex·tw·th·raw·gloss·code·brand) · `_3D_BRANDS`(ARCKIT·한솔 스토리보드·영림 인테리어필름) · `_3D_GRPS`, 무늬 `door-tex/*.js`(`_doorTexImg`, `_doorFinishCanvas` 색 입힘·raw는 그대로 거울 반복).

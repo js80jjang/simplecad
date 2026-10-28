@@ -8441,11 +8441,26 @@ function _3dAutoBase(S){
 function _3dFinish(id){for(var i=0;i<_3D_FINISH.length;i++)if(_3D_FINISH[i].id===id)return _3D_FINISH[i];return null;}
 function _3dRgbHex(c){return '#'+c.map(function(v){return ('0'+v.toString(16)).slice(-2);}).join('');}
 var _doorTexImgs={},_doorFinCv={};
-function _doorTexImg(key){ // 결 이미지 (불러오는 중이면 null, 다 되면 3D·디자인 창 다시)
+function _doorTexImg(key){ // 결 이미지 (불러오는 중이면 null, 다 되면 _doorTexArrived로 묶어서 다시 그림)
   var e=_doorTexImgs[key];if(e)return e.img||null;e=_doorTexImgs[key]={};
   var sc=document.createElement('script');sc.src='door-tex/'+key+'.js';
-  sc.onload=function(){var d=window._DOOR_TEX&&window._DOOR_TEX[key];if(!d)return;var im=new Image();im.onload=function(){e.img=im;if(_3d&&_3d.r){_3dRegeom();var p=document.getElementById('v3d-style');if(p&&p.style.display!=='none')_3dStylePanel();}};im.src=d;};
+  sc.onload=function(){var d=window._DOOR_TEX&&window._DOOR_TEX[key];if(!d)return;var im=new Image();im.onload=function(){e.img=im;_doorTexArrived(key);};im.src=d;};
   document.head.appendChild(sc);return null;
+}
+// 무늬가 도착하면 (여러 개가 연달아 오면 0.12초 묶어서 한 번): 지금 3D 도어에 쓰는 무늬일 때만 3D를 다시 만들고,
+// 디자인 창은 견본 칸만 바꿈 (지금 고른 마감의 미리보기 무늬가 왔고 검색 칸을 쓰는 중이 아니면 창 전체) — 검색 첫 글자에 수십 개가 와도 멈추지 않게
+var _doorTexNew=[],_doorTexT=0;
+function _doorTexArrived(key){
+  _doorTexNew.push(key);if(_doorTexT)return;
+  _doorTexT=setTimeout(function(){
+    var keys=_doorTexNew;_doorTexNew=[];_doorTexT=0;if(!_3d||!_3d.r)return;
+    var used=[_3dFinish(_3dStyle.lower.finish),_3dFinish(_3dUp().finish)].filter(Boolean).map(function(f){return f.tex;});
+    var hit=keys.some(function(k){return used.indexOf(k)>=0;});
+    if(hit)_3dRegeom();
+    var p=document.getElementById('v3d-style');if(!p||!p.offsetParent)return;
+    var fq=document.getElementById('v3d-fq'),typing=fq&&document.activeElement===fq;
+    if(hit&&!typing)_3dStylePanel();else if(window._3dFinGridRefresh)_3dFinGridRefresh();else _3dStylePanel();
+  },120);
 }
 // 마감 캔버스: 결 이미지의 밝기 변화를 마감 색에 입힘 (결 대비 70%) — 결이 없거나 아직이면 null
 function _doorFinishCanvas(id){
@@ -8460,9 +8475,13 @@ function _doorFinishCanvas(id){
   g.putImageData(d,0,0);return _doorFinCv[id]=c;
 }
 // 견본 작은 그림 (디자인 창) — 결 있으면 그 일부, 아니면 색
-function _doorFinishSwatch(id){var f=_3dFinish(id),c=_doorFinishCanvas(id);if(!c)return 'background:'+_3dRgbHex(f.rgb);
-  if(!f._sw){var s=document.createElement('canvas');s.width=s.height=96;s.getContext('2d').drawImage(c,0,0,Math.min(c.width,256),Math.min(c.height,256),0,0,96,96);f._sw=s.toDataURL('image/jpeg',0.85);}
-  return 'background:url('+f._sw+') center/cover';}
+//   (결 이미지 왼쪽 위 최대 256px를 96px로 줄인 뒤 그 작은 그림에만 색을 입힘 — 원본 크기 전체를 계산하지 않아 처음 보는 견본이 많아도 빠름)
+function _doorFinishSwatch(id){var f=_3dFinish(id);if(!f)return '';if(f._sw)return 'background:url('+f._sw+') center/cover';
+  var im=f.tex?_doorTexImg(f.tex):null;if(!im)return 'background:'+_3dRgbHex(f.rgb);
+  var s=document.createElement('canvas');s.width=s.height=96;var g=s.getContext('2d');g.drawImage(im,0,0,Math.min(im.width,256),Math.min(im.height,256),0,0,96,96);
+  if(!f.raw){var d=g.getImageData(0,0,96,96),p=d.data,sum=0;for(var i=0;i<p.length;i+=4)sum+=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];var avg=Math.max(1,sum/(p.length/4));
+    for(var i=0;i<p.length;i+=4){var k=1+((0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])/avg-1)*0.7;p[i]=Math.min(255,f.rgb[0]*k);p[i+1]=Math.min(255,f.rgb[1]*k);p[i+2]=Math.min(255,f.rgb[2]*k);}g.putImageData(d,0,0);}
+  f._sw=s.toDataURL('image/jpeg',0.85);return 'background:url('+f._sw+') center/cover';}
 // 다각형을 안쪽으로 d만큼 줄임 (변마다 평행 이동한 직선끼리 교점). i번째 변 = 원래 i번째 변을 옮긴 것
 function _3dInset(pts,d){
   var n=pts.length,A=0;for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n];A+=p[0]*q[1]-q[0]*p[1];}
@@ -9416,11 +9435,16 @@ function _3dStylePanel(){
   function bindFin(){box.querySelectorAll('[data-fin]').forEach(function(e){e.onclick=function(){tgtObj().finish=e.dataset.fin;changed(true);};});} // 마감 = 결 좌표·텍스처라 모양 다시
   bindFin();
   var fq=document.getElementById('v3d-fq');
-  if(fq){ // 칠 때마다 견본 칸만 다시 (창 전체를 다시 그리면 입력 칸 포커스가 사라짐)
-    var fx=document.getElementById('v3d-fq-x'),cs=document.getElementById('v3d-coll');
-    fq.oninput=function(){U.q=fq.value;document.getElementById('v3d-fgrid').innerHTML=_3dFinGrid(list,U.q,T.finish);bindFin();fx.style.display=U.q?'':'none';if(cs)cs.style.opacity=U.q?'.45':'';};
-    fq.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape'){fq.value='';fq.oninput();}}; // 3D 창 단축키(R·Delete 등)로 안 넘김
-    fx.onclick=function(){fq.value='';fq.oninput();fq.focus();};
+  window._3dFinGridRefresh=null;
+  if(fq){ // 칠 때마다 견본 칸만 다시 (창 전체를 다시 그리면 입력 칸 포커스가 사라짐), 0.15초 멈추면 (한글 조합 중 글자마다 다시 찾지 않게)
+    var fx=document.getElementById('v3d-fq-x'),cs=document.getElementById('v3d-coll'),qt=0;
+    function grid(){var gd=document.getElementById('v3d-fgrid');if(!gd)return;var st=gd.firstElementChild&&gd.querySelector('div[style*="overflow:auto"]'),top=st?st.scrollTop:0;
+      gd.innerHTML=_3dFinGrid(list,U.q,T.finish);bindFin();var st2=gd.querySelector('div[style*="overflow:auto"]');if(st2)st2.scrollTop=top;}
+    window._3dFinGridRefresh=grid; // 무늬가 도착하면 견본 칸만 (_doorTexArrived)
+    function apply(){clearTimeout(qt);qt=0;U.q=fq.value;grid();fx.style.display=U.q?'':'none';if(cs)cs.style.opacity=U.q?'.45':'';}
+    fq.oninput=function(){clearTimeout(qt);qt=setTimeout(apply,150);};
+    fq.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape'){fq.value='';apply();}else if(e.key==='Enter')apply();}; // 3D 창 단축키(R·Delete 등)로 안 넘김
+    fx.onclick=function(){fq.value='';apply();fq.focus();};
   }
   box.querySelectorAll('[data-opt]').forEach(function(e){e.onclick=function(){setPath(e.dataset.opt,e.dataset.v);changed(true);};});
   box.querySelectorAll('[data-tgt]').forEach(function(e){e.onclick=function(){U.tgt=e.dataset.tgt;_3dStylePanel();};});
