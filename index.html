@@ -8835,7 +8835,7 @@ function show3D(){
     +'<div style="flex:1;position:relative;min-height:0"><canvas id="v3d-cv" style="position:absolute;inset:0;width:100%;height:100%;cursor:grab"></canvas>'
     +'<div id="v3d-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>'
     +'<div id="v3d-pieces" style="position:absolute;left:10px;top:10px;background:rgba(13,24,34,0.88);border:1px solid #16233D;border-radius:4px;padding:8px 10px;font-size:11px;max-height:70%;overflow:auto"></div>'
-    +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점 · Esc = 닫기</div></div>';
+    +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
   _3d={m:m,cv:cv,msg:document.getElementById('v3d-msg'),cam:null,r:null,furn:true,upper:true,mode:'mid'};
@@ -8960,7 +8960,7 @@ function show3D(){
     if(pk&&pk.kind==='mid'){_3dFlipFace(pk.key);return;}
     if(!pk)_3dSetView('iso');
   });
-  document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close3D();}
+  document.addEventListener('keydown',_3d.onKey=function(e){if(e.key==='Escape'){e.stopPropagation();e.preventDefault();} // Esc로는 닫지 않음 (사용자 요청, 닫기는 ✕ 버튼) — 뒤 편집 화면에도 안 넘김
     else if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'&&!/INPUT|TEXTAREA/.test((document.activeElement||{}).tagName||'')){e.stopPropagation();e.preventDefault();_3dUndo();}},true); // Ctrl+Z = 3D 되돌리기
   window.addEventListener('resize',_3d.onResize=_3dResize);
   var r=cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;cv.width=Math.max(10,Math.round(r.width*dp));cv.height=Math.max(10,Math.round(r.height*dp));
