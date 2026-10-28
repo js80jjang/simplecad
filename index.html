@@ -7315,12 +7315,19 @@ function _drawCleanExport(){
   if(!SO)shapes.forEach(function(m){
     if(m.kind!=='grindregion')return;
     var gd=_gosraDir(m);if(!gd)return;
-    // 150×150 원클릭처럼 깊이가 50mm보다 큰 연마는 그 깊이 그대로(조각 안쪽 선이라 방향은 저장된 inward: 가로선 +y, 세로선 +x)
+    // 깊이가 50mm보다 큰 연마(변에 그린 300 띠, 150×150 원클릭 등)는 그 깊이 그대로. 방향 = 선 양쪽 중 재료(조각)가 있는 쪽
+    //   (돌린 조각에서는 저장된 inward가 조각 로컬 기준이라 그대로 쓰면 뒤집힘 — 2026-10-28 수정). 양쪽 다 재료(조각 안쪽 선)면 저장된 inward(가로선 +y, 세로선 +x)
     var dep=_GRIND_MM,ddx=gd.dx,ddy=gd.dy;
     if((m.depth||0)>_GRIND_MM){
       dep=m.depth;
-      var gH=Math.abs(m.y2-m.y1)<0.5,gV=Math.abs(m.x2-m.x1)<0.5;
-      if((gH||gV)&&m.inward){var sg=m.inward>0?1:-1;ddx=gV?sg:0;ddy=gH?sg:0;}
+      var gH=Math.abs(m.y2-m.y1)<0.5,gV=Math.abs(m.x2-m.x1)<0.5,gl=Math.hypot(m.x2-m.x1,m.y2-m.y1);
+      if(gl>0){
+        var nx=-(m.y2-m.y1)/gl,ny=(m.x2-m.x1)/gl,mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2,e=Math.min(20,m.depth/2);
+        function mat(x,y){return pieces.some(function(p){return _expPieceContains(p,x,y)&&!p.cutouts.some(function(q){return _expPieceContains({s:q},x,y);});});}
+        var a=mat(mx+nx*e,my+ny*e),b=mat(mx-nx*e,my-ny*e);
+        if(a!==b){ddx=a?nx:-nx;ddy=a?ny:-ny;}
+        else if((gH||gV)&&m.inward){var sg=m.inward>0?1:-1;ddx=gV?sg:0;ddy=gH?sg:0;}
+      }
     }
     var band=_expHatchBand(m.x1,m.y1,m.x2,m.y2,ddx,ddy,dep,_GRIND_COL);if(!band)return;
     stats.open=true;
