@@ -114,13 +114,14 @@
   - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
   - 유광 온장 표시 `_boardSheen`(배치 창·도면화 온장 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
   - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
-- 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`): `exportDrawingA4('one')` = 한 쪽에 모든 조각을 `_compactPageShapes`로 모아(온장별 상세 없음, 2026-10-28 사용자 요청),
+- 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`): `exportDrawingA4('one')` = 한 쪽에 모든 조각을 `_compactPageShapes`로(온장별 상세 없음, 2026-10-28 사용자 요청),
   `exportDrawingA4('detail')` = 아래 예전 방식. `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
 - 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(온장 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "온장 N" 번호 유지)
   + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
   - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 온장 2장 이상이면 2쪽부터 **온장마다 상세 한 쪽**("상세 · 온장 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
     밖이면 가장 가까운 조각, 그룹은 main 자리) → 쪽마다 `shapes`를 그 장 조각 것만으로 잠시 바꿔 `_renderDrawingImage`.
-    이때 `_compactPageShapes`가 조각(+딸린 도형)을 원래 자리 대신 줄 맞춰 모은 복사본으로 바꿈(줄 폭을 바꿔 가며 도면 영역 `_DRW_AW×_DRW_AH`에 가장 크게, 간격 = 150px 상당 mm). 배치 안 된 조각은 따로 한 쪽.
+    이때 `_compactPageShapes`가 조각(+딸린 도형)을 옮긴 복사본으로 바꿈 — **원래 배치 유지**(2026-10-28 사용자 확정 "설치 위치를 알 수 있게 배치해 놓은 것"):
+    가로·세로 축마다 조각 구간을 합쳐 조각이 없는 빈 띠만 150px 상당 mm로 줄임(더 좁은 틈·순서·줄 맞춤은 그대로, 도면 영역 `_DRW_AW×_DRW_AH` 배율로 4번 다시 계산). 줄 맞춰 새로 모으지 않음. 배치 안 된 조각은 따로 한 쪽.
     조각 번호는 `_autoPieceNums`를 `shapeNum`에 잠시 고정해 전체 기준 유지. 도면 쪽은 **항상 가로 A4**(`isPort=false`)
   - 밑면연마 띠는 50mm, 단 깊이가 더 큰 것(150×150 원클릭)은 그 깊이로·방향은 저장된 `inward`(가로선 +y, 세로선 +x)
   - 끌어 옮기는 치수 글자 공통: `dimLabels` 항목에 `start()/drag(ex,ey,dx,dy,st)` (선택·선 절단 도구 mousedown → `dimDragInfo`, document mousemove가 호출).

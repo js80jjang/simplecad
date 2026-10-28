@@ -7897,7 +7897,7 @@ function _renderDrawingImage(pageLine){
   }
   return{img:img,isPort:isPort};
 }
-// 쪽 나누기 도면: 그 장의 조각들을 원래 자리 대신 가깝게 모아(줄 맞춰 배치) 도면을 크게.
+// 쪽 나누기 도면: 그 쪽 조각들의 원래 배치는 그대로, 큰 빈 곳만 줄여 도면을 크게.
 // 조각마다 딸린 도형(타공·밑면연마·고스라·글자 등)은 같이 옮긴 복사본으로 돌려줌 (원본 shapes는 그대로)
 var _DRW_AW=1660,_DRW_AH=851; // _renderDrawingImage의 도면 영역(px): 2000×1281에서 여백 뺀 크기
 function _compactPageShapes(list,pmap,items){
@@ -7912,32 +7912,24 @@ function _compactPageShapes(list,pmap,items){
     if(b){g.bb.l=Math.min(g.bb.l,b.l);g.bb.t=Math.min(g.bb.t,b.t);g.bb.r=Math.max(g.bb.r,b.r);g.bb.b=Math.max(g.bb.b,b.b);}
   });
   if(G.length<2)return list;
-  // 원래 도면의 읽는 순서(위→아래, 왼쪽→오른쪽)대로
-  G.sort(function(a,b){return Math.round(a.bb.t/300)-Math.round(b.bb.t/300)||a.bb.l-b.bb.l;});
-  var sumW=0,maxW=0;G.forEach(function(g){var w=g.bb.r-g.bb.l;sumW+=w;maxW=Math.max(maxW,w);});
-  // 줄 폭을 바꿔 가며 도면 영역에 가장 크게 들어가는 배치. 조각 사이 간격 = 치수 두 줄 자리(약 150px)를 mm로
-  function shelf(rowW,gap){
-    var x=0,y=0,rowH=0,totW=0,pos=[];
-    G.forEach(function(g){
-      var w=g.bb.r-g.bb.l,h=g.bb.b-g.bb.t;
-      if(x>0&&x+w>rowW){y+=rowH+gap;x=0;rowH=0;}
-      pos.push([x,y]);x+=w+gap;rowH=Math.max(rowH,h);totW=Math.max(totW,x-gap);
-    });
-    return{pos:pos,w:totW,h:y+rowH,sc:Math.min(_DRW_AW/Math.max(1,totW),_DRW_AH/Math.max(1,y+rowH))};
+  // 원래 배치 유지(2026-10-28 사용자 요청 "설치 위치를 알 수 있게 배치해 놓은 것"): 조각의 위아래·좌우 순서·줄 맞춤은 그대로 두고
+  // 가로·세로 축마다 조각이 하나도 없는 빈 띠만 치수 두 줄 자리(약 150px)로 줄임 (원래 더 좁은 틈은 그대로)
+  function squeeze(lo,hi,gap){ // 축 하나: 조각 구간을 합친 뒤 큰 빈 틈만 줄이는 함수 x → x'
+    var iv=G.map(function(g){return[lo(g),hi(g)];}).sort(function(a,b){return a[0]-b[0];}),m=[];
+    iv.forEach(function(v){if(m.length&&v[0]<=m[m.length-1][1])m[m.length-1][1]=Math.max(m[m.length-1][1],v[1]);else m.push(v.slice());});
+    var cut=[0];for(var i=1;i<m.length;i++)cut.push(cut[i-1]+Math.max(0,m[i][0]-m[i-1][1]-gap));
+    return{f:function(x){var c=0;for(var i=0;i<m.length;i++)if(x>=m[i][0]-1e-6)c=cut[i];return x-c;},len:m[m.length-1][1]-m[0][0]-cut[cut.length-1]};
   }
-  var best=null,sc=0.3;
+  var sc=0.3,SX,SY;
   for(var it=0;it<4;it++){
-    var gap=150/sc;best=null;
-    for(var i=0;i<=40;i++){
-      var r=shelf(maxW+(sumW+gap*G.length-maxW)*i/40,gap);
-      if(!best||r.sc>best.sc+1e-9)best=r;
-    }
-    sc=best.sc;
+    var gap=150/sc;
+    SX=squeeze(function(g){return g.bb.l;},function(g){return g.bb.r;},gap);SY=squeeze(function(g){return g.bb.t;},function(g){return g.bb.b;},gap);
+    sc=Math.min(_DRW_AW/Math.max(1,SX.len),_DRW_AH/Math.max(1,SY.len));
   }
-  // 각 줄 안에서 조각을 세로 가운데 맞춤 없이 위쪽 정렬, 옮긴 복사본 만들기
+  // 조각(+딸린 도형)마다 같은 만큼 옮긴 복사본
   var out=[];
   G.forEach(function(g,i){
-    var dx=best.pos[i][0]-g.bb.l,dy=best.pos[i][1]-g.bb.t;
+    var dx=SX.f(g.bb.l)-g.bb.l,dy=SY.f(g.bb.t)-g.bb.t;
     g.ss.forEach(function(s){
       var c=JSON.parse(JSON.stringify(s));
       ['x','x1','x2','cx'].forEach(function(k){if(typeof c[k]==='number')c[k]+=dx;});
@@ -7948,14 +7940,14 @@ function _compactPageShapes(list,pmap,items){
   return out;
 }
 // 도면화 버튼: 방식 고르기 (지난번 고른 것 먼저, 이 PC에 기억)
-//   one = 한 장에 (조각을 원래 자리 대신 줄 맞춰 모아 크게, 온장별 상세 없음) / detail = 전체 도면(원래 자리) + 온장별 상세
+//   one = 한 장에 (원래 배치 그대로 큰 빈 곳만 줄여 크게, 온장별 상세 없음) / detail = 전체 도면(원래 자리) + 온장별 상세
 function drawingMenu(btn){
   var old=document.getElementById('drw-menu');if(old){old.remove();return;}
   var last='one';try{last=localStorage.getItem('scd_drw_mode')||'one';}catch(e){}
   var m=document.createElement('div');m.id='drw-menu';
   var r=btn.getBoundingClientRect();
   m.style.cssText='position:fixed;z-index:9999;left:'+Math.round(r.left)+'px;top:'+Math.round(r.bottom+4)+'px;background:#0A1222;border:1px solid #2A4F92;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:5px;box-shadow:0 6px 18px rgba(0,0,0,.5);min-width:250px';
-  [['one','한 장에 모아 보기','조각을 줄 맞춰 모아 크게 · 온장별 상세 없음'],['detail','전체 도면 + 온장별 상세','1쪽은 원래 자리, 2쪽부터 온장마다 한 쪽']].forEach(function(o){
+  [['one','한 장에 모아 보기','원래 배치 그대로 · 큰 빈 곳만 줄여 크게 · 온장별 상세 없음'],['detail','전체 도면 + 온장별 상세','1쪽은 원래 자리, 2쪽부터 온장마다 한 쪽']].forEach(function(o){
     var b=document.createElement('button');var on=o[0]===last;
     b.style.cssText='text-align:left;padding:7px 10px;border-radius:4px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#1C2A47')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#D9DFEA;font-size:12px';
     b.innerHTML='<b style="color:#E3B861">'+o[1]+'</b><br><span style="font-size:10.5px;color:#A9B4C8">'+o[2]+'</span>';
@@ -7995,7 +7987,7 @@ function exportDrawingA4(mode){
   var pages=[];
   try{
     pagesDef.forEach(function(pd){
-      if(pd.list)shapes=_compactPageShapes(pd.list,pmap,items); // 조각을 모아 크게 (번호 고정 후라 복사본에도 번호가 따라감)
+      if(pd.list)shapes=_compactPageShapes(pd.list,pmap,items); // 배치 그대로 빈 곳만 줄여 크게 (번호 고정 후라 복사본에도 번호가 따라감)
       try{var r=_renderDrawingImage(pd.label);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);}}
       finally{shapes=all;}
     });
