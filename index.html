@@ -5701,6 +5701,9 @@ document.addEventListener('keydown',function(e){
     if(_lineKey(e)){e.preventDefault();e.stopPropagation();return;}
   }
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
+  // 글자 입력칸(현장·제품명·단가 등)에서는 Ctrl+C·V·X·Z·A·Y를 브라우저 기본(글자 복사·붙여넣기·되돌리기)으로 — 도형 복사/붙여넣기·되돌리기로 가로채지 않음 (2026-10-29)
+  var _ae=document.activeElement||{};
+  if((e.ctrlKey||e.metaKey)&&!e.altKey&&(/^Key[CVXZAY]$/.test(e.code||'')||/^(c|v|x|z|a|y)$/i.test(e.key||''))&&(/INPUT|TEXTAREA|SELECT/.test(_ae.tagName||'')||_ae.isContentEditable)&&!(_ae.type==='checkbox'||_ae.type==='radio'||_ae.type==='button'))return;
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyZ'||e.key==='z'||e.key==='Z')){e.preventDefault();if(_3d){_3dUndo();return;}drawStart=null;selBox=null;undo();return;} // 3D 창이 열려 있으면 3D 되돌리기
   if((e.ctrlKey||e.metaKey)&&e.code==='KeyS'){e.preventDefault();if(e.shiftKey)saveProjectAs();else saveProject();return;} // Ctrl+S 저장 / Ctrl+Shift+S 다른 이름으로
   if((e.ctrlKey||e.metaKey)&&(e.code==='KeyC'||e.key==='c'||e.key==='C')&&selectedShapes.length){
