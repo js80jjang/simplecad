@@ -246,10 +246,12 @@ canvas{display:block;cursor:crosshair}
   <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 절단</button>
   <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
   <div class="fillet-sub" id="circle-sub">
-    <label>Φ(mm):<input type="number" id="circle-phi" value="35" min="1" step="1"></label>
+    <label id="circle-phi-row">Φ(mm):<input type="number" id="circle-phi" value="35" min="1" step="1"></label>
+    <div id="hole-rect-row" style="display:none;align-items:center;gap:3px;font-size:11px">W<input type="number" id="hole-rect-w" value="200" min="1" step="1" style="width:46px">×H<input type="number" id="hole-rect-h" value="50" min="1" step="1" style="width:40px"></div>
     <div style="display:flex;gap:3px;margin-top:5px">
       <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#1F3F7A;color:#fff">수전</button>
       <button id="hole-type-outlet" onclick="setPendingHoleType('outlet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">콘센트</button>
+      <button id="hole-type-rect" onclick="setPendingHoleType('rect')" title="사각 타공 (기본 200×50, 고스라 없음, 가공비 = 콘센트 타공)" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">사각</button>
     </div>
   </div>
   <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 절단</button>
@@ -1413,12 +1415,14 @@ function _baseColor(s){
   var _at=_applianceType(s);
   if(_at==='sink')return '#2A4F92';
   if(_at==='cook')return '#FFA726';
+  if(_at==='hole')return '#26A69A'; // 사각 타공
   return SCOL[s.kind]||'#1F3F7A';
 }
 function _baseFill(s){
   var _at=_applianceType(s);
   if(_at==='sink')return 'rgba(66,165,245,0.10)';
   if(_at==='cook')return 'rgba(255,167,38,0.10)';
+  if(_at==='hole')return 'rgba(38,166,154,0.12)';
   return SFILL[s.kind]||'';
 }
 
@@ -4518,6 +4522,11 @@ function finalizeShape(fmx,fmy){
   var mx=fmx,my=fmy;
   var s=null;
   if(tool==='rect'){var x=Math.min(x0,mx),y=Math.min(y0,my),w=Math.abs(mx-x0),h=Math.abs(my-y0);if(w<1||h<1){drawStart=null;return;}s=makeShape('rect',{x:x,y:y,w:w,h:h,cornerType:'none',cornerSize:0});}
+  else if(tool==='circle'&&pendingHoleType==='rect'){ // 사각 타공: 누른 자리가 가운데
+    var _hw=_rectHoleWH(),hgid='grp'+(nextId);
+    var hs=makeShape('rect',{x:x0-_hw[0]/2,y:y0-_hw[1]/2,w:_hw[0],h:_hw[1],cornerType:'none',cornerSize:0,groupId:hgid,groupRole:'main',applianceType:'hole'});
+    saveHistory();shapes.push(hs);selectedShapes=[hs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
+  }
   else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});}
   else if(tool==='circlecut'){var dragR2=Math.hypot(mx-x0,my-y0);var phiEl2=document.getElementById('circlecut-phi');var phiVal2=phiEl2?parseFloat(phiEl2.value):0;var r2=dragR2<2&&phiVal2>0?phiVal2/2:dragR2;if(r2<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r2,holeType:'cut'});}
   else if(tool==='line'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('line',{x1:x0,y1:y0,x2:mx,y2:my});}
@@ -5219,6 +5228,7 @@ cv.addEventListener('mousemove',function(e){
     var x0=drawStart[0],y0=drawStart[1];
     var ps=null;
     if(tool==='rect'){ps={kind:'rect',x:Math.min(x0,mx),y:Math.min(y0,my),w:Math.abs(mx-x0),h:Math.abs(my-y0),cornerType:'none',cornerSize:0,ops:[]};}
+    else if(tool==='circle'&&pendingHoleType==='rect'){var _hw2=_rectHoleWH();ps={kind:'rect',x:x0-_hw2[0]/2,y:y0-_hw2[1]/2,w:_hw2[0],h:_hw2[1],cornerType:'none',cornerSize:0,applianceType:'hole',ops:[]};}
     else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:pendingHoleType,ops:[]};}
     else if(tool==='circlecut'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:'cut',ops:[]};}
     else if(tool==='dimline'){
@@ -5569,7 +5579,8 @@ function calcCost(){
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       if(s.groupId&&s.groupRole==='main'){
-        if(s.cornerType==='fillet')cnt.sink++;
+        if(s.applianceType==='hole')cnt.holeo++; // 사각 타공 = 콘센트 타공 금액
+        else if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
         var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s),_vb=s.rotation?getBBox(s):null;
@@ -6001,11 +6012,13 @@ function flipGrindInward(){
 }
 function setPendingHoleType(t){
   pendingHoleType=t;
-  var btn1=document.getElementById('hole-type-outlet');
-  var btn2=document.getElementById('hole-type-faucet');
-  if(btn1)btn1.style.background=t==='outlet'?'#1F3F7A':'#121D33';
-  if(btn2)btn2.style.background=t==='faucet'?'#1F3F7A':'#121D33';
+  ['outlet','faucet','rect'].forEach(function(k){var b=document.getElementById('hole-type-'+k);if(b)b.style.background=t===k?'#1F3F7A':'#121D33';});
+  // 사각 타공이면 Φ 대신 W×H 칸
+  var pr=document.getElementById('circle-phi-row'),rr=document.getElementById('hole-rect-row');
+  if(pr)pr.style.display=t==='rect'?'none':'';if(rr)rr.style.display=t==='rect'?'flex':'none';
 }
+// 사각 타공(2026-10-29 사용자 요청): 조각 안 작은 직각 구멍 = 싱크볼·쿡탑과 같은 타공부 사각형(groupRole main, applianceType 'hole'), 고스라 없음, 가공비 = 콘센트 타공(holeo)
+function _rectHoleWH(){var w=parseFloat((document.getElementById('hole-rect-w')||{}).value)||200,h=parseFloat((document.getElementById('hole-rect-h')||{}).value)||50;return[w,h];}
 function setHoleType(t){
   selectedShapes.forEach(function(s){if(s.kind==='circle'||s.kind==='hole')s.holeType=t;});
   saveHistory();redraw();calcCost();showProps();
@@ -7366,7 +7379,7 @@ function _drawCleanExport(){
   pieces.forEach(function(p){
     p.cutouts.forEach(function(q){
       if(q.kind!=='rect')return;
-      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':'타공');
+      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='hole'?'사각타공':'타공'));
       var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
       var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
       _expText(nm,cen[0],cen[1],p.col[0],fs,'bold',[0,Math.max(8,fs*0.5)],14); // R값은 맨 마지막에 지시선으로
