@@ -203,7 +203,8 @@
   - 마감 `_3D_FINISH`(id·name·grp·rgb·tex·tw·th·raw·gloss·code·brand) · `_3D_BRANDS`(ARCKIT·한솔 스토리보드·영림 인테리어필름) · `_3D_GRPS`, 무늬 `door-tex/*.js`(`_doorTexImg`, `_doorFinishCanvas` 색 입힘·raw는 그대로 거울 반복).
     브랜드 더하기 = `_3D_BRANDS` + `_3D_FINISH` 항목 + door-tex 이미지 (한솔·영림은 사용자 PDF 카탈로그에서 Windows.Data.Pdf로 쪽을 그려 견본을 잘라 만듦, ARCKIT은 사용자 .skp 재질)
   - `_3dSetupGL` 가구: 도어 `door(F,P,Q,dy0,dy1,nx,nz,design,isUp,side,ang)`(손잡이 쪽 `_3dHandleSide`, ang = 열린 각도 → 두께 18 + 경첩(손잡이 반대쪽 앞 모서리) 축 회전),
-    몸통 = 도어마다 칸 `bay`(뒷판·옆판·밑판(상부장 윗판) + 선반 2단, 하부장 깊이 `depthIn`, 앞면 변 없는 조각은 예전 외곽 벽) → `R.unitInfo`(key 하부장 `L상판id:변:번호`/상부장 `U자리key:번호`)
+    몸통 = 도어마다 칸 `bay`(뒷판·옆판·밑판(상부장 윗판) + 선반 2단, 하부장 깊이 `depthIn`, 앞면 변 없는 조각은 예전 외곽 벽,
+    싱크볼 구멍 상자와 겹치는 하부장 칸은 높이를 볼 바닥 밑(상판 밑 −202)까지만 + 윗판 — 구멍으로 옆판·선반이 안 보이게, 2026-10-29) → `R.unitInfo`(key 하부장 `L상판id:변:번호`/상부장 `U자리key:번호`)
     `_3dPick` kind 'unit'(하부장 칸)/'upper'(상부장 칸, 끌면 그 상부장 전체 위아래 → `upOff[자리key]`, 자석·기준선) → 누르면 `_3d.selUnit` 노란 테두리 `_3dUnitOutline`, Delete = `_3dUnitDelete`,
     더블클릭 = `_3dDoorToggle`(0↔90°, 파일 저장 안 함). 되돌리기 `_3d.fOps`(지우기·상부장 높이, 그때 `_hist` 길이) — `_3dUndo`가 먼저 처리, "가구 처음대로" = 모두
   - 첫 화면 `_3dIntro`(약 1.8초): `_3d.anim={t}` → `_3dAnimPh()` s(상판 3D 자리로 미끄러짐·돌기)·r(900으로 올라감, 하부장 같이 자람)·m(미드웨이·판 눕힌 데서 세움, 정점 보간)·g(상부장 내려앉음), 시점 위에서 → 비스듬히, 누르면 끝

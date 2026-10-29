@@ -8874,7 +8874,12 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         for(var k=0;k<parts.length;k++){
           var uk='L'+key.id+':'+i+':'+k;if(uDel[uk])continue; // 3D에서 지운 칸
           var bd=depthIn(body,[A[0]+ux*(parts[k][0]+parts[k][1])/2,A[1]+uz*(parts[k][0]+parts[k][1])/2],nx,nz);
-          bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,y0,false);
+          // 싱크볼 구멍과 겹치는 칸은 몸통·선반을 볼 밑(상판 밑 200)까지만 — 구멍으로 칸 옆판·선반이 들여다보이지 않게 (2026-10-29)
+          var byt=y0,bx0=parts[k][0],bx1=parts[k][1],bc=[[bx0,0],[bx1,0],[bx1,-bd],[bx0,-bd]].map(function(q){return[A[0]+ux*q[0]+nx*q[1],A[1]+uz*q[0]+nz*q[1]];}),
+            bl=Math.min.apply(null,bc.map(function(p){return p[0];})),br=Math.max.apply(null,bc.map(function(p){return p[0];})),bt=Math.min.apply(null,bc.map(function(p){return p[1];})),bb2=Math.max.apply(null,bc.map(function(p){return p[1];}));
+          loops.holes.forEach(function(H,hi3){if(loops.kinds[hi3]!=='sink')return;var xs=H.map(function(p){return p[0];}),zs=H.map(function(p){return p[1];});
+            if(Math.min.apply(null,xs)<br-1&&Math.max.apply(null,xs)>bl+1&&Math.min.apply(null,zs)<bb2-1&&Math.max.apply(null,zs)>bt+1)byt=Math.min(byt,y0-202);});
+          bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,byt,byt<y0);
           var K0=[A[0]-nx*_3D_KICKSET,A[1]-nz*_3D_KICKSET],kb=Math.max(0,bd-_3D_KICKSET); // 걸레받이: 칸 앞에서 50 들임 + 양 끝
           [[parts[k][0],parts[k][1],0,0],[parts[k][0],parts[k][0],0,-kb],[parts[k][1],parts[k][1],0,-kb]].forEach(function(q){var a=[K0[0]+ux*q[0]+nx*q[2],K0[1]+uz*q[0]+nz*q[2]],b=[K0[0]+ux*q[1]+nx*q[3],K0[1]+uz*q[1]+nz*q[3]],en=q[0]===q[1]?[(q[0]===parts[k][0]?-1:1)*ux,(q[0]===parts[k][0]?-1:1)*uz]:[nx,nz];
             [[a,0],[b,0],[b,_3D_KICK],[a,0],[b,_3D_KICK],[a,_3D_KICK]].forEach(function(p){v(furnDraw.kick,p[0][0],p[1],p[0][1],en[0],0,en[1],0,0);});});
