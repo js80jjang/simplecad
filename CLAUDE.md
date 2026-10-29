@@ -207,6 +207,7 @@
     `_3dPick` kind 'unit'(하부장 칸)/'upper'(상부장 칸, 끌면 그 상부장 전체 위아래 → `upOff[자리key]`, 자석·기준선) → 누르면 `_3d.selUnit` 노란 테두리 `_3dUnitOutline`, Delete = `_3dUnitDelete`,
     더블클릭 = `_3dDoorToggle`(0↔90°, 파일 저장 안 함). 되돌리기 `_3d.fOps`(지우기·상부장 높이, 그때 `_hist` 길이) — `_3dUndo`가 먼저 처리, "가구 처음대로" = 모두
   - 첫 화면 `_3dIntro`(약 1.8초): `_3d.anim={t}` → `_3dAnimPh()` s(상판 3D 자리로 미끄러짐·돌기)·r(900으로 올라감, 하부장 같이 자람)·m(미드웨이·판 눕힌 데서 세움, 정점 보간)·g(상부장 내려앉음), 시점 위에서 → 비스듬히, 누르면 끝
+  - 닫을 때 `close3D(true)`(✕ 버튼만, show3D 안의 close3D()는 바로) → `_3dOutro`(2026-10-29): `st.closing`, 번호표·양옆 서랍 흐리게, t 1→0(약 1.5초), 시점 지금 → 위에서(t=0 장면), 끝나면 창 opacity 0.25초 뒤 close3D. 누르면 바로(`animStop`), 닫는 중이면 `_3dIntro`는 멈춤
   - door-tex 이미지는 외부 카탈로그 자료 — 공개 저장소에 올려도 되는지 사용자 확인 후 올림
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`

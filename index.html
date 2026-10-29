@@ -9110,10 +9110,28 @@ function _3dIntro(){
   function ease(x){return x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
   st.anim={t:0};
   (function step(){
-    if(_3d!==st)return;var f=st.animStop?1:Math.min(1,(performance.now()-t0)/T);st.anim=f<1?{t:f}:null;
+    if(_3d!==st||st.closing)return;var f=st.animStop?1:Math.min(1,(performance.now()-t0)/T);st.anim=f<1?{t:f}:null; // 닫는 중이면 첫 화면은 그만
     var e=ease(Math.min(1,f/0.85)),L=function(a,b){return a+(b-a)*e;};
     st.cam={yaw:c0.yaw+dyaw*e,pitch:L(c0.pitch,c1.pitch),d:L(c0.d,c1.d),t:[L(c0.t[0],c1.t[0]),L(c0.t[1],c1.t[1]),L(c0.t[2],c1.t[2])]};
     _3dRegeom();if(f<1)requestAnimationFrame(step);else st.animStop=false;
+  })();
+}
+// 닫을 때 (첫 화면 거꾸로): t 1 → 0, 시점은 지금 시점 → 위에서(t=0 장면 기준). 번호표·양옆 창은 먼저 숨기고, 끝나면 창이 흐려지며 close3D
+function _3dOutro(st){
+  st.closing=true;st.sel=null;st.hover=null;st.selUnit=null;st.prev=null;st.guide=null;
+  ['v3d-labels','v3d-side-l','v3d-side-r'].forEach(function(id){var e=document.getElementById(id);if(e){e.style.transition='opacity .2s';e.style.opacity='0';}});
+  var c1=JSON.parse(JSON.stringify(st.cam));
+  st.anim={t:0};_3dRegeom();_3dSetView('top');var c0=JSON.parse(JSON.stringify(st.cam)); // (같은 작업 안이라 이 장면은 화면에 안 나옴)
+  st.cam=c1;st.anim={t:1};_3dRegeom();
+  var T=1500,t0=performance.now(),dyaw=c0.yaw-c1.yaw;dyaw=Math.atan2(Math.sin(dyaw),Math.cos(dyaw));
+  function ease(x){return x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+  (function step(){
+    if(_3d!==st)return;var f=st.animStop?1:Math.min(1,(performance.now()-t0)/T);
+    st.anim={t:1-f};var e=ease(Math.min(1,f/0.9)),L=function(a,b){return a+(b-a)*e;};
+    st.cam={yaw:c1.yaw+dyaw*e,pitch:L(c1.pitch,c0.pitch),d:L(c1.d,c0.d),t:[L(c1.t[0],c0.t[0]),L(c1.t[1],c0.t[1]),L(c1.t[2],c0.t[2])]};
+    _3dRegeom();
+    if(f<1){requestAnimationFrame(step);return;}
+    st.m.style.transition='opacity .25s';st.m.style.opacity='0';setTimeout(function(){if(_3d===st)close3D();},260);
   })();
 }
 // 첫 화면 단계 (0~1): s = 3D 자리로 미끄러짐·돌기, r = 올라감(하부장 자람), g = 미드웨이·판 자람·상부장 내려앉음
@@ -9517,7 +9535,7 @@ function show3D(){
   document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=_3dOpts.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
   document.getElementById('v3d-upper').onchange=function(e){if(!_3d)return;_3d.upper=_3dOpts.upper=e.target.checked;_3dRegeom();}; // 상부장 켜기/끄기 (시점 그대로)
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
-  document.getElementById('v3d-close').onclick=close3D;
+  document.getElementById('v3d-close').onclick=function(){close3D(true);}; // 돌아가는 애니메이션 뒤 닫힘
   document.getElementById('v3d-reset').onclick=_3dResetLayout;
   document.getElementById('v3d-undo').onclick=_3dUndo;
   _3d.histBase=_hist.length; // 되돌리기는 여기까지
@@ -9675,8 +9693,11 @@ function show3D(){
   _3dRebuild(0);
   requestAnimationFrame(function(){if(_3d&&_3d.cv===cv){_3dResize();_3dIntro();}}); // 창이 그려진 뒤 크기를 다시 재고 → 도면 자리에서 3D 배치로 움직이는 첫 화면
 }
-function close3D(){
-  var st=_3d;if(!st)return;_3d=null;
+// anim = ✕ 버튼: 첫 화면을 거꾸로 (상부장이 올라가고 → 판이 눕고 → 상판이 바닥으로 내려와 도면 자리로, 시점은 지금 → 위에서) 뒤 창이 흐려지며 닫힘 (약 1.5초, 누르면 바로)
+function close3D(anim){
+  var st=_3d;if(!st)return;
+  if(anim===true&&st.r&&!st.closing){_3dOutro(st);return;}
+  _3d=null;
   window.removeEventListener('mousemove',st.onMove);window.removeEventListener('mouseup',st.onUp);
   document.removeEventListener('keydown',st.onKey,true);document.removeEventListener('keydown',st.onKey2);window.removeEventListener('resize',st.onResize);
   if(st.r){var ext=st.r.gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();}
