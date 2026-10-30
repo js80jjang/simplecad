@@ -4045,10 +4045,10 @@ async function _saveDxfFile(data,name){
 }
 function _doExportDxf(useForm){
   var m=document.getElementById('dxf-modal');if(m)m.remove();
-  var name=((products[0]&&products[0].name)||'도면').trim()||'도면';
+  var name=_saveBaseName(); // .ceramic 저장과 같은 이름 (업체명-주소-작성일, 둘 다 없으면 제품명)
   if(useForm){
     var tpl=_dxfTemplate();if(!tpl){pickDxfTemplate(function(){_doExportDxf(true);});return;}
-    try{var r=buildDxfInForm(tpl);_saveDxfFile(r.text,name+'_가공의뢰서');}catch(e){alert('양식에 넣지 못했습니다.\n'+e.message);}
+    try{var r=buildDxfInForm(tpl);_saveDxfFile(r.text,name);}catch(e){alert('양식에 넣지 못했습니다.\n'+e.message);}
   } else {
     var data=buildDxf();if(!data){alert('내보낼 도형이 없습니다.');return;}_saveDxfFile(data,name);
   }
@@ -8193,7 +8193,8 @@ function exportDrawingA4(mode){
             :'<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#f3f3f3;color:#888;font-size:11pt">윤현몰 제품 사진 없음</div>')
       +'</div></div>';
   });
-  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>도면</title><style>'+css+'</style></head><body>'+body+'</body></html>');
+  // 창 제목 = 크롬 "PDF로 저장" 파일 이름 → .ceramic 저장과 같은 이름(업체명-주소-작성일)
+  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+escHtml(_saveBaseName())+'</title><style>'+css+'</style></head><body>'+body+'</body></html>');
   pw.document.close();
   // 큰 그림은 문서를 쓴 뒤에 넣음
   setTimeout(function(){
