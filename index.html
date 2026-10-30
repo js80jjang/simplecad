@@ -1267,10 +1267,13 @@ function applySnap(cx,cy,excl){
   snapKind=null;_snapGuide=null;
   if(objSnap){var best=tol+1,bx=mx,by=my,bk=null;snapPoints(excl||null).forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<best){best=d;bx=p.x;by=p.y;bk=p.k;}});if(bk){mx=bx;my=by;snapKind=bk;}}
   // 교차점·가상 교차점·연장선 (끄는 도형 자신은 빼고, 가장 가까운 것) — 그리드보다 먼저
-  if(!snapKind&&objSnap&&(snapIntersect||snapVirtInter||snapExtension)){var _ls=_snapLinesAt(mx,my,tol,excl||null);if(_ls){mx=_ls.x;my=_ls.y;snapKind=_ls.k;_snapGuide=_ls.g;}}
+  if(!snapKind&&objSnap&&(snapIntersect||snapVirtInter||snapExtension)){var _ls=_snapLinesAt(mx,my,tol,excl||null);
+    // 변 표시 도구(밑면연마·고스라·졸리컷)는 변 위 교차점만 — 연장선·가상 교차점이 변 붙이기를 가로채지 않게
+    if(_ls&&_ls.k!=='x'&&(tool==='grind'||tool==='gosra'||tool==='jollycut'))_ls=null;
+    if(_ls){mx=_ls.x;my=_ls.y;snapKind=_ls.k;_snapGuide=_ls.g;}}
   var _gridLater=!snapKind&&gridSnap; // 그리드는 맨 나중 (밑면연마·고스라 변 붙이기가 그리드에 막히던 것)
   // 그라인드/고스라 도구: 사각형 엣지 라인에 자동 스냅
-  if(!snapKind&&(tool==='grind'||tool==='gosra')){
+  if(!snapKind&&(tool==='grind'||tool==='gosra'||tool==='jollycut')){
     var etol=10/scale,bestEd=etol+1,esx=mx,esy=my;
     shapes.forEach(function(sh){
       if(sh.kind!=='rect')return;
