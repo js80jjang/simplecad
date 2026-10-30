@@ -1,7 +1,7 @@
-# 윤현몰 제품 온장 이미지 → mall-img/<상품번호>.js
-# mall-catalog.js의 img(목록 이미지 = 온장 전체 사진, 2:1)를 받아 작게 줄여 data URL로 저장.
+# 윤현몰 제품 원판 이미지 → mall-img/<상품번호>.js
+# mall-catalog.js의 img(목록 이미지 = 원판 전체 사진, 2:1)를 받아 작게 줄여 data URL로 저장.
 # 목록 이미지가 작으면(6mm 제품은 150×75) 상품 상세 페이지의 상세 이미지(대부분 1150×576)를 대신 씀.
-# 앱은 이 파일을 <script>로 읽어서 온장 배치·도면화 2쪽에 무늬로 채움.
+# 앱은 이 파일을 <script>로 읽어서 원판 배치·도면화 2쪽에 무늬로 채움.
 #   - 쇼핑몰 이미지 서버가 다른 사이트에서 쓰는 걸 허용하지 않아(CORS 없음) 바로 연결하면 도면화(PDF)가 막힘
 #   - .js(data URL)로 두면 GitHub Pages·PC에서 바로 연 파일(file://) 모두에서 됨
 # GitHub Actions(.github/workflows/mall-catalog.yml)가 제품 목록 갱신 뒤에 실행. 직접 실행: python tools/update_mall_images.py
@@ -21,7 +21,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 CATALOG = os.path.join(ROOT, 'mall-catalog.js')
 OUT = os.path.join(ROOT, 'mall-img')
 MANIFEST = os.path.join(OUT, 'manifest.json')  # {상품번호: 원본 주소|SPEC} — 같으면 다시 받지 않음 (SPEC가 바뀌면 전부 다시)
-MAX_W = 1150     # 긴 쪽 픽셀. 쇼핑몰 온장 사진 원본이 1150×576이라 줄이지 않음 (파일 하나 ≈ 60KB)
+MAX_W = 1150     # 긴 쪽 픽셀. 쇼핑몰 원판 사진 원본이 1150×576이라 줄이지 않음 (파일 하나 ≈ 60KB)
 QUALITY = 86
 SPEC = 'w%d-q%d' % (MAX_W, QUALITY)
 MIN_W = 600      # 목록 이미지 폭이 이보다 작으면 상품 상세 페이지의 큰 이미지를 찾아 씀
@@ -42,14 +42,14 @@ def fetch(url):
 
 
 def detail_image(page_url):
-    # 상품 상세 페이지의 상세 이미지(대부분 1150×576 온장 사진) 주소 — 목록 이미지가 작을 때(6mm 제품은 150×75) 대신 씀
+    # 상품 상세 페이지의 상세 이미지(대부분 1150×576 원판 사진) 주소 — 목록 이미지가 작을 때(6mm 제품은 150×75) 대신 씀
     html = fetch(page_url).decode('utf-8', 'replace')
     m = re.search(r'https://[^"\'\s]*/goods/\d+/image/detail/[^/"\'\s]+\.(?:jpe?g|png)', html)
     return m.group(0) if m else None
 
 
 def pick_image(it):
-    # 목록 이미지 → 작으면(폭 MIN_W 미만) 상세 이미지가 더 크고 온장 비율(약 2:1)일 때 그것으로. (그림, 상세 이미지를 확인했는지)
+    # 목록 이미지 → 작으면(폭 MIN_W 미만) 상세 이미지가 더 크고 원판 비율(약 2:1)일 때 그것으로. (그림, 상세 이미지를 확인했는지)
     data = fetch(it['img'])
     w = Image.open(io.BytesIO(data)).size[0]
     if w >= MIN_W or not it.get('url'):

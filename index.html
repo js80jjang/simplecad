@@ -51,7 +51,7 @@ body{background:#060B16;color:#D9DFEA;font-family:'NanumSquare','나눔스퀘어
 #board-panel input{width:52px;background:#050912;border:1px solid #1F3F7A;color:#fff;font-size:11px;padding:2px 4px;border-radius:2px;text-align:center}
 #board-panel .bp-btn{background:#1F3F7A;border:none;color:#fff;padding:3px 10px;font-size:11px;border-radius:2px;cursor:pointer}
 #board-panel .bp-btn:hover{background:#2A4F92}
-/* 온장 배치 모달 */
+/* 원판 배치 모달 */
 #board-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;align-items:center;justify-content:center}
 #board-modal.show{display:flex}
 #board-modal-inner{background:#050912;border:1px solid #2A4F92;border-radius:6px;padding:0;width:88vw;max-width:1100px;height:88vh;display:flex;flex-direction:column}
@@ -334,7 +334,7 @@ canvas{display:block;cursor:crosshair}
 </div>
 <div id="center">
   <div id="canvas-toolbar">
-    <button class="canvas-btn" style="background:#2E7D32;color:#fff" onclick="newProject()" title="도형·작업 정보(업체명·주소·제품·출고일)·기타 비용·온장 배치를 비우고 새 도면 시작 (단가는 그대로)">📄 새로만들기</button>
+    <button class="canvas-btn" style="background:#2E7D32;color:#fff" onclick="newProject()" title="도형·작업 정보(업체명·주소·제품·출고일)·기타 비용·원판 배치를 비우고 새 도면 시작 (단가는 그대로)">📄 새로만들기</button>
     <button class="canvas-btn red" onclick="clearAll()">전체삭제</button>
     <button class="canvas-btn" onclick="fitView()">뷰 맞춤</button>
     <button class="canvas-btn" id="btn-save" style="background:#1F3F7A;color:#fff" onclick="saveProject()" title="저장 (Ctrl+S) — 처음엔 파일 이름·위치를 고름">💾 저장</button>
@@ -345,13 +345,13 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#FFD740" onclick="showPatchNotes(true)" title="업데이트 내용 (패치 노트)">📢 새 소식</button>
     <button class="canvas-btn" id="btn-install" style="display:none;background:#2E7D32;color:#fff" onclick="installApp()" title="바탕화면·시작 메뉴에 앱으로 설치 (별도 창으로 실행)">⬇ 앱 설치</button>
     <div id="board-panel">
-      <label>온장</label>
-      <input type="number" id="board-w" value="3200" min="100" step="10" title="온장 폭(mm)" oninput="_scheduleBoardQty()"> <label>×</label>
-      <input type="number" id="board-h" value="1600" min="100" step="10" title="온장 높이(mm)" oninput="_scheduleBoardQty()">
+      <label>원판</label>
+      <input type="number" id="board-w" value="3200" min="100" step="10" title="원판 폭(mm)" oninput="_scheduleBoardQty()"> <label>×</label>
+      <input type="number" id="board-h" value="1600" min="100" step="10" title="원판 높이(mm)" oninput="_scheduleBoardQty()">
       <label style="color:#56647E">mm</label>
-      <button class="bp-btn" onclick="showBoardLayout()">온장 배치</button>
-      <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="drawingMenu(this)" title="도면화(PDF) — 한 장에 모아 보기 / 전체 + 온장별 상세">📐 도면화 ▾</button>
-      <button class="bp-btn" style="background:#00695C;margin-left:6px" onclick="show3D()" title="조각을 두께·구멍·온장 무늬까지 3D로 보기 (돌리기·확대·이미지 저장)">🧊 3D 보기</button>
+      <button class="bp-btn" onclick="showBoardLayout()">원판 배치</button>
+      <button class="bp-btn" style="background:#1A237E;margin-left:6px" onclick="drawingMenu(this)" title="도면화(PDF) — 한 장에 모아 보기 / 전체 + 원판별 상세">📐 도면화 ▾</button>
+      <button class="bp-btn" style="background:#00695C;margin-left:6px" onclick="show3D()" title="조각을 두께·구멍·원판 무늬까지 3D로 보기 (돌리기·확대·이미지 저장)">🧊 3D 보기</button>
     </div>
     <span id="canvas-hint">드래그=다중선택 / Ctrl+클릭·드래그=선택 추가 / 치수클릭=편집 / 휠=줌 / 중클릭=패닝 / Del=삭제</span>
   </div>
@@ -372,11 +372,11 @@ canvas{display:block;cursor:crosshair}
       <button class="wb-q" onclick="setDelivIn(0)" title="출고일을 오늘로">오늘</button><button class="wb-q" onclick="setDelivIn(1)" title="출고일을 내일로">내일</button><button class="wb-q" onclick="setDelivIn(3)" title="출고일을 3일 뒤로">+3일</button>
     </div>
   </div>
-  <!-- 온장 배치 모달 -->
+  <!-- 원판 배치 모달 -->
   <div id="board-modal">
     <div id="board-modal-inner">
       <div id="board-modal-header">
-        <h3>온장 배치</h3>
+        <h3>원판 배치</h3>
         <span id="board-modal-info"></span>
         <span id="board-page-nav" style="display:none;align-items:center;gap:6px">
           <span id="board-page-lbl" style="color:#E3B861;font-size:12px;min-width:52px;text-align:center;font-weight:bold"></span>
@@ -400,7 +400,7 @@ canvas{display:block;cursor:crosshair}
   <!-- 출력 미리보기 모달 -->
   <div id="print-modal">
     <div id="print-modal-controls">
-      <h3>🖨 출력 미리보기 — 도면 위 / 온장배치 아래</h3>
+      <h3>🖨 출력 미리보기 — 도면 위 / 원판배치 아래</h3>
       <button class="pm-btn" style="background:#1F3F7A;color:#fff" onclick="openPrintWindow()">🖨 인쇄 / PDF 저장</button>
       <button class="pm-btn" style="background:#555;color:#fff" onclick="closePrintModal()">✕ 닫기</button>
       <span style="font-size:11px;color:#888;margin-left:8px">PDF 저장: 인쇄 대화상자에서 프린터를 "PDF로 저장" 선택</span>
@@ -411,7 +411,7 @@ canvas{display:block;cursor:crosshair}
         <img id="print-img-drawing" src="">
       </div>
       <div class="print-section" id="print-board-section">
-        <h4>■ 온장 배치 도면</h4>
+        <h4>■ 원판 배치 도면</h4>
         <img id="print-img-board" src="">
       </div>
     </div>
@@ -623,7 +623,7 @@ var _catalog=(function(){
   return out;
 })();
 var _ddResults=[];
-// ── 제품 온장 이미지 (mall-img/<상품번호>.js = data URL, tools/update_mall_images.py가 매일 받음) ──
+// ── 제품 원판 이미지 (mall-img/<상품번호>.js = data URL, tools/update_mall_images.py가 매일 받음) ──
 //   쇼핑몰 이미지를 바로 쓰면 도면화(PDF) 캔버스가 막혀서(CORS) 저장소에 받아 둔 것을 <script>로 읽음
 var _slabImgs={}; // 상품번호 → {img} (불러오는 중이면 빈 객체)
 function _mallIdFor(name,size){
@@ -635,13 +635,13 @@ function _mallIdFor(name,size){
   }
   return byName;
 }
-// 제품 이름(배치 그룹 이름) → 불러온 Image, 아직 없으면 null (불러오기 시작, 다 되면 온장 배치 창 다시 그림)
+// 제품 이름(배치 그룹 이름) → 불러온 Image, 아직 없으면 null (불러오기 시작, 다 되면 원판 배치 창 다시 그림)
 function _slabImgFor(label){
   var p=_prodOf(label)||products[0];
   var id=p&&p.name?_mallIdFor(p.name,p.size):null;if(!id)return null;
   return _slabImgById(id);
 }
-// 상품번호로 온장 사진 (3D 제품 바꿔 보기도 씀)
+// 상품번호로 원판 사진 (3D 제품 바꿔 보기도 씀)
 function _slabImgById(id){
   if(_slabImgs[id])return _slabImgs[id].img||null;
   var ent=_slabImgs[id]={},sc=document.createElement('script');
@@ -660,7 +660,7 @@ function _boardLabel(board){
   if(board.prod){var j=_prodIdxOf(board.prod);if(j>=0)return _prodNames()[j];}
   return names[0]||'';
 }
-// 제품의 온장 크기(mm, 긴 쪽이 가로): 제품 사이즈 칸(예: 1600×3200×12T)에서, 없으면 도구줄 온장 칸
+// 제품의 원판 크기(mm, 긴 쪽이 가로): 제품 사이즈 칸(예: 1600×3200×12T)에서, 없으면 도구줄 원판 칸
 //   제품마다 사이즈가 다르면 장마다 크기가 다름 → board.bw/bh (_boardDims)
 function _prodBoardSize(name){
   var p=_prodOf(name);
@@ -669,11 +669,11 @@ function _prodBoardSize(name){
   return{bw:parseFloat((document.getElementById('board-w')||{}).value)||3200,bh:parseFloat((document.getElementById('board-h')||{}).value)||1600};
 }
 function _boardDims(board){return board&&board.bw?{bw:board.bw,bh:board.bh}:_prodBoardSize(_boardLabel(board||[]));}
-// 저장된 배치를 그대로 쓸 수 있는지: 온장 칸·제품별 사이즈가 그대로일 때만
+// 저장된 배치를 그대로 쓸 수 있는지: 원판 칸·제품별 사이즈가 그대로일 때만
 function _boardSizeSig(){return JSON.stringify([(document.getElementById('board-w')||{}).value,(document.getElementById('board-h')||{}).value,products.map(function(p){return (p.name||'').trim()+'|'+(p.size||'').trim();})]);}
-// 장 머리글: 온장 N · 제품명
-function _boardTitle(board,bi){var n=_boardLabel(board);return '온장 '+(bi+1)+(n?' · '+n:'');}
-// 온장 무늬: 가로로 긴 온장 사진을 온장 상자(bx,by,w,h px)에 맞춤 — 온장이 세로면 90° 돌려서
+// 장 머리글: 원판 N · 제품명
+function _boardTitle(board,bi){var n=_boardLabel(board);return '원판 '+(bi+1)+(n?' · '+n:'');}
+// 원판 무늬: 가로로 긴 원판 사진을 원판 상자(bx,by,w,h px)에 맞춤 — 원판이 세로면 90° 돌려서
 function _drawSlab(g,img,bx,by,w,h){
   g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high'; // 줄이거나 키울 때 뭉개짐 덜하게
   if((w>=h)===(img.width>=img.height)){g.drawImage(img,bx,by,w,h);return;}
@@ -766,7 +766,7 @@ function _prodOf(label){var i=_prodIdxOf(label);return i>=0?products[i]:null;}
 var _PCOLS=['#1F3F7A','#2E7D32','#6A1B9A','#D84315','#00838F','#AD1457','#4527A0','#827717'];
 function _prodColor(i){return _PCOLS[i%_PCOLS.length];}
 function _shapeProdIdx(s){var n=_prodNames(),i=s?_prodIdxOf(s.label):-1;if(i>=0)return i;for(var k=0;k<n.length;k++)if(n[k])return k;return 0;}
-// 온장 배치 조각(it.shape: rect/circle/ellipse/linegroup)의 제품 이름
+// 원판 배치 조각(it.shape: rect/circle/ellipse/linegroup)의 제품 이름
 function _itemProd(sh){
   var n=_prodNames();
   if(sh.kind==='linegroup'){for(var i=0;i<sh.lines.length;i++){var j=_prodIdxOf(sh.lines[i].label);if(j>=0)return n[j];}return n[_shapeProdIdx(null)]||'';}
@@ -785,7 +785,7 @@ function assignProduct(i){
   // 선 조각은 이어진 선 전체를 같은 제품으로
   _collectBoardItems().forEach(function(it){var sh=it.shape;if(sh.kind==='linegroup'&&sh.lines.some(function(l){return set.has(l);}))sh.lines.forEach(function(l){set.add(l);});});
   set.forEach(function(s){s.label=name;});
-  _savedBoardLayout=null;_savedBoardImg=null; // 제품이 바뀌면 온장 배치는 새로
+  _savedBoardLayout=null;_savedBoardImg=null; // 제품이 바뀌면 원판 배치는 새로
   redraw();calcCost();
 }
 // 제품 이름을 고치면 그 제품으로 정한 도형도 따라감 (_prodNames가 구분 이름 바뀐 것을 옮김)
@@ -811,11 +811,11 @@ function _prodRow(i){
   // 제품명 바로 옆 ✕: 제품이 여러 개면 그 줄 빼기, 하나뿐이면 제품명·사이즈 비우기
   if(products.length>1||p.name||p.size)h+='<button class="prod-del" onclick="removeProduct('+i+')" title="'+(products.length>1?'이 제품 빼기':'제품명·사이즈 지우기')+'">✕</button>';
   h+='<input type="text" class="wb-size" placeholder="사이즈 (예: 1600×3200)" value="'+escHtml(p.size||'')+'" oninput="_prodNames();products['+i+'].size=this.value;_prodNames();redraw()">';
-  h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="온장 배치 장수 (도형에 따라 자동)">';
+  h+='<span class="wb-lbl">수량</span><span class="wb-qty" title="원판 배치 장수 (도형에 따라 자동)">';
   h+='<input type="text" id="pq-'+i+'" value="'+(p.qty||0)+'" readonly tabindex="-1" style="width:34px;border-radius:2px!important;cursor:default"><span class="wb-lbl" style="margin-left:3px">장</span></span>';
   return h+'</div>';
 }
-// 제품을 고르면 온장 사이즈도 그 제품 크기로 (예: 1600×3200×12T → 온장 3200 × 1600, 긴 쪽이 가로)
+// 제품을 고르면 원판 사이즈도 그 제품 크기로 (예: 1600×3200×12T → 원판 3200 × 1600, 긴 쪽이 가로)
 function _setBoardFromSize(size){
   var m=/(\d{3,4})\s*[x×X*]\s*(\d{3,4})/.exec(size||'');if(!m)return;
   var a=+m[1],b=+m[2],bw=document.getElementById('board-w'),bh=document.getElementById('board-h');
@@ -833,7 +833,7 @@ function renderProductList(){
   var n=products.length,html='';
   for(var i=0;i<n;i++){
     html+='<div class="wb-prow">'+(i===0?'<span class="wb-lbl wb-head">제품</span>':'<span class="wb-head"></span>')+_prodRow(i);
-    if(i===n-1)html+='<button class="wb-more" onclick="addProduct()" title="제품 하나 더 추가 (온장 배치에서 장마다 제품을 고를 수 있음)">+ 제품</button>';
+    if(i===n-1)html+='<button class="wb-more" onclick="addProduct()" title="제품 하나 더 추가 (원판 배치에서 장마다 제품을 고를 수 있음)">+ 제품</button>';
     html+='</div>';
   }
   container.innerHTML=html;
@@ -1121,8 +1121,8 @@ var _endDrag=null; // 화살표·연결 표시 끝점 끌기 {s, w:1|2}
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15,dimDragL0=null,dimDragSnap=null;
-var _savedBoardLayout=null; // 마지막 온장 배치 저장
-var _savedBoardImg=null; // 마지막 온장 배치 렌더링 이미지 (도면화용)
+var _savedBoardLayout=null; // 마지막 원판 배치 저장
+var _savedBoardImg=null; // 마지막 원판 배치 렌더링 이미지 (도면화용)
 var grind150mode=false;
 var grind100mode=false;
 var dimLineType='dist'; // 'dist' | 'r' | 'phi'
@@ -3169,7 +3169,7 @@ function clearAll(){
   redraw();calcCost();updatePropsPanel(); // (예전 updateCost는 없는 함수라 여기서 멈춰 가공비가 안 바뀌었음)
 }
 
-// 새로만들기: 도형 + 작업 정보(업체명/주소·제품·출고일) + 기타 비용 + 저장된 온장 배치를 비움. 단가·등급·온장 칸은 그대로 (되돌리기로 도형은 복구)
+// 새로만들기: 도형 + 작업 정보(업체명/주소·제품·출고일) + 기타 비용 + 저장된 원판 배치를 비움. 단가·등급·원판 칸은 그대로 (되돌리기로 도형은 복구)
 function newProject(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
   if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
@@ -3327,7 +3327,7 @@ function _doSave(){
 // ═══ DXF 불러오기 (오토캐드 → 다른 이름으로 저장 → DXF) ═══
 // 지원: LINE, LWPOLYLINE, POLYLINE(구형), CIRCLE, ARC. 모형 공간만, 블록/치수/글자/해치 등은 무시.
 // - 직각 닫힌 사각형(폴리선 또는 선 4개) → 사각 절단 (RECTANG 모깎기/모따기 사각형은 라운드/모따기 코너로)
-// - 그 외 선/폴리선 → 선 절단. 곡선은 직선 여러 개로 근사(선 절단 조각·온장 배치에 그대로 연결되도록)
+// - 그 외 선/폴리선 → 선 절단. 곡선은 직선 여러 개로 근사(선 절단 조각·원판 배치에 그대로 연결되도록)
 // - 원: 지름 300 이상 → 원형 절단, 그 외 → 현재 선택된 타공 종류
 function _parseDxfEntities(text){
   // 큰 파일(삽입된 이미지/OLE 등으로 수십 MB)도 가볍게: 줄 배열만 만들고 HEADER/ENTITIES 외 구간은 값 해석 없이 건너뜀
@@ -3800,7 +3800,7 @@ function _dxfCollect(H){
       if(_rightAngle(s.rotation)){
         var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),Bt=q.y+Math.abs(q.h),hd=s.hideDims||{};
         if(cut){if(!hd.w)dim([L,T],[R,T],[0,1],H*2.2,_fmtDim(R-L));if(!hd.h)dim([L,T],[L,Bt],[1,0],H*2.2,_fmtDim(Bt-T));}
-        else{var ff=_fullBoardFit(s); // 온장 그대로 사이즈 표기 (온장 배치에서 그 방향으로 놓았을 때만)
+        else{var ff=_fullBoardFit(s); // 원판 그대로 사이즈 표기 (원판 배치에서 그 방향으로 놓았을 때만)
           if(!hd.w)dim([L,T],[R,T],[0,-1],H*3,_fmtDim(R-L)+(ff.w?' '+_FULL_TXT:''));if(!hd.h)dim([L,T],[L,Bt],[-1,0],H*3,_fmtDim(Bt-T)+(ff.h?' '+_FULL_TXT:''));}
       }
       if(!cut&&s.pieceName){
@@ -4394,7 +4394,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         _setSiteInfo(data.company,data.siteAddr);
         document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
         document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
-        // 저장해 둔 온장 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
+        // 저장해 둔 원판 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
         _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;
         // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
         //   비교는 계산에 쓸 등급(파일의 등급, 없으면 지금 등급)만, 쉼표·띄어쓰기 무시하고 숫자로, 한쪽이라도 빈 칸이면 비교 안 함
@@ -4893,7 +4893,7 @@ function finalizeShape(fmx,fmy){
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main',applianceType:'cook'});
     saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
-  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];if(tool!=='note'&&tool!=='arrow'&&tool!=='linkmark'){_savedBoardLayout=null;_savedBoardImg=null;}} // 주석은 온장 배치와 무관
+  if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];if(tool!=='note'&&tool!=='arrow'&&tool!=='linkmark'){_savedBoardLayout=null;_savedBoardImg=null;}} // 주석은 원판 배치와 무관
   else{}
   drawStart=null;lastMx=null;lastMy=null;
   // 연속 그리기 모드 — ESC로 select 복귀 (keydown 핸들러에서 처리)
@@ -4951,7 +4951,7 @@ function _autoPieceNums(lgRep){
   var nums={},n=0;
   var rects=shapes.filter(function(o){return o.kind==='rect';});
   shapes.forEach(function(s,i){
-    // 다른 사각형 안에 들어있는 사각형(CAD로 그린 싱크볼 외곽 등)은 조각이 아님 — 온장 배치와 같은 기준
+    // 다른 사각형 안에 들어있는 사각형(CAD로 그린 싱크볼 외곽 등)은 조각이 아님 — 원판 배치와 같은 기준
     var piece=s.kind==='rect'&&!s.groupId&&!rects.some(function(o){return o!==s&&isInsideRect(s,o);});
     if(piece||(s.kind==='line'&&lgRep[i]))nums[i]=++n;
   });
@@ -4975,7 +4975,7 @@ function _lineGroupReps(){
   });
   return _lgRep;
 }
-// 온장 배치 피스의 번호 (도면 배지와 동일). 번호 없는 피스(원형 등)는 ''
+// 원판 배치 피스의 번호 (도면 배지와 동일). 번호 없는 피스(원형 등)는 ''
 function _boardPieceNum(sh,autoNums){
   var src=sh.kind==='linegroup'?sh.lines:[sh];
   for(var i=0;i<src.length;i++){if(src[i].shapeNum!==undefined&&src[i].shapeNum!=='')return String(src[i].shapeNum);}
@@ -5733,7 +5733,7 @@ document.addEventListener('mouseup',function(e){
 });
 
 cv.addEventListener('wheel',function(e){
-  e.preventDefault();var f=e.deltaY<0?1.1:0.9;
+  e.preventDefault();var f=e.deltaY<0?1.1:1/1.1; // 확대·축소 같은 비율 → 한 칸 들어갔다 나오면 처음 배율 그대로 (예전 0.9는 조금씩 작아졌음)
   var mx2=(e.offsetX-offsetX)/scale,my2=(e.offsetY-offsetY)/scale;
   scale=Math.max(0.01,Math.min(scale*f,20));
   offsetX=e.offsetX-mx2*scale;offsetY=e.offsetY-my2*scale;redraw();
@@ -5955,7 +5955,7 @@ function loadAllTierPrices(){
   });
 }
 function calcCost(){
-  _fullVer++; // 온장 그대로 판정 다시
+  _fullVer++; // 원판 그대로 판정 다시
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
   var cnt={sink:0,cook:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
   shapes.forEach(function(s){
@@ -5967,7 +5967,7 @@ function calcCost(){
       } else if(!s.groupId){
         var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s),_vb=s.rotation?getBBox(s):null;
         var _vw=_vb?_vb.r-_vb.l:Math.abs(s.w),_vh=_vb?_vb.b-_vb.t:Math.abs(s.h);
-        // 온장 배치에서 온장 그대로 사이즈인 방향의 양쪽 면은 온장 원래 끝면이라 절단비 없음 (w가 온장 폭이면 h 길이 두 면)
+        // 원판 배치에서 원판 그대로 사이즈인 방향의 양쪽 면은 원판 원래 끝면이라 절단비 없음 (w가 원판 폭이면 h 길이 두 면)
         if(_ff.w)_rl-=2*_vh;if(_ff.h)_rl-=2*_vw;
         lenMm.rect+=Math.max(0,_rl);
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
@@ -5990,7 +5990,7 @@ function calcCost(){
       lenMm.gosra+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     }
   });
-  var qty=1; // 수량은 온장 장수(_updateBoardQty)일 뿐, 가공을 여러 번 하는 게 아니라서 가공비에 곱하지 않음
+  var qty=1; // 수량은 원판 장수(_updateBoardQty)일 뿐, 가공을 여러 번 하는 게 아니라서 가공비에 곱하지 않음
   function gp(id){var el=document.getElementById(id);if(!el)return 0;return parseFloat((el.value||'').replace(/,/g,''))||0;}
   function gta(k){
     var pfx=TIER_PREFIX[_tier]||'su-';
@@ -6042,7 +6042,7 @@ function calcCost(){
   if(st)st.textContent=Math.round(grand).toLocaleString();
   _scheduleBoardQty();
 }
-// 제품 수량 = 온장 배치 장수 (자동). 손으로 고친 배치가 남아 있으면 그 장수, 없으면 자동 배치로 계산
+// 제품 수량 = 원판 배치 장수 (자동). 손으로 고친 배치가 남아 있으면 그 장수, 없으면 자동 배치로 계산
 //   여러 제품이면 도형에 붙인 제품 이름(배치 그룹)별로, 제품이 안 붙은 조각의 장수는 첫 제품에
 var _bqTimer=null;
 function _scheduleBoardQty(){clearTimeout(_bqTimer);_bqTimer=setTimeout(_updateBoardQty,120);}
@@ -6057,7 +6057,7 @@ function _updateBoardQty(){
   products.forEach(function(p){p.qty=0;});
   function add(label,n){var i=_prodIdxOf(label);products[Math.max(0,i)].qty+=n;}
   boards.forEach(function(b){if(b&&b.length)add(_boardLabel(b),1);}); // 장마다 고른 제품별로 셈
-  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor(_prodNames()[i]);}); // 온장 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
+  products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor(_prodNames()[i]);}); // 원판 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
 }
 function deleteSelected(){
   if(!selectedShapes.length)return;
@@ -6225,7 +6225,7 @@ function updatePropsPanel(){
   }
   var s=selectedShapes[0],html='';
   if(s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark'){pp.innerHTML=_annPropsHtml(s);return;}
-  // (제품은 도형마다 붙이지 않고 온장 배치에서 장마다 고름)
+  // (제품은 도형마다 붙이지 않고 원판 배치에서 장마다 고름)
   html+='<div class="prop-row"><label>번호:</label><input type="text" value="'+(s.shapeNum||'')+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>';
   if(s.kind==='rect'){
     html+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="0.5" oninput="liveProp(\'w\',this.value)"></div>';
@@ -6440,7 +6440,7 @@ function liveGroupProp(fld,val){
   syncGroupShapes(s);redraw();calcCost();
 }
 
-// ═══ 온장 배치 ═══
+// ═══ 원판 배치 ═══
 // 배치할 피스 목록: rect/circle/hole/ellipse + 연결된 선 그룹 → [{shape,w,h,label}]
 // 선 조각을 th(라디안, 화면 좌표 기준 시계 +)만큼 돌렸을 때의 상자 {x0,y0,w,h}
 function _rotBox(lines,th){
@@ -6472,29 +6472,29 @@ function _lineDimPlan(lines){
   });
   return plan;
 }
-// 온장 그대로 사이즈: 사각 조각을 온장 배치에서 온장 가로(세로)와 같은 길이의 변이 온장 가로(세로) 방향이 되게 놓았을 때만
-//   (1600×3200 온장에 1600 변을 1600 방향으로) 그 방향은 온장 원래 끝면 그대로
-//   → 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "온장 그대로 사이즈". 1600 변을 3200 방향으로 놓으면 보통 조각
-var _FULL_TXT='온장 그대로 사이즈';
-// 조각 한 변이 그 제품 온장의 폭이나 길이와 같은지 (실제로 온장 그대로인지는 배치 방향으로 정함: _placeDims)
+// 원판 그대로 사이즈: 사각 조각을 원판 배치에서 원판 가로(세로)와 같은 길이의 변이 원판 가로(세로) 방향이 되게 놓았을 때만
+//   (1600×3200 원판에 1600 변을 1600 방향으로) 그 방향은 원판 원래 끝면 그대로
+//   → 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "원판 그대로 사이즈". 1600 변을 3200 방향으로 놓으면 보통 조각
+var _FULL_TXT='원판 그대로 사이즈';
+// 조각 한 변이 그 제품 원판의 폭이나 길이와 같은지 (실제로 원판 그대로인지는 배치 방향으로 정함: _placeDims)
 function _fullElig(s,w,h){
   var sz=_prodBoardSize(_itemProd(s));
   return [w,h].some(function(d){return Math.abs(d-sz.bw)<0.5||Math.abs(d-sz.bh)<0.5;});
 }
-// 배치 칸 크기(유효 영역 ew×eh 기준): 온장 가로(ew+여백 20)와 같은 변을 가로로 놓으면 그 방향은 온장 그대로 → 칸은 ew. 세로도 같음
+// 배치 칸 크기(유효 영역 ew×eh 기준): 원판 가로(ew+여백 20)와 같은 변을 가로로 놓으면 그 방향은 원판 그대로 → 칸은 ew. 세로도 같음
 function _placeDims(it,rotated,ew,eh){
   var dx=rotated?it.h:it.w,dy=rotated?it.w:it.h,fx=false,fy=false;
   if(it.full){fx=Math.abs(dx-ew-20)<0.5&&dy<=eh+20.5;fy=Math.abs(dy-eh-20)<0.5&&dx<=ew+20.5;}
   return{pw:fx?ew:dx,ph:fy?eh:dy,fx:fx,fy:fy};
 }
-// 배치된 조각이 온장 그대로인 방향(온장 x/y): 칸이 조각 실제 크기보다 작으면 그 방향
+// 배치된 조각이 원판 그대로인 방향(원판 x/y): 칸이 조각 실제 크기보다 작으면 그 방향
 function _pFull(p){
   var it=p.item;if(!it||!it.full)return{x:false,y:false};
   var dx=p.rotated?it.h:it.w,dy=p.rotated?it.w:it.h;
   return{x:p.pw<dx-0.5,y:p.ph<dy-0.5};
 }
 function _pLabel(p){var f=_pFull(p);return (p.item.label||'')+(f.x||f.y?' '+_FULL_TXT:'');}
-// 도형이 지금 온장 배치(손으로 고친 배치, 없으면 자동)에서 온장 그대로인 방향 — 도형 화면 상자 w/h 기준
+// 도형이 지금 원판 배치(손으로 고친 배치, 없으면 자동)에서 원판 그대로인 방향 — 도형 화면 상자 w/h 기준
 var _fullCache=null,_fullVer=0; // calcCost마다 _fullVer++ → 다시 계산
 function _fullBoardFit(s){
   var key=_fullVer+'|'+_boardSizeSig();
@@ -6555,7 +6555,7 @@ function _collectBoardItems(){
     var pseudo={kind:'linegroup',lines:grp,x:lx1,y:ly1,w:lw,h:lh};
     pieces.push(pseudo);
   }
-  // 선으로 그린 조각 안에 든 사각형·원 = 타공(따로 온장에 배치하지 않음)
+  // 선으로 그린 조각 안에 든 사각형·원 = 타공(따로 원판에 배치하지 않음)
   var lgs=pieces.filter(function(p){return p.kind==='linegroup'&&p.lines.length>=3;});
   if(lgs.length)pieces=pieces.filter(function(s){
     if(s.kind==='linegroup')return true;
@@ -6575,15 +6575,15 @@ function _collectBoardItems(){
       w=Math.abs(s.w);h=Math.abs(s.h);
       if(s.rotation){var _rb=getBBox(s);w=_rb.r-_rb.l;h=_rb.b-_rb.t;} // 돌린 사각형은 화면에 보이는 상자 크기로 (그리는 모양과 맞춤)
       label=Math.round(w)+'×'+Math.round(h);
-      // 온장 그대로 사이즈가 될 수 있는 조각: 그 방향으로 놓으면 배치 칸을 여백만큼 줄이고(_placeDims), 그릴 때 온장 끝까지 늘림(_boardPiece)
+      // 원판 그대로 사이즈가 될 수 있는 조각: 그 방향으로 놓으면 배치 칸을 여백만큼 줄이고(_placeDims), 그릴 때 원판 끝까지 늘림(_boardPiece)
       if(_fullElig(s,w,h))return{shape:s,w:w,h:h,label:label,full:true};
     }
     else if(s.kind==='circle'||s.kind==='hole'){w=s.r*2;h=s.r*2;label='Φ'+w.toFixed(0);}
     else if(s.kind==='ellipse'){var _eh=_ellHalf(s);w=_eh[0]*2;h=_eh[1]*2;label='타원 '+(s.rx*2).toFixed(0)+'×'+(s.ry*2).toFixed(0);} // 칸 = 회전 포함 상자, 글자 = 장축×단축
     else if(s.kind==='linegroup'){
       w=s.w;h=s.h;
-      // 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌려서 배치
-      var _sz=_prodBoardSize(_itemProd(s)),_ew=_sz.bw-20,_eh=_sz.bh-20; // 이 조각 제품의 온장 유효 영역 (여백 10)
+      // 그대로 원판에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌려서 배치
+      var _sz=_prodBoardSize(_itemProd(s)),_ew=_sz.bw-20,_eh=_sz.bh-20; // 이 조각 제품의 원판 유효 영역 (여백 10)
       var fit=function(a,b){return (a<=_ew&&b<=_eh)||(b<=_ew&&a<=_eh);};
       if(!fit(w,h)){
         var best=null;
@@ -6612,9 +6612,9 @@ function _packBoardItems(items,ew,eh,gap){
   var allBoards=[],groupMeta=[];
   _grpOrder.forEach(function(lbl,gi){
     var grpItems=_grpMap[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});
-    var sz=_prodBoardSize(lbl); // 제품마다 온장 크기가 다를 수 있음
+    var sz=_prodBoardSize(lbl); // 제품마다 원판 크기가 다를 수 있음
     var grpBoards=packBoards(grpItems,sz.bw-20,sz.bh-20,gap);
-    // 온장 그대로 방향으로 놓는 게 장수를 늘리면, 보통 조각처럼(실제 크기로) 배치한 쪽이 장수가 적을 때 그쪽으로
+    // 원판 그대로 방향으로 놓는 게 장수를 늘리면, 보통 조각처럼(실제 크기로) 배치한 쪽이 장수가 적을 때 그쪽으로
     if(grpItems.some(function(it){return it.full;})){
       var _orig=new Map(),_plain=grpItems.map(function(it){if(!it.full)return it;var c=Object.assign({},it,{full:false});_orig.set(c,it);return c;});
       var _alt=packBoards(_plain,sz.bw-20,sz.bh-20,gap);
@@ -6644,8 +6644,8 @@ function _restoreSavedBoards(saved,items){
       else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
       if(!it){ok=false;return null;}
       var _it={shape:it.shape,w:_w,h:_h,label:it.label||p.label};
-      if(it.full){ // 온장 그대로 사이즈가 될 수 있는 조각: 그 방향이면 칸이 여백만큼 작음
-        // 칸 크기가 지금 규칙과 다르면(방향과 상관없이 줄여 두던 예전 파일) 같은 자리에 지금 규칙 크기로 — 온장 밖·겹침이면 아래에서 새로 배치
+      if(it.full){ // 원판 그대로 사이즈가 될 수 있는 조각: 그 방향이면 칸이 여백만큼 작음
+        // 칸 크기가 지금 규칙과 다르면(방향과 상관없이 줄여 두던 예전 파일) 같은 자리에 지금 규칙 크기로 — 원판 밖·겹침이면 아래에서 새로 배치
         var aw=bsz.bw-2*mg,ah=bsz.bh-2*mg,d=_placeDims(it,!!p.rotated,aw,ah);
         if(Math.abs(d.pw-p.pw)>1||Math.abs(d.ph-p.ph)>1){
           var nx=Math.min(p.x,aw-d.pw),ny=Math.min(p.y,ah-d.ph);if(nx<-0.5||ny<-0.5){ok=false;return null;}
@@ -6671,7 +6671,7 @@ function _restoreSavedBoards(saved,items){
   boards.forEach(function(b){b.forEach(function(p){delete p._adj;});});
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
-    var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 온장 크기
+    var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 원판 크기
   });
   return boards;
 }
@@ -6688,7 +6688,7 @@ function showBoardLayout(){
   var _canRestore=_savedBoardLayout&&(_savedBoardLayout.sig?_savedBoardLayout.sig===_boardSizeSig():(_savedBoardLayout.bw===bw&&_savedBoardLayout.bh===bh));
   var _rBoards=_canRestore?_restoreSavedBoards(_savedBoardLayout,items):null;
   var useBoards=_rBoards||allBoards;
-  // 화면 배치 칸은 가장 큰 온장 기준 (장마다 크기가 다르면 각자 크기로 그림)
+  // 화면 배치 칸은 가장 큰 원판 기준 (장마다 크기가 다르면 각자 크기로 그림)
   bw=0;bh=0;useBoards.forEach(function(b){var d=_boardDims(b);bw=Math.max(bw,d.bw);bh=Math.max(bh,d.bh);});
   if(!bw){var d0=_prodBoardSize('');bw=d0.bw;bh=d0.bh;}
   ew=bw-2*margin;eh=bh-2*margin;
@@ -6696,7 +6696,7 @@ function showBoardLayout(){
   var totalPlaced=allBoards.reduce(function(a,b){return a+b.length;},0);
   var infoEl=document.getElementById('board-modal-info');
   var _sizes=[];useBoards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
-  var infoStr='온장 '+_sizes.join(', ')+' mm | '+useBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
+  var infoStr='원판 '+_sizes.join(', ')+' mm | '+useBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
   infoStr+=' | <span style="color:#75839C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
   infoEl.innerHTML=infoStr;
 
@@ -6746,7 +6746,7 @@ function packOneBoard(items,ew,eh,gap){
   for(var i=0;i<items.length;i++){
     var it=items[i];
     var cands=[];
-    var d0=_placeDims(it,false,ew,eh),d1=_placeDims(it,true,ew,eh); // 온장 그대로 방향이면 칸이 여백만큼 작아짐
+    var d0=_placeDims(it,false,ew,eh),d1=_placeDims(it,true,ew,eh); // 원판 그대로 방향이면 칸이 여백만큼 작아짐
     if(d0.pw<=ew&&d0.ph<=eh)cands.push({pw:d0.pw,ph:d0.ph,rot:false});
     if(Math.round(it.w)!==Math.round(it.h)&&d1.pw<=ew&&d1.ph<=eh)cands.push({pw:d1.pw,ph:d1.ph,rot:true});
     if(!cands.length){unplaced.push(it);continue;}
@@ -6786,10 +6786,10 @@ function packBoards(sorted,ew,eh,gap){
   return boards;
 }
 
-// ─── 온장 배치 인터랙션 상태 ───
+// ─── 원판 배치 인터랙션 상태 ───
 var _bs=null; // board state: {boards,bw,bh,ew,eh,margin,gap,sc,boardPxW,boardPxH,startX,startY,gap2,selectedPiece,dragOffX,dragOffY}
 
-// 장(bi)의 유효 영역(mm): 제품마다 온장 크기가 다를 수 있음
+// 장(bi)의 유효 영역(mm): 제품마다 원판 크기가 다를 수 있음
 function _bsArea(bi){var d=_boardDims(_bs.boards[bi]);return{ew:d.bw-2*_bs.margin,eh:d.bh-2*_bs.margin};}
 function _bsHitTest(ex,ey){
   if(!_bs)return null;
@@ -6877,13 +6877,13 @@ function _bsInitEvents(){
       if(ans==null)return;var deg=parseFloat(ans);if(!isFinite(deg)){alert('숫자로 입력해 주세요.');return;}
       var th=-deg*Math.PI/180,rb=_rotBox(sh.lines,th);
       var fitN=rb.w<=EW+0.01&&rb.h<=EH+0.01;
-      if(!fitN){alert(deg+'°로 돌리면 '+Math.round(rb.w)+'×'+Math.round(rb.h)+' 이라 온장 유효 영역('+EW+'×'+EH+')에 들어가지 않습니다.');return;}
+      if(!fitN){alert(deg+'°로 돌리면 '+Math.round(rb.w)+'×'+Math.round(rb.h)+' 이라 원판 유효 영역('+EW+'×'+EH+')에 들어가지 않습니다.');return;}
       if(Math.abs(th)<1e-9){delete p.item.rot;delete p.item.rx0;delete p.item.ry0;}
       else{p.item.rot=th;p.item.rx0=rb.x0;p.item.ry0=rb.y0;}
       p.item.w=rb.w;p.item.h=rb.h;p.item.label=Math.round(rb.w)+'×'+Math.round(rb.h);
       p.rotated=false;p.pw=rb.w;p.ph=rb.h;
     } else {
-      var nd=_placeDims(p.item,!p.rotated,EW,EH),newPw=nd.pw,newPh=nd.ph; // 온장 그대로 방향이 바뀌면 칸 크기도
+      var nd=_placeDims(p.item,!p.rotated,EW,EH),newPw=nd.pw,newPh=nd.ph; // 원판 그대로 방향이 바뀌면 칸 크기도
       if(newPw>EW+0.01||newPh>EH+0.01)return; // 초과 시 무시
       p.pw=newPw;p.ph=newPh;p.rotated=!p.rotated;
     }
@@ -7065,18 +7065,18 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   bcv.width=cw||(wrap?wrap.clientWidth:800)||800;
   bcv.height=ch||(wrap?wrap.clientHeight:500)||500;
   var bctx=bcv.getContext('2d');
-  // 도면화 2쪽 온장 배치와 같은 모양 (흰 바탕, 회색 온장, 도면과 같은 조각 색)
+  // 도면화 2쪽 원판 배치와 같은 모양 (흰 바탕, 회색 원판, 도면과 같은 조각 색)
   bctx.fillStyle='#ffffff';bctx.fillRect(0,0,bcv.width,bcv.height);
 
   var n=boards.length;
-  var pad=24,gap2=44,headerH=18,groupGap=14,TH=34; // TH: 장 머리글(온장 N · 크기 · 사용률) 자리
+  var pad=24,gap2=44,headerH=18,groupGap=14,TH=34; // TH: 장 머리글(원판 N · 크기 · 사용률) 자리
   var groups=(_bs&&_bs.groups&&_bs.groups.length>0)?_bs.groups:null;
 
   var sc,boardPxW,boardPxH;
   var boardOffsets=[];
 
   if(groups&&groups.length>1&&targetCanvas){
-    // 그룹별 행 레이아웃: 각 그룹을 별도 행으로 (그림으로 내보낼 때만 — 온장 배치 창은 제품이 여러 개여도 한 쪽에 2장씩)
+    // 그룹별 행 레이아웃: 각 그룹을 별도 행으로 (그림으로 내보낼 때만 — 원판 배치 창은 제품이 여러 개여도 한 쪽에 2장씩)
     var maxCount=1;
     groups.forEach(function(g){if(g.count>maxCount)maxCount=g.count;});
     var numGroups=groups.length;
@@ -7163,10 +7163,10 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     var ox=off.ox,oy=off.oy;
     var mg=margin*sc;
 
-    // 장 머리글 + 온장
-    // 머리글 "온장 N · 제품명" (제품은 도형에 정한 제품)
+    // 장 머리글 + 원판
+    // 머리글 "원판 N · 제품명" (제품은 도형에 정한 제품)
     var _biLbl=_boardTitle(placed,bi);
-    var _bd=_boardDims(placed); // 이 장의 온장 크기 (제품마다 다를 수 있음, 칸은 가장 큰 온장 기준)
+    var _bd=_boardDims(placed); // 이 장의 원판 크기 (제품마다 다를 수 있음, 칸은 가장 큰 원판 기준)
     var _img=_slabImgFor(_boardLabel(placed)),_tex={img:_img,bx:ox,by:oy,w:_bd.bw*sc,h:_bd.bh*sc,board:placed};
     _boardFrame(bctx,ox,oy,_biLbl,placed,_bd.bw,_bd.bh,sc,k,_img);
 
@@ -7240,8 +7240,8 @@ function movePieceTo(dir){
   // 대상 장이 없으면 새로 추가 (제품은 원래 장과 같게)
   var _srcProd=_boardLabel(_bs.boards[srcBi]);
   if(tgtBi>=_bs.boards.length){var _nb=[];_nb.prod=_srcProd;_bs.boards.push(_nb);}
-  // 다른 제품 장으로는 못 옮김 (온장 크기·무늬가 다름) — 제품은 도면에서 바꿈
-  if(_bs.boards[tgtBi].length&&_boardLabel(_bs.boards[tgtBi])!==_srcProd){alert('다른 제품의 온장으로는 옮길 수 없습니다.\n제품을 바꾸려면 도면에서 그 조각을 선택하고 제품 ● 을 눌러 주세요.');return;}
+  // 다른 제품 장으로는 못 옮김 (원판 크기·무늬가 다름) — 제품은 도면에서 바꿈
+  if(_bs.boards[tgtBi].length&&_boardLabel(_bs.boards[tgtBi])!==_srcProd){alert('다른 제품의 원판으로는 옮길 수 없습니다.\n제품을 바꾸려면 도면에서 그 조각을 선택하고 제품 ● 을 눌러 주세요.');return;}
   // 피스를 원본 장에서 제거
   var idx=_bs.boards[srcBi].indexOf(p);
   if(idx>=0)_bs.boards[srcBi].splice(idx,1);
@@ -7268,7 +7268,7 @@ function goBoardPage(dir){
   _bs.boardPage=Math.max(0,Math.min((_bs.boardPage||0)+dir,totalPages-1));
   renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
 }
-// 온장 배치 창이 열려 있으면 ← → = 쪽 넘기기
+// 원판 배치 창이 열려 있으면 ← → = 쪽 넘기기
 document.addEventListener('keydown',function(e){
   var md=document.getElementById('board-modal');if(!md||!md.classList.contains('show')||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||''))return;
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){var b=document.getElementById(e.key==='ArrowLeft'?'board-prev-btn':'board-next-btn');if(b&&b.style.display!=='none'&&!b.disabled){goBoardPage(e.key==='ArrowLeft'?-1:1);e.preventDefault();e.stopPropagation();}}
@@ -7277,8 +7277,8 @@ function closeBoardModal(){
   // 현재 배치 상태 저장
   if(_bs&&_bs.boards){
     _savedBoardLayout={bw:_bs.bw,bh:_bs.bh,ew:_bs.ew,eh:_bs.eh,margin:_bs.margin,gap:_bs.gap,
-      sig:_boardSizeSig(), // 온장 칸·제품 사이즈가 바뀌면 새로 배치
-      boardSizes:_bs.boards.map(function(b){return _boardDims(b);}), // 장마다 온장 크기
+      sig:_boardSizeSig(), // 원판 칸·제품 사이즈가 바뀌면 새로 배치
+      boardSizes:_bs.boards.map(function(b){return _boardDims(b);}), // 장마다 원판 크기
       groups:_bs.groups,
       boardProds:_bs.boards.map(function(b){return _boardLabel(b);}), // 장마다 제품
       boards:_bs.boards.map(function(board){
@@ -7303,7 +7303,7 @@ function closeBoardModal(){
   }
   document.getElementById('board-modal').classList.remove('show');
   _updateBoardQty(); // 손으로 고친 배치 장수를 수량에
-  calcCost(); // 온장 그대로 사이즈는 배치 방향에 따라 절단비가 달라짐
+  calcCost(); // 원판 그대로 사이즈는 배치 방향에 따라 절단비가 달라짐
 }
 function resetBoardLayout(){
   _savedBoardLayout=null;_savedBoardImg=null;
@@ -7329,7 +7329,7 @@ function _expPieceContains(pc,x,y){
   if(s.kind==='linegroup'){var inside=false;s.lines.forEach(function(l){if((l.y1>y)!==(l.y2>y)){var xi=l.x1+(y-l.y1)*(l.x2-l.x1)/(l.y2-l.y1);if(xi>x)inside=!inside;}});return inside;}
   return false;
 }
-// 조각/타공부/타공 분류 (온장 배치와 같은 조각 기준)
+// 조각/타공부/타공 분류 (원판 배치와 같은 조각 기준)
 function _expCollect(){
   var items=_collectBoardItems(),pieces=[];
   items.forEach(function(it){
@@ -7787,7 +7787,7 @@ function _drawCleanExport(){
     if(s.kind==='rect'){
       var g=_expRectGeo(s),bx=pieceBoxesPx[pi],band=DOFF+70;
       var ff=_fullBoardFit(s);if(Math.abs(Math.sin(g.rot||0))>0.5)ff={w:ff.h,h:ff.w}; // ff는 화면 상자 기준 → 도형 w/h 기준으로
-      var tW=_fmtDim(g.w)+(ff.w?' '+_FULL_TXT:''),tH=_fmtDim(g.h)+(ff.h?' '+_FULL_TXT:''); // 온장 그대로 사이즈 표기
+      var tW=_fmtDim(g.w)+(ff.w?' '+_FULL_TXT:''),tH=_fmtDim(g.h)+(ff.h?' '+_FULL_TXT:''); // 원판 그대로 사이즈 표기
       if(_rightAngle(s.rotation)){ // 화면상 상자 기준 (90° 돌렸으면 폭·높이 글자를 바꿔서)
         var q=_axisBox(s),L=q.x,T=q.y,R=q.x+Math.abs(q.w),B=q.y+Math.abs(q.h),sw=Math.abs(Math.sin(g.rot))>0.5;
         var hdW=sw?hd.h:hd.w,hdH=sw?hd.w:hd.h;
@@ -7990,12 +7990,12 @@ function _expChain(lines){
   }
   return eq(pts[0],pts[pts.length-1])&&pts.length>3?pts:null;
 }
-// ═══ 도면화 2페이지: 온장 배치 (도면과 같은 조각 색) ═══
+// ═══ 도면화 2페이지: 원판 배치 (도면과 같은 조각 색) ═══
 function _hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
-function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전체 번호(쪽을 나눠 그릴 때 "온장 N" 번호 유지)
+function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전체 번호(쪽을 나눠 그릴 때 "원판 N" 번호 유지)
   bi0=bi0||0;
   var g=cvs.getContext('2d'),W=cvs.width,H=cvs.height,PAD=40;
-  // 칸은 가장 큰 온장 기준, 장마다 자기 크기로 그림
+  // 칸은 가장 큰 원판 기준, 장마다 자기 크기로 그림
   if(boards.length){bw=0;bh=0;boards.forEach(function(b){var d=_boardDims(b);bw=Math.max(bw,d.bw);bh=Math.max(bh,d.bh);});}
   g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
   // 장 수에 맞춰 가장 크게 보이는 행/열 배치
@@ -8015,15 +8015,15 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전
     _boardSheen(g,bx,by,d.bw*sc,d.bh*sc,_prodGloss(_boardLabel(board)),1); // 유광이면 반사 띠 + 표
   });
 }
-// ── 온장 배치 그리기 공통 (도면화 2쪽 · 온장 배치 창이 같은 모양) ── k: 글자·선 크기 배율(도면화=1)
+// ── 원판 배치 그리기 공통 (도면화 2쪽 · 원판 배치 창이 같은 모양) ── k: 글자·선 크기 배율(도면화=1)
 function _boardDrawRef(){
   var pieces=_expCollect(),info=new Map();
   function keyOf(s){return s&&s.kind==='linegroup'?s.lines[0]:s;}
   pieces.forEach(function(p){info.set(keyOf(p.s),p);});
   return{info:info,keyOf:keyOf,auto:showShapeNumbers?_autoPieceNums():null};
 }
-// 장 머리글(이름 · 크기 · 사용률) + 온장(남는 부분 = 회색)
-// img: 제품 온장 사진(있으면 남는 부분에 옅게)
+// 장 머리글(이름 · 크기 · 사용률) + 원판(남는 부분 = 회색)
+// img: 제품 원판 사진(있으면 남는 부분에 옅게)
 function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
   var FONT=_EXP_FONT,used=board.reduce(function(a,p){return a+(p.pw||0)*(p.ph||0);},0);
   g.font='bold '+Math.round(30*k)+'px '+FONT;g.fillStyle='#222';g.textAlign='left';g.textBaseline='alphabetic';
@@ -8032,11 +8032,11 @@ function _boardFrame(g,bx,by,title,board,bw,bh,sc,k,img){
   g.font=Math.round(24*k)+'px '+FONT;g.fillStyle='#666';
   g.fillText(_fmtDim(bw)+' × '+_fmtDim(bh)+' mm  ·  사용 '+Math.round(used/(bw*bh)*100)+'%',bx+tw+18*k,by-22*k);
   g.fillStyle='#EDEDED';g.fillRect(bx,by,bw*sc,bh*sc);
-  // 온장 사진은 실제 밝기 그대로, 남는 부분만 살짝 어둡게 (조각이 실제 색으로 도드라지게)
+  // 원판 사진은 실제 밝기 그대로, 남는 부분만 살짝 어둡게 (조각이 실제 색으로 도드라지게)
   if(img){_drawSlab(g,img,bx,by,bw*sc,bh*sc);g.fillStyle='rgba(0,0,0,0.32)';g.fillRect(bx,by,bw*sc,bh*sc);}
   g.strokeStyle='#555';g.lineWidth=3*k;g.setLineDash([]);g.strokeRect(bx,by,bw*sc,bh*sc);
 }
-// 유광 온장 표시 (온장 배치 창·도면화 온장 배치 쪽): 조각까지 다 그린 뒤 온장 위에 비스듬한 반사 띠 두 줄 + 오른쪽 위 "유광"/"반광" 표
+// 유광 원판 표시 (원판 배치 창·도면화 원판 배치 쪽): 조각까지 다 그린 뒤 원판 위에 비스듬한 반사 띠 두 줄 + 오른쪽 위 "유광"/"반광" 표
 //   gloss = _prodGloss(장 제품): 1 유광 · 0.5 반광(라파토) · 0 무광(아무것도 안 그림)
 function _boardSheen(g,bx,by,w,h,gloss,k){
   if(!gloss)return;
@@ -8054,12 +8054,12 @@ function _boardSheen(g,bx,by,w,h,gloss,k){
   g.fillStyle='#8A6A1E';g.textAlign='left';g.textBaseline='middle';g.fillText(t,px,py+(fs+10*k)/2);
 }
 // 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
-// tex: {img,bx,by,w,h} 제품 온장 사진과 온장 상자(px) — 있으면 조각을 무늬로 채움
+// tex: {img,bx,by,w,h} 제품 원판 사진과 원판 상자(px) — 있으면 조각을 무늬로 채움
 function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
   var ox0=ox,oy0=oy;
-  // 온장 그대로 사이즈: 그 방향은 배치 칸을 여백(10)만큼 양쪽으로 늘려 온장 끝에 붙여 그림
+  // 원판 그대로 사이즈: 그 방향은 배치 칸을 여백(10)만큼 양쪽으로 늘려 원판 끝에 붙여 그림
   var _pf=_pFull(p),_fx=_pf.x,_fy=_pf.y;
   if(_fx)ox-=10*sc;if(_fy)oy-=10*sc;
   var pw=(p.pw+(_fx?20:0))*sc,ph=(p.ph+(_fy?20:0))*sc;
@@ -8076,7 +8076,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   else if(sh.kind==='ellipse'){path(_ellPts(sh,72));} // 돌린 타원도 배치 회전 그대로
   else if(sh.kind==='rect'){path(_expRectPathLocal(sh));}
   else{g.beginPath();g.rect(ox,oy,pw,ph);}
-  // 온장 사진이 있으면 조각 자리의 무늬를 실제 밝기 그대로(배치된 자리에서 잘라낸 모습), 조각 구분은 외곽선 색으로
+  // 원판 사진이 있으면 조각 자리의 무늬를 실제 밝기 그대로(배치된 자리에서 잘라낸 모습), 조각 구분은 외곽선 색으로
   if(tex&&tex.img){g.save();g.clip();_drawSlab(g,tex.img,tex.bx,tex.by,tex.w,tex.h);g.restore();g.lineWidth=4*k;}
   else g.fill();
   g.stroke();
@@ -8113,8 +8113,8 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     g.restore();
   } else if(tex){
     // 너무 작아 안에 글자가 안 들어가면: 가까운 빈 곳에 글자 + 화살표로 조각을 가리킴
-    //   온장 안에서 다른 조각·다른 바깥 글자와 안 겹치고 조각에서 알맞게 떨어진 자리를 찾음.
-    //   온장이 꽉 차면 온장 밖(캔버스 안, 잘리지 않는 곳)에서 찾음
+    //   원판 안에서 다른 조각·다른 바깥 글자와 안 겹치고 조각에서 알맞게 떨어진 자리를 찾음.
+    //   원판이 꽉 차면 원판 밖(캔버스 안, 잘리지 않는 곳)에서 찾음
     //   조각이 작아 번호 칸도 안 들어가면 글자 앞에 번호 칸을 같이 붙임
     var t1=lines.join(' '),f1=Math.round(Math.max(11,18*k)),nb=(_pn&&!(pw>30*k&&ph>24*k))?String(_pn):'';
     g.font='bold '+f1+'px Arial';var nbw=nb?Math.max(f1*1.3,g.measureText(nb).width+10*k):0,nbg=nb?5*k:0;
@@ -8180,9 +8180,9 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     });
   }
 }
-// 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (온장 배치용)
+// 사각형 외곽(코너 포함) world 점 목록 — 회전 없는 형태 (원판 배치용)
 function _expRectPathLocal(s){
-  // 돌린 사각형도 화면에 보이는 모양 그대로 (온장 조각 상자는 회전 포함 bbox 기준)
+  // 돌린 사각형도 화면에 보이는 모양 그대로 (원판 조각 상자는 회전 포함 bbox 기준)
   var g=_expRectGeo({x:s.x,y:s.y,w:s.w,h:s.h,rotation:s.rotation||0,corners:s.corners,cornerType:s.cornerType,cornerSize:s.cornerSize});return _expRectPath(g);}
 // 조각 이름 자리 찾기: 큰 글씨부터 줄여가며, 조각 안에서 타공부/타공(+치수 자리)을 피하는 빈 곳 중 중심에 가까운 곳
 function _expNameSpot(p,nm){
@@ -8227,13 +8227,13 @@ function _expLabelPoint(p){
   return toCanvas((p.bb.l+p.bb.r)/2,(p.bb.t+p.bb.b)/2);
 }
 // ═══ 도면화 (PDF) ═══
-// 온장이 2장 이상이면 도면도 온장마다 한 쪽씩: 그 장에 배치된 조각(+싱크볼·타공·밑면연마·고스라·졸리컷·글자 등)만 크게.
-// 배치 안 된 조각은 따로 한 쪽, 마지막 쪽은 온장 배치도. 조각 번호는 전체 도면 기준 그대로(_autoPieceNums를 잠시 고정).
+// 원판이 2장 이상이면 도면도 원판마다 한 쪽씩: 그 장에 배치된 조각(+싱크볼·타공·밑면연마·고스라·졸리컷·글자 등)만 크게.
+// 배치 안 된 조각은 따로 한 쪽, 마지막 쪽은 원판 배치도. 조각 번호는 전체 도면 기준 그대로(_autoPieceNums를 잠시 고정).
 function _drawingBoards(){
   var items=_collectBoardItems();
   var boards=(_savedBoardLayout&&(!_savedBoardLayout.sig||_savedBoardLayout.sig===_boardSizeSig()))?_restoreSavedBoards(_savedBoardLayout,items):null; // 사이즈가 바뀌었으면 새로
   var fromSaved=!!boards;
-  if(!boards&&items.length)boards=_packBoardItems(items,3180,1580,3).boards; // 제품별 온장 크기로 다시 계산
+  if(!boards&&items.length)boards=_packBoardItems(items,3180,1580,3).boards; // 제품별 원판 크기로 다시 계산
   return{items:items,boards:boards||[],fromSaved:fromSaved,margin:(fromSaved&&_savedBoardLayout.margin)||10};
 }
 // 도형 → 속한 조각(items 번호): 조각 자체(선 조각은 그 선들)는 그 조각, 나머지는 안에 있는(변 위 포함) 가장 작은 조각,
@@ -8397,14 +8397,14 @@ function _areaPages(items){
   return pages;
 }
 // 도면화 버튼: 방식 고르기 (지난번 고른 것 먼저, 이 PC에 기억)
-//   area = 전체 도면(모양만) + 구역별 상세(붙은 조각끼리·제품별, 원래 배치 유지) / detail = 전체 도면(원래 자리, 치수 포함) + 온장별 상세
+//   area = 전체 도면(모양만) + 구역별 상세(붙은 조각끼리·제품별, 원래 배치 유지) / detail = 전체 도면(원래 자리, 치수 포함) + 원판별 상세
 function drawingMenu(btn){
   var old=document.getElementById('drw-menu');if(old){old.remove();return;}
   var last='area';try{last=localStorage.getItem('scd_drw_mode')||'area';}catch(e){}if(last==='one')last='area';
   var m=document.createElement('div');m.id='drw-menu';
   var r=btn.getBoundingClientRect();
   m.style.cssText='position:fixed;z-index:9999;left:'+Math.round(r.left)+'px;top:'+Math.round(r.bottom+4)+'px;background:#0A1222;border:1px solid #2A4F92;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:5px;box-shadow:0 6px 18px rgba(0,0,0,.5);min-width:250px';
-  [['area','전체 도면 + 구역별 상세','1쪽은 설치 배치 모양만 · 붙은 조각끼리 제품별로 한 쪽씩 (배치 그대로)'],['detail','전체 도면 + 온장별 상세','1쪽은 원래 자리, 2쪽부터 온장마다 한 쪽']].forEach(function(o){
+  [['area','전체 도면 + 구역별 상세','1쪽은 설치 배치 모양만 · 붙은 조각끼리 제품별로 한 쪽씩 (배치 그대로)'],['detail','전체 도면 + 원판별 상세','1쪽은 원래 자리, 2쪽부터 원판마다 한 쪽']].forEach(function(o){
     var b=document.createElement('button');var on=o[0]===last;
     b.style.cssText='text-align:left;padding:7px 10px;border-radius:4px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#1C2A47')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#D9DFEA;font-size:12px';
     b.innerHTML='<b style="color:#E3B861">'+o[1]+'</b><br><span style="font-size:10.5px;color:#A9B4C8">'+o[2]+'</span>';
@@ -8418,7 +8418,7 @@ function exportDrawingA4(mode){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
   if(mode==='one')mode='area'; // 예전 "한 장에 모아 보기" → 구역별
-  // ── 도면 쪽 나누기: 구역별이면 붙은 조각끼리(제품별) 한 쪽씩, 온장별이면 온장 2장 이상일 때 장마다 한 쪽 ──
+  // ── 도면 쪽 나누기: 구역별이면 붙은 조각끼리(제품별) 한 쪽씩, 원판별이면 원판 2장 이상일 때 장마다 한 쪽 ──
   var pagesDef=[],pmap=null;
   if(mode==='area'){pmap=_shapePieceMap(items);_areaPages(items).forEach(function(pg,i,A){
     var set={};pg.idx.forEach(function(k){set[k]=1;});
@@ -8428,20 +8428,20 @@ function exportDrawingA4(mode){
     boards.forEach(function(b,bi){
       var idx=[];b.forEach(function(p){var k=items.findIndex(function(it){return it.shape===p.item.shape;});if(k>=0){idx.push(k);onBoard[k]=1;}});
       var d=_boardDims(b),nm=_boardLabel(b);
-      pagesDef.push({idx:idx,label:'온장 '+(bi+1)+'/'+boards.length+(nm?' · '+nm:'')+'  ('+d.bw+'×'+d.bh+')',bw:d.bw,bh:d.bh});
+      pagesDef.push({idx:idx,label:'원판 '+(bi+1)+'/'+boards.length+(nm?' · '+nm:'')+'  ('+d.bw+'×'+d.bh+')',bw:d.bw,bh:d.bh});
     });
     var rest=[];items.forEach(function(it,k){if(!onBoard[k])rest.push(k);});
-    if(rest.length)pagesDef.push({idx:rest,label:'온장에 배치되지 않은 조각',bw:null,bh:null});
+    if(rest.length)pagesDef.push({idx:rest,label:'원판에 배치되지 않은 조각',bw:null,bh:null});
     pagesDef.forEach(function(pd){var set={};pd.idx.forEach(function(k){set[k]=1;});pd.list=shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];});});
     pagesDef=pagesDef.filter(function(pd){return pd.list.length;});
     pagesDef.forEach(function(pd){pd.label='상세 · '+pd.label;});
   }
   var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');
-  // 첫 쪽은 언제나 모든 도형이 원래 자리 그대로 들어간 전체 도면, 온장이 2장 이상이면 다음 쪽부터 장별 상세 도면
+  // 첫 쪽은 언제나 모든 도형이 원래 자리 그대로 들어간 전체 도면, 원판이 2장 이상이면 다음 쪽부터 장별 상세 도면
   // 구역별: 1쪽 = 전체 도면 모양만(치수·가공 표시 없이 설치 배치와 조각 번호), 다음 쪽부터 구역 상세
   if(mode==='area')pagesDef.unshift({list:null,label:'전체 도면 (치수는 다음 쪽부터 구역별 상세)',bw:d0.bw,bh:d0.bh,shapeOnly:true});
   else if(pagesDef.length<2)pagesDef=[{list:null,label:'',bw:d0.bw,bh:d0.bh}];
-  else pagesDef.unshift({list:null,label:'전체 도면 (다음 쪽부터 온장별 상세)',bw:d0.bw,bh:d0.bh});
+  else pagesDef.unshift({list:null,label:'전체 도면 (다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh});
   // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
   // 구역별은 번호 보기를 꺼 놨어도 조각 번호를 넣음 (1쪽 전체 도면과 상세 쪽을 번호로 맞춰 봄)
   var svNums=showShapeNumbers;if(mode==='area')showShapeNumbers=true;
@@ -8463,7 +8463,7 @@ function exportDrawingA4(mode){
   var _delivDate=(_delivDateRaw||_delivTimeRaw)?(_delivDateRaw.replace(/-/g,'.')+(_delivTimeRaw?' '+_delivTimeRaw:'')).trim():'';
   var today=new Date();
   var dateStr=today.getFullYear()+'.'+(today.getMonth()+1).toString().padStart(2,'0')+'.'+today.getDate().toString().padStart(2,'0');
-  // 온장 배치도: 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm). 장이 많으면 너무 작아지므로 한 쪽에 최대 2장씩
+  // 원판 배치도: 도면과 같은 조각 색으로 새로 그림 (A4 가로 영역 비율 281×180mm). 장이 많으면 너무 작아지므로 한 쪽에 최대 2장씩
   var _BPP=2,boardImgs=[],_sizes=[];
   if(boards.length){
     boards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
@@ -8511,7 +8511,7 @@ function exportDrawingA4(mode){
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
     +'@media print{.page2{page-break-before:always;}}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
-    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 온장 배치도':'')+'</span></div>';
+    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span></div>';
   pages.forEach(function(pg,pi){
     var bwT=pg.bw||_prodBoardSize('').bw,bhT=pg.bh||_prodBoardSize('').bh;
     body+='<div class="page '+(pg.isPort?'port':'land')+'"><div class="frame"><div class="inner-border">'
@@ -8520,7 +8520,7 @@ function exportDrawingA4(mode){
       +'<div class="tb-main">'
       +'<div class="tb-co">윤현상재</div>'
       +'<div class="tb-title">세라믹 가공 도면'+(pages.length>1?' <span style="font-size:9pt;font-weight:bold;color:#1F3F7A">('+(pi+1)+'/'+pages.length+')</span>':'')+'</div>'
-      +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">온장</span>'+bwT.toFixed(0)+' × '+bhT.toFixed(0)+' mm</div>'
+      +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">원판</span>'+bwT.toFixed(0)+' × '+bhT.toFixed(0)+' mm</div>'
       +'</div>'
       +'<div class="tb-cells">'
       +'<div class="tb-row"><div class="tbl">작성일</div><div class="tbv">'+dateStr+'</div></div>'
@@ -8532,12 +8532,12 @@ function exportDrawingA4(mode){
   boardImgs.forEach(function(im,k){
     var a=k*_BPP+1,b=Math.min(boards.length,a+_BPP-1);
     body+='<div class="page2">'
-      +'<div class="page2-title">📋 온장 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')
-      +(boardImgs.length>1?'  <span style="color:#1F3F7A">(온장 '+a+(b>a?'~'+b:'')+' / 전체 '+boards.length+'장)</span>':'')+'</div>'
+      +'<div class="page2-title">📋 원판 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')
+      +(boardImgs.length>1?'  <span style="color:#1F3F7A">(원판 '+a+(b>a?'~'+b:'')+' / 전체 '+boards.length+'장)</span>':'')+'</div>'
       +'<div class="board-area"><img id="_bimg'+k+'" src=""></div>'
       +'</div>';
   });
-  // 맨 마지막 쪽: 사용 제품의 온장 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
+  // 맨 마지막 쪽: 사용 제품의 원판 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
   var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
     var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
     if(id)((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).forEach(function(c){if(c.id===id)cat=c;});
@@ -8547,7 +8547,7 @@ function exportDrawingA4(mode){
   // 제품마다 한 쪽씩 (사진을 크게): 제품이 여러 개면 "사용 제품 1/3"처럼
   _prodCards.forEach(function(c,k){
     var n=_prodCards.length;
-    body+='<div class="page2"><div class="page2-title">📷 사용 제품'+(n>1?' '+(k+1)+'/'+n:'')+' — 온장 사진 (공장 확인용)</div>'
+    body+='<div class="page2"><div class="page2-title">📷 사용 제품'+(n>1?' '+(k+1)+'/'+n:'')+' — 원판 사진 (공장 확인용)</div>'
       +'<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:2mm;padding:5mm">'
       +'<div style="font-size:16pt;font-weight:900;color:#111">'+escHtml(c.name)+(c.en?' <span style="font-size:10pt;font-weight:normal;color:#555">'+escHtml(c.en)+'</span>':'')+'</div>'
       +'<div style="font-size:10pt;color:#333;font-family:Consolas,monospace">'+escHtml(c.size)+(c.qty?'  ·  '+c.qty+'장':'')+'</div>'
@@ -8586,7 +8586,7 @@ document.addEventListener('keydown',function(e){
 
 // ═══ 3D 보기 (WebGL, 외부 라이브러리 없음) ═══
 // 조각(_expCollect)을 도면 자리 그대로 두께(제품 사이즈의 "12T" 등, 없으면 12mm)만큼 세우고 싱크볼·쿡탑·타공은 구멍으로.
-// 윗면 무늬 = 온장 배치에서 그 조각이 놓인 자리의 온장 사진(_drawingBoards + _drawSlab) → 실제로 잘려 나올 결이 보임.
+// 윗면 무늬 = 원판 배치에서 그 조각이 놓인 자리의 원판 사진(_drawingBoards + _drawSlab) → 실제로 잘려 나올 결이 보임.
 //   윗면은 조각 상자 크기 사각형에 "조각 모양으로 오린 무늬 텍스처"를 붙이고 투명한 곳은 버림(구멍까지 삼각분할 없이).
 //   옆면 = 외곽·구멍 둘레를 따라 세운 사각형, 윗면 외곽선 = 이음선(조각끼리 맞닿는 곳이 선으로 보임).
 // 좌표: X = 도면 x, Z = 도면 y(아래가 +), Y = 위. 단위 mm
@@ -8595,7 +8595,7 @@ function _3dThick(shape){
   var nm=_itemProd(shape),p=_prodOf(nm)||products[0];
   var m=p&&/(\d+(?:\.\d+)?)\s*T/i.exec(p.size||'');return m?+m[1]:12;
 }
-// 제품 광택(3D 반사 효과·온장 배치 광택 표시): 제품명·윤현몰 상품명/영문명에 유광·폴리시드·루시도·POLISHED·GLOSS → 1, 라파토·LAPPATO·반광 → 0.5, 그 밖(매트·사틴·실크·레더 등) → 0
+// 제품 광택(3D 반사 효과·원판 배치 광택 표시): 제품명·윤현몰 상품명/영문명에 유광·폴리시드·루시도·POLISHED·GLOSS → 1, 라파토·LAPPATO·반광 → 0.5, 그 밖(매트·사틴·실크·레더 등) → 0
 function _3dGloss(shape){return _prodGloss(_itemProd(shape));}
 function _prodGloss(label){
   var p=_prodOf(label)||products[0];if(!p)return 0;
@@ -8627,7 +8627,7 @@ function _3dInside(loops,x,y){
 // 2D 아핀 [a,b,c,d,e,f] (x'=a x + c y + e, y'=b x + d y + f)
 function _afMul(m,n){return[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];}
 function _afInv(m){var d=m[0]*m[3]-m[1]*m[2];return[m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
-// 온장 배치의 조각 자리: 도면 좌표 → 온장 좌표(mm). _boardPiece의 M과 같은 계산 (sc=1)
+// 원판 배치의 조각 자리: 도면 좌표 → 원판 좌표(mm). _boardPiece의 M과 같은 계산 (sc=1)
 function _3dWorldToBoard(bp,bb,margin){
   var it=bp.item,rot=it.rot||0,cr=Math.cos(rot),sr=Math.sin(rot),iw=rot?it.w:bb.r-bb.l;
   var pf=_pFull(bp),fx=pf.x,fy=pf.y,ox=margin+bp.x-(fx?10:0),oy=margin+bp.y-(fy?10:0);
@@ -8637,7 +8637,7 @@ function _3dWorldToBoard(bp,bb,margin){
 }
 // 조각 구분 (3D 보기): 'top'=상판 · 'obj'=오브제(가구 없는 상판 — 선반·벤치 등, 붙인 하부판이 상판 밑에 매달려 같이 움직임)
 //   · 'panel'=하부판(바닥~상판 밑, 2026-10-28 전면판 front·측판 side를 합침 — 예전 값도 하부판)
-//   · 'mid'=미드웨이(벽에 세움) · 'etc'=삭제(3D에서만 안 그림, 도면·온장은 그대로). 도형에 piece3d로 저장(선 조각은 선마다)
+//   · 'mid'=미드웨이(벽에 세움) · 'etc'=삭제(3D에서만 안 그림, 도면·원판은 그대로). 도형에 piece3d로 저장(선 조각은 선마다)
 //   정하지 않았으면 폭 300 미만은 삭제, 나머지는 상판
 function _3dKey(sh){return sh&&sh.kind==='linegroup'?sh.lines[0]:sh;}
 function _3dGetType(sh,bb){var t=_3dKey(sh).piece3d;if(t)return t;return Math.min(bb.r-bb.l,bb.b-bb.t)<300?'etc':'top';}
@@ -8651,7 +8651,7 @@ function _3dBuildScene(){
   var pieces=_expCollect(),DB=_drawingBoards(),place=new Map(),boardCv=[];
   function key(sh){return sh&&sh.kind==='linegroup'?sh.lines[0]:sh;}
   DB.boards.forEach(function(b,bi){b.forEach(function(bp){if(bp.item&&bp.item.shape)place.set(key(bp.item.shape),{bp:bp,bi:bi});});});
-  function slabCanvas(bi){ // 온장 한 장 = 사진을 온장 크기로 (_drawSlab), 장마다 한 번만
+  function slabCanvas(bi){ // 원판 한 장 = 사진을 원판 크기로 (_drawSlab), 장마다 한 번만
     if(boardCv[bi]!==undefined)return boardCv[bi];
     var b=DB.boards[bi],pid=_3dProdId(_boardLabel(b)),img=pid?_slabImgById(pid):null;if(!img)return null; // 아직 불러오는 중이면 다음에 (제품 바꿔 보기면 그 제품 사진)
     var d=_boardDims(b),s=Math.min(2048,Math.max(img.width,img.height))/Math.max(d.bw,d.bh),c=document.createElement('canvas');
@@ -9558,14 +9558,14 @@ function _3dOutro(st){
 function _3dAnimPh(){var a=_3d&&_3d.anim;if(!a)return{s:1,r:1,g:1,m:1};function c(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);}
   return{s:c(a.t/0.45),r:c((a.t-0.3)/0.4),m:c((a.t-0.35)/0.45),g:c((a.t-0.7)/0.3)};}
 function _3dResize(){var st=_3d;if(!st)return;var r=st.cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;st.cv.width=Math.max(10,Math.round(r.width*dp));st.cv.height=Math.max(10,Math.round(r.height*dp));_3dRender();}
-// 장면을 (다시) 만들기 — 온장 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
+// 장면을 (다시) 만들기 — 원판 사진을 불러오는 중이면 잠시 뒤 다시 (최대 약 6초)
 function _3dRebuild(tries){
   var st=_3d;if(!st)return;var sc=_3dBuildScene();
   if(_3dGLC){_3dGLC.tex.forEach(function(t){_3dGLC.gl.deleteTexture(t);});_3dGLC.tex.clear();} // 무늬 캔버스가 새로 만들어졌으니 텍스처도 새로
   st.scene=sc;var r=_3dRegeom(true);
   _3dPiecePanel(sc); // 장면을 만든 뒤 (미드웨이 지금 자리를 알아야 조절 버튼이 거기서 시작)
   if(!r){st.msg.textContent=shapes.length?'3D로 보여 줄 조각이 없거나 이 브라우저가 WebGL을 지원하지 않습니다.':'도면에 조각이 없습니다.';return;}
-  st.msg.textContent=sc.waiting?'온장 사진 불러오는 중…':'';
+  st.msg.textContent=sc.waiting?'원판 사진 불러오는 중…':'';
   if(sc.waiting&&(tries||0)<20)setTimeout(function(){if(_3d===st)_3dRebuild((tries||0)+1);},300);
 }
 // 모양만 다시 (무늬·텍스처는 그대로) — 끌거나 돌릴 때마다 빠르게
@@ -9866,7 +9866,7 @@ function _3dStylePanel(){
       +'<div style="flex:1;min-width:0"><div style="color:#75839C;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(nm)+'</div>'
       +'<div style="color:'+(it?'#F1D69A':'#D9DFEA')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(it?'→ '+escHtml(it.name):'도면 제품 그대로')+'</div></div>'
       +'<button data-popen="'+i+'" style="'+btn+(open?'#2A4F92;background:#1F3F7A':'#1C2A47;background:#121D33')+'">'+(open?'닫기':'바꿔 보기')+'</button></div>'
-      +(it?'<div style="display:flex;gap:4px;margin-top:5px"><button data-prst="'+i+'" style="'+btn+'#1C2A47;background:#121D33">원래대로</button><button data-papply="'+i+'" style="'+btn+'#2A4F92;background:#1F3F7A" title="도면의 제품을 이 제품으로 바꿈 (견적·온장 배치도 바뀜)">도면에 적용</button></div>':'');
+      +(it?'<div style="display:flex;gap:4px;margin-top:5px"><button data-prst="'+i+'" style="'+btn+'#1C2A47;background:#121D33">원래대로</button><button data-papply="'+i+'" style="'+btn+'#2A4F92;background:#1F3F7A" title="도면의 제품을 이 제품으로 바꿈 (견적·원판 배치도 바뀜)">도면에 적용</button></div>':'');
     if(open)h+='<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input data-psearch="'+i+'" placeholder="검색 (한글·영문·사이즈)" style="flex:1;min-width:0;background:#121D33;border:1px solid #1C2A47;color:#D9DFEA;border-radius:3px;padding:3px 5px;font-size:11px">'
       +'<label style="display:flex;gap:3px;align-items:center;color:#A9B4C8;font-size:10.5px;cursor:pointer;white-space:nowrap"><input type="checkbox" data-psame'+(U.pSame?' checked':'')+'>같은 두께</label></div>'
       +'<div data-pgrid="'+i+'" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;max-height:330px;overflow:auto;margin-top:5px;padding:1px"></div>';
@@ -9926,7 +9926,7 @@ function _3dStylePanel(){
   box.querySelectorAll('[data-prst]').forEach(function(b){b.onclick=function(){delete S.prod[names[+b.dataset.prst]];_3dRebuild(0);_3dStylePanel();};});
   box.querySelectorAll('[data-papply]').forEach(function(b){b.onclick=function(){
     var nm=names[+b.dataset.papply],oid=S.prod[nm],it=cat.filter(function(c){return String(c.id)===String(oid);})[0],pi=_prodIdxOf(nm);if(!it||pi<0)return;
-    if(!confirm('도면의 "'+nm+'" 제품을\n"'+it.name+' '+(it.size||'')+'"(으)로 바꿀까요?\n견적·온장 배치도 새 제품 기준으로 바뀝니다.'))return;
+    if(!confirm('도면의 "'+nm+'" 제품을\n"'+it.name+' '+(it.size||'')+'"(으)로 바꿀까요?\n견적·원판 배치도 새 제품 기준으로 바뀝니다.'))return;
     _prodNames();products[pi].name=it.name;products[pi].size=it.size||products[pi].size;_prodNames(); // 구분 이름이 바뀌면 도형 제품도 따라감
     delete S.prod[nm];renderProductList();calcCost();_3dRebuild(0);_3dStylePanel();
   };});

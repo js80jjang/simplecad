@@ -1,6 +1,6 @@
 # 심플 캐드 (세라믹 상판 가공비 계산기)
 
-세라믹 상판 도면을 그리고 가공비 견적·도면(PDF)·온장 배치를 만드는 **단일 파일 웹 앱**.
+세라믹 상판 도면을 그리고 가공비 견적·도면(PDF)·원판 배치를 만드는 **단일 파일 웹 앱**.
 사용자와의 대화·커밋 메시지는 **한국어**.
 
 - 앱: `index.html` 하나(HTML/CSS/JS 모두 인라인, 빌드 없음, 외부 라이브러리 없음) + `dxf-form.js`(DXF 기본 양식 데이터)
@@ -21,15 +21,15 @@
 - 가져오는 분류: 스크립트의 `CATEGORIES`(지금 `009003` = 두께 12mm, `009001` = 두께 6mm). 고도몰 목록 HTML(`item_cont`/`item_name`/`item_name_explain`/`item_price`/`m2`)을 읽음
   — 쇼핑몰 화면이 바뀌어 10개 미만이면 실패로 끝나고 기존 파일 유지
 - 항목: `{id,name(한글),en,size(1600×3200×12T),price(장당),m2,img,url,cate}`. 앱의 `_catalog` = 몰 상품만, 이름+사이즈로 중복 제거
-  — 검색은 한글·영문·사이즈, 여러 단어는 모두 포함. 고르면 제품명·사이즈 채움 + 온장 크기(`board-w`=긴 쪽, `board-h`)도 그 사이즈로(`_setBoardFromSize`)
+  — 검색은 한글·영문·사이즈, 여러 단어는 모두 포함. 고르면 제품명·사이즈 채움 + 원판 크기(`board-w`=긴 쪽, `board-h`)도 그 사이즈로(`_setBoardFromSize`)
 
-- 온장 이미지: 같은 워크플로가 `tools/update_mall_images.py`(Pillow) 실행 → 몰 목록 이미지(= 온장 전체 사진 2:1, 몰에서 가장 큰 것이 1150×576)를 줄이지 않고 JPEG q86(`SPEC`, 바꾸면 전부 다시 받음, 장당 ≈90KB)으로
+- 원판 이미지: 같은 워크플로가 `tools/update_mall_images.py`(Pillow) 실행 → 몰 목록 이미지(= 원판 전체 사진 2:1, 몰에서 가장 큰 것이 1150×576)를 줄이지 않고 JPEG q86(`SPEC`, 바꾸면 전부 다시 받음, 장당 ≈90KB)으로
   `mall-img/<상품번호>.js`(`window._MALL_IMG[id]=data URL`)로 저장, `mall-img/manifest.json`에 원본 주소(같으면 다시 안 받음), 빠진 제품은 지움
   — 목록 이미지 폭이 600 미만(6mm 제품은 몰 목록 이미지가 150×75)이면 상품 페이지의 상세 이미지(`/image/detail/`, 대부분 1150×576, 비율 1.6~2.4일 때만)를 씀,
     manifest 값 끝 `|d` = 상세 이미지 확인함(다시 안 봄). mall-img 이미지가 바뀌면 sw.js `CACHE` 버전도 올림(설치 앱은 mall-img를 저장본 먼저 씀)
   — 쇼핑몰 이미지 서버에 CORS가 없어 바로 연결하면 도면화 캔버스가 막히므로 저장소에 받아 둠(사용자 승인: 공개 저장소에 올려도 됨)
   - 앱: `_slabImgFor(제품 이름)`이 `<script>`로 불러옴(`_updateBoardQty`에서 미리), `_boardLabel(장)`=조각에 붙인 제품/첫 제품,
-    `_drawSlab`로 온장 배치 창·도면화 2쪽에 채움 — 사진은 실제 밝기 그대로(옅게 하지 않음), 남는 부분만 검정 32%로 어둡게,
+    `_drawSlab`로 원판 배치 창·도면화 2쪽에 채움 — 사진은 실제 밝기 그대로(옅게 하지 않음), 남는 부분만 검정 32%로 어둡게,
     조각은 배치된 자리 무늬 그대로 + 조각 색 외곽선. 이미지 없으면 예전 색
   - 테스트는 http(serve) 주소로 — 브라우저 패널의 data: 주소에서는 `mall-img/` 상대 경로를 못 읽음
 
@@ -57,19 +57,19 @@
   - 제품 구분 이름 `_prodNames()` = 제품명, 같은 이름이 둘 이상이면 "제품명 (사이즈)"(사이즈도 같으면 ` #번호`). 구분 이름이 바뀌면(이름·사이즈 수정, 제품 추가·삭제)
     `_prodKeyWas`(WeakMap)로 알아채 도형 `s.label`·저장 배치 `boardProds`를 옮김. 이름으로 제품 찾기는 `_prodIdxOf/_prodOf`(예전 파일의 제품명도 첫 같은 이름으로)
   - **도형마다 제품**(`s.label`=제품 구분 이름, 안 정하면 첫 제품 — `_shapeProdIdx`/`_itemProd`): 도형 선택 → 제품 줄 앞 ●(`assignProduct`).
-    그룹(싱크볼 등)·이어진 선 조각 전체가 같이 바뀜, 지정하면 저장된 온장 배치는 초기화. 제품 이름 바꾸면 도형도 따라감(`_setProdName`), 제품 빼면 첫 제품으로
+    그룹(싱크볼 등)·이어진 선 조각 전체가 같이 바뀜, 지정하면 저장된 원판 배치는 초기화. 제품 이름 바꾸면 도형도 따라감(`_setProdName`), 제품 빼면 첫 제품으로
   - 편집 화면: 제품 2개 이상이면 조각을 제품 색으로 옅게 + 왼쪽 아래 제품명(`_drawProdTints`), ●에 마우스 올리면 그 제품만 진하게(`_hoverProd`). 도형 속성창의 제품 선택은 없앰
-  - 온장 배치: 제품별로 장을 따로(`_packBoardItems` 그룹 = `_itemProd`), 장 머리글 `_boardTitle`="온장 N · 제품명", 온장 사진도 그 제품(`_boardLabel`).
-    **온장 크기도 제품마다**: 제품 사이즈 칸에서(`_prodBoardSize`, 없으면 도구줄 온장 칸) → 장마다 `board.bw/bh`(`_boardDims`),
-    배치 창·도면화 2쪽 칸은 가장 큰 온장 기준·장은 자기 크기로, 끌기·돌리기 한계는 그 장 유효 영역(`_bsArea`). 저장 배치는 `sig`(`_boardSizeSig`)가 같을 때만 복원
+  - 원판 배치: 제품별로 장을 따로(`_packBoardItems` 그룹 = `_itemProd`), 장 머리글 `_boardTitle`="원판 N · 제품명", 원판 사진도 그 제품(`_boardLabel`).
+    **원판 크기도 제품마다**: 제품 사이즈 칸에서(`_prodBoardSize`, 없으면 도구줄 원판 칸) → 장마다 `board.bw/bh`(`_boardDims`),
+    배치 창·도면화 2쪽 칸은 가장 큰 원판 기준·장은 자기 크기로, 끌기·돌리기 한계는 그 장 유효 영역(`_bsArea`). 저장 배치는 `sig`(`_boardSizeSig`)가 같을 때만 복원
     도면화 1쪽 왼쪽 위·DXF 양식 글자는 제품마다 한 줄
-- **온장 그대로 사이즈**(`_FULL_TXT`, 2026-10-27 사용자 확정 "배치 방향 기준"): 사각 조각 한 변이 온장 폭/길이와 같으면 후보(`_fullElig` → `item.full`, w/h는 실제 크기),
-  **온장 배치에서 그 변을 온장의 같은 방향으로 놓았을 때만**(1600×3200 온장에 1600 변을 1600 방향으로) 온장 그대로 — 3200 방향으로 놓으면 보통 조각.
+- **원판 그대로 사이즈**(`_FULL_TXT`, 2026-10-27 사용자 확정 "배치 방향 기준"): 사각 조각 한 변이 원판 폭/길이와 같으면 후보(`_fullElig` → `item.full`, w/h는 실제 크기),
+  **원판 배치에서 그 변을 원판의 같은 방향으로 놓았을 때만**(1600×3200 원판에 1600 변을 1600 방향으로) 원판 그대로 — 3200 방향으로 놓으면 보통 조각.
   `_placeDims(it,rotated,ew,eh)` = 배치 칸(그 방향은 ew/eh로 20 줄임, 자동 배치·오른쪽 클릭 돌리기·복원이 씀), `_pFull(p)` = 칸이 실제보다 작은 방향, `_pLabel(p)` = 크기 글자+표기.
-  `_boardPiece`·`_3dWorldToBoard`가 그 방향 온장 끝까지 늘려 그림. `_fullBoardFit(s)` = 지금 배치(`_drawingBoards`)에서 도형 화면 상자 w/h 기준(캐시: calcCost마다 `_fullVer++`·저장 배치 바뀌면),
+  `_boardPiece`·`_3dWorldToBoard`가 그 방향 원판 끝까지 늘려 그림. `_fullBoardFit(s)` = 지금 배치(`_drawingBoards`)에서 도형 화면 상자 w/h 기준(캐시: calcCost마다 `_fullVer++`·저장 배치 바뀌면),
   `calcCost` 사각 절단에서 그 방향 양쪽 면 뺌, 도면화·DXF 치수 옆 표기 (편집 화면 치수는 그대로). 배치 창 닫으면 calcCost.
   자동 배치는 실제 크기로만 놓은 쪽이 장수가 적으면 그쪽(`_packBoardItems`). 예전 저장 배치(방향 상관없이 줄인 칸)는 같은 자리에 지금 규칙 크기로 복원, 겹치면 새로 배치
-- 제품 수량 = 온장 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
+- 제품 수량 = 원판 배치 장수(자동, 읽기 전용 `pq-N`): `_updateBoardQty`(calcCost 끝에서 `_scheduleBoardQty`, 배치 창 닫을 때)가
   손으로 고친 배치(`_savedBoardLayout`)나 자동 배치에서 장마다 고른 제품별로 셈. **가공비에 곱하지 않음**(가공을 여러 번 하는 뜻 아님)
 - 작업 정보 줄(도면 위 `#work-bar`): `site-info` 한 칸 "업체명/현장주소"(첫 '/' 앞=업체명, 뒤=주소, `_syncSiteInfo`/`_setSiteInfo`) →
   숨은 `company-name`(업체명)·`site-addr`(주소)에 나눠 넣음(저장 파일 company/siteAddr 그대로), 최근 목록 `scd_siteinfo_history`, 제품(`renderProductList`, 2개부터 `#prod-pop`),
@@ -82,7 +82,7 @@
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
-  `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/온장 배치에서 제외
+  `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
@@ -105,8 +105,8 @@
   `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유). 전역 mouseup의 `finalizeShape`는 line 제외
 - 타원 절단 도구(`ellipse`, 2026-10-30 사용자 요청 "캐드 ELLIPSE 그대로", `_ellSt`/`_ellClick`/`_ellKey`/`_ellPreview`): 축 끝점 → 다른 끝점 → 다른 축 거리(첫 축에서 수직 = 반지름) / C = 중심 → 축 끝점 → 거리,
   단계마다 클릭 또는 숫자+Enter(2단계 마우스 방향 길이, 3단계 반지름), 기본 직교(`ortho`, Shift 비스듬히), Esc 취소, 마우스 옆 안내 글자. → `ellipse{cx,cy,rx,ry,rotation}`(가로·세로 축이면 rotation 0, 아니면 −90°~90°)
-  - 돌린 타원 공통 도우미 `_ellHalf`(회전 포함 상자 반폭·반높이)·`_ellPts`(둘레 점)·`_ellLocal`(점 → 타원 로컬): getBBox·클릭 판정·조각 안 판정·편집/도면화 그리기(ctx.ellipse 회전 인자)·온장 배치(`_boardPiece` path)·3D·치수 축 방향
-  - 가공비 = 원형 절단(`lenMm.circlecut`) 둘레, 온장 배치 칸 = 회전 포함 상자·글자 "타원 장축×단축", 도면화·DXF 치수 = 두 축 길이(축 방향 그대로 바깥)
+  - 돌린 타원 공통 도우미 `_ellHalf`(회전 포함 상자 반폭·반높이)·`_ellPts`(둘레 점)·`_ellLocal`(점 → 타원 로컬): getBBox·클릭 판정·조각 안 판정·편집/도면화 그리기(ctx.ellipse 회전 인자)·원판 배치(`_boardPiece` path)·3D·치수 축 방향
+  - 가공비 = 원형 절단(`lenMm.circlecut`) 둘레, 원판 배치 칸 = 회전 포함 상자·글자 "타원 장축×단축", 도면화·DXF 치수 = 두 축 길이(축 방향 그대로 바깥)
   - 타원 둘레 가공 표시 `_ellMarkFor(tool,…)`(finalizeShape에서 grind·jollycut·gosra 도구, 두 끝점이 타원 둘레 위면): 둘레 `_ELL_N`(72)등분 점(= `_ellPts`, 3D 옆면 변과 같은 점 → 3D 졸리컷·고스라 면도 맞음)을 잇는 짧은 직선 마크들,
     끈 구간(짧은 쪽) 또는 누르기만 하면 한 바퀴, 한 묶음 = 새 `userGroupId`. 재료 쪽(타원 조각 = 안, 조각 안 타원 = 바깥)으로 grind `inward`+`inwardOverride`·gosra `outward`,
     ★·▲·깊이 글자는 가운데·18칸마다만(`sym:false` = 편집/도면화/DXF에서 기호 안 그림, grind는 hideDims.dist). `_gosraDir`도 타원 조각/타공부를 앎
@@ -129,22 +129,22 @@
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
   - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
-  - 온장 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
+  - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
-    온장 안을 훑어 다른 조각·다른 바깥 글자와 안 겹치고 화살표가 다른 조각을 지나지 않는 자리, 없으면 캔버스 안(잘리지 않게).
+    원판 안을 훑어 다른 조각·다른 바깥 글자와 안 겹치고 화살표가 다른 조각을 지나지 않는 자리, 없으면 캔버스 안(잘리지 않게).
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
-  - 선 조각이 그대로 온장에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
-  - 유광 온장 표시 `_boardSheen`(배치 창·도면화 온장 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
-  - 온장 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
+  - 선 조각이 그대로 원판에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
+  - 유광 원판 표시 `_boardSheen`(배치 창·도면화 원판 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
+  - 원판 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
 - 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`, 예전 값 'one'은 'area'로):
   `exportDrawingA4('area')`(2026-10-28 사용자 확정) = 1쪽 전체 도면 **모양만**(`_expShapeOnly` → `_drawCleanExport`가 밑면연마·고스라·치수·사용자 치수선·졸리컷·각도·R/Φ·범례를 건너뜀, 외곽·싱크볼/쿡탑·타공·이름·번호·도면 글자만)
   + 구역별 상세 `_areaPages(items)`: 같은 제품이고 상자 사이 `_AREA_TOUCH`(300mm) 이하인 조각끼리 union-find → 제품 순·위→아래·왼→오른쪽, 같은 제품 다음 구역과 합쳐도 배율이 25% 넘게 안 줄면 한 쪽에(작은 판 쪽이 따로 안 생기게).
   다른 제품은 항상 다른 쪽. 이 방식은 번호 보기와 상관없이 조각 번호를 넣음(`showShapeNumbers` 잠시 켬).
-  `exportDrawingA4('detail')` = 아래 예전 방식(1쪽 전체 도면에 치수 포함 + 온장별 상세). `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
-- 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(온장 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "온장 N" 번호 유지)
-  + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 온장 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
-  - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 온장 2장 이상이면 2쪽부터 **온장마다 상세 한 쪽**("상세 · 온장 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
+  `exportDrawingA4('detail')` = 아래 예전 방식(1쪽 전체 도면에 치수 포함 + 원판별 상세). `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
+- 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(원판 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "원판 N" 번호 유지)
+  + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 원판 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
+  - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 원판 2장 이상이면 2쪽부터 **원판마다 상세 한 쪽**("상세 · 원판 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
     밖이면 가장 가까운 조각, 그룹은 main 자리) → 쪽마다 `shapes`를 그 장 조각 것만으로 잠시 바꿔 `_renderDrawingImage`.
     이때 `_compactPageShapes`가 조각(+딸린 도형)을 옮긴 복사본으로 바꿈 — **원래 배치 유지**(2026-10-28 사용자 확정 "설치 위치를 알 수 있게 배치해 놓은 것"):
     가로·세로 축마다 조각 구간을 합쳐 조각이 없는 빈 띠만 150px 상당 mm로 줄임(더 좁은 틈·순서·줄 맞춤은 그대로, 도면 영역 `_DRW_AW×_DRW_AH` 배율로 4번 다시 계산). 줄 맞춰 새로 모으지 않음. 배치 안 된 조각은 따로 한 쪽.
@@ -165,7 +165,7 @@
   - 겹침 방지: `_pdr`(글자 상자), `_pseg`(그린 선), `_pcut`(타공부 안쪽) 등록 후 `_expDim`/`_expBestDim`/`_expLeader`가 빈 자리 선택
 - 3D 보기(`show3D`/`close3D`/`save3DImage`, WebGL 직접 구현 — 외부 라이브러리 없음, 닫기는 ✕ 버튼만 — Esc는 `onKey`가 삼킴(2026-10-28 사용자 요청)): `_3dBuildScene`이 `_expCollect` 조각마다
   외곽·구멍 루프(`_3dLoops`: rect=`_expRectPath`, 선 조각=`_expChain`, 싱크볼/쿡탑·타공=구멍), 두께(`_3dThick`, 제품 사이즈 "12T", 없으면 12),
-  윗면 텍스처 = 조각 모양으로 오린 온장 사진(`_drawingBoards` 배치 자리 → `_3dWorldToBoard`(= `_boardPiece`의 M) → 아핀 `_afMul/_afInv`로 `_drawSlab` 온장 캔버스를 옮겨 그림, 사진 없으면 돌 색).
+  윗면 텍스처 = 조각 모양으로 오린 원판 사진(`_drawingBoards` 배치 자리 → `_3dWorldToBoard`(= `_boardPiece`의 M) → 아핀 `_afMul/_afInv`로 `_drawSlab` 원판 캔버스를 옮겨 그림, 사진 없으면 돌 색).
   `_3dSetupGL`: 윗/밑면 = 조각 상자 사각형 + 텍스처(투명 버림, 삼각분할 없음), 옆면 = 루프 따라 세운 사각형(법선은 재료 바깥), 윗면 외곽선 = 이음선, 바닥판.
   하부장(기본 켬, 머리줄 "하부장" 체크 `_3d.furn` — 꺼도 상판은 900·세라믹 판은 그대로, 가구만 안 그림): 상판 윗면 900(`_3D_H`), 몸통 = 외곽을 20 들인 다각형(`_3dInset`) 벽, 걸레받이 100(+50 들임),
   민자 도어 = 앞면 변(`_3dFrontEdges`: 밑면연마·고스라 붙은 변, 없으면 도면 아래쪽을 보는 가장 긴 변)에 + 틈 선, 폭 300 미만 조각은 장 없음.
@@ -237,10 +237,10 @@
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
 
 ## 도면 표기 규칙 (사용자 확정)
-- (도면화·온장 배치) 변은 모두 조각 색 실선, **밑면연마 = 변에서 재료 쪽 50mm 띠에 주황 45° 빗금**(`_expHatchBand`, `_GRIND_MM`),
+- (도면화·원판 배치) 변은 모두 조각 색 실선, **밑면연마 = 변에서 재료 쪽 50mm 띠에 주황 45° 빗금**(`_expHatchBand`, `_GRIND_MM`),
   **고스라 = 검정 ▲** (꼭지점이 방향), **졸리컷 = 빨간 ★·선** — 편집 화면은 예전 색 그대로(고스라 빨강, 졸리컷 파랑)
   - 사각/선 절단 조각 변: 바깥에서 조각 안쪽을 향함 / 싱크볼·쿡탑 변: 타공부 안쪽에서 선을 향함 (밑면연마 띠 방향도 같음, `_gosraDir`)
-- 조각마다 색은 **외곽선만**(안은 흰색, 음영 없음 — 도면화 1쪽·온장 배치 사진 없을 때), 치수는 조각 색 화살표 치수, 정수 표기, 글자는 항상 바로 서게
+- 조각마다 색은 **외곽선만**(안은 흰색, 음영 없음 — 도면화 1쪽·원판 배치 사진 없을 때), 치수는 조각 색 화살표 치수, 정수 표기, 글자는 항상 바로 서게
 - 선 각도(`_lineAngleMarks` → `_drawAngleMarks`, 편집 화면·도면화 공통, DXF는 `_dxfCollect`에서 SC-DIM ARC+TEXT, ° = `%%d`): 선 두 개가 만나는 점마다 사잇각 호+값(직각·일직선 제외),
   이어진 선이 없는 비스듬한 선은 시작점에서 수평 점선 기준 각도
 - R값·Φ값은 대각선 지시선으로 빼서 어떤 선에도 글자가 걸치지 않게
