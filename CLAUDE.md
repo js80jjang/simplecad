@@ -92,6 +92,9 @@
   `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) → 그룹째 끌면 같이 이동.
   싱크볼 크기 맞춤 `syncGroupShapes`는 groupId 멤버만
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
+  - 주석 크기 = 도면 크기(2026-10-31 사용자 요청 "오토캐드처럼"): `redraw`가 격자 다음 `_annDraw(_redrawBody)` — 배율을 `_annRef`(뷰 맞춤 `fitView`·처음 화면 배율)로 바꿔 그리고 캔버스를 k=`_annK()`(scale/_annRef, 0.4~5)배.
+    → px로 정한 글자·화살촉·치수 간격이 도면과 같이 커지고 작아짐. 편집 ctx의 `lineWidth`·`setLineDash`는 `_lwK`로 나눠 화면 굵기 그대로. 손잡이·회전 손잡이·선택 상자·마그넷·트림 강조는 틀 밖(화면 크기).
+    `dimLabels` 자리는 틀 좌표(화면 ÷ `_annCur`) — `hitDim`·치수 끌기(document mousemove, `_annRun`)·`_dimInputPopup`이 변환. 그리기 미리보기 도형도 `_annDraw`. 도면화(printRender)는 k=1. 휠 = ×1.1 / ÷1.1
   - 크기 손잡이(2026-10-30 개발판에서 만들어 합침): 선택 도형 하나(싱크볼·쿡탑 묶음이면 본체) `_rszTarget` → `drawHandles`가 손잡이(`_rszHandles`, 위치 `_rszHs`) —
     사각형 꼭짓점 4·변 가운데 4(반대쪽 고정, 돌린 사각형은 그 축 `_rszFrame`) / 원 둘레 4(지름) / 타원 두 축 끝 / 선 양 끝. 누르면 `_rszStart`(saveHistory) → 끌기 `_rszApply`(자기 점엔 스냅 안 함) → 놓으면 `_rszEnd`
     (싱크볼 `syncGroupShapes`, 바뀌었으면 저장 배치 초기화). 끄는 중 숫자+Enter = `_rszTyped`(사각 꼭짓점 "가로,세로"·하나면 가로, 변 = 그 치수, 원 = 지름, 타원 = 그 축 길이, 선 = 길이), Esc = 처음 크기, 마우스 옆 `_rszOverlay`

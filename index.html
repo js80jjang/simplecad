@@ -1151,7 +1151,7 @@ var EDITTOOLS=['fillet','grind','jollycut','gosra'];
 
 function mm2px(v){return v*scale;}
 function toCanvas(mx,my){return[offsetX+mx*scale,offsetY+my*scale];}
-function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);offsetX=pad;offsetY=pad;}redraw();}
+function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);_annRef=scale;offsetX=pad;offsetY=pad;}redraw();}
 window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTimeout(resizeCanvas,200);
 loadAllTierPrices();
 renderProductList();
@@ -3197,7 +3197,7 @@ function fitView(){
   if(l===Infinity)return;
   var pad=70,cw=Math.max(50,cv.width-pad*2),ch=Math.max(50,cv.height-pad*2);
   var sw=(r-l)||1,sh=(b-t)||1;
-  scale=Math.min(cw/sw,ch/sh,20);
+  scale=Math.min(cw/sw,ch/sh,20);_annRef=scale; // 맞춰 보기 배율 = 치수 글자 기준 크기
   offsetX=cv.width/2-(l+r)/2*scale;offsetY=cv.height/2-(t+b)/2*scale;
   redraw();
 }
@@ -5120,12 +5120,43 @@ function _fxDraw(s,k,grow){ // k = 0..1 진하기, grow = 크기 배율
   var c=toCanvas((bb.l+bb.r)/2,(bb.t+bb.b)/2);
   ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,k));ctx.translate(c[0],c[1]);ctx.scale(grow,grow);ctx.translate(-c[0],-c[1]);drawShape(s);ctx.restore();
 }
+// ─── 주석 크기 = 도면 크기 (오토캐드처럼, 2026-10-31 사용자 요청) ───
+// 치수·글자·화살촉·번호 등 px로 정한 크기는 _annRef 배율(맞춰 보기 때 배율)에서의 크기 → 확대·축소하면 도면과 같이 커지고 작아짐.
+// 방법: 편집 화면을 그릴 때 배율을 _annRef로 바꿔 그리고 캔버스를 k(=scale/_annRef)배 키움. 선 굵기·점선 간격은 화면 그대로(_lwK로 나눔).
+// 이때 기록되는 치수 글자 자리(dimLabels)는 그 틀 좌표 → 누르기·끌기도 _annRun으로 같은 틀에서 계산
+var _annRef=null,_annCur=1,_lwK=1;
+function _annK(){if(printRender||!_annRef)return 1;return Math.max(0.4,Math.min(5,scale/_annRef));}
+function _annRun(k,fn){if(k===1)return fn();var s0=scale,ox=offsetX,oy=offsetY;scale=s0/k;offsetX=ox/k;offsetY=oy/k;try{return fn();}finally{scale=s0;offsetX=ox;offsetY=oy;}}
+function _annDraw(fn){var k=_annCur=_annK();if(k===1)return fn();ctx.save();ctx.scale(k,k);_lwK=k;try{return _annRun(k,fn);}finally{_lwK=1;ctx.restore();}} // 미리보기 도형도 같은 크기로
+(function(){var P=CanvasRenderingContext2D.prototype,d=Object.getOwnPropertyDescriptor(P,'lineWidth'),sld=P.setLineDash;
+  Object.defineProperty(ctx,'lineWidth',{configurable:true,get:function(){return d.get.call(this)*_lwK;},set:function(v){d.set.call(this,v/_lwK);}});
+  ctx.setLineDash=function(a){return sld.call(this,_lwK===1?a:a.map(function(x){return x/_lwK;}));};})();
 function redraw(){
   var _fxNow=printRender?0:_fxScan();
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle=printRender?'#ffffff':'#09121F';ctx.fillRect(0,0,cv.width,cv.height);
   if(printRender)_pdr=[];
   _lgFrameGroups=null;_lgDimPlan=null; // 선 그룹 캐시는 매 프레임 새로 계산
-  drawGrid();dimLabels=[];autoAdjustDims();
+  drawGrid();
+  _annDraw(function(){_redrawBody(_fxNow);});
+  _rszHs=[];selectedShapes.forEach(function(s){drawHandles(s);});
+  _rotHandlePx=null;
+  if(selectedShapes.length&&!selBox)drawRotationHandle();
+  drawSelBox();
+  if(magnetLineX!==null||magnetLineY!==null)drawMagnetLines();
+  // trim/fillet 호버 하이라이트
+  if((tool==='trim'||tool==='fillet')&&trimHoverShape&&trimHoverEdge){
+    var hep1_=toCanvas(trimHoverEdge.ax,trimHoverEdge.ay);
+    var hep2_=toCanvas(trimHoverEdge.bx,trimHoverEdge.by);
+    ctx.save();
+    ctx.strokeStyle='rgba(0,229,255,0.92)';
+    ctx.lineWidth=3.5;ctx.setLineDash([]);
+    ctx.shadowColor='rgba(0,229,255,0.55)';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(hep1_[0],hep1_[1]);ctx.lineTo(hep2_[0],hep2_[1]);ctx.stroke();
+    ctx.restore();
+  }
+}
+function _redrawBody(_fxNow){
+  dimLabels=[];autoAdjustDims();
   if(!printRender)_drawProdTints();
   shapes.forEach(function(s){
     var mo=printRender?null:_fxMorph.get(s);
@@ -5145,22 +5176,7 @@ function redraw(){
   drawUserGroups();
   _drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1F3F7A';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});
   drawShapeNumbers();
-  _rszHs=[];selectedShapes.forEach(function(s){drawHandles(s);});
-  _rotHandlePx=null;
-  if(selectedShapes.length&&!selBox)drawRotationHandle();
-  drawNestDims();drawSelBox();
-  if(magnetLineX!==null||magnetLineY!==null)drawMagnetLines();
-  // trim/fillet 호버 하이라이트
-  if((tool==='trim'||tool==='fillet')&&trimHoverShape&&trimHoverEdge){
-    var hep1_=toCanvas(trimHoverEdge.ax,trimHoverEdge.ay);
-    var hep2_=toCanvas(trimHoverEdge.bx,trimHoverEdge.by);
-    ctx.save();
-    ctx.strokeStyle='rgba(0,229,255,0.92)';
-    ctx.lineWidth=3.5;ctx.setLineDash([]);
-    ctx.shadowColor='rgba(0,229,255,0.55)';ctx.shadowBlur=10;
-    ctx.beginPath();ctx.moveTo(hep1_[0],hep1_[1]);ctx.lineTo(hep2_[0],hep2_[1]);ctx.stroke();
-    ctx.restore();
-  }
+  drawNestDims();
 }
 
 // ═══ 히트테스트 ═══
@@ -5252,6 +5268,7 @@ function _lineDimCursor(d){
   return a<22.5||a>=157.5?'ew-resize':(a<67.5?'nwse-resize':(a<112.5?'ns-resize':'nesw-resize'));
 }
 function hitDim(ex,ey){
+  ex/=_annCur;ey/=_annCur; // 화면 → 치수 글자 틀 좌표
   for(var i=0;i<dimLabels.length;i++){var d=dimLabels[i];if(Math.abs(ex-d.px)<=36&&Math.abs(ey-d.py)<=14)return d;}
   // 치수 글자가 아니면 치수선 자체(5px 이내) — 끌어서 위치만 옮김
   for(var j=0;j<dimLabels.length;j++){var l=dimLabels[j].line;if(l&&ptLD(ex,ey,l[0][0],l[0][1],l[1][0],l[1][1])<=5)return dimLabels[j];}
@@ -5627,7 +5644,7 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
     else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
-    if(ps){ctx.globalAlpha=0.8;drawShape(ps,true);ctx.globalAlpha=1;}
+    if(ps){ctx.globalAlpha=0.8;_annDraw(function(){drawShape(ps,true);});ctx.globalAlpha=1;}
     if(tool==='line')_lineOverlay(); // 선 절단: 미리보기 + 길이/입력 상자
   }
 });
@@ -5637,8 +5654,10 @@ document.addEventListener('mousemove',function(e){
   if(!dimDragInfo)return;
   var cvRect=cv.getBoundingClientRect();
   var ex=e.clientX-cvRect.left,ey=e.clientY-cvRect.top;
-  var _dx=ex-dimDragStartX,_dy=ey-dimDragStartY;
-  if(Math.hypot(_dx,_dy)>3){
+  if(Math.hypot(ex-dimDragStartX,ey-dimDragStartY)>3){
+    var _ak=_annCur;
+    _annRun(_ak,function(){ // 치수 글자 자리는 틀 좌표(화면 ÷ k)
+    ex/=_ak;ey/=_ak;var _dx=ex-dimDragStartX/_ak,_dy=ey-dimDragStartY/_ak;
     var _ds=dimDragInfo.shape;
     // 끄는 동안에도 자동 배치(autoAdjustDims)가 되돌리지 않게 먼저 "사용자가 옮김" 표시
     var isW=dimDragInfo.field==='w';dimDragSnap=null;
@@ -5667,10 +5686,11 @@ document.addEventListener('mousemove',function(e){
     }
     else if(isW){var _nw=dimDragOrigW+_dy;_ds.dimOffsetW=Math.abs(_nw)<5?(_nw>=0?5:-5):_nw;_ds.dimUserOffsetW=true;}
     else if(dimDragInfo.field==='h'){var _nh=dimDragOrigH+_dx;_ds.dimOffsetH=Math.abs(_nh)<5?(_nh>=0?5:-5):_nh;_ds.dimUserOffsetH=true;}
+    });
     redraw();
     // 스냅된 자리 표시: 화면을 가로지르는 점선
-    if(dimDragSnap){ctx.save();ctx.strokeStyle='#00BCD4';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();
-      if(dimDragSnap.isW){ctx.moveTo(0,dimDragSnap.v);ctx.lineTo(cv.width,dimDragSnap.v);}else{ctx.moveTo(dimDragSnap.v,0);ctx.lineTo(dimDragSnap.v,cv.height);}
+    if(dimDragSnap){var _sv=dimDragSnap.v*_ak;ctx.save();ctx.strokeStyle='#00BCD4';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();
+      if(dimDragSnap.isW){ctx.moveTo(0,_sv);ctx.lineTo(cv.width,_sv);}else{ctx.moveTo(_sv,0);ctx.lineTo(_sv,cv.height);}
       ctx.stroke();ctx.restore();}
   }
 });
@@ -5764,7 +5784,7 @@ function _dimInputPopup(opts){
   var inp=document.getElementById('dim-inline');
   var hideBtn=document.getElementById('dim-hide-btn');
   if(!inp||!hideBtn)return;
-  _dimPopupShow(opts.px,opts.py);
+  _dimPopupShow(opts.px*_annCur,opts.py*_annCur); // 치수 글자 자리(틀 좌표) → 화면
   inp.value=opts.initVal.toFixed(1);
   inp.select();inp.focus();
   // 숨기기 버튼 (onclick 덮어쓰기로 이전 이벤트 정리)
