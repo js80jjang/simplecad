@@ -99,6 +99,9 @@
   단계마다 클릭 또는 숫자+Enter(2단계 마우스 방향 길이, 3단계 반지름), 기본 직교(`ortho`, Shift 비스듬히), Esc 취소, 마우스 옆 안내 글자. → `ellipse{cx,cy,rx,ry,rotation}`(가로·세로 축이면 rotation 0, 아니면 −90°~90°)
   - 돌린 타원 공통 도우미 `_ellHalf`(회전 포함 상자 반폭·반높이)·`_ellPts`(둘레 점)·`_ellLocal`(점 → 타원 로컬): getBBox·클릭 판정·조각 안 판정·편집/도면화 그리기(ctx.ellipse 회전 인자)·온장 배치(`_boardPiece` path)·3D·치수 축 방향
   - 가공비 = 원형 절단(`lenMm.circlecut`) 둘레, 온장 배치 칸 = 회전 포함 상자·글자 "타원 장축×단축", 도면화·DXF 치수 = 두 축 길이(축 방향 그대로 바깥)
+  - 타원 둘레 가공 표시 `_ellMarkFor(tool,…)`(finalizeShape에서 grind·jollycut·gosra 도구, 두 끝점이 타원 둘레 위면): 둘레 `_ELL_N`(72)등분 점(= `_ellPts`, 3D 옆면 변과 같은 점 → 3D 졸리컷·고스라 면도 맞음)을 잇는 짧은 직선 마크들,
+    끈 구간(짧은 쪽) 또는 누르기만 하면 한 바퀴, 한 묶음 = 새 `userGroupId`. 재료 쪽(타원 조각 = 안, 조각 안 타원 = 바깥)으로 grind `inward`+`inwardOverride`·gosra `outward`,
+    ★·▲·깊이 글자는 가운데·18칸마다만(`sym:false` = 편집/도면화/DXF에서 기호 안 그림, grind는 hideDims.dist). `_gosraDir`도 타원 조각/타공부를 앎
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
