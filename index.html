@@ -9116,7 +9116,7 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
   //   hopt = 손잡이 덮어쓰기 {type,dir,len} (서랍은 가로 손잡이 등)
   function door(F,P,Q,dy0,dy1,nx,nz,design,isUp,side,ang,mode,hopt,ext){
     var w=Math.hypot(Q[0]-P[0],Q[1]-P[1]);if(w<1)return;var ux=(Q[0]-P[0])/w,uz=(Q[1]-P[1])/w,HS=hopt?Object.assign({},_3dStyle.handle,hopt):_3dStyle.handle,hd=HS.type;
-    var DK=['door','gap','glass','handle','groove','cook'],st0={};DK.forEach(function(k){st0[k]=F[k].length;});
+    var DK=['door','gap','glass','handle','groove','cook','sink'],st0={};DK.forEach(function(k){st0[k]=F[k].length;});
     if(hd==='gola'){if(isUp)dy0+=35;else dy1-=35;} // 골라(C채널): 도어를 35 줄이고 그 자리에 알루미늄 홈
     var H=dy1-dy0;
     function pt(s,d){return[P[0]+ux*s+nx*d,P[1]+uz*s+nz*d];}
@@ -9149,14 +9149,16 @@ function _3dSetupGL(cv,scene,furn,mode,upper){ // mode: 'top' = 상판만, 'mid'
       for(var k=0;k<n;k++){var c0=k*rw;for(var j=0;j<6;j++){var a0=Math.PI*j/6,a1=Math.PI*(j+1)/6;
         strip(F.door,c0+rw*(1-Math.cos(a0))/2,6*Math.sin(a0),c0+rw*(1-Math.cos(a1))/2,6*Math.sin(a1),dy0,dy1);}}
       lines(0,w,dy0,dy1,0.5);
-    } else if(design==='oven'){ // 오븐 문: 금속 틀 + 검은 유리창 + 위 조작부 띠 + 가로 막대 손잡이
-      quad(F.handle,0,w,dy0,dy1,0);quad(F.cook,Math.min(30,w/6),w-Math.min(30,w/6),dy0+30,dy1-90,0.6);quad(F.cook,w*0.25,w*0.75,dy1-55,dy1-25,0.6);
-      box(F.handle,Math.min(50,w/5),w-Math.min(50,w/5),dy1-112,dy1-100,12,24);box(F.handle,Math.min(56,w/5),Math.min(66,w/5+10),dy1-112,dy1-100,0,12);box(F.handle,w-Math.min(66,w/5+10),w-Math.min(56,w/5),dy1-112,dy1-100,0,12);
+    } else if(design==='oven'){ // 빌트인 오븐 문: 스테인리스 틀 + 검은 유리창 + 검은 가로 막대 손잡이 (조작부는 uFront가 문 위에 따로)
+      var om=Math.min(28,w/8);quad(F.sink,0,w,dy0,dy1,0);quad(F.cook,om,w-om,dy0+om,dy1-60,0.6);
+      box(F.cook,Math.min(60,w/5),w-Math.min(60,w/5),dy1-42,dy1-28,14,28);box(F.cook,Math.min(66,w/5),Math.min(78,w/5+12),dy1-42,dy1-28,0,14);box(F.cook,w-Math.min(78,w/5+12),w-Math.min(66,w/5),dy1-42,dy1-28,0,14);
       lines(0,w,dy0,dy1,0.5);
     } else {
       quad(F.door,0,w,dy0,dy1,0);lines(0,w,dy0,dy1,0.5);
       if(design==='groove')[1/3,2/3].forEach(function(f){var gy=dy0+H*f;quad(F.groove,0,w,gy-3,gy+3,0.4);}); // 가로 V홈 두 줄 (어두운 6mm 띠)
     }
+    if(HS.band)quad(F.cook,0,w,dy1-36,dy1,0.6); // 식세기 조작부 띠 (문 위 어두운 띠)
+    if(HS.inner){var ia=pt(0,-18.5),ib=pt(w,-18.5);q3(F.sink,[ia[0],dy0,ia[1]],[ia[0],dy1,ia[1]],[ib[0],dy1,ib[1]],[ib[0],dy0,ib[1]],[-nx,0,-nz]);} // 문 안쪽 스테인리스 (열면 보임)
     // ── 손잡이 ──
     var L2=HS.len==='full'?Infinity:(+HS.len||160),vert=HS.dir!=='h'&&hd!=='edge',edgeS=side==='l'?45:side==='r'?w-45:w/2;
     function onePull(len){ // 바·매립형이 놓일 자리: 세로면 손잡이 쪽 끝에서 45 안쪽 · 위(하부장)/아래(상부장)에서 50, 가로면 가운데 · 위/아래에서 45
@@ -9217,10 +9219,53 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
   function uFront(F,P,Q,dy0,dy1,nx,nz,dsg,isUp,side,ang,t,dep){
     var H=dy1-dy0,w=Math.hypot(Q[0]-P[0],Q[1]-P[1]),hH={dir:'h'},G=3,ux=(Q[0]-P[0])/(w||1),uz=(Q[1]-P[1])/(w||1),out=Math.max(150,(dep||560)-80);
     function at(s,d){return[P[0]+ux*s+nx*d,P[1]+uz*s+nz*d];}
-    if(!isUp&&t==='drawer'){var y=dy1;[0.24,0.36,0.40].forEach(function(r,i){var yb=i===2?dy0:y-H*r;door(F,P,Q,yb+(i===2?0:G/2),y-(i===0?0:G/2),nx,nz,dsg,false,'c',ang*[1,0.75,0.5][i],'slide',hH,out);y=yb;});return;}
-    if(!isUp&&t==='pullout'){door(F,P,Q,dy0,dy1,nx,nz,dsg,false,'c',ang,'slide',hH,out);return;}
-    if(!isUp&&t==='dish'){door(F,P,Q,dy0,dy1,nx,nz,dsg,false,'c',ang,'down',hH);return;}
-    if(!isUp&&t==='oven'){var yo=dy1-Math.min(H-120,600);door(F,P,Q,dy0,yo-G/2,nx,nz,dsg,false,'c',ang*0.6,'slide',hH,out);door(F,P,Q,yo+G/2,dy1,nx,nz,'oven',false,'c',ang,'down',{type:'none'});return;}
+    // 칸 안 부품: d = 앞면에서 앞(+)/안(-) mm (몸통 앞면 = -2), D = 안쪽 끝
+    var D=Math.max(200,(dep||560)-60),f=ang/90;
+    function P3(s,y,d){var p=at(s,d);return[p[0],y,p[1]];}
+    function q4(arr,a,b,c,e,n){[a,b,c,a,c,e].forEach(function(p){v(arr,p[0],p[1],p[2],n[0],n[1],n[2],0,0);});}
+    function bx(arr,s0,s1,y0,y1,d0,d1){ // 상자 (d0 안쪽 < d1 앞)
+      q4(arr,P3(s0,y0,d1),P3(s1,y0,d1),P3(s1,y1,d1),P3(s0,y1,d1),[nx,0,nz]);q4(arr,P3(s0,y0,d0),P3(s0,y1,d0),P3(s1,y1,d0),P3(s1,y0,d0),[-nx,0,-nz]);
+      q4(arr,P3(s0,y1,d0),P3(s0,y1,d1),P3(s1,y1,d1),P3(s1,y1,d0),[0,1,0]);q4(arr,P3(s0,y0,d0),P3(s1,y0,d0),P3(s1,y0,d1),P3(s0,y0,d1),[0,-1,0]);
+      q4(arr,P3(s0,y0,d0),P3(s0,y0,d1),P3(s0,y1,d1),P3(s0,y1,d0),[-ux,0,-uz]);q4(arr,P3(s1,y0,d0),P3(s1,y1,d0),P3(s1,y1,d1),P3(s1,y0,d1),[ux,0,uz]);}
+    function cav(arr,s0,s1,y0,y1,d0,d1){ // 앞이 열린 안쪽 통 (면이 안쪽을 봄: 뒤·양옆·위·아래)
+      q4(arr,P3(s0,y0,d0),P3(s1,y0,d0),P3(s1,y1,d0),P3(s0,y1,d0),[nx,0,nz]);
+      q4(arr,P3(s0,y0,d0),P3(s0,y0,d1),P3(s0,y1,d1),P3(s0,y1,d0),[ux,0,uz]);q4(arr,P3(s1,y0,d0),P3(s1,y1,d0),P3(s1,y1,d1),P3(s1,y0,d1),[-ux,0,-uz]);
+      q4(arr,P3(s0,y1,d0),P3(s1,y1,d0),P3(s1,y1,d1),P3(s0,y1,d1),[0,-1,0]);q4(arr,P3(s0,y0,d0),P3(s0,y0,d1),P3(s1,y0,d1),P3(s1,y0,d0),[0,1,0]);}
+    var AR=[F.body,F.handle,F.cook,F.glass,F.sink];
+    function mk(){return AR.map(function(a){return a.length;});}
+    function mvOut(m,dd){if(!dd)return;AR.forEach(function(a,i){for(var j=m[i];j<a.length;j+=8){a[j]+=nx*dd;a[j+2]+=nz*dd;}});}
+    function drawerBox(yb,yt,k){var m=mk(),hb=Math.max(yb+40,yt-45); // 서랍 통: 양옆판·뒤판·밑판 + 레일, 앞판과 같이 빠짐
+      bx(F.body,22,34,yb+20,hb,-D,-20);bx(F.body,w-34,w-22,yb+20,hb,-D,-20);bx(F.body,34,w-34,yb+20,hb,-D,-D+12);bx(F.body,34,w-34,yb+20,yb+30,-D+12,-20);
+      bx(F.handle,14,22,yb+32,yb+44,-D,-20);bx(F.handle,w-22,w-14,yb+32,yb+44,-D,-20);mvOut(m,f*k*out);}
+    if(!isUp&&t==='drawer'){ // 서랍 3단 (위 24%·가운데 36%·아래 40%) — 열면 아래가 가장 많이, 가운데, 위가 가장 조금
+      var y=dy1,K=[0.4,0.68,1];[0.24,0.36,0.40].forEach(function(r,i){var yb=i===2?dy0:y-H*r,y0=yb+(i===2?0:G/2),y1=y-(i===0?0:G/2);
+        door(F,P,Q,y0,y1,nx,nz,dsg,false,'c',ang*K[i],'slide',hH,out);drawerBox(y0,y1,K[i]);y=yb;});return;}
+    if(!isUp&&t==='pullout'){ // 풀아웃: 앞판 + 뒤로 이어진 바구니(양옆 옆판·뒤 틀·선반 3단 + 투명 난간)
+      door(F,P,Q,dy0,dy1,nx,nz,dsg,false,'c',ang,'slide',hH,out);var m=mk(),yA=dy0+40,yB=dy1-80;
+      bx(F.cook,24,30,yA,yB,-D,-22);bx(F.cook,w-30,w-24,yA,yB,-D,-22); // 옆판
+      bx(F.cook,30,w-30,yB-24,yB,-D,-D+6);bx(F.cook,30,w-30,yA,yA+24,-D,-D+6); // 뒤 틀
+      [yA+20,dy0+H*0.42,dy0+H*0.72].forEach(function(ys){bx(F.cook,30,w-30,ys,ys+6,-D+6,-22);bx(F.glass,30,w-30,ys+6,ys+80,-30,-26);bx(F.glass,30,w-30,ys+6,ys+80,-D+10,-D+6);});
+      mvOut(m,f*out);return;}
+    if(!isUp&&t==='dish'){ // 식세기장: 통판 문(위 조작부 띠, 아래 축으로 내려옴, 안쪽 스테인리스) + 안에 스테인리스 통·식기 랙 2단(열면 아래 랙이 나옴)
+      var t0=dy0+40,t1=dy1-30;cav(F.sink,22,w-22,t0,t1,-D,-4);
+      [[t0+70,0.7],[t0+(t1-t0)*0.52,0.35]].forEach(function(r){var m=mk(),ry=r[0],a=36,b=w-36,d0=-D+16,d1=-34;
+        bx(F.cook,a,b,ry,ry+6,d1-6,d1);bx(F.cook,a,b,ry,ry+6,d0,d0+6);bx(F.cook,a,a+6,ry,ry+6,d0,d1);bx(F.cook,b-6,b,ry,ry+6,d0,d1); // 랙 테두리
+        for(var x=a+40;x<b-20;x+=45)bx(F.cook,x,x+4,ry,ry+4,d0,d1); // 바닥 철사
+        bx(F.cook,a,b,ry+70,ry+75,d1-5,d1);bx(F.cook,a,b,ry+70,ry+75,d0,d0+5);bx(F.cook,a,a+5,ry+70,ry+75,d0,d1);bx(F.cook,b-5,b,ry+70,ry+75,d0,d1); // 위 테
+        for(var z=d0+50;z<d1-20;z+=60)bx(F.cook,a+6,b-6,ry+6,ry+60,z,z+3); // 세운 살
+        mvOut(m,f*r[1]*D);});
+      door(F,P,Q,dy0,dy1,nx,nz,dsg,false,'c',ang,'down',{dir:'h',band:true,inner:true});return;}
+    if(!isUp&&t==='oven'){ // 빌트인 오븐장: 위 막음판 · 오븐(조작부 + 아래로 열리는 문, 안에 검은 오븐 칸·선반) · 아래 서랍
+      var yF0=dy1-60;door(F,P,Q,yF0+G/2,dy1,nx,nz,dsg,false,'c',0,'swing',{type:'none'});
+      var a1=yF0-G/2,a0=Math.max(dy0+130,a1-595),cp=a1-85;
+      q4(F.sink,P3(0,cp,0.3),P3(w,cp,0.3),P3(w,a1,0.3),P3(0,a1,0.3),[nx,0,nz]); // 조작부 (스테인리스) + 표시창·다이얼
+      q4(F.cook,P3(w*0.4,cp+28,0.8),P3(w*0.6,cp+28,0.8),P3(w*0.6,a1-24,0.8),P3(w*0.4,a1-24,0.8),[nx,0,nz]);
+      [0.2,0.8].forEach(function(r){bx(F.cook,w*r-13,w*r+13,cp+29,cp+55,0.3,16);});
+      cav(F.cook,40,w-40,a0+28,cp-28,-Math.min(D,520),-4); // 오븐 칸
+      [0.38,0.66].forEach(function(r){var yr=a0+28+(cp-a0-56)*r;bx(F.sink,42,w-42,yr,yr+5,-Math.min(D,520)+10,-30);});
+      door(F,P,Q,a0,cp-2,nx,nz,'oven',false,'c',ang,'down',{type:'none',inner:true});
+      if(a0-G-dy0>60){door(F,P,Q,dy0,a0-G,nx,nz,dsg,false,'c',ang*0.6,'slide',hH,out);drawerBox(dy0,a0-G,0.6);}
+      return;}
     if(isUp&&t==='flap'){door(F,P,Q,dy0,dy1,nx,nz,dsg,true,'c',ang,'up',hH);return;}
     if(isUp&&t==='fold'){var hm=(dy0+dy1)/2;door(F,P,Q,hm+G/2,dy1,nx,nz,dsg,true,'c',ang,'up',{type:'none'});door(F,P,Q,dy0,hm-G/2,nx,nz,dsg,true,'c',ang,'fold2',hH,dy1-hm-G/2);return;}
     if(isUp&&t==='slide'){var hv={type:'recess',dir:'v'};door(F,at(0,22),at(w/2+10,22),dy0,dy1,nx,nz,dsg,true,'r',0,'swing',hv);door(F,at(w/2-10,0),Q,dy0,dy1,nx,nz,dsg,true,'l',ang,'slu',hv,w/2-10);return;}
@@ -9230,13 +9275,16 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
   function uMark(){var m={};Object.keys(furnDraw).forEach(function(k){m[k]=furnDraw[k].length;});return m;}
   function uShift(m,o){if(!o||(!o[0]&&!o[1]&&!o[2]))return;Object.keys(furnDraw).forEach(function(k){var a=furnDraw[k];for(var i=m[k];i<a.length;i+=8){a[i]+=o[0];a[i+1]+=o[1];a[i+2]+=o[2];}});}
   // 가구 한 칸(도어 하나 단위): 앞 선 F0(s=0, 바깥 법선 n) 기준 s0~s1, 깊이 d(안쪽), yb~yt — 뒷판·양옆·밑판·윗판 + 가로 선반 2단(1/3·2/3 높이, 두께 18)
-  function bay(arr,F0,ux,uz,nx,nz,s0,s1,d,yb,yt,top){
+  function bay(arr,F0,ux,uz,nx,nz,s0,s1,d,yb,yt,top,noShelf,slotOnly){
     function P3(s,dd,y){return[F0[0]+ux*s+nx*dd,y,F0[1]+uz*s+nz*dd];}
     function q(a,b,c,e,n){[a,b,c,a,c,e].forEach(function(p){v(arr,p[0],p[1],p[2],n[0],n[1],n[2],0,0);});}
+    if(slotOnly){ // 칸을 옮기거나 지운 자리: 빈 칸처럼 뒷판 + 양옆(안쪽을 봄)만
+      q(P3(s0,-d,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s0,-d,yt),[nx,0,nz]);
+      q(P3(s0,0,yb),P3(s0,-d,yb),P3(s0,-d,yt),P3(s0,0,yt),[ux,0,uz]);q(P3(s1,0,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s1,0,yt),[-ux,0,-uz]);return;}
     q(P3(s0,-d,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s0,-d,yt),[nx,0,nz]); // 뒷판 (안쪽을 봄)
     q(P3(s0,0,yb),P3(s0,-d,yb),P3(s0,-d,yt),P3(s0,0,yt),[-ux,0,-uz]);q(P3(s1,0,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s1,0,yt),[ux,0,uz]); // 옆판
     q(P3(s0,0,yb),P3(s1,0,yb),P3(s1,-d,yb),P3(s0,-d,yb),[0,1,0]);if(top)q(P3(s0,0,yt),P3(s1,0,yt),P3(s1,-d,yt),P3(s0,-d,yt),[0,-1,0]);
-    [1/3,2/3].forEach(function(f){var y=yb+(yt-yb)*f,a=s0+1,b=s1-1,dd=-d+1,df=-20; // 선반 (앞에서 20 들임)
+    if(!noShelf)[1/3,2/3].forEach(function(f){var y=yb+(yt-yb)*f,a=s0+1,b=s1-1,dd=-d+1,df=-20; // 선반 (앞에서 20 들임)
       q(P3(a,df,y+9),P3(b,df,y+9),P3(b,dd,y+9),P3(a,dd,y+9),[0,1,0]);q(P3(a,df,y-9),P3(b,df,y-9),P3(b,dd,y-9),P3(a,dd,y-9),[0,-1,0]);
       q(P3(a,df,y-9),P3(b,df,y-9),P3(b,df,y+9),P3(a,df,y+9),[nx,0,nz]);});
   }
@@ -9246,7 +9294,7 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
   var unitInfo=[],uDel=_3dStyle.unitDel||{},dAng=(_3d&&_3d.doorAng)||{}; // 가구 칸 (고르기·삭제·문 열기)
   function unitPush(key,up,F0,ux,uz,nx,nz,s0,s1,d,yb,yt,o){o=o||[0,0,0];var c=[[0,2],[0,-d],[1,-d],[1,2]].map(function(q){var s=q[0]?s1:s0;return[F0[0]+ux*s+nx*q[1]+o[0],F0[1]+uz*s+nz*q[1]+o[2]];});yb+=o[1];yt+=o[1];
     unitInfo.push({key:key,up:up,c:c,y0:yb,y1:yt,ux:ux,uz:uz,nx:nx,nz:nz,o:o,min:[Math.min(c[0][0],c[1][0],c[2][0],c[3][0]),yb,Math.min(c[0][1],c[1][1],c[2][1],c[3][1])],max:[Math.max(c[0][0],c[1][0],c[2][0],c[3][0]),yt,Math.max(c[0][1],c[1][1],c[2][1],c[3][1])]});}
-  var LF={door:furnDraw.door,gap:furnDraw.gap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove,cook:furnDraw.cook},UF={door:furnDraw.uDoor,gap:furnDraw.uGap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove,cook:furnDraw.cook};
+  var LF={door:furnDraw.door,gap:furnDraw.gap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove,cook:furnDraw.cook,sink:furnDraw.sink,body:furnDraw.body},UF={door:furnDraw.uDoor,gap:furnDraw.uGap,glass:furnDraw.glass,handle:furnDraw.handle,groove:furnDraw.groove,cook:furnDraw.cook,sink:furnDraw.sink,body:furnDraw.uBody};
   // ARCKIT 마감 결: 결 이미지가 준비됐으면 도어에 무늬 좌표(tw·th mm마다 한 장, 반복) + 반복 텍스처
   var lFin=_3dFinish(_3dStyle.lower.finish),uFin=_3dFinish(_3dUp().finish),lCv=lFin?_doorFinishCanvas(lFin.id):null,uCv=uFin?_doorFinishCanvas(uFin.id):null;
   if(lCv){LF.tw=lFin.tw;LF.th=lFin.th;}if(uCv){UF.tw=uFin.tw;UF.th=uFin.th;}
@@ -9348,15 +9396,19 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(A[0]+B[0])/2+nx,(A[1]+B[1])/2+nz)){nx=-nx;nz=-nz;}
         var parts=_3dDoorSplit(L,appAt[i]||[]);
         for(var k=0;k<parts.length;k++){
-          var uk='L'+key.id+':'+i+':'+k;if(uDel[uk])continue; // 3D에서 지운 칸
-          var UO=_3dUnitOf(uk)||{},uo=UO.o,um=uMark(); // 옮긴 자리·종류 (칸 단위)
+          var uk='L'+key.id+':'+i+':'+k;
+          var UO=_3dUnitOf(uk)||{},uo=UO.o,moved=!!(uo&&(uo[0]||uo[1]||uo[2])); // 옮긴 자리·종류 (칸 단위)
+          if(uDel[uk]||moved){var bd0=depthIn(body,[A[0]+ux*(parts[k][0]+parts[k][1])/2,A[1]+uz*(parts[k][0]+parts[k][1])/2],nx,nz);
+            bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd0,0,y0,false,true,true);} // 빈 자리 = 빈 칸처럼 (뒷판·양옆)
+          if(uDel[uk])continue; // 3D에서 지운 칸
+          var um=uMark();
           var bd=depthIn(body,[A[0]+ux*(parts[k][0]+parts[k][1])/2,A[1]+uz*(parts[k][0]+parts[k][1])/2],nx,nz);
           // 싱크볼 구멍과 겹치는 칸은 몸통·선반을 볼 밑(상판 밑 200)까지만 — 구멍으로 칸 옆판·선반이 들여다보이지 않게 (2026-10-29)
           var byt=y0,bx0=parts[k][0],bx1=parts[k][1],bc=[[bx0,0],[bx1,0],[bx1,-bd],[bx0,-bd]].map(function(q){return[A[0]+ux*q[0]+nx*q[1],A[1]+uz*q[0]+nz*q[1]];}),
             bl=Math.min.apply(null,bc.map(function(p){return p[0];})),br=Math.max.apply(null,bc.map(function(p){return p[0];})),bt=Math.min.apply(null,bc.map(function(p){return p[1];})),bb2=Math.max.apply(null,bc.map(function(p){return p[1];}));
           loops.holes.forEach(function(H,hi3){if(loops.kinds[hi3]!=='sink')return;var xs=H.map(function(p){return p[0];}),zs=H.map(function(p){return p[1];});
             if(Math.min.apply(null,xs)<br-1&&Math.max.apply(null,xs)>bl+1&&Math.min.apply(null,zs)<bb2-1&&Math.max.apply(null,zs)>bt+1)byt=Math.min(byt,y0-202);});
-          bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,byt,byt<y0);
+          bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,byt,byt<y0||moved,!!UO.t&&UO.t!=='swing'); // 옮긴 칸은 윗판도 (상판 밑을 벗어남) · 서랍·풀아웃 등은 선반 없음
           var K0=[A[0]-nx*_3D_KICKSET,A[1]-nz*_3D_KICKSET],kb=Math.max(0,bd-_3D_KICKSET); // 걸레받이: 칸 앞에서 50 들임 + 양 끝
           [[parts[k][0],parts[k][1],0,0],[parts[k][0],parts[k][0],0,-kb],[parts[k][1],parts[k][1],0,-kb]].forEach(function(q){var a=[K0[0]+ux*q[0]+nx*q[2],K0[1]+uz*q[0]+nz*q[2]],b=[K0[0]+ux*q[1]+nx*q[3],K0[1]+uz*q[1]+nz*q[3]],en=q[0]===q[1]?[(q[0]===parts[k][0]?-1:1)*ux,(q[0]===parts[k][0]?-1:1)*uz]:[nx,nz];
             [[a,0],[b,0],[b,_3D_KICK],[a,0],[b,_3D_KICK],[a,_3D_KICK]].forEach(function(p){v(furnDraw.kick,p[0][0],p[1],p[0][1],en[0],0,en[1],0,0);});});

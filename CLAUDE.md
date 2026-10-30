@@ -234,10 +234,13 @@
     `_3dPick` kind 'unit'(하부장 칸)/'upper'(상부장 칸, 끌면 그 상부장 전체 위아래 → `upOff[자리key]`, 자석·기준선) → 누르면 `_3d.selUnit` 노란 테두리 `_3dUnitOutline`, Delete = `_3dUnitDelete`,
     더블클릭 = `_3dDoorToggle`(0↔90°, 파일 저장 안 함). 되돌리기 `_3d.fOps`(지우기·상부장 높이, 그때 `_hist` 길이) — `_3dUndo`가 먼저 처리, "가구 처음대로" = 모두
   - 가구 칸 객체(2026-10-31): `_3dStyle.units[칸 key] = {o:[x,y,z] 옮긴 mm, t:종류}`(`_3dUnitOf/_3dUnitSet`, 0·swing이면 지움). `_3dSetupGL`이 칸마다 `uMark()` → 몸통·걸레받이·앞면 그림 → `uShift(m,o)`로 그 정점만 옮김, `unitInfo`에 o·축(ux,uz,nx,nz)
+    옮기거나 지운 하부장 칸의 원래 자리 = `bay(...,slotOnly)` 빈 칸(뒷판·양옆이 안쪽을 봄), 옮긴 칸은 윗판도 그림
     고르기 `_3d.selUnits`(Ctrl+클릭 여러 개, `_3dSelSet`/`_3dSelOutline`, 마지막 = selUnit), 위 가운데 종류 막대 `#v3d-utype`(`_3dUTypeBar`: `_3D_UTYPES` 버튼·↺ 자리·삭제)
     끌기 `drag.um` → `_3dUnitMove`(누른 칸 축으로 옆 a·앞뒤 b, 작은 쪽 < 큰 쪽 0.5면 0(Alt 자유), 다른 칸·상판 외곽 상자 옆면/앞뒷면·처음 자리 tol 맞춤 + 기준선 / Shift = 위아래 `_3dVertH`, 바닥·칸 y0/y1·상판 높이),
     방향키 `_3dUnitNudge`(←→ 화면 기준 옆, ↑↓ 위아래, 10/Shift 100), Delete = 고른 칸 모두. 되돌리기 fOp `{t:'units',prev:JSON}`·`{t:'del',keys}`. 예전 상부장 전체 높이 `upOff`는 읽기만(끌기는 이제 칸 단위)
-  - 칸 종류 앞면 `uFront`(`_3D_UTYPES`): 하부 swing·drawer(3단 24/36/40%, 가로 손잡이, 빠짐)·pullout(한 판 빠짐)·dish(통판, 아래 축으로 내려옴)·oven(위 오븐 문 `door` design 'oven' = 금속 틀+검은 유리 `F.cook`+막대, 아래 서랍) /
+  - 칸 종류 앞면 `uFront`(`_3D_UTYPES`, 안 부품 도우미 `bx` 상자·`cav` 안쪽 통·`mvOut` 같이 빠짐, LF/UF에 body·sink 배열도): 하부 swing·drawer(3단 24/36/40%, 열림 위 0.4·가운데 0.68·아래 1, 서랍 통 `drawerBox`)·
+    pullout(앞판 + 바구니: 옆판·뒤 틀·선반 3단·투명 난간)·dish(문 위 조작부 띠 `hopt.band`·안쪽 스테인리스 `hopt.inner`, 아래 축으로 내려옴, 안 스테인리스 통 + 랙 2단(아래 랙 0.7·위 0.35 빠짐))·
+    oven(빌트인: 위 막음판 60 · 조작부 85(표시창·다이얼) · 오븐 문 design 'oven'(스테인리스 틀+검은 유리+검은 막대, 아래로) + 검은 오븐 칸·선반 · 아래 서랍). 서랍류는 `bay` 선반 없음(noShelf) /
     상부 swing·flap(위 축으로 들림)·fold(두 짝, 아래짝 `fold2` = 위짝 아래 모서리 따라 반대로 접힘)·slide(앞 22 띄운 짝 + 뒤 짝이 옆으로 밀림 `slu`, 매립 손잡이). `door(...,mode,hopt,ext)` = 열리는 방식·손잡이 덮어쓰기·거리
   - 첫 화면 `_3dIntro`(약 1.8초): `_3d.anim={t}` → `_3dAnimPh()` s(상판 3D 자리로 미끄러짐·돌기)·r(900으로 올라감, 하부장 같이 자람)·m(미드웨이·판 눕힌 데서 세움, 정점 보간)·g(상부장 내려앉음), 시점 위에서 → 비스듬히, 누르면 끝
   - 닫을 때 `close3D(true)`(✕ 버튼만, show3D 안의 close3D()는 바로) → `_3dOutro`(2026-10-29): `st.closing`, 번호표·양옆 서랍 흐리게, t 1→0(약 1.5초), 시점 지금 → 위에서(t=0 장면), 끝나면 창 opacity 0.25초 뒤 close3D. 누르면 바로(`animStop`), 닫는 중이면 `_3dIntro`는 멈춤
