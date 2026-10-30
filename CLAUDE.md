@@ -92,6 +92,12 @@
   `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) → 그룹째 끌면 같이 이동.
   싱크볼 크기 맞춤 `syncGroupShapes`는 groupId 멤버만
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
+  - 크기 손잡이(2026-10-30 개발판에서 만들어 합침): 선택 도형 하나(싱크볼·쿡탑 묶음이면 본체) `_rszTarget` → `drawHandles`가 손잡이(`_rszHandles`, 위치 `_rszHs`) —
+    사각형 꼭짓점 4·변 가운데 4(반대쪽 고정, 돌린 사각형은 그 축 `_rszFrame`) / 원 둘레 4(지름) / 타원 두 축 끝 / 선 양 끝. 누르면 `_rszStart`(saveHistory) → 끌기 `_rszApply`(자기 점엔 스냅 안 함) → 놓으면 `_rszEnd`
+    (싱크볼 `syncGroupShapes`, 바뀌었으면 저장 배치 초기화). 끄는 중 숫자+Enter = `_rszTyped`(사각 꼭짓점 "가로,세로"·하나면 가로, 변 = 그 치수, 원 = 지름, 타원 = 그 축 길이, 선 = 길이), Esc = 처음 크기, 마우스 옆 `_rszOverlay`
+  - 움직임 효과: `_fxScan`(redraw마다 지난번 도형 Set과 비교) → 새 도형 `_fxIn` 0.22초 나타나기, 지운 도형 `_fxOut` 0.18초 사라지기(`_fxDraw`), 대부분 새 객체(불러오기)면 효과 없음.
+    되돌리기는 `undo()`가 `_fxUndoPrev`(id → 복사본)를 남겨 id로 비교: 다시 생김 = 나타나기, 없어짐 = 사라지기, 자리·크기·각도(`_FX_KEYS`) 바뀜 = `_fxMorph` 0.24초 미끄러지기. 효과 중 rAF로 다시 그림(선·타원·손잡이 미리보기 같이)
+  - 3D 디자인 창을 누르면(capture, 바꾸기 전) `_3dSnapFade` = 3D 화면을 찍어 덮었다가 0.38초 동안 걷어냄(디자인 바뀔 때 스며들듯)
 - 선 절단 도구 = 오토캐드 LINE 방식(`lineChain`, `_lineAddTo/_lineMouseUp/_lineKey/_lineOverlay`): 클릭 = 시작점 → 마우스를 움직이면 미리보기 선 + 동적 입력(`_lineDynInput`:
   선 옆 점선 치수의 길이 칸(파랑 선택 = 바로 치면 바뀜, 입력 중엔 친 글자), 시작점 수평 기준 점선 호 + 각도 칸, 커서 옆 "다음 점 지정 또는 길이 입력")
   → 클릭(또는 끌다 놓기, `_lineMouseUp`) = 그 점(직교·스냅 적용)까지 바로 선 / 움직이며 숫자 + Enter(`_lineKey` → `_lineTarget`) = 마우스 방향으로 그 길이

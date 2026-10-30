@@ -924,7 +924,9 @@ var trimHoverShape=null,trimHoverEdge=null;
 var pendingHoleType='faucet'; // 타공 도구 기본: Φ35 수전
 var _hist=[];
 function saveHistory(){_hist.push(JSON.stringify(shapes.map(function(s){return Object.assign({},s);})));if(_hist.length>50)_hist.shift();}
-function undo(){if(!_hist.length)return;shapes=JSON.parse(_hist.pop()).map(function(d){return Object.assign({},d);});selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();}
+function undo(){if(!_hist.length)return;
+  _fxUndoPrev=new Map(shapes.map(function(s){return[s.id,JSON.parse(JSON.stringify(s))];})); // 되돌리기 애니메이션: 바뀌기 전 도형 (id로 맞춤 — _fxScan)
+  shapes=JSON.parse(_hist.pop()).map(function(d){return Object.assign({},d);});selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();}
 function makeShape(k,p){var base={id:nextId++,kind:k,ops:[]};if(k==='gosramark')base.hideDims={dist:true};return Object.assign(base,p);}
 
 // 모따기: 사각형 엣지 클릭 감지
@@ -2908,7 +2910,100 @@ function drawNestDims(){
   }
 }
 
+// ── 크기 손잡이 (개발판 2026-10-30 사용자 요청 "객체를 클릭하여 사이즈를 마우스로 끌어서 변경 + 끈 상태에서 치수 입력") ──
+//   선택한 도형 하나(싱크볼·쿡탑처럼 묶음이면 그 본체)에 손잡이: 사각형 = 꼭짓점 4 + 변 가운데 4(반대쪽 고정, 돌린 사각형도 그 축으로),
+//   원 = 둘레 4(지름), 타원 = 두 축 끝(그 축 길이, 가운데 고정), 선 = 양 끝(반대 끝 고정).
+//   끄는 동안 숫자 + Enter = 그 치수로(사각 꼭짓점은 "가로,세로" 또는 숫자 하나 = 가로, 원 = 지름, 타원 = 그 축 길이, 선 = 길이) → 바로 끝. Esc = 처음 크기로
+var _rsz=null,_rszHs=[]; // _rszHs = 지금 그린 손잡이 [{x,y(px), h}]
+function _rszTarget(){
+  if(tool!=='select'||!selectedShapes.length)return null;
+  var s=selectedShapes.length===1?selectedShapes[0]:null;
+  if(!s){var m=selectedShapes.filter(function(o){return o.groupRole==='main';});if(m.length===1&&selectedShapes.every(function(o){return o.groupId===m[0].groupId;}))s=m[0];} // 싱크볼·쿡탑 묶음 = 본체
+  if(!s)return null;
+  if(s.kind==='rect'||s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||(s.kind==='line'&&!s.groupId))return s;
+  return null;
+}
+function _rszFrame(s){ // 사각형: 가운데·축(돌린 각도 포함)
+  var r=s.rotation||0;return{c:[s.x+s.w/2,s.y+s.h/2],u:[Math.cos(r),Math.sin(r)],v:[-Math.sin(r),Math.cos(r)],w:Math.abs(s.w),h:Math.abs(s.h)};
+}
+function _rszHandles(s){
+  var o=[];
+  if(s.kind==='rect'){var F=_rszFrame(s);[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]].forEach(function(k){
+    o.push({p:[F.c[0]+F.u[0]*k[0]*F.w/2+F.v[0]*k[1]*F.h/2,F.c[1]+F.u[1]*k[0]*F.w/2+F.v[1]*k[1]*F.h/2],sx:k[0],sy:k[1]});});}
+  else if(s.kind==='circle'||s.kind==='hole')[[1,0],[0,1],[-1,0],[0,-1]].forEach(function(k){o.push({p:[s.cx+k[0]*s.r,s.cy+k[1]*s.r],c:true});});
+  else if(s.kind==='ellipse'){var er=s.rotation||0,u=[Math.cos(er),Math.sin(er)],v=[-Math.sin(er),Math.cos(er)];
+    [[1,'rx',u],[-1,'rx',u],[1,'ry',v],[-1,'ry',v]].forEach(function(k){var L=s[k[1]];o.push({p:[s.cx+k[2][0]*L*k[0],s.cy+k[2][1]*L*k[0]],ax:k[1]});});}
+  else if(s.kind==='line')o.push({p:[s.x1,s.y1],end:1},{p:[s.x2,s.y2],end:2});
+  return o;
+}
+function _rszHit(px,py){for(var i=0;i<_rszHs.length;i++)if(Math.abs(px-_rszHs[i].x)<=7&&Math.abs(py-_rszHs[i].y)<=7)return _rszHs[i].h;return null;}
+function _rszCursor(h,s){if(!h)return null;if(h.c||h.end)return 'crosshair';if(h.ax)return h.ax==='rx'?'ew-resize':'ns-resize';
+  var a=Math.atan2(h.sy,h.sx)+(s.rotation||0),d=((Math.round(a/(Math.PI/4))%4)+4)%4;return['ew-resize','nwse-resize','ns-resize','nesw-resize'][d];}
+function _rszStart(s,h){
+  saveHistory();_rsz={s:s,h:h,buf:'',orig:JSON.parse(JSON.stringify(s)),F:s.kind==='rect'?_rszFrame(s):null};cv.focus();
+}
+function _rszApply(mx,my){ // 마우스 자리(mm)로 크기 바꾸기
+  var R=_rsz,s=R.s,h=R.h,o=R.orig;
+  if(s.kind==='rect'){var F=R.F,ax=[F.c[0]-F.u[0]*h.sx*F.w/2-F.v[0]*h.sy*F.h/2,F.c[1]-F.u[1]*h.sx*F.w/2-F.v[1]*h.sy*F.h/2]; // 반대쪽(고정점)
+    var dx=mx-ax[0],dy=my-ax[1],du=dx*F.u[0]+dy*F.u[1],dv=dx*F.v[0]+dy*F.v[1];
+    var nw=h.sx?Math.max(1,h.sx*du):F.w,nh=h.sy?Math.max(1,h.sy*dv):F.h;_rszSetRect(nw,nh);}
+  else if(s.kind==='circle'||s.kind==='hole')s.r=Math.max(0.5,Math.hypot(mx-o.cx,my-o.cy));
+  else if(s.kind==='ellipse'){var er=o.rotation||0,dd=h.ax==='rx'?(mx-o.cx)*Math.cos(er)+(my-o.cy)*Math.sin(er):-(mx-o.cx)*Math.sin(er)+(my-o.cy)*Math.cos(er);s[h.ax]=Math.max(0.5,Math.abs(dd));}
+  else if(s.kind==='line'){if(h.end===1){s.x1=mx;s.y1=my;}else{s.x2=mx;s.y2=my;}}
+}
+function _rszSetRect(nw,nh){ // 반대쪽 고정, 손잡이 쪽으로 늘리기 (변 손잡이는 다른 축 그대로)
+  var R=_rsz,s=R.s,F=R.F,h=R.h,ax=[F.c[0]-F.u[0]*h.sx*F.w/2-F.v[0]*h.sy*F.h/2,F.c[1]-F.u[1]*h.sx*F.w/2-F.v[1]*h.sy*F.h/2];
+  var cx=ax[0]+F.u[0]*h.sx*nw/2+F.v[0]*h.sy*nh/2,cy=ax[1]+F.u[1]*h.sx*nw/2+F.v[1]*h.sy*nh/2;
+  s.w=nw;s.h=nh;s.x=cx-nw/2;s.y=cy-nh/2;
+}
+function _rszTyped(txt){ // 입력한 치수로
+  var R=_rsz,s=R.s,h=R.h,o=R.orig,nums=String(txt).split(/[,x×*\s]+/).map(parseFloat).filter(function(v){return v>0;});if(!nums.length)return false;
+  if(s.kind==='rect'){var F=R.F,nw=F.w,nh=F.h;
+    if(h.sx&&h.sy){nw=nums[0];if(nums[1])nh=nums[1];}else if(h.sx)nw=nums[0];else nh=nums[0];
+    _rszSetRect(nw,nh);}
+  else if(s.kind==='circle'||s.kind==='hole')s.r=nums[0]/2;
+  else if(s.kind==='ellipse')s[h.ax]=nums[0]/2;
+  else if(s.kind==='line'){var fx=h.end===1?s.x2:s.x1,fy=h.end===1?s.y2:s.y1,mx2=h.end===1?s.x1:s.x2,my2=h.end===1?s.y1:s.y2,L=Math.hypot(mx2-fx,my2-fy)||1,nx=fx+(mx2-fx)/L*nums[0],ny=fy+(my2-fy)/L*nums[0];
+    if(h.end===1){s.x1=nx;s.y1=ny;}else{s.x2=nx;s.y2=ny;}}
+  return true;
+}
+function _rszEnd(cancel){
+  var R=_rsz;if(!R)return;_rsz=null;
+  if(cancel){Object.keys(R.orig).forEach(function(k){R.s[k]=R.orig[k];});}
+  if(R.s.kind==='rect'&&R.s.groupId)syncGroupShapes(R.s); // 싱크볼 둘레 고스라 등 따라감
+  if(JSON.stringify(R.s)!==JSON.stringify(R.orig)){_savedBoardLayout=null;_savedBoardImg=null;}
+  cv.style.cursor='default';updatePropsPanel();calcCost();redraw();
+}
+function _rszInfo(){ // 끄는 동안 마우스 옆 치수 글자
+  var R=_rsz,s=R.s,h=R.h,t;
+  if(s.kind==='rect')t=(h.sx&&h.sy)?_fmtDim(s.w)+' × '+_fmtDim(s.h):_fmtDim(h.sx?s.w:s.h);
+  else if(s.kind==='circle'||s.kind==='hole')t='Φ'+_fmtDim(s.r*2);
+  else if(s.kind==='ellipse')t=_fmtDim(s[h.ax]*2)+' ('+(h.ax==='rx'?'축1':'축2')+')';
+  else t=_fmtDim(Math.hypot(s.x2-s.x1,s.y2-s.y1));
+  return t;
+}
+function _rszOverlay(px,py){
+  if(!_rsz)return;var R=_rsz,hint=(R.s.kind==='rect'&&R.h.sx&&R.h.sy)?'치수 입력 + Enter (가로,세로)':'치수 입력 + Enter';
+  ctx.save();ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.textBaseline='top';ctx.textAlign='left';
+  var l1=R.buf?R.buf+'▏':_rszInfo(),w=Math.max(ctx.measureText(l1).width,(ctx.font='11px "Malgun Gothic",sans-serif',ctx.measureText(hint).width))+14,x=px+18,y=py+18;
+  ctx.fillStyle='rgba(10,18,34,0.94)';ctx.fillRect(x,y,w,38);ctx.strokeStyle='#2A4F92';ctx.lineWidth=1;ctx.strokeRect(x,y,w,38);
+  ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.fillStyle=R.buf?'#FFD740':'#E3B861';ctx.fillText(l1,x+7,y+4);
+  ctx.font='11px "Malgun Gothic",sans-serif';ctx.fillStyle='#A9B4C8';ctx.fillText(hint,x+7,y+21);ctx.restore();
+}
+function _rszKey(e){
+  if(!_rsz)return false;
+  if(e.key==='Escape'){_rszEnd(true);return true;}
+  if(/^[0-9.,x*]$/.test(e.key)||e.key===' '){_rsz.buf+=e.key===' '?',':e.key;redraw();_rszOverlay(_rsz.px||0,_rsz.py||0);return true;}
+  if(e.key==='Backspace'){_rsz.buf=_rsz.buf.slice(0,-1);redraw();_rszOverlay(_rsz.px||0,_rsz.py||0);return true;}
+  if(e.key==='Enter'){if(_rsz.buf&&_rszTyped(_rsz.buf)){_rsz.buf='';_rszEnd(false);}return true;}
+  return true; // 끄는 동안 다른 단축키(Delete 등)는 막음
+}
 function drawHandles(s){
+  if(s===_rszTarget()&&!printRender){ // 크기 손잡이 (흰 테두리 주황 네모, 끌 수 있음)
+    _rszHandles(s).forEach(function(h){var p=toCanvas(h.p[0],h.p[1]);_rszHs.push({x:p[0],y:p[1],h:h});
+      ctx.fillStyle='#FF6D00';ctx.strokeStyle='white';ctx.lineWidth=1.2;ctx.fillRect(p[0]-5,p[1]-5,10,10);ctx.strokeRect(p[0]-5,p[1]-5,10,10);});
+    return;
+  }
   var r=5,pts=[];
   if(s.kind==='rect')pts=rotRectCorners(s);
   else if(s.kind==='circle'||s.kind==='hole')pts.push(toCanvas(s.cx,s.cy));
@@ -4931,17 +5026,67 @@ function drawRotationHandle(){
   ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax+3,ay-2);ctx.lineTo(ax-2,ay-3);ctx.closePath();ctx.fillStyle='#E3B861';ctx.fill();
   ctx.restore();
 }
+// ── 새 도형 나타나기·지운 도형 사라지기 (개발판 2026-10-30): 그릴 때마다 지난번 도형 목록과 비교해
+//   새로 생긴 것 = 0.22초 동안 옅게 → 진하게 + 살짝 커지며, 없어진 것 = 0.18초 동안 흐려지며 작아짐.
+//   대부분이 새 객체면(되돌리기·불러오기·새로만들기) 효과 없음. 효과 중엔 requestAnimationFrame으로 다시 그림
+//   되돌리기(2026-10-30): undo()가 바뀌기 전 도형을 `_fxUndoPrev`(id → 복사본)에 두면, id로 맞춰
+//   다시 생긴 도형 = 나타나기, 없어진 도형 = 사라지기, 자리·크기·각도가 바뀐 도형 = 0.24초 동안 예전 값에서 미끄러지듯(`_fxMorph`)
+var _fxPrev=null,_fxIn=new Map(),_fxOut=[],_fxRaf=0,_FX_IN=220,_FX_OUT=180,_fxUndoPrev=null,_fxMorph=new Map(),_FX_MORPH=240;
+var _FX_KEYS=['x','y','w','h','cx','cy','r','rx','ry','x1','y1','x2','y2','rotation','a0','a1'];
+function _fxScan(){
+  var now=performance.now(),cur=new Set(shapes);
+  if(_fxUndoPrev){ // 되돌리기: 객체가 모두 새것이라 id로 비교
+    var P=_fxUndoPrev,ids=new Set();_fxUndoPrev=null;
+    shapes.forEach(function(s){ids.add(s.id);var o=P.get(s.id);
+      if(!o){_fxIn.set(s,now);return;}
+      if(_FX_KEYS.some(function(k){return typeof s[k]==='number'&&typeof o[k]==='number'&&Math.abs(s[k]-o[k])>1e-6;}))_fxMorph.set(s,{from:o,t:now});});
+    P.forEach(function(o,id){if(!ids.has(id))_fxOut.push({s:o,t:now});});
+    _fxPrev=cur;
+  } else if(_fxPrev){
+    var added=shapes.filter(function(s){return !_fxPrev.has(s);}),removed=[];_fxPrev.forEach(function(s){if(!cur.has(s))removed.push(s);});
+    var kept=shapes.length-added.length,replaced=removed.length>0&&added.length>0&&kept<shapes.length*0.5;
+    if(!replaced){
+      if(added.length&&added.length<=120)added.forEach(function(s){_fxIn.set(s,now);});
+      if(removed.length&&removed.length<=120)removed.forEach(function(s){_fxOut.push({s:s,t:now});});
+    }
+  }
+  _fxPrev=cur;
+  _fxIn.forEach(function(t,s){if(now-t>_FX_IN||!cur.has(s))_fxIn.delete(s);});
+  _fxMorph.forEach(function(m,s){if(now-m.t>_FX_MORPH||!cur.has(s))_fxMorph.delete(s);});
+  _fxOut=_fxOut.filter(function(o){return now-o.t<_FX_OUT;});
+  return now;
+}
+function _fxDraw(s,k,grow){ // k = 0..1 진하기, grow = 크기 배율
+  var bb=getBBoxAny(s);if(!bb){ctx.save();ctx.globalAlpha=k;drawShape(s);ctx.restore();return;}
+  var c=toCanvas((bb.l+bb.r)/2,(bb.t+bb.b)/2);
+  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,k));ctx.translate(c[0],c[1]);ctx.scale(grow,grow);ctx.translate(-c[0],-c[1]);drawShape(s);ctx.restore();
+}
 function redraw(){
+  var _fxNow=printRender?0:_fxScan();
   ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle=printRender?'#ffffff':'#09121F';ctx.fillRect(0,0,cv.width,cv.height);
   if(printRender)_pdr=[];
   _lgFrameGroups=null;_lgDimPlan=null; // 선 그룹 캐시는 매 프레임 새로 계산
   drawGrid();dimLabels=[];autoAdjustDims();
   if(!printRender)_drawProdTints();
-  shapes.forEach(function(s){drawShape(s);});
+  shapes.forEach(function(s){
+    var mo=printRender?null:_fxMorph.get(s);
+    if(mo){ // 되돌리기: 예전 값 → 지금 값 사이를 그린 임시 도형
+      var f0=Math.min(1,(_fxNow-mo.t)/_FX_MORPH),e0=1-Math.pow(1-f0,3),tmp=Object.assign({},s);
+      _FX_KEYS.forEach(function(k){var a=mo.from[k],b=s[k];if(typeof a!=='number'||typeof b!=='number')return;
+        if(k==='rotation'||k==='a0'||k==='a1'){var d=Math.atan2(Math.sin(b-a),Math.cos(b-a));tmp[k]=a+d*e0;}else tmp[k]=a+(b-a)*e0;});
+      drawShape(tmp);return;
+    }
+    var t0=printRender?null:_fxIn.get(s);
+    if(t0==null){drawShape(s);return;}
+    var f=Math.min(1,(_fxNow-t0)/_FX_IN),e=1-Math.pow(1-f,3);_fxDraw(s,e,0.9+0.1*e); // 나타나기
+  });
+  if(!printRender)_fxOut.forEach(function(o){var f=Math.min(1,(_fxNow-o.t)/_FX_OUT);_fxDraw(o.s,1-f,1-0.06*f);}); // 사라지기
+  if(!printRender&&(_fxIn.size||_fxOut.length||_fxMorph.size)&&!_fxRaf)_fxRaf=requestAnimationFrame(function(){_fxRaf=0; // 도구 미리보기(선 절단·타원·크기 손잡이)도 같이 다시
+    if(tool==='line'&&lineChain&&typeof _lineRedraw==='function')_lineRedraw();else{redraw();if(tool==='ellipse')_ellPreview(lastMx,lastMy);if(_rsz)_rszOverlay(_rsz.px||0,_rsz.py||0);}});
   drawUserGroups();
   _drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1F3F7A';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});
   drawShapeNumbers();
-  selectedShapes.forEach(function(s){drawHandles(s);});
+  _rszHs=[];selectedShapes.forEach(function(s){drawHandles(s);});
   _rotHandlePx=null;
   if(selectedShapes.length&&!selBox)drawRotationHandle();
   drawNestDims();drawSelBox();
@@ -5081,6 +5226,9 @@ cv.addEventListener('mousedown',function(e){
   var sn=applySnap(e.offsetX,e.offsetY),mx=sn[0],my=sn[1];
 
   if(tool==='select'){
+    // 크기 손잡이를 누르면 크기 바꾸기 (끄는 동안 숫자+Enter = 그 치수)
+    var _rh=_rszHit(e.offsetX,e.offsetY),_rt=_rszTarget();
+    if(_rh&&_rt){_rszStart(_rt,_rh);_rsz.px=e.offsetX;_rsz.py=e.offsetY;e.preventDefault();redraw();_rszOverlay(e.offsetX,e.offsetY);return;}
     // 화살표·연결 표시 하나만 선택돼 있으면 양 끝 핸들을 끌어 길이·방향 바꾸기
     if(selectedShapes.length===1&&(selectedShapes[0].kind==='arrow'||selectedShapes[0].kind==='linkmark')){
       var es=selectedShapes[0],ep1=toCanvas(es.x1,es.y1),ep2=toCanvas(es.x2,es.y2);
@@ -5279,7 +5427,7 @@ cv.addEventListener('pointermove',function(e){
 
 cv.addEventListener('mousemove',function(e){
   // 버튼이 이미 해제됐는데 drawStart가 남아있으면 즉시 도형 완성
-  var _dragExcl=(dragStart&&selectedShapes.length)?selectedShapes:null;
+  var _dragExcl=(dragStart&&selectedShapes.length)?selectedShapes:(_rsz?[_rsz.s]:null); // 크기 바꾸는 도형 자신의 점에는 안 붙음
   var sn=applySnap(e.offsetX,e.offsetY,_dragExcl),mx=sn[0],my=sn[1];
   var snm={e:'끝점',m:'중간점',c:'중심',grid:'그리드',x:'교차점'};
   document.getElementById('coord-lbl').textContent='X: '+mx.toFixed(3)+'  Y: '+my.toFixed(3);
@@ -5287,6 +5435,8 @@ cv.addEventListener('mousemove',function(e){
   if(panOrigin){offsetX=panOrig[0]+(e.offsetX-panOrigin[0]);offsetY=panOrig[1]+(e.offsetY-panOrigin[1]);redraw();return;}
 
   if(tool==='select'){
+    if(_rsz){_rszApply(mx,my);_rsz.px=e.offsetX;_rsz.py=e.offsetY;redraw();_rszOverlay(e.offsetX,e.offsetY);return;} // 크기 바꾸는 중
+    if(!dragStart&&!selBox&&!_rotState&&!_endDrag){var _hh=_rszHit(e.offsetX,e.offsetY);if(_hh){cv.style.cursor=_rszCursor(_hh,_rszTarget()||{});lastMx=mx;lastMy=my;return;}}
     if(_endDrag){var es2=_endDrag.s;if(_endDrag.w===1){es2.x1=mx;es2.y1=my;}else{es2.x2=mx;es2.y2=my;}redraw();return;}
     // 화살표 끝 핸들 위에서는 커서 바꿈
     if(!dragStart&&!selBox&&!_rotState&&selectedShapes.length===1&&(selectedShapes[0].kind==='arrow'||selectedShapes[0].kind==='linkmark')){
@@ -5478,6 +5628,7 @@ document.addEventListener('mouseup',function(e){
   }
 
   if(tool==='select'){
+    if(_rsz){_rszEnd(false);return;} // 크기 바꾸기 끝
     // 회전 드래그 종료
     if(_rotState){selectedShapes.forEach(function(_rs){if(_rs.kind==='rect'&&_rs.groupId)syncGroupShapes(_rs);});_rotState=null;calcCost();redraw();return;}
     // 자동 치수선 드래그 종료
@@ -5882,6 +6033,7 @@ function resetDims(){
   updatePropsPanel();redraw();
 }
 document.addEventListener('keydown',function(e){
+  if(_rsz&&_rszKey(e)){e.preventDefault();e.stopPropagation();return;} // 크기 손잡이를 끄는 중: 숫자·Enter·Esc
   // 선 절단 이어 그리기 중: 숫자·Enter·Esc·C·U를 먼저 받음 (입력칸에 쓰는 중이면 제외)
   if(tool==='line'&&lineChain&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
     if(_lineKey(e)){e.preventDefault();e.stopPropagation();return;}
@@ -9569,6 +9721,16 @@ function _3dFinGrid(list,q,cur){
   }).join('')+'</div>';
   return h;
 }
+// 3D 화면 바꾸기 전 모습을 2D 캔버스에 찍어 WebGL 캔버스 위에 덮었다가 0.38초 동안 흐리게 → 새 모습이 스며들듯 나타남
+//   (그리자마자 같은 작업 안에서 찍어야 WebGL 버퍼가 남아 있음). 바뀐 게 없으면 같은 그림이라 티 안 남
+function _3dSnapFade(){
+  var st=_3d;if(!st||!st.r||st.anim||st.closing)return;
+  try{_3dRender();var c=document.createElement('canvas');c.width=st.cv.width;c.height=st.cv.height;c.getContext('2d').drawImage(st.cv,0,0);}catch(e){return;}
+  c.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:1;transition:opacity .38s ease';
+  if(st.fadeCv)st.fadeCv.remove();st.fadeCv=c;st.cv.parentNode.insertBefore(c,st.cv.nextSibling);
+  setTimeout(function(){void c.offsetWidth;c.style.opacity='0';},20); // 새 모습을 그린 뒤 걷기 시작
+  setTimeout(function(){c.remove();if(st.fadeCv===c)st.fadeCv=null;},480);
+}
 function _3dStylePanel(){
   var box=document.getElementById('v3d-style');if(!box||!_3d)return;var S=_3dStyle;
   var hdr='font-weight:bold;color:#E3B861;margin:9px 0 4px',btn='padding:3px 7px;border-radius:3px;cursor:pointer;font-size:11px;color:#fff;border:1px solid ';
@@ -9587,7 +9749,7 @@ function _3dStylePanel(){
   if(!colls.some(function(c){return c[0]===U.coll;}))U.coll=colls[0][0];
   var cb=U.coll.split(':'),list=_3D_FINISH.filter(function(f){return f.brand===cb[0]&&f.grp!=='body'&&(cb[1]==='all'||f.grp===cb[1]);});
   var tab='padding:4px 10px;cursor:pointer;font-size:11.5px;border:1px solid #2A4F92;border-bottom:none;border-radius:4px 4px 0 0;margin-right:2px;';
-  var h='<div style="display:flex;align-items:center"><b style="color:#F1D69A;font-size:13px">🎨 3D 디자인</b><span style="flex:1"></span><button id="v3d-style-reset" style="'+btn+'#1C2A47;background:#121D33" title="가구 마감·디자인을 처음대로 (제품 바꿔 보기는 그대로)">기본값</button></div>';
+  var h='<div style="display:flex;align-items:center"><b style="color:#F1D69A;font-size:13px">3D 디자인</b><span style="flex:1"></span><button id="v3d-style-reset" style="'+btn+'#1C2A47;background:#121D33" title="가구 마감·디자인을 처음대로 (제품 바꿔 보기는 그대로)">기본값</button></div>';
   h+='<div style="display:flex;margin-top:8px">'+[['lower','하부장 도어'],['upper','상부장 도어']].map(function(t){var on=t[0]===tgt;
     return '<span data-tgt="'+t[0]+'" style="'+tab+'background:'+(on?'#1F3F7A':'#0A1222')+';color:'+(on?'#fff':'#A9B4C8')+'">'+t[1]+'</span>';}).join('')+'</div>';
   h+='<div style="border:1px solid #2A4F92;border-radius:0 4px 4px 4px;padding:8px;background:#0A1222">';
@@ -9652,6 +9814,8 @@ function _3dStylePanel(){
     h+='</div>';
   });
   box.innerHTML=h;
+  // 디자인을 바꿀 때 부드럽게 (개발판 2026-10-30): 디자인 창을 누르는 순간(바꾸기 전) 3D 화면을 찍어 위에 덮고, 바뀐 뒤 흐리게 걷어냄 (_3dSnapFade)
+  if(!box._fxB){box._fxB=1;box.addEventListener('click',function(){_3dSnapFade();},true);box.addEventListener('change',function(e){if(e.target&&e.target.type==='color')_3dSnapFade();},true);}
   function setPath(p,v){var k=p.split('.');S[k[0]][k[1]]=v;}
   function changed(geo){if(geo)_3dRegeom();else _3dRender();_3dStylePanel();}
   // 고르는 쪽 도어 (상부장이 "하부장과 같게"였으면 하부장 것을 이어받아 따로)
@@ -9733,7 +9897,7 @@ function show3D(){
     +'<div id="v3d-tab-l" title="조각 구분 열기/닫기" style="'+_3dTabCss('l')+'"><i style="font-style:normal">◂</i>조각 구분</div></div>'
     +'<div id="v3d-side-r" style="position:absolute;right:0;top:10px;bottom:40px;display:flex;flex-direction:row-reverse;align-items:flex-start;pointer-events:none;transition:transform .22s ease">'
     +'<div id="v3d-style" style="pointer-events:auto;margin-right:10px;width:290px;background:rgba(10,18,34,0.95);border:1px solid #2A4F92;border-radius:6px;padding:10px 12px;font-size:11.5px;color:#D9DFEA;max-height:100%;overflow:auto;box-sizing:border-box"></div>'
-    +'<div id="v3d-tab-r" title="디자인(상·하부장 컬러·도어·손잡이·제품 바꿔 보기) 열기/닫기" style="'+_3dTabCss('r')+'"><i style="font-style:normal">▸</i>🎨 디자인</div></div>'
+    +'<div id="v3d-tab-r" title="디자인(상·하부장 컬러·도어·손잡이·제품 바꿔 보기) 열기/닫기" style="'+_3dTabCss('r')+'"><i style="font-style:normal">▸</i>디자인</div></div>'
     +'<div style="position:absolute;left:10px;bottom:8px;color:#16233D;font-size:11px;background:rgba(255,255,255,0.75);padding:3px 8px;border-radius:3px"><b>조각 끌기</b> = 옮기기(상판은 이웃에 착 맞춤, 미드웨이는 상판 변 따라) · <b>조각 오른쪽 클릭</b>(또는 R) = 돌리기 · <b>Shift+조각 끌기</b> = 위아래로 · <b>미드웨이 더블클릭</b> = 무늬 면(앞/뒤/양면) ·빈 곳 끌기 = 화면 돌리기 · 오른쪽 끌기 = 화면 이동 · 휠 = 확대 · 더블클릭 = 처음 시점</div></div>';
   document.body.appendChild(m);
   var cv=document.getElementById('v3d-cv');
