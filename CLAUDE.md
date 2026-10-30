@@ -95,6 +95,10 @@
   → 클릭(또는 끌다 놓기, `_lineMouseUp`) = 그 점(직교·스냅 적용)까지 바로 선 / 움직이며 숫자 + Enter(`_lineKey` → `_lineTarget`) = 마우스 방향으로 그 길이
   (누른 채 숫자로 그렸으면 놓을 때 무시: `lineDown.nseg`), Tab = 지금 방향으로 길이·각도 입력란(`#line-pop`, 각도 칸 커서, 0°=오른쪽 반시계). 끝점에서 계속 이어 그림, 끝나도 도구 유지
   `300,-200`(상대, 위가 +)·`500<90`(길이<각도), 빈 Enter/Esc/오른쪽 클릭=끝, C=닫기, U=마지막 선 취소. 기본 직교(Shift=자유). 전역 mouseup의 `finalizeShape`는 line 제외
+- 타원 절단 도구(`ellipse`, 2026-10-30 사용자 요청 "캐드 ELLIPSE 그대로", `_ellSt`/`_ellClick`/`_ellKey`/`_ellPreview`): 축 끝점 → 다른 끝점 → 다른 축 거리(첫 축에서 수직 = 반지름) / C = 중심 → 축 끝점 → 거리,
+  단계마다 클릭 또는 숫자+Enter(2단계 마우스 방향 길이, 3단계 반지름), 기본 직교(`ortho`, Shift 비스듬히), Esc 취소, 마우스 옆 안내 글자. → `ellipse{cx,cy,rx,ry,rotation}`(가로·세로 축이면 rotation 0, 아니면 −90°~90°)
+  - 돌린 타원 공통 도우미 `_ellHalf`(회전 포함 상자 반폭·반높이)·`_ellPts`(둘레 점)·`_ellLocal`(점 → 타원 로컬): getBBox·클릭 판정·조각 안 판정·편집/도면화 그리기(ctx.ellipse 회전 인자)·온장 배치(`_boardPiece` path)·3D·치수 축 방향
+  - 가공비 = 원형 절단(`lenMm.circlecut`) 둘레, 온장 배치 칸 = 회전 포함 상자·글자 "타원 장축×단축", 도면화·DXF 치수 = 두 축 길이(축 방향 그대로 바깥)
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
