@@ -86,6 +86,7 @@
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
+- 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
 - 사용자 그룹 `userGroupId`(`groupSelected`, 새 id는 쓰는 중인 것과 안 겹치게): 싱크볼·쿡탑 그룹(groupId)은 그대로 두고 그 전체도 사용자 그룹에 넣음.
   `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) → 그룹째 끌면 같이 이동.
   싱크볼 크기 맞춤 `syncGroupShapes`는 groupId 멤버만

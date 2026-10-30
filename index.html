@@ -252,6 +252,7 @@ canvas{display:block;cursor:crosshair}
       <button id="hole-type-faucet" onclick="setPendingHoleType('faucet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#1F3F7A;color:#fff">수전</button>
       <button id="hole-type-outlet" onclick="setPendingHoleType('outlet')" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">콘센트</button>
       <button id="hole-type-rect" onclick="setPendingHoleType('rect')" title="사각 타공 (기본 200×50, 고스라 없음, 가공비 = 콘센트 타공)" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">사각</button>
+      <button id="hole-type-ell" onclick="setPendingHoleType('ell')" title="타원 타공 (W×H 칸 크기, 가공비 = 콘센트 타공)" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">타원</button>
     </div>
   </div>
   <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 절단</button>
@@ -1462,14 +1463,14 @@ function _baseColor(s){
   var _at=_applianceType(s);
   if(_at==='sink')return '#2A4F92';
   if(_at==='cook')return '#FFA726';
-  if(_at==='hole')return '#26A69A'; // 사각 타공
+  if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return '#26A69A'; // 사각·타원 타공
   return SCOL[s.kind]||'#1F3F7A';
 }
 function _baseFill(s){
   var _at=_applianceType(s);
   if(_at==='sink')return 'rgba(66,165,245,0.10)';
   if(_at==='cook')return 'rgba(255,167,38,0.10)';
-  if(_at==='hole')return 'rgba(38,166,154,0.12)';
+  if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return 'rgba(38,166,154,0.12)';
   return SFILL[s.kind]||'';
 }
 
@@ -3669,7 +3670,7 @@ function _dxfCollect(H){
     }
     else if(s.kind==='ellipse'){
       var ep=[];for(var i=0;i<72;i++){var t=i/72*2*Math.PI,ex=s.rx*Math.cos(t),ey=s.ry*Math.sin(t),ro=s.rotation||0;ep.push([s.cx+ex*Math.cos(ro)-ey*Math.sin(ro),s.cy+ex*Math.sin(ro)+ey*Math.cos(ro)]);}
-      poly(inAnyRect(s.cx,s.cy)?'SC-CUTOUT':'SC-PIECE',ep,true);
+      poly(s.hole?'SC-HOLE':(inAnyRect(s.cx,s.cy)?'SC-CUTOUT':'SC-PIECE'),ep,true); // 타원 타공은 타공 레이어(점선)
       // 두 축 길이 치수 (도면화와 같은 자리: 축 방향 그대로 바깥)
       var er2=s.rotation||0,eux=Math.cos(er2),euy=Math.sin(er2);
       dim([s.cx-eux*s.rx,s.cy-euy*s.rx],[s.cx+eux*s.rx,s.cy+euy*s.rx],[euy,-eux],s.ry+H*2.2,_fmtDim(s.rx*2));
@@ -4686,6 +4687,9 @@ function finalizeShape(fmx,fmy){
     var hs=makeShape('rect',{x:x0-_hw[0]/2,y:y0-_hw[1]/2,w:_hw[0],h:_hw[1],cornerType:'none',cornerSize:0,groupId:hgid,groupRole:'main',applianceType:'hole'});
     saveHistory();shapes.push(hs);selectedShapes=[hs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
+  else if(tool==='circle'&&pendingHoleType==='ell'){ // 타원 타공: 누른 자리가 가운데, W×H = 두 축 (hole:true = 가공비 콘센트 타공·DXF 타공 레이어)
+    var _hw3=_rectHoleWH();s=makeShape('ellipse',{cx:x0,cy:y0,rx:_hw3[0]/2,ry:_hw3[1]/2,rotation:0,hole:true});
+  }
   else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});}
   else if(tool==='circlecut'){var dragR2=Math.hypot(mx-x0,my-y0);var phiEl2=document.getElementById('circlecut-phi');var phiVal2=phiEl2?parseFloat(phiEl2.value):0;var r2=dragR2<2&&phiVal2>0?phiVal2/2:dragR2;if(r2<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r2,holeType:'cut'});}
   else if(tool==='line'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('line',{x1:x0,y1:y0,x2:mx,y2:my});}
@@ -5393,6 +5397,7 @@ cv.addEventListener('mousemove',function(e){
     var ps=null;
     if(tool==='rect'){ps={kind:'rect',x:Math.min(x0,mx),y:Math.min(y0,my),w:Math.abs(mx-x0),h:Math.abs(my-y0),cornerType:'none',cornerSize:0,ops:[]};}
     else if(tool==='circle'&&pendingHoleType==='rect'){var _hw2=_rectHoleWH();ps={kind:'rect',x:x0-_hw2[0]/2,y:y0-_hw2[1]/2,w:_hw2[0],h:_hw2[1],cornerType:'none',cornerSize:0,applianceType:'hole',ops:[]};}
+    else if(tool==='circle'&&pendingHoleType==='ell'){var _hw4=_rectHoleWH();ps={kind:'ellipse',cx:x0,cy:y0,rx:_hw4[0]/2,ry:_hw4[1]/2,rotation:0,hole:true,ops:[]};}
     else if(tool==='circle'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:pendingHoleType,ops:[]};}
     else if(tool==='circlecut'){ps={kind:'circle',cx:x0,cy:y0,r:Math.hypot(mx-x0,my-y0),holeType:'cut',ops:[]};}
     else if(tool==='dimline'){
@@ -5755,7 +5760,8 @@ function calcCost(){
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
       }
     } else if(s.kind==='ellipse'){
-      lenMm.circlecut+=perimeterMm(s); // 타원 절단 = 원형 절단 단가로 둘레 길이
+      if(s.hole)cnt.holeo++; // 타원 타공 = 콘센트 타공 금액
+      else lenMm.circlecut+=perimeterMm(s); // 타원 절단 = 원형 절단 단가로 둘레 길이
     } else if(s.kind==='circle'||s.kind==='hole'){
       if(s.holeType==='cut')lenMm.circlecut+=perimeterMm(s);
       else if(s.holeType==='faucet')cnt.holef++;else cnt.holeo++;
@@ -6182,10 +6188,10 @@ function flipGrindInward(){
 }
 function setPendingHoleType(t){
   pendingHoleType=t;
-  ['outlet','faucet','rect'].forEach(function(k){var b=document.getElementById('hole-type-'+k);if(b)b.style.background=t===k?'#1F3F7A':'#121D33';});
-  // 사각 타공이면 Φ 대신 W×H 칸
-  var pr=document.getElementById('circle-phi-row'),rr=document.getElementById('hole-rect-row');
-  if(pr)pr.style.display=t==='rect'?'none':'';if(rr)rr.style.display=t==='rect'?'flex':'none';
+  ['outlet','faucet','rect','ell'].forEach(function(k){var b=document.getElementById('hole-type-'+k);if(b)b.style.background=t===k?'#1F3F7A':'#121D33';});
+  // 사각·타원 타공이면 Φ 대신 W×H 칸 (둘이 같은 칸)
+  var wh=t==='rect'||t==='ell',pr=document.getElementById('circle-phi-row'),rr=document.getElementById('hole-rect-row');
+  if(pr)pr.style.display=wh?'none':'';if(rr)rr.style.display=wh?'flex':'none';
 }
 // 사각 타공(2026-10-29 사용자 요청): 조각 안 작은 직각 구멍 = 싱크볼·쿡탑과 같은 타공부 사각형(groupRole main, applianceType 'hole'), 고스라 없음, 가공비 = 콘센트 타공(holeo)
 function _rectHoleWH(){var w=parseFloat((document.getElementById('hole-rect-w')||{}).value)||200,h=parseFloat((document.getElementById('hole-rect-h')||{}).value)||50;return[w,h];}
