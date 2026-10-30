@@ -1928,6 +1928,9 @@ function drawShape(s,preview){
   ctx.strokeStyle=preview?'rgba(255,80,80,0.85)':col;
   ctx.lineWidth=hovS?3:(sel?2.5:1.5);
   if(preview)ctx.setLineDash([4,3]);
+  // 사각·타원 타공은 수전·콘센트 타공(원)처럼 점선 (2026-10-30 사용자 요청)
+  var _holeDash=!preview&&!sel&&((s.kind==='rect'&&_applianceType(s)==='hole')||(s.kind==='ellipse'&&s.hole));
+  if(_holeDash)ctx.setLineDash([5,3]);
   if(s.kind==='rect'){
     var rot=s.rotation||0;
     var cc_=toCanvas(s.x+s.w/2,s.y+s.h/2);
@@ -1957,7 +1960,7 @@ function drawShape(s,preview){
       else if(fe==='right'){ctx.moveTo(rw_/2,-rh_/2);ctx.lineTo(rw_/2,rh_/2);}
       ctx.stroke();
     }
-    ctx.restore();
+    ctx.restore();if(_holeDash)ctx.setLineDash([]);
     if(!preview)drawDims(s,col);
   } else if(s.kind==='circle'||s.kind==='hole'){
     var cc=toCanvas(s.cx,s.cy),cr=mm2px(s.r);
@@ -1971,7 +1974,7 @@ function drawShape(s,preview){
     if(!preview)drawDimsCircle(s,col);
   } else if(s.kind==='ellipse'){
     var ce=toCanvas(s.cx,s.cy);ctx.beginPath();ctx.ellipse(ce[0],ce[1],mm2px(s.rx),mm2px(s.ry),s.rotation||0,0,2*Math.PI);
-    if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}ctx.stroke();if(!preview)drawDimsEllipse(s,col);
+    if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}ctx.stroke();if(_holeDash)ctx.setLineDash([]);if(!preview)drawDimsEllipse(s,col);
   } else if(s.kind==='line'){
     var lp1=toCanvas(s.x1,s.y1),lp2=toCanvas(s.x2,s.y2);
     ctx.beginPath();ctx.moveTo(lp1[0],lp1[1]);ctx.lineTo(lp2[0],lp2[1]);ctx.stroke();
@@ -7497,11 +7500,14 @@ function _drawCleanExport(){
     else if(s.kind==='circle'||s.kind==='hole'){var c=toCanvas(s.cx,s.cy);ctx.strokeStyle=col;ctx.lineWidth=4;ctx.beginPath();ctx.arc(c[0],c[1],mm2px(s.r),0,2*Math.PI);ctx.stroke();}
     else if(s.kind==='ellipse'){var e=toCanvas(s.cx,s.cy);ctx.strokeStyle=col;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(e[0],e[1],mm2px(s.rx),mm2px(s.ry),s.rotation||0,0,2*Math.PI);ctx.stroke();}
     else if(s.kind==='linegroup')s.lines.forEach(function(l){var L=Math.hypot(l.x2-l.x1,l.y2-l.y1);_expStrokeEdge(l.x1,l.y1,l.x2,l.y2,0,L,col,stats);});
+    // 타공(수전·콘센트 원, 사각 타공, 타원 타공)은 점선 (2026-10-30 사용자 요청), 싱크볼·쿡탑 등 타공부는 실선
+    var HD=[14,8];
     p.cutouts.forEach(function(q){
-      if(q.kind==='rect')_expStrokeRect(_expRectGeo(q),col,stats,true);
-      else{var e=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(e[0],e[1],mm2px(q.rx),mm2px(q.ry),q.rotation||0,0,2*Math.PI);ctx.stroke();}
+      if(q.kind==='rect'&&_applianceType(q)==='hole'){ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash(HD);_expFillPath(_expRectPath(_expRectGeo(q)));ctx.stroke();ctx.setLineDash([]);}
+      else if(q.kind==='rect')_expStrokeRect(_expRectGeo(q),col,stats,true);
+      else{var e=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash(q.hole?HD:[]);ctx.beginPath();ctx.ellipse(e[0],e[1],mm2px(q.rx),mm2px(q.ry),q.rotation||0,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);}
     });
-    p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash([]);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(q.r),0,2*Math.PI);ctx.stroke();});
+    p.holes.forEach(function(q){var c=toCanvas(q.cx,q.cy);ctx.strokeStyle=col;ctx.lineWidth=3;ctx.setLineDash(HD);ctx.beginPath();ctx.arc(c[0],c[1],mm2px(q.r),0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);});
   });
   // ②-1b 밑면연마: 변에서 재료 쪽으로 50mm 띠 + 주황 빗금 (방향은 고스라 판정과 같음 — 조각 변=안쪽, 싱크볼/쿡탑 변=타공부 바깥쪽)
   if(!SO)shapes.forEach(function(m){
