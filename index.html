@@ -1204,6 +1204,11 @@ function snapPoints(excl){
     }
     else if(s.kind==='circle'||s.kind==='hole'){pts.push({x:s.cx+s.r,y:s.cy,k:'e'},{x:s.cx-s.r,y:s.cy,k:'e'},{x:s.cx,y:s.cy+s.r,k:'e'},{x:s.cx,y:s.cy-s.r,k:'e'});if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});}
     else if(s.kind==='arc'){pts.push({x:s.cx+s.r*Math.cos(s.a0),y:s.cy+s.r*Math.sin(s.a0),k:'e'},{x:s.cx+s.r*Math.cos(s.a1),y:s.cy+s.r*Math.sin(s.a1),k:'e'});if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});}
+    else if(s.kind==='ellipse'){ // 타원: 두 축 끝점 4개(돌린 축 그대로) + 중심
+      var _er=s.rotation||0,_ec=Math.cos(_er),_es=Math.sin(_er);
+      pts.push({x:s.cx+_ec*s.rx,y:s.cy+_es*s.rx,k:'e'},{x:s.cx-_ec*s.rx,y:s.cy-_es*s.rx,k:'e'},{x:s.cx-_es*s.ry,y:s.cy+_ec*s.ry,k:'e'},{x:s.cx+_es*s.ry,y:s.cy-_ec*s.ry,k:'e'});
+      if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});
+    }
     else if(s.kind==='line'||s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'){pts.push({x:s.x1,y:s.y1,k:'e'},{x:s.x2,y:s.y2,k:'e'},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2,k:'m'});
       if(s.kind==='grindregion'){
         // 밑면연마 사각영역 4꼭짓점도 스냅
@@ -1243,6 +1248,12 @@ function applySnap(cx,cy,excl){
       });
     });
     if(bestEd<=etol){mx=esx;my=esy;snapKind='edge';}
+  }
+  // 밑면연마·고스라·졸리컷 도구: 타원 둘레에도 붙음 (둘레 가까운 점, 360등분에서 찾음)
+  if((!snapKind||snapKind==='grid')&&(tool==='grind'||tool==='gosra'||tool==='jollycut')){
+    var _et=10/scale,_eb=_et+1,_ex=mx,_ey=my,_mx0=(cx-offsetX)/scale,_my0=(cy-offsetY)/scale;
+    shapes.forEach(function(sh){if(sh.kind!=='ellipse')return;_ellPts(sh,360).forEach(function(p){var d=Math.hypot(_mx0-p[0],_my0-p[1]);if(d<_eb){_eb=d;_ex=p[0];_ey=p[1];}});});
+    if(_eb<=_et){mx=_ex;my=_ey;snapKind='edge';}
   }
   // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)

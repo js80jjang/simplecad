@@ -102,6 +102,7 @@
   - 타원 둘레 가공 표시 `_ellMarkFor(tool,…)`(finalizeShape에서 grind·jollycut·gosra 도구, 두 끝점이 타원 둘레 위면): 둘레 `_ELL_N`(72)등분 점(= `_ellPts`, 3D 옆면 변과 같은 점 → 3D 졸리컷·고스라 면도 맞음)을 잇는 짧은 직선 마크들,
     끈 구간(짧은 쪽) 또는 누르기만 하면 한 바퀴, 한 묶음 = 새 `userGroupId`. 재료 쪽(타원 조각 = 안, 조각 안 타원 = 바깥)으로 grind `inward`+`inwardOverride`·gosra `outward`,
     ★·▲·깊이 글자는 가운데·18칸마다만(`sym:false` = 편집/도면화/DXF에서 기호 안 그림, grind는 hideDims.dist). `_gosraDir`도 타원 조각/타공부를 앎
+  - 스냅(`snapPoints`): 타원 두 축 끝점 4개 + 중심(snapCircleCenter), `applySnap`에서 grind·gosra·jollycut 도구는 타원 둘레(360등분 가장 가까운 점)에도 'edge'
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
