@@ -1227,13 +1227,48 @@ function snapPoints(excl){
   return pts;
 }
 function lineSegIntersect(x1,y1,x2,y2,x3,y3,x4,y4){var d=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);if(Math.abs(d)<1e-10)return null;var t=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/d;var u=-((x1-x2)*(y1-y3)-(y1-y2)*(x1-x3))/d;if(t>=0&&t<=1&&u>=0&&u<=1)return{x:x1+t*(x2-x1),y:y1+t*(y2-y1)};return null;}
+// ── 선 스냅 (2026-10-31 점검): 교차점(돌린 사각형 변·원 포함, 가장 가까운 것) · 가상 교차점(두 선을 늘렸을 때 만나는 점) · 연장선(선 끝 너머 그 방향) ──
+//   마우스 가까이(tol) 지나는 선분만 골라 계산. 반환 {x,y,k:'x'|'v'|'ext', g:[[x1,y1,x2,y2]…] 보조선(mm)}
+var _snapGuide=null; // 지금 스냅의 보조선 (drawSnapInd가 점선으로)
+function _snapSegs(excl){
+  var ex=Array.isArray(excl)?excl:(excl?[excl]:[]),segs=[],circ=[];
+  shapes.forEach(function(s){
+    if(ex.indexOf(s)>=0)return;
+    if(s.kind==='line')segs.push([s.x1,s.y1,s.x2,s.y2]);
+    else if(s.kind==='rect'){var P=_rectCorners(s);for(var i=0;i<4;i++){var a=P[i],b=P[(i+1)%4];segs.push([a.x,a.y,b.x,b.y]);}}
+    else if(s.kind==='circle'||s.kind==='hole')circ.push(s);
+  });
+  return{segs:segs,circ:circ};
+}
+function _snapLinesAt(mx,my,tol,excl){
+  var S=_snapSegs(excl),near=[],best=null,bd=tol;
+  function cand(x,y,k,g){var d=Math.hypot(mx-x,my-y);if(d<bd||(best&&Math.abs(d-bd)<1e-9&&k==='x'&&best.k!=='x')){bd=d;best={x:x,y:y,k:k,g:g||null};}}
+  S.segs.forEach(function(g){var dx=g[2]-g[0],dy=g[3]-g[1],L=Math.hypot(dx,dy);if(L<0.01)return;
+    var t=((mx-g[0])*dx+(my-g[1])*dy)/(L*L),px=g[0]+dx*t,py=g[1]+dy*t,dl=Math.hypot(mx-px,my-py);
+    if(dl<tol)near.push({g:g,t:t,px:px,py:py,L:L});});
+  // 교차점 / 가상 교차점 (가까운 선끼리만)
+  for(var i=0;i<near.length;i++)for(var j=i+1;j<near.length;j++){
+    var a=near[i].g,b=near[j].g,d=(a[0]-a[2])*(b[1]-b[3])-(a[1]-a[3])*(b[0]-b[2]);if(Math.abs(d)<1e-9)continue;
+    var t=((a[0]-b[0])*(b[1]-b[3])-(a[1]-b[1])*(b[0]-b[2]))/d,u=-((a[0]-a[2])*(a[1]-b[1])-(a[1]-a[3])*(a[0]-b[0]))/d;
+    var x=a[0]+t*(a[2]-a[0]),y=a[1]+t*(a[3]-a[1]),onA=t>=-1e-6&&t<=1+1e-6,onB=u>=-1e-6&&u<=1+1e-6;
+    if(onA&&onB){if(snapIntersect)cand(x,y,'x');}
+    else if(snapVirtInter){var g2=[];function ext(s,tt){if(tt<0)g2.push([s[0],s[1],x,y]);else if(tt>1)g2.push([s[2],s[3],x,y]);}ext(a,t);ext(b,u);cand(x,y,'v',g2);}
+  }
+  // 선과 원의 교차점
+  if(snapIntersect)S.circ.forEach(function(c){if(Math.abs(Math.hypot(mx-c.cx,my-c.cy)-c.r)>tol)return;near.forEach(function(n){var g=n.g,dx=g[2]-g[0],dy=g[3]-g[1],fx=g[0]-c.cx,fy=g[1]-c.cy,A=dx*dx+dy*dy,B=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-c.r*c.r,D=B*B-4*A*C;if(D<0)return;
+    [(-B-Math.sqrt(D))/(2*A),(-B+Math.sqrt(D))/(2*A)].forEach(function(t){if(t>=0&&t<=1)cand(g[0]+dx*t,g[1]+dy*t,'x');});});});
+  // 연장선: 선 끝 너머(그 방향, 끝에서 3000mm 안)
+  if(snapExtension&&!best)near.forEach(function(n){var g=n.g;if(n.t>1&&(n.t-1)*n.L<3000)cand(n.px,n.py,'ext',[[g[2],g[3],n.px,n.py]]);else if(n.t<0&&-n.t*n.L<3000)cand(n.px,n.py,'ext',[[g[0],g[1],n.px,n.py]]);});
+  return best;
+}
 function getIntersectPoints(){var segs=[];for(var i=0;i<shapes.length;i++){var s=shapes[i];if(s.kind==='line'||s.kind==='dimline')segs.push([s.x1,s.y1,s.x2,s.y2]);else if(s.kind==='rect'){segs.push([s.x,s.y,s.x+s.w,s.y],[s.x+s.w,s.y,s.x+s.w,s.y+s.h],[s.x+s.w,s.y+s.h,s.x,s.y+s.h],[s.x,s.y+s.h,s.x,s.y]);}}var pts=[];for(var i=0;i<segs.length-1;i++)for(var j=i+1;j<segs.length;j++){var p=lineSegIntersect(segs[i][0],segs[i][1],segs[i][2],segs[i][3],segs[j][0],segs[j][1],segs[j][2],segs[j][3]);if(p)pts.push({x:p.x,y:p.y,k:'x'});}return pts;}
 function applySnap(cx,cy,excl){
   var mx=(cx-offsetX)/scale,my=(cy-offsetY)/scale,tol=12/scale;
-  snapKind=null;
+  snapKind=null;_snapGuide=null;
   if(objSnap){var best=tol+1,bx=mx,by=my,bk=null;snapPoints(excl||null).forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<best){best=d;bx=p.x;by=p.y;bk=p.k;}});if(bk){mx=bx;my=by;snapKind=bk;}}
-  if(!snapKind&&snapIntersect){var ixpts=getIntersectPoints();ixpts.forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<tol){mx=p.x;my=p.y;snapKind='x';}});}
-  if(!snapKind&&gridSnap){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
+  // 교차점·가상 교차점·연장선 (끄는 도형 자신은 빼고, 가장 가까운 것) — 그리드보다 먼저
+  if(!snapKind&&objSnap&&(snapIntersect||snapVirtInter||snapExtension)){var _ls=_snapLinesAt(mx,my,tol,excl||null);if(_ls){mx=_ls.x;my=_ls.y;snapKind=_ls.k;_snapGuide=_ls.g;}}
+  var _gridLater=!snapKind&&gridSnap; // 그리드는 맨 나중 (밑면연마·고스라 변 붙이기가 그리드에 막히던 것)
   // 그라인드/고스라 도구: 사각형 엣지 라인에 자동 스냅
   if(!snapKind&&(tool==='grind'||tool==='gosra')){
     var etol=10/scale,bestEd=etol+1,esx=mx,esy=my;
@@ -1258,6 +1293,7 @@ function applySnap(cx,cy,excl){
     shapes.forEach(function(sh){if(sh.kind!=='ellipse')return;_ellPts(sh,360).forEach(function(p){var d=Math.hypot(_mx0-p[0],_my0-p[1]);if(d<_eb){_eb=d;_ex=p[0];_ey=p[1];}});});
     if(_eb<=_et){mx=_ex;my=_ey;snapKind='edge';}
   }
+  if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
   // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)
   var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'));
@@ -1267,17 +1303,31 @@ function applySnap(cx,cy,excl){
 function applyGrid(){var v=parseFloat(document.getElementById('grid-mm').value);if(v>0)gridMm=v;redraw();}
 
 // ═══ 마그넷 ═══
-function getEdges(s){if(s.kind==='rect')return{xs:[s.x,s.x+s.w/2,s.x+s.w],ys:[s.y,s.y+s.h/2,s.y+s.h]};if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse')return{xs:[s.cx],ys:[s.cy]};if(s.kind==='line'||s.kind==='dimline')return{xs:[s.x1,s.x2],ys:[s.y1,s.y2]};return{xs:[],ys:[]};}
-function shiftS(s,dx,dy){if(s.kind==='rect'){s.x+=dx;s.y+=dy;}else if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'){s.cx+=dx;s.cy+=dy;}else if(s.x1!==undefined){s.x1+=dx;s.y1+=dy;s.x2+=dx;s.y2+=dy;}}
+// 마그넷 기준 x·y: 회전 포함 상자의 왼·가운데·오른 / 위·가운데·아래 (사각형·원·타원·호), 선은 양 끝 (2026-10-31: 돌린 사각형·원 둘레도)
+function getEdges(s){
+  if(s.kind==='line'||s.kind==='dimline')return{xs:[s.x1,s.x2],ys:[s.y1,s.y2]};
+  if(s.kind==='rect'||s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||s.kind==='arc'){var b=getBBoxAny(s);if(b)return{xs:[b.l,(b.l+b.r)/2,b.r],ys:[b.t,(b.t+b.b)/2,b.b]};}
+  return{xs:[],ys:[]};
+}
+function shiftS(s,dx,dy){if(s.kind==='rect'||s.kind==='note'){s.x+=dx;s.y+=dy;}else if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||s.kind==='arc'){s.cx+=dx;s.cy+=dy;}else if(s.x1!==undefined){s.x1+=dx;s.y1+=dy;s.x2+=dx;s.y2+=dy;}}
+// 끄는 도형(여러 개·그룹이면 전체 상자 + 각 도형 기준)을 다른 도형 기준 x·y에 맞춤 → 선택한 것 모두 같이 옮김 + 분홍 보조선.
+//   거리 = 마그넷 칸(mm)과 화면 10px 중 큰 것 (멀리 보면 mm만으로는 1px도 안 돼서 안 붙던 것)
 function doMagnet(arr){
   magnetLineX=null;magnetLineY=null;
-  if(!magnetSnapOn||arr.length!==1)return;
-  var dragged=arr[0];
-  var tol=parseFloat(document.getElementById('magnet-tol').value)||8;
-  var de=getEdges(dragged),bDX=null,bDY=null,mnx=tol+1,mny=tol+1,mxv=null,myv=null;
-  shapes.forEach(function(s){if(selectedShapes.indexOf(s)>=0)return;var oe=getEdges(s);de.xs.forEach(function(a){oe.xs.forEach(function(b){var d=Math.abs(a-b);if(d<mnx){mnx=d;bDX=b-a;mxv=b;}});});de.ys.forEach(function(a){oe.ys.forEach(function(b){var d=Math.abs(a-b);if(d<mny){mny=d;bDY=b-a;myv=b;}});});});
-  if(bDX!==null){shiftS(dragged,bDX,0);magnetLineX=mxv;}
-  if(bDY!==null){shiftS(dragged,0,bDY);magnetLineY=myv;}
+  if(!magnetSnapOn||!arr.length)return;
+  var tol=Math.max(parseFloat(document.getElementById('magnet-tol').value)||8,10/scale);
+  var xs=[],ys=[],bb=null;
+  arr.forEach(function(s){var b=getBBoxAny(s);if(b){if(!bb)bb={l:b.l,t:b.t,r:b.r,b:b.b};else{bb.l=Math.min(bb.l,b.l);bb.t=Math.min(bb.t,b.t);bb.r=Math.max(bb.r,b.r);bb.b=Math.max(bb.b,b.b);}}
+    if(arr.length<=40){var e=getEdges(s);xs=xs.concat(e.xs);ys=ys.concat(e.ys);}});
+  if(bb){xs.push(bb.l,(bb.l+bb.r)/2,bb.r);ys.push(bb.t,(bb.t+bb.b)/2,bb.b);}
+  var bDX=null,bDY=null,mnx=tol,mny=tol,mxv=null,myv=null;
+  shapes.forEach(function(s){if(selectedShapes.indexOf(s)>=0)return;var oe=getEdges(s);
+    xs.forEach(function(a){oe.xs.forEach(function(b){var d=Math.abs(a-b);if(d<mnx){mnx=d;bDX=b-a;mxv=b;}});});
+    ys.forEach(function(a){oe.ys.forEach(function(b){var d=Math.abs(a-b);if(d<mny){mny=d;bDY=b-a;myv=b;}});});});
+  if(bDX===null&&bDY===null)return;
+  selectedShapes.forEach(function(s){shiftS(s,bDX||0,bDY||0);});
+  selectedShapes.forEach(function(s){if(s.kind==='rect'&&s.groupId&&s.groupRole==='main')syncGroupShapes(s);});
+  if(bDX!==null)magnetLineX=mxv;if(bDY!==null)magnetLineY=myv;
 }
 
 // 타원 공통 (rotation = 장축 각도, 편집 좌표 = 아래가 +y이고 캔버스와 같은 방향): 회전 포함 상자 반폭·반높이 / 둘레 점 / 점이 안에 있는지
@@ -3072,10 +3122,16 @@ function drawGrid(){if(printRender)return;
   }
   ctx.restore();
 }
-function drawSnapInd(mx,my,k){var cc=toCanvas(mx,my),cols={e:'#FFD600',m:'#00E5FF',c:'#69F0AE',grid:'rgba(96,112,128,0.45)',x:'#FF6D00'};ctx.strokeStyle=cols[k]||'white';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cc[0],cc[1],8,0,2*Math.PI);ctx.stroke();}
+function drawSnapInd(mx,my,k){var cc=toCanvas(mx,my),cols={e:'#FFD600',m:'#00E5FF',c:'#69F0AE',grid:'rgba(96,112,128,0.45)',x:'#FF6D00',v:'#FF9E80',ext:'#B388FF',edge:'#FFD740'};
+  if(_snapGuide&&_snapGuide.length){ctx.save();ctx.strokeStyle=cols[k]||'white';ctx.lineWidth=1;ctx.setLineDash([5,4]); // 연장선·가상 교차점 보조선
+    _snapGuide.forEach(function(g){var a=toCanvas(g[0],g[1]),b=toCanvas(g[2],g[3]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});ctx.restore();}
+  ctx.strokeStyle=cols[k]||'white';ctx.lineWidth=2;ctx.beginPath();
+  if(k==='x'||k==='v'){ctx.moveTo(cc[0]-7,cc[1]-7);ctx.lineTo(cc[0]+7,cc[1]+7);ctx.moveTo(cc[0]+7,cc[1]-7);ctx.lineTo(cc[0]-7,cc[1]+7);} // 교차점 = ×
+  else ctx.arc(cc[0],cc[1],8,0,2*Math.PI);ctx.stroke();}
+// 마우스가 다른 도형 기준 x·y(돌린 사각형·원 둘레 포함, getEdges)와 줄이 맞으면 하늘색 점선 (화면 4px 안)
 function drawGuides(mx,my){
-  var w=cv.width,h=cv.height,tol=0.5;ctx.strokeStyle='#00BCD4';ctx.lineWidth=1;ctx.setLineDash([4,4]);
-  shapes.forEach(function(s){var rx=[],ry=[];if(s.kind==='rect'){rx=[s.x,s.x+s.w/2,s.x+s.w];ry=[s.y,s.y+s.h/2,s.y+s.h];}else if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'){rx=[s.cx];ry=[s.cy];}rx.forEach(function(v){if(Math.abs(mx-v)<tol){var cx2=toCanvas(v,0)[0];ctx.beginPath();ctx.moveTo(cx2,0);ctx.lineTo(cx2,h);ctx.stroke();}});ry.forEach(function(v){if(Math.abs(my-v)<tol){var cy2=toCanvas(0,v)[1];ctx.beginPath();ctx.moveTo(0,cy2);ctx.lineTo(w,cy2);ctx.stroke();}});});
+  var w=cv.width,h=cv.height,tol=4/scale;ctx.strokeStyle='#00BCD4';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  shapes.forEach(function(s){var _ge=getEdges(s),rx=s.kind==='line'||s.kind==='dimline'?[]:_ge.xs,ry=s.kind==='line'||s.kind==='dimline'?[]:_ge.ys;rx.forEach(function(v){if(Math.abs(mx-v)<tol){var cx2=toCanvas(v,0)[0];ctx.beginPath();ctx.moveTo(cx2,0);ctx.lineTo(cx2,h);ctx.stroke();}});ry.forEach(function(v){if(Math.abs(my-v)<tol){var cy2=toCanvas(0,v)[1];ctx.beginPath();ctx.moveTo(0,cy2);ctx.lineTo(w,cy2);ctx.stroke();}});});
   ctx.setLineDash([]);
 }
 function drawMagnetLines(){
@@ -5429,7 +5485,7 @@ cv.addEventListener('mousemove',function(e){
   // 버튼이 이미 해제됐는데 drawStart가 남아있으면 즉시 도형 완성
   var _dragExcl=(dragStart&&selectedShapes.length)?selectedShapes:(_rsz?[_rsz.s]:null); // 크기 바꾸는 도형 자신의 점에는 안 붙음
   var sn=applySnap(e.offsetX,e.offsetY,_dragExcl),mx=sn[0],my=sn[1];
-  var snm={e:'끝점',m:'중간점',c:'중심',grid:'그리드',x:'교차점'};
+  var snm={e:'끝점',m:'중간점',c:'중심',grid:'그리드',x:'교차점',v:'가상 교차점',ext:'연장선',edge:'변 위'};
   document.getElementById('coord-lbl').textContent='X: '+mx.toFixed(3)+'  Y: '+my.toFixed(3);
   document.getElementById('snap-lbl').textContent=snapKind?(snm[snapKind]||''):'';
   if(panOrigin){offsetX=panOrig[0]+(e.offsetX-panOrigin[0]);offsetY=panOrig[1]+(e.offsetY-panOrigin[1]);redraw();return;}

@@ -114,6 +114,11 @@
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
+- 스냅(2026-10-31 점검) `applySnap` 순서: 오브젝트 점(`snapPoints`) → 선 스냅 `_snapLinesAt`(마우스 가까이 지나는 선분만 `_snapSegs`: 선·사각형 변(회전 포함)·원,
+  교차점 'x'(가장 가까운 것, 선-원 포함)·가상 교차점 'v'(`snapVirtInter`)·연장선 'ext'(`snapExtension`, 끝에서 3000 안), 보조선 `_snapGuide` → `drawSnapInd`가 점선) →
+  도구별 변 붙이기(밑면연마·고스라 'edge') → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음
+  - 마그넷 `doMagnet(arr)`: 여러 개·그룹도 — 전체 상자 + 각 도형 `getEdges`(회전 포함 상자 왼·가운데·오른/위·가운데·아래, 선은 양 끝)를 다른 도형 기준에 맞춰 선택 전체를 `shiftS`(+싱크볼 `syncGroupShapes`),
+    거리 = max(마그넷 mm, 10px/scale), 분홍 보조선 `magnetLineX/Y`. 마우스 줄맞춤 하늘색 `drawGuides`도 getEdges·4px
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
   - 공통 도우미(새 코드는 이걸 쓰고 같은 계산을 다시 쓰지 않기): `_rectXf/_rectCorners`(회전 rect 꼭짓점), `_isAnnot`(주석 도형 제외),
     `_nearestEdge`(트림·호버 변 찾기), `_isCutRect`(타공부 사각형), `_drawRLeader`(R·C 지시선 글자), `_ymd`(20261021), `_TOOL_SUBS/_TOOL_FOCUS`(도구 보조 칸)
