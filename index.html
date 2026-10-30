@@ -3152,7 +3152,7 @@ function importDxf(text){
     // 심플캐드에서 내보낸 DXF: 치수·글자·화살표·고스라·졸리컷 레이어는 도형이 아님, 밑면연마 띠는 해치처럼
     var _lay=(_dxfGet(e,8,'')||'').toUpperCase();
     if(/^SC-(DIM|NOTE|GOSRA|JOLLY|TITLE)$/.test(_lay))return;
-    if(_lay==='SC-GRIND'&&e.type!=='HATCH'){ // (2026-10-30부터는 띠 테두리 없이 해치만 → 아래 HATCH로 읽음)
+    if(_lay==='SC-GRIND'){ // 띠 테두리 폴리선만 읽음 (같은 띠의 해치는 겹치므로 건너뜀)
       if(e.type!=='POLYLINE'&&e.type!=='LWPOLYLINE')return;
       var gb={l:Infinity,r:-Infinity,b:Infinity,t:-Infinity};
       var _gAdd=function(x,y){gb.l=Math.min(gb.l,x);gb.r=Math.max(gb.r,x);gb.b=Math.min(gb.b,y);gb.t=Math.max(gb.t,y);};
@@ -3579,8 +3579,7 @@ function _dxfCollect(H){
       // 연마 띠: 변에서 재료 쪽(고스라 판정과 같은 방향)으로 깊이만큼 + 45° 빗금 (양식 범례의 밑면연마 표시)
       var gd=_gosraDir(s),dp=s.depth||30;if(!gd)return;
       var b1=[s.x1,s.y1],b2=[s.x2,s.y2],b3=[s.x2+gd.dx*dp,s.y2+gd.dy*dp],b4=[s.x1+gd.dx*dp,s.y1+gd.dy*dp];
-      // 띠 테두리 선은 R12에만 (R2000+는 해치만 — 조각 선 위에 색 선이 겹치지 않게, 다시 불러올 때도 해치 경계로 읽음)
-      ents.push({t:'POLY',L:'SC-GRIND',closed:true,only:'r12',pts:[b1,b2,b3,b4].map(function(p){return[p[0],-p[1],0];})});
+      poly('SC-GRIND',[b1,b2,b3,b4],true); // 띠 테두리 (사용자 요청으로 유지, 다시 불러올 때 밑면연마로 읽는 자리)
       // 빗금 = 해치 엔티티 하나 (2026-10-30 사용자 요청 "hatch 명령어로"). R12용으로 예전처럼 선도 만들어 둠(R2000+에선 안 씀)
       var gl=Math.hypot(s.x2-s.x1,s.y2-s.y1),ux=(s.x2-s.x1)/gl,uy=(s.y2-s.y1)/gl,stp=Math.max(dp*0.8,H*0.8),hl=[];
       for(var d0=stp/2;d0<gl+dp;d0+=stp){ // 띠 안에서 대각선: 변 위 d0에서 깊이 쪽으로 기울여서
