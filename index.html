@@ -9138,11 +9138,10 @@ function _3dDragTarget(m,ray){
   var T=near(st.r.topY),F=st.r.topY>50?near(0):null,onTop=T&&st.r.tops.some(function(tp){return _3dInside(tp.loops,T.P[0],T.P[1]);});
   var h=(!F||onTop||(T&&T.d<=F.d))?T:F;if(!h)return null;
   // 변보다 긴 판·변 끝을 넘는 자리도 됨(끝 20은 걸쳐 있게) → 자석 맞춤
-  // 판 밑에 매달 때는 긴 쪽이 높이(세로로 내려옴)가 기본 — 짧은 쪽이 그 판 길이 안에 들면 (flip = 지금 방향과 바꿈)
-  var e=h.e,flip=!!e.bot&&m.Lm>m.Hm&&m.Hm<=e.len+1,Lm=flip?m.Hm:m.Lm;
-  var s=(h.P[0]-e.a[0])*e.ux+(h.P[1]-e.a[1])*e.uz,ov=Math.min(20,e.len/2,Lm/2),s0=Math.max(ov-Lm,Math.min(s-Lm/2,e.len-ov));
-  var mg=_3dMagnet(e,s0,{shape:m.shape,Lm:Lm});
-  return{e:e,s0:mg.s0,floor:h===F&&!e.pan,guide:mg.guide,flip:flip};
+  // 판 밑에 매달 때도 지금 방향 그대로 (오른쪽 클릭으로 돌린 방향 유지 — 서랍처럼 가로로 붙이는 판)
+  var e=h.e,s=(h.P[0]-e.a[0])*e.ux+(h.P[1]-e.a[1])*e.uz,ov=Math.min(20,e.len/2,m.Lm/2),s0=Math.max(ov-m.Lm,Math.min(s-m.Lm/2,e.len-ov));
+  var mg=_3dMagnet(e,s0,m);
+  return{e:e,s0:mg.s0,floor:h===F&&!e.pan,guide:mg.guide};
 }
 // 판 끌기 자석: 놓을 변 방향으로 판의 시작·끝이 변 끝·다른 상판 꼭짓점·다른 판 모서리와 같은 자리면 딱 맞춤 (변에서 1500 안쪽 것만)
 //   → {s0, guide(기준선 — _3dLabels가 분홍 점선으로)}
@@ -10389,8 +10388,7 @@ function show3D(){
     }
     if(drag.mid){ // 미드웨이 끌기: 놓일 자리 미리보기 (노란 테두리)
       var tg=_3dDragTarget(drag.mid,_3dRay(e.clientX,e.clientY));if(!tg)return;
-      var m=drag.mid;if(tg.flip)m=Object.assign({},m,{Lm:m.Hm,Hm:m.Lm});
-      var b=_3dMidBox(tg.e.bot?Object.assign({},tg.e,{y:tg.e.y-Math.min(m.Hm,tg.e.y)}):tg.e.pan?tg.e:m.panel?(tg.e.obj?Object.assign({},tg.e,{y:tg.e.y0-Math.min(m.Hm,tg.e.y0)}):_3dPanelEdge(tg.e)):(tg.floor?_3dFloorEdge(tg.e):tg.e),tg.s0,m.Lm,tg.e.bot?Math.min(m.Hm,tg.e.y):m.panel&&tg.e.obj?Math.min(m.Hm,tg.e.y0):m.Hm,m.tm),Pp=[[b.W0,b.yA],[b.W1,b.yA],[b.F1,b.yA],[b.F0,b.yA],[b.W0,b.yB],[b.W1,b.yB],[b.F1,b.yB],[b.F0,b.yB]],L=[];
+      var m=drag.mid,b=_3dMidBox(tg.e.bot?Object.assign({},tg.e,{y:tg.e.y-Math.min(m.Hm,tg.e.y)}):tg.e.pan?tg.e:m.panel?(tg.e.obj?Object.assign({},tg.e,{y:tg.e.y0-Math.min(m.Hm,tg.e.y0)}):_3dPanelEdge(tg.e)):(tg.floor?_3dFloorEdge(tg.e):tg.e),tg.s0,m.Lm,tg.e.bot?Math.min(m.Hm,tg.e.y):m.panel&&tg.e.obj?Math.min(m.Hm,tg.e.y0):m.Hm,m.tm),Pp=[[b.W0,b.yA],[b.W1,b.yA],[b.F1,b.yA],[b.F0,b.yA],[b.W0,b.yB],[b.W1,b.yB],[b.F1,b.yB],[b.F0,b.yB]],L=[];
       [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(function(q){[Pp[q[0]],Pp[q[1]]].forEach(function(p){L.push(p[0][0],p[1],p[0][1],0,1,0,0,0);});});
       _3d.prev=L;_3d.dragTo=tg;_3d.guide=tg.guide;_3dRender();return;
     }
@@ -10405,7 +10403,7 @@ function show3D(){
     if(d.snap&&((d.mid&&_3d.dragTo)||d.vert||d.vertTop||(d.top&&d.moved))&&d.snap!==_3dHistSnap()){_hist.push(d.snap);if(_hist.length>50)_hist.shift();}
     if(_3d.guide){_3d.guide=null;if(!(d.top&&d.moved)&&!d.vertTop)_3dRender();} // 기준선은 끄는 동안만
     if(d.mid&&_3d.dragTo){ // 미드웨이 놓은 자리 저장
-      var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:tg.flip?!d.mid.swap:d.mid.swap,floor:!!tg.floor};
+      var tg=_3d.dragTo;_3dKey(d.mid.shape).mid3d={edge:tg.e.id,off:Math.round(tg.s0),swap:d.mid.swap,floor:!!tg.floor};
       _3d.prev=null;_3d.dragTo=null;_3dRegeom();_3dPiecePanel(_3d.scene);return;
     }
     if(d.um){ // 가구 칸: 옮겼으면 되돌리기 기록, 안 옮기고 여러 개 중 하나를 눌렀으면 그 칸만 고름
