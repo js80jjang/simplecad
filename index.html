@@ -1535,7 +1535,7 @@ function buildFillet(x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo
 function buildChamfer(x,y,w,h,c){c=Math.min(c,w/2,h/2);ctx.beginPath();ctx.moveTo(x+c,y);ctx.lineTo(x+w-c,y);ctx.lineTo(x+w,y+c);ctx.lineTo(x+w,y+h-c);ctx.lineTo(x+w-c,y+h);ctx.lineTo(x+c,y+h);ctx.lineTo(x,y+h-c);ctx.lineTo(x,y+c);ctx.closePath();}
 function arrowHead(tx,ty,angle,sz,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx-sz*Math.cos(angle-0.38),ty-sz*Math.sin(angle-0.38));ctx.lineTo(tx-sz*Math.cos(angle+0.38),ty-sz*Math.sin(angle+0.38));ctx.closePath();ctx.fill();}
 
-var _MARK_K=0.25; // 졸리컷 ★·고스라 ▲ 크기 배율 (편집 화면·도면화·DXF, 범례 견본은 그대로) — 2026-11-02 사용자 요청 "지금의 1/4"
+var _MARK_K=0.5; // 졸리컷 ★·고스라 ▲ 크기 배율 (편집 화면·도면화·DXF, 범례 견본은 그대로) — 2026-11-02 사용자 요청: 1/4로 줄였다가 "너무 작다, 2배로" → 0.5
 function drawStar(cx,cy,r,col){
   ctx.beginPath();
   for(var i=0;i<10;i++){var a=(i*Math.PI/5)-Math.PI/2,rad=i%2===0?r:r*0.4;var x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
