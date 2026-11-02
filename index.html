@@ -1975,7 +1975,7 @@ function drawShape(s,preview){
   if(s.kind==='note'){drawNote(s,preview);return;}
   if(s.kind==='arrow'){drawArrowMark(s,preview);return;}
   if(s.kind==='linkmark'){drawLinkMark(s,preview);return;}
-  if(s.kind==='dimline'){drawDimLine(s,preview);return;}
+  if(s.kind==='dimline'){_dimDraw(function(){drawDimLine(s,preview);});return;}
   if(s.kind==='grindregion'){drawGrindRegion(s,preview);return;}
   if(s.kind==='jollymark'){drawJollyMark(s,preview);return;}
   if(s.kind==='gosramark'){drawGosraMark(s,preview);return;}
@@ -2018,7 +2018,7 @@ function drawShape(s,preview){
       ctx.stroke();
     }
     ctx.restore();if(_holeDash)ctx.setLineDash([]);
-    if(!preview)drawDims(s,col);
+    if(!preview)_dimDraw(function(){drawDims(s,col);});
   } else if(s.kind==='circle'||s.kind==='hole'){
     var cc=toCanvas(s.cx,s.cy),cr=mm2px(s.r);
     ctx.beginPath();ctx.arc(cc[0],cc[1],cr,0,2*Math.PI);
@@ -2028,14 +2028,14 @@ function drawShape(s,preview){
     ctx.stroke();ctx.setLineDash([]);
     // 중심 십자선 (원형 절단은 타공이 아니므로 십자선 생략)
     if(!preview&&s.holeType!=='cut'){var cs=Math.max(4,Math.min(cr*0.28,11));ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cc[0]-cs,cc[1]);ctx.lineTo(cc[0]+cs,cc[1]);ctx.moveTo(cc[0],cc[1]-cs);ctx.lineTo(cc[0],cc[1]+cs);ctx.stroke();}
-    if(!preview)drawDimsCircle(s,col);
+    if(!preview)_dimDraw(function(){drawDimsCircle(s,col);});
   } else if(s.kind==='ellipse'){
     var ce=toCanvas(s.cx,s.cy);ctx.beginPath();ctx.ellipse(ce[0],ce[1],mm2px(s.rx),mm2px(s.ry),s.rotation||0,0,2*Math.PI);
-    if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}ctx.stroke();if(_holeDash)ctx.setLineDash([]);if(!preview)drawDimsEllipse(s,col);
+    if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}ctx.stroke();if(_holeDash)ctx.setLineDash([]);if(!preview)_dimDraw(function(){drawDimsEllipse(s,col);});
   } else if(s.kind==='line'){
     var lp1=toCanvas(s.x1,s.y1),lp2=toCanvas(s.x2,s.y2);
     ctx.beginPath();ctx.moveTo(lp1[0],lp1[1]);ctx.lineTo(lp2[0],lp2[1]);ctx.stroke();
-    if(!preview)drawDimsLine(s,col);
+    if(!preview)_dimDraw(function(){drawDimsLine(s,col);});
   } else if(s.kind==='arc'){
     var acp=toCanvas(s.cx,s.cy),arPx=mm2px(s.r);
     ctx.beginPath();ctx.arc(acp[0],acp[1],arPx,s.a0,s.a1);ctx.stroke();
@@ -5129,7 +5129,16 @@ function _fxDraw(s,k,grow){ // k = 0..1 진하기, grow = 크기 배율
 var _annRef=null,_annCur=1,_lwK=1;
 function _annK(){if(printRender||!_annRef)return 1;return Math.max(0.4,Math.min(5,scale/_annRef));}
 function _annRun(k,fn){if(k===1)return fn();var s0=scale,ox=offsetX,oy=offsetY;scale=s0/k;offsetX=ox/k;offsetY=oy/k;try{return fn();}finally{scale=s0;offsetX=ox;offsetY=oy;}}
-function _annDraw(fn){var k=_annCur=_annK();if(k===1)return fn();ctx.save();ctx.scale(k,k);_lwK=k;try{return _annRun(k,fn);}finally{_lwK=1;ctx.restore();}} // 미리보기 도형도 같은 크기로
+function _annDraw(fn){var k=_annCur=_annK();_annDimCur=_dimKOf(k);if(k===1)return fn();ctx.save();ctx.scale(k,k);_lwK=k;try{return _annRun(k,fn);}finally{_lwK=1;ctx.restore();}} // 미리보기 도형도 같은 크기로
+// 치수만 다른 배율(2026-11-02 사용자 요청 "확대하면 치수가 겹쳐 보인다"): 확대(k>1)할 때 치수 글자·간격은 √k배만 → 도면보다 덜 커져서 덜 겹침, 축소는 도면과 같이
+// _dimDraw(fn) = 지금 주석 틀(k) 안에서 치수 틀(kd)로 바꿔 그림. 치수 글자 자리(dimLabels)는 이 틀 좌표 → 누르기·끌기·입력 칸은 _annDimCur로 변환
+var _annDimCur=1;
+function _dimKOf(k){return k>1?Math.sqrt(k):k;}
+function _dimDraw(fn){
+  var k=_annCur,kd=_annDimCur;if(printRender||k===kd||_dimDraw.on||_lwK!==k)return fn(); // 겹쳐 부르거나 주석 틀 밖이면 그대로
+  var r=k/kd,s=scale,ox=offsetX,oy=offsetY,lw=_lwK;ctx.save();ctx.scale(1/r,1/r);_lwK=kd;scale=s*r;offsetX=ox*r;offsetY=oy*r;_dimDraw.on=true;
+  try{return fn();}finally{_dimDraw.on=false;scale=s;offsetX=ox;offsetY=oy;_lwK=lw;ctx.restore();}
+}
 (function(){var P=CanvasRenderingContext2D.prototype,d=Object.getOwnPropertyDescriptor(P,'lineWidth'),sld=P.setLineDash;
   Object.defineProperty(ctx,'lineWidth',{configurable:true,get:function(){return d.get.call(this)*_lwK;},set:function(v){d.set.call(this,v/_lwK);}});
   ctx.setLineDash=function(a){return sld.call(this,_lwK===1?a:a.map(function(x){return x/_lwK;}));};})();
@@ -5158,7 +5167,7 @@ function redraw(){
   }
 }
 function _redrawBody(_fxNow){
-  dimLabels=[];autoAdjustDims();
+  dimLabels=[];_dimDraw(autoAdjustDims); // 치수 자리 맞춤도 치수 틀에서
   if(!printRender)_drawProdTints();
   shapes.forEach(function(s){
     var mo=printRender?null:_fxMorph.get(s);
@@ -5176,9 +5185,9 @@ function _redrawBody(_fxNow){
   if(!printRender&&(_fxIn.size||_fxOut.length||_fxMorph.size)&&!_fxRaf)_fxRaf=requestAnimationFrame(function(){_fxRaf=0; // 도구 미리보기(선 절단·타원·크기 손잡이)도 같이 다시
     if(tool==='line'&&lineChain&&typeof _lineRedraw==='function')_lineRedraw();else{redraw();if(tool==='ellipse')_ellPreview(lastMx,lastMy);if(_rsz)_rszOverlay(_rsz.px||0,_rsz.py||0);}});
   drawUserGroups();
-  _drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1F3F7A';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});
+  _dimDraw(function(){_drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1F3F7A';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});});
   drawShapeNumbers();
-  drawNestDims();
+  _dimDraw(drawNestDims);
 }
 
 // ═══ 히트테스트 ═══
@@ -5270,7 +5279,7 @@ function _lineDimCursor(d){
   return a<22.5||a>=157.5?'ew-resize':(a<67.5?'nwse-resize':(a<112.5?'ns-resize':'nesw-resize'));
 }
 function hitDim(ex,ey){
-  ex/=_annCur;ey/=_annCur; // 화면 → 치수 글자 틀 좌표
+  ex/=_annDimCur;ey/=_annDimCur; // 화면 → 치수 글자 틀 좌표 (치수 틀 배율)
   for(var i=0;i<dimLabels.length;i++){var d=dimLabels[i];if(Math.abs(ex-d.px)<=36&&Math.abs(ey-d.py)<=14)return d;}
   // 치수 글자가 아니면 치수선 자체(5px 이내) — 끌어서 위치만 옮김
   for(var j=0;j<dimLabels.length;j++){var l=dimLabels[j].line;if(l&&ptLD(ex,ey,l[0][0],l[0][1],l[1][0],l[1][1])<=5)return dimLabels[j];}
@@ -5657,7 +5666,7 @@ document.addEventListener('mousemove',function(e){
   var cvRect=cv.getBoundingClientRect();
   var ex=e.clientX-cvRect.left,ey=e.clientY-cvRect.top;
   if(Math.hypot(ex-dimDragStartX,ey-dimDragStartY)>3){
-    var _ak=_annCur;
+    var _ak=_annDimCur; // 치수 틀 배율
     _annRun(_ak,function(){ // 치수 글자 자리는 틀 좌표(화면 ÷ k)
     ex/=_ak;ey/=_ak;var _dx=ex-dimDragStartX/_ak,_dy=ey-dimDragStartY/_ak;
     var _ds=dimDragInfo.shape;
@@ -5786,7 +5795,7 @@ function _dimInputPopup(opts){
   var inp=document.getElementById('dim-inline');
   var hideBtn=document.getElementById('dim-hide-btn');
   if(!inp||!hideBtn)return;
-  _dimPopupShow(opts.px*_annCur,opts.py*_annCur); // 치수 글자 자리(틀 좌표) → 화면
+  _dimPopupShow(opts.px*_annDimCur,opts.py*_annDimCur); // 치수 글자 자리(틀 좌표) → 화면
   inp.value=opts.initVal.toFixed(1);
   inp.select();inp.focus();
   // 숨기기 버튼 (onclick 덮어쓰기로 이전 이벤트 정리)
