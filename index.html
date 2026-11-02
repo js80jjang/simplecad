@@ -9416,7 +9416,9 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
       s0+=1;s1-=1;d-=1;
       q(P3(s0,-d,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s0,-d,yt),[nx,0,nz]);
       q(P3(s0,0,yb),P3(s0,-d,yb),P3(s0,-d,yt),P3(s0,0,yt),[ux,0,uz]);q(P3(s1,0,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s1,0,yt),[-ux,0,-uz]);
-      q(P3(s0,0,yb+0.5),P3(s1,0,yb+0.5),P3(s1,-d,yb+0.5),P3(s0,-d,yb+0.5),[nx*0.6,-0.8,nz*0.6]);return;} // 바닥: 상판 밑 그늘처럼 어둡게 (하얗게 뜨지 않게)
+      q(P3(s0,0,yb+0.5),P3(s1,0,yb+0.5),P3(s1,-d,yb+0.5),P3(s0,-d,yb+0.5),[nx*0.6,-0.8,nz*0.6]); // 바닥: 상판 밑 그늘처럼 어둡게 (하얗게 뜨지 않게)
+      if(top)q(P3(s0,0,yt),P3(s1,0,yt),P3(s1,-d,yt),P3(s0,-d,yt),[0,-1,0]); // 싱크볼 밑 빈 자리: 볼 밑 천장
+      return;}
     q(P3(s0,-d,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s0,-d,yt),[nx,0,nz]); // 뒷판 (안쪽을 봄)
     q(P3(s0,0,yb),P3(s0,-d,yb),P3(s0,-d,yt),P3(s0,0,yt),[-ux,0,-uz]);q(P3(s1,0,yb),P3(s1,-d,yb),P3(s1,-d,yt),P3(s1,0,yt),[ux,0,uz]); // 옆판
     q(P3(s0,0,yb),P3(s1,0,yb),P3(s1,-d,yb),P3(s0,-d,yb),[0,1,0]);if(top)q(P3(s0,0,yt),P3(s1,0,yt),P3(s1,-d,yt),P3(s0,-d,yt),[0,1,0]); // 윗판은 위에서 보임 (빼낸 칸·싱크볼 구멍 밑)
@@ -9544,14 +9546,15 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
       function oneUnit(uk,A,ux,uz,nx,nz,s0u,s1u,bd,hside){
           var parts=[[s0u,s1u]],k=0;
           var UO=_3dUnitOf(uk)||{},uo=UO.o,moved=!!(uo&&(uo[0]||uo[1]||uo[2])); // 옮긴 자리·종류 (칸 단위)
-          if(uDel[uk]||moved)bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,0,y0,false,true,true); // 빈 자리 = 빈 칸처럼 (뒷판·양옆·바닥)
-          if(uDel[uk])return; // 3D에서 지운 칸
-          var um=uMark();
-          // 싱크볼 구멍과 겹치는 칸은 몸통·선반을 볼 밑(상판 밑 200)까지만 — 구멍으로 칸 옆판·선반이 들여다보이지 않게 (2026-10-29)
+          // 싱크볼 구멍과 겹치는 칸은 몸통·선반을 볼 밑(상판 밑 200)까지만 — 구멍으로 칸 옆판·선반이 들여다보이지 않게 (2026-10-29, 빈 자리도 같이 2026-11-02)
           var byt=y0,bx0=parts[k][0],bx1=parts[k][1],bc=[[bx0,0],[bx1,0],[bx1,-bd],[bx0,-bd]].map(function(q){return[A[0]+ux*q[0]+nx*q[1],A[1]+uz*q[0]+nz*q[1]];}),
             bl=Math.min.apply(null,bc.map(function(p){return p[0];})),br=Math.max.apply(null,bc.map(function(p){return p[0];})),bt=Math.min.apply(null,bc.map(function(p){return p[1];})),bb2=Math.max.apply(null,bc.map(function(p){return p[1];}));
           loops.holes.forEach(function(H,hi3){if(loops.kinds[hi3]!=='sink')return;var xs=H.map(function(p){return p[0];}),zs=H.map(function(p){return p[1];});
             if(Math.min.apply(null,xs)<br-1&&Math.max.apply(null,xs)>bl+1&&Math.min.apply(null,zs)<bb2-1&&Math.max.apply(null,zs)>bt+1)byt=Math.min(byt,y0-202);});
+          if(uDel[uk]||moved)bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,0,byt,byt<y0,true,true); // 빈 자리 = 빈 칸처럼 (뒷판·양옆·바닥, 싱크볼 밑이면 볼 밑까지 + 천장)
+          if(uDel[uk])return; // 3D에서 지운 칸
+          var um=uMark();
+          if(moved)byt=y0; // 빼낸 칸은 싱크볼 밑이 아니니 온전한 높이
           bay(furnDraw.body,A,ux,uz,nx,nz,parts[k][0],parts[k][1],bd,_3D_KICK,byt,byt<y0||moved,!!UO.t&&UO.t!=='swing'); // 옮긴 칸은 윗판도 (상판 밑을 벗어남) · 서랍·풀아웃 등은 선반 없음
           var K0=[A[0]-nx*_3D_KICKSET,A[1]-nz*_3D_KICKSET],kb=Math.max(0,bd-_3D_KICKSET); // 걸레받이: 칸 앞에서 50 들임 + 양 끝
           [[parts[k][0],parts[k][1],0,0],[parts[k][0],parts[k][0],0,-kb],[parts[k][1],parts[k][1],0,-kb]].forEach(function(q){var a=[K0[0]+ux*q[0]+nx*q[2],K0[1]+uz*q[0]+nz*q[2]],b=[K0[0]+ux*q[1]+nx*q[3],K0[1]+uz*q[1]+nz*q[3]],en=q[0]===q[1]?[(q[0]===parts[k][0]?-1:1)*ux,(q[0]===parts[k][0]?-1:1)*uz]:[nx,nz];

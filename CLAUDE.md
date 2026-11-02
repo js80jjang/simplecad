@@ -243,7 +243,7 @@
     `_3dPick` kind 'unit'(하부장 칸)/'upper'(상부장 칸, 끌면 그 상부장 전체 위아래 → `upOff[자리key]`, 자석·기준선) → 누르면 `_3d.selUnit` 노란 테두리 `_3dUnitOutline`, Delete = `_3dUnitDelete`,
     더블클릭 = `_3dDoorToggle`(0↔90°, 파일 저장 안 함). 되돌리기 `_3d.fOps`(지우기·상부장 높이, 그때 `_hist` 길이) — `_3dUndo`가 먼저 처리, "가구 처음대로" = 모두
   - 가구 칸 객체(2026-10-31): `_3dStyle.units[칸 key] = {o:[x,y,z] 옮긴 mm, t:종류}`(`_3dUnitOf/_3dUnitSet`, 0·swing이면 지움). `_3dSetupGL`이 칸마다 `uMark()` → 몸통·걸레받이·앞면 그림 → `uShift(m,o)`로 그 정점만 옮김, `unitInfo`에 o·축(ux,uz,nx,nz)
-    옮기거나 지운 하부장 칸의 원래 자리 = `bay(...,slotOnly)` 빈 칸(뒷판·양옆·어두운 바닥, 옆 칸과 같은 면이면 깜빡여서 1mm 안쪽), 옮긴 칸은 윗판도 그림(법선 위)
+    옮기거나 지운 하부장 칸의 원래 자리 = `bay(...,slotOnly)` 빈 칸(뒷판·양옆·어두운 바닥, 옆 칸과 같은 면이면 깜빡여서 1mm 안쪽, 싱크볼 밑이면 볼 밑 `byt`까지 + 천장), 옮긴 칸은 온전한 높이 + 윗판(법선 위)
     하부장 칸 = `oneUnit(uk,A,u,n,s0,s1,깊이,손잡이 쪽)`. 깊이(`depthIn`) > 800이면 절반(2026-11-02): 닿은 맞은편 변(`depthIn.hit`)이 앞면 변이면 그쪽도 절반이라 그대로,
     아니면 뒤 줄 칸 key `…b`(앞 선 = 깊이 끝, u·n 반대, 문은 뒤쪽). 가구통 모서리 선 `furnDraw.line/uLine`(bay 12모서리, 몸통 색 ×0.32, 제자리 칸은 도어·상판에 가려 빼낸 칸·빈 자리에서만 보임)
     고르기 `_3d.selUnits`(Ctrl+클릭 여러 개, `_3dSelSet`/`_3dSelOutline`, 마지막 = selUnit), 위 가운데 종류 막대 `#v3d-utype`(`_3dUTypeBar`: `_3D_UTYPES` 버튼·↺ 자리·삭제)
