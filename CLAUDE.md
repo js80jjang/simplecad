@@ -134,6 +134,10 @@
   - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
   - 원판보다 커서 못 놓은 조각(2026-11-02): `_packBoardItems`가 `unplaced`([{item,prod,bw,bh,ew,eh}])로 돌려줌 → `showBoardLayout`이 머리줄 아래 빨간 상자 `#board-modal-warn`에
     `_unfitReason`(조각 번호·이름·크기·제품 + 긴 변/짧은 변이 원판 유효 길이/폭(여백 10씩 뺌)보다 큰지) — 저장 배치 복원 때는 없음(못 놓은 조각이 있으면 복원 안 됨)
+  - 미배치 칸(2026-11-02 사용자 요청): 원판 배치 창 오른쪽 `_bsParkW` 폭(창에서만, 도면화 그림엔 없음, `_bs.parkX` = 칸 시작 px, 다음 쪽 화살표도 그 왼쪽).
+    조각을 끌어 칸 위에서 놓으면(`_bs.overPark`) `_bs.parked`로, 칸 조각을 누르면 `_bs.parkDrag`(원판 배율로 커서에, 놓을 수 없는 원판이면 빨간 테두리) → 원판 위 놓기 `_bsPlaceParked`(같은 제품만·`_bsFitDims`),
+    칸에서 오른쪽 클릭 = 90°. 겹침 정리 `_bsResolve`(밀어내고 그래도 겹치면 놓은 조각을 가장 가까운 빈 자리로), 빈 장 정리 `_bsCleanBoards`(빈 장도 제품 이름 유지).
+    남긴 채 닫으면 confirm → `_bsAutoPlaceParked`(같은 제품 원판 빈 자리 10mm 훑기, 없으면 그 제품 새 장)
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
