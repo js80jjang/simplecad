@@ -6629,7 +6629,7 @@ function _packBoardItems(items,ew,eh,gap){
     _grpMap[lbl].push(it);
   });
   var _grpCols=['#1F3F7A','#2E7D32','#6A1B9A','#D84315','#00695C','#AD1457','#4527A0','#56647E'];
-  var allBoards=[],groupMeta=[];
+  var allBoards=[],groupMeta=[],unplaced=[];
   _grpOrder.forEach(function(lbl,gi){
     var grpItems=_grpMap[lbl].slice().sort(function(a,b){return Math.max(b.w,b.h)-Math.max(a.w,a.h);});
     var sz=_prodBoardSize(lbl); // 제품마다 원판 크기가 다를 수 있음
@@ -6640,11 +6640,24 @@ function _packBoardItems(items,ew,eh,gap){
       var _alt=packBoards(_plain,sz.bw-20,sz.bh-20,gap);
       if(_alt.length<grpBoards.length){_alt.forEach(function(b){b.forEach(function(p){if(_orig.has(p.item))p.item=_orig.get(p.item);});});grpBoards=_alt;}
     }
-    var startBi=allBoards.length;
+    var startBi=allBoards.length,_inB=new Set();grpBoards.forEach(function(b){b.forEach(function(p){_inB.add(p.item.shape);});});
+    grpItems.forEach(function(it){if(!_inB.has(it.shape))unplaced.push({item:it,prod:lbl,bw:sz.bw,bh:sz.bh,ew:sz.bw-20,eh:sz.bh-20});}); // 원판보다 커서 못 놓은 조각
     grpBoards.forEach(function(b){if(lbl!=='미지정')b.prod=lbl;b.bw=sz.bw;b.bh=sz.bh;allBoards.push(b);}); // 장 제품 = 그 장 조각들의 제품
     groupMeta.push({label:lbl,color:_grpCols[gi%_grpCols.length],startBi:startBi,count:grpBoards.length});
   });
-  return{boards:allBoards,groups:groupMeta};
+  return{boards:allBoards,groups:groupMeta,unplaced:unplaced};
+}
+// 원판에 못 놓은 조각의 이유 글자 (2026-11-02 사용자 요청): 조각 번호·크기·제품 + 어느 변이 원판 유효 영역(여백 10씩 뺀 크기)보다 큰지
+function _unfitReason(u){
+  var it=u.item,s=it.shape,w=Math.round(it.w),h=Math.round(it.h),L=Math.max(w,h),S=Math.min(w,h),EL=Math.max(u.ew,u.eh),ES=Math.min(u.ew,u.eh);
+  var nums=_autoPieceNums(),num=null;
+  if(s.kind==='linegroup')s.lines.some(function(l){var i=shapes.indexOf(l);num=l.shapeNum||nums[i]||null;return num;});
+  else num=s.shapeNum||nums[shapes.indexOf(s)]||null;
+  var nm=(num?num+'번 ':'')+(s.pieceName?s.pieceName+' ':'')+'조각 '+it.label+(u.prod&&u.prod!=='미지정'?' ('+u.prod+')':''),why=[];
+  if(L>EL)why.push('긴 변 '+L+' > 원판 길이 '+EL);
+  if(S>ES)why.push('짧은 변 '+S+' > 원판 폭 '+ES);
+  if(!why.length)why.push('돌려도 원판 '+EL+'×'+ES+' 안에 안 들어감');
+  return nm+' — '+why.join(', ')+(s.kind==='linegroup'?' (선 조각은 돌려 봐도 안 들어감)':'')+' · 원판 '+u.bw+'×'+u.bh+'에서 여백 10mm씩 뺀 크기 기준';
 }
 // 저장된 배치(_savedBoardLayout.boards)를 현재 피스(items)에 매핑. 하나라도 못 찾거나 개수가 다르면 null.
 // 선 절단 피스는 lineIds로 매핑, lineIds가 없는 예전 파일은 크기가 같은 선 그룹 피스로 매핑.
@@ -6719,6 +6732,13 @@ function showBoardLayout(){
   var infoStr='원판 '+_sizes.join(', ')+' mm | '+useBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
   infoStr+=' | <span style="color:#75839C">오른쪽 클릭 = 90° 돌리기 · Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
   infoEl.innerHTML=infoStr;
+  // 원판에 안 들어가 빠진 조각 → 이유를 빨간 상자로 (배치 그림 위)
+  var warnEl=document.getElementById('board-modal-warn');
+  if(!warnEl){var _wrap=document.getElementById('board-canvas-wrap');warnEl=document.createElement('div');warnEl.id='board-modal-warn';_wrap.parentNode.insertBefore(warnEl,_wrap);} // 머리줄 아래·배치 그림 위
+  var _un=_rBoards?[]:(_packed.unplaced||[]);
+  warnEl.style.cssText=_un.length?'flex:none;margin:6px 12px;padding:8px 12px;background:#3A1620;border:1px solid #C0504D;border-radius:4px;color:#FFD9D6;font-size:12.5px;line-height:1.6':'display:none';
+  warnEl.innerHTML=_un.length?'<b style="color:#FF8A80">⚠ 원판에 안 들어가 배치하지 못한 조각 '+_un.length+'개</b> — 도면에서 조각을 나누거나(접합) 더 큰 원판 사이즈의 제품으로 바꿔 주세요.<br>'
+    +_un.map(function(u){return '· '+escHtml(_unfitReason(u));}).join('<br>'):'';
 
   // 저장된 배치가 있으면 복원 (복사/추가로 도형 수가 달라지면 _restoreSavedBoards가 null)
   {

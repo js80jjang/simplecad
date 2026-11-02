@@ -132,6 +132,8 @@
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
   - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
+  - 원판보다 커서 못 놓은 조각(2026-11-02): `_packBoardItems`가 `unplaced`([{item,prod,bw,bh,ew,eh}])로 돌려줌 → `showBoardLayout`이 머리줄 아래 빨간 상자 `#board-modal-warn`에
+    `_unfitReason`(조각 번호·이름·크기·제품 + 긴 변/짧은 변이 원판 유효 길이/폭(여백 10씩 뺌)보다 큰지) — 저장 배치 복원 때는 없음(못 놓은 조각이 있으면 복원 안 됨)
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
