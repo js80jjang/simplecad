@@ -142,6 +142,10 @@
 - 자르기 도구(`cut`, 2026-11-03 사용자 요청 "1000×500 → 400×500 / 600×500", 트림 아래 단추): `_cutSt` 단계 — 변 클릭(`_cutFind`: rect·선 조각 고리 `_cutLineLoop`·원·타원·열린 선, 사각형은 진짜 꼭짓점 `st.rc`에서 변 따라 잼)
   → 1단계 P = 둘레 따라 마우스(`_cutMove`/`_cutSetP`, 정수 mm)·숫자+Enter = 거리·끌다 놓기 → 2단계 가르는 선 `_cutChord`(기본 = 변에 수직, 원·타원은 진짜 법선, Shift = 마우스 방향, 숫자+Enter = 지나온 변과의 각도) → 맞은편 변 Q
   → `_cutDo`: 회전 없는 사각형 축 방향 = `_cutRectAxis`(사각형 둘, 코너는 제자리 쪽), 그 밖 = `_cutSplit` 두 고리 → `_cutLines`(선 조각, 곡선 근사 = arcR/ellArc 가운데만 글자). `_cutMarksAt`가 P·Q에서 고스라·졸리컷·밑면연마를 둘로.
+  자른 뒤(2026-11-03 사용자 요청): 가르는 선 법선 중 오른쪽(세로가 아니면 아래) 조각 + 그 안·둘레에 딸린 것(`rides`: 싱크볼 그룹·타공·가공 표시·글자)을 `_CUT_GAP`(100) 옮기고 `_fxMorph`(항목 `d` = `_CUT_ANIM` 420ms)로 미끄러짐, `_fxPrev`를 바로 맞춰 나타나기/사라지기 효과는 없음.
+  원·라운드 코너 선분은 `arcS`(원 중심이 선 법선(-dy,dx) 쪽 +1/-1) → `_arcCtrOf`로 중심 복원 → `_findCornerAttach`가 곡선으로 인식(가공 표시 곡선 유지), `_cutMarksAt`은 호 표시를 호 위에서 나눔. 원·타원 P·Q는 `_cutOnCurve`(진짜 둘레), 사분점·축 끝에 붙음.
+  원 `_findCornerAttach` matOutward = 원형 절단이 다른 조각 안(`_inAnyPiece`)일 때만(단독 원 조각은 안쪽 재료). 원형 절단이 조각 밖이면 `drawNestDims` 관계 치수 없음.
+  도면화 밑면연마: 호에 붙은 것 = `_expHatchArc`(부채꼴 띠, 재료 쪽 `_matAt`), 곧은 띠는 `_gBands`로 모아 끝이 맞닿은 띠(같은 깊이·같은 쪽)는 `_expHatchBand`의 j1/j2로 꺾어 이음(타원 둘레)
   선 `lp`(조각 표지) = 맞댄 두 선 조각이 끝점으로 안 묶이게 — `_cutLpOk`를 `_collectBoardItems`(겹친 선 하나만·이어짐)·`_lineBoundaryGroups`가 씀. 둘째 조각 가르는 선 `cutTwin` = 편집 화면 길이 치수 하나만. 미리보기·안내 `_cutPreview`
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
