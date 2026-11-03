@@ -124,7 +124,8 @@
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
 - 스냅(2026-10-31 점검) `applySnap` 순서: 오브젝트 점(`snapPoints`) → 선 스냅 `_snapLinesAt`(마우스 가까이 지나는 선분만 `_snapSegs`: 선·사각형 변(회전 포함)·원,
   교차점 'x'(가장 가까운 것, 선-원 포함)·가상 교차점 'v'(`snapVirtInter`)·연장선 'ext'(`snapExtension`, 끝에서 3000 안), 보조선 `_snapGuide` → `drawSnapInd`가 점선) →
-  도구별 변 붙이기(밑면연마·고스라 'edge') → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음
+  도구별 변 붙이기(밑면연마·고스라 'edge', 타원 둘레·곡선 근사 선분 위도) → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음
+  - `_snapCurveBit(s)`(2026-11-03 사용자 요청 "원·타원 뒤 스냅이 너무 많이 잡힌다") = 곡선 근사 선분(arcR/ellArc)·타원 둘레 표시 묶음(sym:false) → 점 스냅(`snapPoints`)·선 스냅(`_snapSegs`, 연장선·가상 교차점)에서 뺌. 점 스냅 허용 = 12px 그대로(예전 13)
   - 마그넷 `doMagnet(arr)`: 여러 개·그룹도 — 전체 상자 + 각 도형 `getEdges`(회전 포함 상자 왼·가운데·오른/위·가운데·아래, 선은 양 끝)를 다른 도형 기준에 맞춰 선택 전체를 `shiftS`(+싱크볼 `syncGroupShapes`),
     거리 = max(마그넷 mm, 10px/scale), 분홍 보조선 `magnetLineX/Y`. 마우스 줄맞춤 하늘색 `drawGuides`도 getEdges·4px
 - 코너별 라운드·모따기(`s.corners`) 최대 = `_cornerLim(corners,ck,w,h)`(2026-11-03): 같은 변 이웃 코너가 둥글지 않으면 그 변 전체, 둥글면 절반 —

@@ -1203,6 +1203,8 @@ function toggleGrind150(){
   document.getElementById('grind-depth').value=grind150mode?150:50; // 끄면 기본 50으로
 }
 function toggleSnap(){var b=document.getElementById('snap-body'),h=document.getElementById('snap-hd');var open=b.style.display!=='none';b.style.display=open?'none':'';h.classList.toggle('open',!open);}
+// 곡선 근사 선분(자른 원·타원, DXF 호, 트림한 타원 = arcR/ellArc) · 타원 둘레 가공 표시 묶음(sym:false) — 스냅 점·선 스냅에서 뺌
+function _snapCurveBit(s){return (s.kind==='line'&&(s.arcR!==undefined||s.ellArc!==undefined))||((s.kind==='grindregion'||s.kind==='gosramark'||s.kind==='jollymark')&&s.sym===false);}
 function snapPoints(excl){
   var pts=[];
   var _exclArr=Array.isArray(excl)?excl:(excl?[excl]:null);
@@ -1226,6 +1228,7 @@ function snapPoints(excl){
       pts.push({x:s.cx+_ec*s.rx,y:s.cy+_es*s.rx,k:'e'},{x:s.cx-_ec*s.rx,y:s.cy-_es*s.rx,k:'e'},{x:s.cx-_es*s.ry,y:s.cy+_ec*s.ry,k:'e'},{x:s.cx+_es*s.ry,y:s.cy-_ec*s.ry,k:'e'});
       if(snapCircleCenter)pts.push({x:s.cx,y:s.cy,k:'c'});
     }
+    else if(_snapCurveBit(s))continue; // 곡선을 근사한 짧은 선분·타원 둘레 표시 묶음은 점 스냅 없음 (곡선 둘레 어디서나 잡히던 것)
     else if(s.kind==='line'||s.kind==='dimline'||s.kind==='grindregion'||s.kind==='jollymark'||s.kind==='gosramark'){pts.push({x:s.x1,y:s.y1,k:'e'},{x:s.x2,y:s.y2,k:'e'},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2,k:'m'});
       if(s.kind==='grindregion'){
         // 밑면연마 사각영역 4꼭짓점도 스냅
@@ -1248,7 +1251,7 @@ function _snapSegs(excl){
   var ex=Array.isArray(excl)?excl:(excl?[excl]:[]),segs=[],circ=[];
   shapes.forEach(function(s){
     if(ex.indexOf(s)>=0)return;
-    if(s.kind==='line')segs.push([s.x1,s.y1,s.x2,s.y2]);
+    if(s.kind==='line'&&!_snapCurveBit(s))segs.push([s.x1,s.y1,s.x2,s.y2]); // 곡선 근사 선분은 연장선·가상 교차점을 만들지 않게
     else if(s.kind==='rect'){var P=_rectCorners(s);for(var i=0;i<4;i++){var a=P[i],b=P[(i+1)%4];segs.push([a.x,a.y,b.x,b.y]);}}
     else if(s.kind==='circle'||s.kind==='hole')circ.push(s);
   });
@@ -1279,7 +1282,7 @@ function getIntersectPoints(){var segs=[];for(var i=0;i<shapes.length;i++){var s
 function applySnap(cx,cy,excl){
   var mx=(cx-offsetX)/scale,my=(cy-offsetY)/scale,tol=12/scale;
   snapKind=null;_snapGuide=null;
-  if(objSnap){var best=tol+1,bx=mx,by=my,bk=null;snapPoints(excl||null).forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<best){best=d;bx=p.x;by=p.y;bk=p.k;}});if(bk){mx=bx;my=by;snapKind=bk;}}
+  if(objSnap){var best=tol,bx=mx,by=my,bk=null;snapPoints(excl||null).forEach(function(p){var d=Math.hypot(mx-p.x,my-p.y);if(d<best){best=d;bx=p.x;by=p.y;bk=p.k;}});if(bk){mx=bx;my=by;snapKind=bk;}}
   // 교차점·가상 교차점·연장선 (끄는 도형 자신은 빼고, 가장 가까운 것) — 그리드보다 먼저
   if(!snapKind&&objSnap&&(snapIntersect||snapVirtInter||snapExtension)){var _ls=_snapLinesAt(mx,my,tol,excl||null);
     // 변 표시 도구(밑면연마·고스라·졸리컷)는 변 위 교차점만 — 연장선·가상 교차점이 변 붙이기를 가로채지 않게
@@ -1307,7 +1310,11 @@ function applySnap(cx,cy,excl){
   // 밑면연마·고스라·졸리컷 도구: 타원 둘레에도 붙음 (둘레 가까운 점, 360등분에서 찾음)
   if((!snapKind||snapKind==='grid')&&(tool==='grind'||tool==='gosra'||tool==='jollycut')){
     var _et=10/scale,_eb=_et+1,_ex=mx,_ey=my,_mx0=(cx-offsetX)/scale,_my0=(cy-offsetY)/scale;
-    shapes.forEach(function(sh){if(sh.kind!=='ellipse')return;_ellPts(sh,360).forEach(function(p){var d=Math.hypot(_mx0-p[0],_my0-p[1]);if(d<_eb){_eb=d;_ex=p[0];_ey=p[1];}});});
+    shapes.forEach(function(sh){
+      if(sh.kind==='line'&&_snapCurveBit(sh)){ // 자른 원·타원 둘레(근사 선분)에도 붙음 — 점 스냅이 없으니 변 위로
+        var dx=sh.x2-sh.x1,dy=sh.y2-sh.y1,l2=dx*dx+dy*dy;if(l2<1e-9)return;var t=Math.max(0,Math.min(1,((_mx0-sh.x1)*dx+(_my0-sh.y1)*dy)/l2)),px=sh.x1+dx*t,py=sh.y1+dy*t,d=Math.hypot(_mx0-px,_my0-py);
+        if(d<_eb){_eb=d;_ex=px;_ey=py;}return;}
+      if(sh.kind!=='ellipse')return;_ellPts(sh,360).forEach(function(p){var d=Math.hypot(_mx0-p[0],_my0-p[1]);if(d<_eb){_eb=d;_ex=p[0];_ey=p[1];}});});
     if(_eb<=_et){mx=_ex;my=_ey;snapKind='edge';}
   }
   if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
