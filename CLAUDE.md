@@ -144,8 +144,8 @@
     조각을 끌어 칸 위에서 놓으면(`_bs.overPark`) `_bs.parked`로, 칸 조각을 누르면 `_bs.parkDrag`(원판 배율로 커서에, 놓을 수 없는 원판이면 빨간 테두리) → 원판 위 놓기 `_bsPlaceParked`(같은 제품만·`_bsFitDims`),
     칸에서 오른쪽 클릭 = 90°. 겹침 정리 `_bsResolve`(밀어내고 그래도 겹치면 놓은 조각을 가장 가까운 빈 자리로), 빈 장 정리 `_bsCleanBoards`(빈 장도 제품 이름 유지).
     남긴 채 닫으면 confirm → `_bsAutoPlaceParked`(같은 제품 원판 빈 자리 10mm 훑기, 없으면 그 제품 새 장)
-  - 제품별 원판 장수(2026-11-03 사용자 요청): 머리줄 `#board-prod-ctrl`(`_bsProdCtrl`, renderBoardLayout마다) "제품 N장 − +" → `_bsAddBoard(gi)` = 그 그룹 끝에 빈 장 `keep`,
-    `_bsDelBoard(gi)` = 빈 장(뒤에서부터) 빼기, 없으면 마지막 장 조각을 `_bs.parked`로 옮기고 빼기(최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,
+  - 원판 장수(2026-11-03 사용자 요청 — 머리줄 단추는 보기 싫다고 해서 오른쪽 클릭 메뉴로): 원판 빈 곳 오른쪽 클릭(oncontextmenu, 조각 위는 돌리기) → `_bsCtxShow(bi)` 메뉴 `#board-ctx`
+    → `_bsAddBoard(bi)` = 그 장 바로 뒤에 같은 제품 빈 장 `keep`(그룹 count·뒤 그룹 startBi `_bsShiftGroups`), `_bsDelBoard(bi)` = 그 장 빼기(조각은 `_bs.parked`로, 제품마다 최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,
     저장 배치 `boardKeep`로 복원, `_updateBoardQty`가 수량에 셈(빈 장도)
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)

@@ -386,7 +386,6 @@ canvas{display:block;cursor:crosshair}
           <button onclick="movePieceTo(-1)" id="board-move-prev" style="background:#16233D;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">&#9650; 이전 장</button>
           <button onclick="movePieceTo(1)" id="board-move-next" style="background:#16233D;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">다음 장 &#9660;</button>
         </span>
-        <span id="board-prod-ctrl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-right:6px"></span>
         <button onclick="resetBoardLayout()" style="background:#16233D;border:1px solid #56647E;color:#E3B861;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px;margin-right:4px">↺ 초기화</button>
         <button id="board-modal-close" onclick="closeBoardModal()">✕</button>
       </div>
@@ -6787,7 +6786,7 @@ function showBoardLayout(){
   var infoEl=document.getElementById('board-modal-info');
   var _sizes=[];useBoards.forEach(function(b){var d=_boardDims(b),t=d.bw+'×'+d.bh;if(_sizes.indexOf(t)<0)_sizes.push(t);});
   var infoStr='원판 '+_sizes.join(', ')+' mm | '+useBoards.length+'장 | 도형 '+totalPlaced+'/'+items.length+'개';
-  infoStr+=' | <span style="color:#75839C">오른쪽 미배치 칸으로 끌어 잠시 빼 두기 · 오른쪽 클릭 = 90° 돌리기 ·Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
+  infoStr+=' | <span style="color:#75839C">오른쪽 미배치 칸으로 끌어 잠시 빼 두기 · 조각 오른쪽 클릭 = 90° 돌리기 · 원판 빈 곳 오른쪽 클릭 = 원판 더하기·빼기 ·Shift+오른쪽 클릭 = 각도 입력(선 조각) · 제품은 도면에서 도형 선택 후 제품 ● 으로</span>';
   infoEl.innerHTML=infoStr;
   // 원판에 안 들어가 빠진 조각 → 이유를 빨간 상자로 (배치 그림 위)
   var warnEl=document.getElementById('board-modal-warn');
@@ -6977,7 +6976,7 @@ function _bsInitEvents(){
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;
     }
     var hit=_bsHitTest(ex,ey);
-    if(!hit)return;
+    if(!hit){var _cb=_bsBoardAt(ex,ey);if(_cb>=0)_bsCtxShow(_cb,e.clientX,e.clientY);return;} // 원판 빈 곳 = 더하기·빼기 메뉴 (조각 위는 돌리기)
     var p=hit.p,EA=_bsArea(hit.bi),EW=EA.ew,EH=EA.eh; // 이 장의 유효 영역
     if(e.shiftKey){
       var sh=p.item&&p.item.shape;
@@ -7314,7 +7313,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       }
     }
   });
-  if(!targetCanvas&&_bs){_bsDrawPark(bctx,bcv,sc,ref,k);_bsProdCtrl();} // 오른쪽 미배치 칸 (창에서만, 도면화 그림엔 없음) + 머리줄 제품별 장수 단추
+  if(!targetCanvas&&_bs)_bsDrawPark(bctx,bcv,sc,ref,k); // 오른쪽 미배치 칸 (창에서만, 도면화 그림엔 없음)
 }
 
 // ─── 미배치 칸 (2026-11-02): 원판 오른쪽에 조각을 잠시 빼 두었다가 원하는 자리로 다시 끌어 놓기 ───
@@ -7363,32 +7362,37 @@ function _bsResolve(bi,p){
   }
   if(best){p.x=best[0];p.y=best[1];}else{p.x=x0;p.y=y0;}
 }
-// 제품별 원판 장수 조절 (2026-11-03 사용자 요청 "원판 갯수를 늘렸다 줄였다, 제품별로"): 머리줄 "제품 N장 [−][+]"
-//   + = 그 제품 마지막 장 뒤에 빈 원판(keep = 빈 채로 남김, 수량에 셈), − = 그 제품의 빈 원판(뒤에서부터)을 빼고, 없으면 마지막 장의 조각을 미배치 칸으로 옮기고 뺌. 제품마다 최소 1장
-function _bsProdCtrl(){
-  var el=document.getElementById('board-prod-ctrl');if(!el||!_bs)return;
-  var B='background:#16233D;border:1px solid #2A4F92;color:#E3B861;border-radius:3px;width:20px;height:20px;padding:0;cursor:pointer;font-size:13px;line-height:1';
-  el.innerHTML=(_bs.groups||[]).map(function(gm,gi){
-    return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#A9B4C8"><span style="color:'+(gm.color||'#E3B861')+'">■</span>'+escHtml(gm.label||'원판')
-      +' <b style="color:#F1D69A;min-width:30px;text-align:center">'+gm.count+'장</b><button title="원판 한 장 빼기" style="'+B+'" onclick="_bsDelBoard('+gi+')">−</button><button title="빈 원판 한 장 더하기" style="'+B+'" onclick="_bsAddBoard('+gi+')">+</button></span>';
-  }).join('');
-}
+// 원판 장수 조절 (2026-11-03 사용자 요청 "원판 갯수를 늘렸다 줄였다, 제품별로" → "원판에서 오른쪽 클릭하면 더하기·빼기 창"):
+//   원판 빈 곳 오른쪽 클릭 = 작은 메뉴 `#board-ctx` — 더하기 = 그 장 바로 뒤에 같은 제품 빈 원판(keep = 빈 채로 남김, 수량에 셈),
+//   빼기 = 그 장을 뺌(조각이 있으면 미배치 칸으로 옮김, 제품마다 최소 1장)
+function _bsGroupOf(bi){var r=-1;(_bs.groups||[]).forEach(function(gm,gi){if(bi>=gm.startBi&&bi<gm.startBi+gm.count)r=gi;});return r;}
 function _bsShiftGroups(gi,d){_bs.groups.forEach(function(g2,j){if(j>gi)g2.startBi+=d;});}
-function _bsAddBoard(gi){
-  var gm=_bs&&_bs.groups&&_bs.groups[gi];if(!gm)return;
-  var at=gm.startBi+gm.count,nb=[];nb.prod=gm.label;nb.keep=true;var ref=_bs.boards[gm.startBi];if(ref&&ref.bw){nb.bw=ref.bw;nb.bh=ref.bh;}
-  _bs.boards.splice(at,0,nb);gm.count++;_bsShiftGroups(gi,1);
+function _bsAddBoard(bi){
+  var gi=_bsGroupOf(bi),gm=_bs.groups&&_bs.groups[gi],src=_bs.boards[bi];if(!src)return;
+  var at=bi+1,nb=[];nb.prod=_boardLabel(src);nb.keep=true;if(src.bw){nb.bw=src.bw;nb.bh=src.bh;}
+  _bs.boards.splice(at,0,nb);if(gm){gm.count++;_bsShiftGroups(gi,1);}
   _bs.boardPage=Math.floor(at/2);_bs.pickedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
 }
-function _bsDelBoard(gi){
-  var gm=_bs&&_bs.groups&&_bs.groups[gi];if(!gm)return;
-  if(gm.count<=1){alert('제품마다 원판은 최소 1장입니다.');return;}
-  var bi=-1;for(var i=gm.startBi+gm.count-1;i>=gm.startBi;i--)if(!_bs.boards[i].length){bi=i;break;} // 빈 원판부터
-  if(bi<0){bi=gm.startBi+gm.count-1;var b=_bs.boards[bi];
-    if(!confirm('빈 원판이 없습니다. 마지막 원판(원판 '+(bi+1)+')의 조각 '+b.length+'개를 미배치 칸으로 옮기고 그 원판을 뺄까요?'))return;
-    (_bs.parked||(_bs.parked=[])).push.apply(_bs.parked,b);}
-  _bs.boards.splice(bi,1);gm.count--;_bsShiftGroups(gi,-1);
+function _bsDelBoard(bi){
+  var gi=_bsGroupOf(bi),gm=_bs.groups&&_bs.groups[gi],b=_bs.boards[bi];if(!b)return;
+  if((gm?gm.count:_bs.boards.length)<=1){alert('제품마다 원판은 최소 1장입니다.');return;}
+  if(b.length){if(!confirm('원판 '+(bi+1)+'의 조각 '+b.length+'개를 미배치 칸으로 옮기고 이 원판을 뺄까요?'))return;(_bs.parked||(_bs.parked=[])).push.apply(_bs.parked,b);}
+  _bs.boards.splice(bi,1);if(gm){gm.count--;_bsShiftGroups(gi,-1);}
   _bs.pickedPiece=null;_bs.selectedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
+}
+function _bsCtxHide(){var m=document.getElementById('board-ctx');if(m)m.style.display='none';}
+function _bsCtxShow(bi,cx,cy){
+  var m=document.getElementById('board-ctx');
+  if(!m){m=document.createElement('div');m.id='board-ctx';document.body.appendChild(m);
+    m.style.cssText='position:fixed;z-index:10050;background:#0A1222;border:1px solid #2A4F92;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.5);padding:4px;min-width:170px;font-size:12px';
+    document.addEventListener('mousedown',function(e){if(m.style.display!=='none'&&!m.contains(e.target))_bsCtxHide();},true);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')_bsCtxHide();},true);}
+  var b=_bs.boards[bi],nm=_boardLabel(b),I='display:block;width:100%;text-align:left;background:none;border:0;color:#D9DFEA;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px';
+  m.innerHTML='<div style="color:#E3B861;padding:4px 10px 6px;border-bottom:1px solid #1C2A47;margin-bottom:3px;font-weight:bold">원판 '+(bi+1)+(nm?' · '+escHtml(nm):'')+'</div>'
+    +'<button data-a="add" style="'+I+'">＋ 원판 한 장 더하기</button><button data-a="del" style="'+I+'">－ 이 원판 빼기'+(b.length?' <span style="color:#75839C">(조각은 미배치로)</span>':'')+'</button>';
+  m.querySelectorAll('button').forEach(function(x){x.onmouseenter=function(){x.style.background='#121D33';};x.onmouseleave=function(){x.style.background='none';};
+    x.onclick=function(){_bsCtxHide();if(x.dataset.a==='add')_bsAddBoard(bi);else _bsDelBoard(bi);};});
+  m.style.display='block';var w=m.offsetWidth,h=m.offsetHeight;m.style.left=Math.min(cx,innerWidth-w-4)+'px';m.style.top=Math.min(cy,innerHeight-h-4)+'px';
 }
 // 빈 장 정리 — 제품(그룹)마다 최소 1장, 빈 장은 그 제품 이름을 남김, 손으로 더한 빈 원판(keep)은 그대로
 function _bsCleanBoards(){
