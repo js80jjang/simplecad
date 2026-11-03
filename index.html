@@ -9000,10 +9000,22 @@ function _3dBuildScene(){
       var W2B=_3dWorldToBoard(pl.bp,bb,DB.margin),M=_afMul(_afMul(T,_afInv(W2B)),[1/sc.s,0,0,1/sc.s,0,0]);
       g.setTransform(M[0],M[1],M[2],M[3],M[4],M[5]);g.drawImage(sc.c,0,0);side=sc.avg;
     } else {g.setTransform(1,0,0,1,0,0);g.fillStyle='#E8E4DC';g.fillRect(0,0,tex.width,tex.height);}
+    if(_3dOpts.notes)_3dDrawNotes(g,T,loops.outer); // 도면 글자(조각 안에 있는 것) = 무늬 위에 같이 → 조각을 옮기고 돌려도 따라감
     g.restore();
     out.push({loops:loops,bb:bb,th:_3dThick(p.s),gloss:_3dGloss(p.s),tex:tex,side:side,shape:p.s,type:_3dGetType(p.s,bb),label:Math.round(bw)+'×'+Math.round(bh)});
   });
   return{pieces:out,waiting:waiting};
+}
+// 도면 글자(note)를 3D 조각 무늬 캔버스에: 글자 가운데가 조각 외곽 안이면, 글자 높이 = fs×1.5mm (기본 32 → 48mm)
+function _3dDrawNotes(g,T,outer){
+  function inPoly(x,y){var c=false;for(var i=0,j=outer.length-1;i<outer.length;j=i++){var a=outer[i],b=outer[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+  shapes.forEach(function(s){
+    if(s.kind!=='note'||!String(s.text||'').trim()||!inPoly(s.x,s.y))return;
+    var fs=Math.max(20,Math.min(600,(s.fs||32)*1.5)),lines=String(s.text).split('\n'),lh=fs*1.25,y0=s.y-(lines.length-1)*lh/2;
+    g.setTransform(T[0],T[1],T[2],T[3],T[4],T[5]);
+    g.font='bold '+fs+'px '+_EXP_FONT;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+    lines.forEach(function(t,i){var y=y0+i*lh;g.lineWidth=fs*0.2;g.strokeStyle='rgba(255,255,255,0.9)';g.strokeText(t,s.x,y);g.fillStyle=s.color||'#1F3F7A';g.fillText(t,s.x,y);});
+  });
 }
 // ── 행렬 (열 우선, WebGL용) ──
 function _m4Persp(fov,asp,n,f){var t=1/Math.tan(fov/2);return[t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0];}
@@ -10249,8 +10261,8 @@ function _3dFlipFace(key){
   _3d.msg.textContent=_3D_FACES[f]+' (미드웨이 더블클릭으로 바꿈)';
 }
 // 3D 보기 설정(하부장·상부장 켜기, 상판만/상판+미드웨이): 창을 닫았다 열어도 그대로, 도면 파일에도 저장(view3dOpts)
-var _3dOpts={furn:true,upper:true,mode:'mid'};
-function _3dOptsLoad(o){_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid'};}
+var _3dOpts={furn:true,upper:true,mode:'mid',notes:true};
+function _3dOptsLoad(o){_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid',notes:!o||o.notes!==false};}
 function _3dSetMode(md){
   if(!_3d)return;_3d.mode=md;_3dOpts.mode=md;
   _3d.m.querySelectorAll('[data-mode]').forEach(function(b){var on=b.dataset.mode===md;b.style.background=on?'#00695C':'#121D33';b.style.borderColor=on?'#26A69A':'#56647E';});
@@ -10465,6 +10477,7 @@ function show3D(){
     +'<button style="'+bs+'" data-mode="top">상판만</button><button style="'+bs+'" data-mode="mid">상판+미드웨이</button><span style="width:6px"></span>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn"'+(_3dOpts.furn?' checked':'')+'> 하부장 (높이 900)</label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper"'+(_3dOpts.upper?' checked':'')+'> 상부장</label>'
+    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="도면 글자(글자 도구)를 그 글자가 있는 조각 윗면에"><input type="checkbox" id="v3d-notes"'+(_3dOpts.notes?' checked':'')+'> 도면 글자</label>'
     +'<button style="'+bs+'" id="v3d-undo" title="되돌리기 (Ctrl+Z)">↶ 되돌리기</button>'
     +'<button style="'+bs+'" id="v3d-reset" title="3D에서 옮기고 돌린 상판·미드웨이를 도면 자리로">↺ 처음 배치로</button>'
     +'<button style="'+bs+'" data-v="iso">비스듬히</button><button style="'+bs+'" data-v="top">위에서</button><button style="'+bs+'" data-v="front">앞에서</button>'
@@ -10487,6 +10500,7 @@ function show3D(){
   m.querySelector('[data-mode="'+_3d.mode+'"]').style.background='#00695C';m.querySelector('[data-mode="'+_3d.mode+'"]').style.borderColor='#26A69A';
   document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=_3dOpts.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
   document.getElementById('v3d-upper').onchange=function(e){if(!_3d)return;_3d.upper=_3dOpts.upper=e.target.checked;_3dRegeom();}; // 상부장 켜기/끄기 (시점 그대로)
+  document.getElementById('v3d-notes').onchange=function(e){if(!_3d)return;_3dOpts.notes=e.target.checked;_3dRebuild(0);}; // 도면 글자 켜기/끄기 (무늬 캔버스 다시)
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
   document.getElementById('v3d-close').onclick=function(){close3D(true);}; // 돌아가는 애니메이션 뒤 닫힘
   document.getElementById('v3d-reset').onclick=_3dResetLayout;
