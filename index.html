@@ -1877,6 +1877,13 @@ function _gosraDir(m){
   else d=-(m.outward||1);                                   // 판단 불가: 저장된 바깥 방향의 반대
   return{mx:mx,my:my,dx:nx*d,dy:ny*d};
 }
+// 고스라 ▲ 자리·방향 (mm): 곧은 변 = _gosraDir, 라운드 코너·원 둘레(_findCornerAttach) = 호 가운데 점, 꼭지점은 재료 쪽(코너 = 중심 쪽, 싱크볼·원형 절단 = 바깥) —
+//   곡면도 다른 고스라처럼 ▲가 변 바깥에서 변을 향하게 (2026-11-03 사용자 요청: 곡면은 ▲가 선 위에 겹쳐 있었음)
+function _gosraSym(m){
+  var c=_findCornerAttach(m.x1,m.y1,m.x2,m.y2);if(!c)return _gosraDir(m);
+  var ai=c.arc,a=(ai.a0+ai.a1)/2,px=ai.x+ai.r*Math.cos(a),py=ai.y+ai.r*Math.sin(a),d=c.matOutward?1:-1; // 재료가 바깥이면 꼭지점도 바깥(중심 반대)
+  return{mx:px,my:py,dx:Math.cos(a)*d,dy:Math.sin(a)*d};
+}
 function drawGosraMark(s,preview){
   var outDir=s.outward||1;
   var hov=s===hoverShape&&(!isSelected(s)||_hoverSelected)&&!preview&&!printRender; // 마우스 올림: 선을 진하고 굵게
@@ -1910,7 +1917,7 @@ function drawGosraMark(s,preview){
     ctx.setLineDash([]);
   }
   // 직선 고스라: 꼭지점이 변에 닿도록, 방향은 _gosraDir 규칙(조각=안쪽, 싱크볼/쿡탑=선 쪽)
-  var _gd=_corner?null:_gosraDir(s);
+  var _gd=_gosraSym(s);if(_corner&&_gd)pc=toCanvas(_gd.mx,_gd.my); // 곡면도 곧은 변처럼 ▲는 바깥에서 변을 향해
   if(s.sym===false)return; // 타원 둘레 고스라 조각: ▲·길이는 몇 곳에만
   // 올림·선택(편집 화면): ▲ 둘레 빛 + 1.5배, 선택은 주황 — 작은 ▲도 지금 고른 게 무엇인지 보이게 (2026-11-03)
   var _gsl=!preview&&!printRender&&(hov||isSelected(s)),_tz=11*_MARK_K*(_gsl?1.5:1),_tc=preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':(_gsl?'#FF6D00':'#F44336'));
@@ -3911,7 +3918,7 @@ function _dxfCollect(H){
     }
     else if(s.kind==='gosramark'){
       if(s.sym===false)return; // 타원 둘레 조각: ▲는 몇 곳에만
-      var gm=_gosraDir(s);if(!gm)return;var sz=(s.groupId?H*0.7:H)*_MARK_K;
+      var gm=_gosraSym(s);if(!gm)return;var sz=(s.groupId?H*0.7:H)*_MARK_K;
       var cx=gm.mx-gm.dx*sz,cy=gm.my-gm.dy*sz,an=Math.atan2(gm.dy,gm.dx);
       fillPoly('SC-GOSRA',[[gm.mx,gm.my],[cx+Math.cos(an+2.094)*sz,cy+Math.sin(an+2.094)*sz],[cx+Math.cos(an-2.094)*sz,cy+Math.sin(an-2.094)*sz]]);
     }
@@ -5344,8 +5351,8 @@ function _shapeHit(s,mx,my,tol){
 //   ▲ = 변 가운데 바깥(꼭지점이 변에 닿음), ★ = 변 가운데에서 안쪽으로 반지름만큼 (2026-11-03: 같은 변의 ▲·★·밑면연마가 겹쳐 고르기 어렵던 것)
 function _markSym(s,k){
   if((s.kind!=='gosramark'&&s.kind!=='jollymark')||s.groupId||s.sym===false)return null;
-  if(_findCornerAttach(s.x1,s.y1,s.x2,s.y2))return null; // 라운드 코너 둘레는 예전대로
-  var gd=_gosraDir(s);if(!gd)return null;var c=toCanvas(gd.mx,gd.my);
+  var cn=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);if(cn&&s.kind==='jollymark')return null; // 라운드 코너 졸리컷 ★은 예전대로(호 가운데)
+  var gd=s.kind==='gosramark'?_gosraSym(s):_gosraDir(s);if(!gd)return null;var c=toCanvas(gd.mx,gd.my);
   if(s.kind==='gosramark'){var o=11*_MARK_K*k;return{x:c[0]-gd.dx*o,y:c[1]-gd.dy*o,r:11*_MARK_K*k};}
   var r=13*_MARK_K*k;return{x:c[0]+gd.dx*r,y:c[1]+gd.dy*r,r:r};
 }
@@ -8064,7 +8071,7 @@ function _drawCleanExport(){
   // ②-2 고스라: 변 가운데, 꼭지점이 변에 닿는 검정 삼각형 (조각 변=바깥에서 안쪽으로, 싱크볼/쿡탑=안에서 선 쪽으로)
   if(!SO)shapes.forEach(function(m){
     if(m.kind!=='gosramark'||m.sym===false)return; // 타원 둘레 조각은 ▲를 몇 곳에만
-    var gd=_gosraDir(m);if(!gd)return;
+    var gd=_gosraSym(m);if(!gd)return; // 라운드 코너는 호 가운데에서
     var mp=toCanvas(gd.mx,gd.my),sz=(m.groupId?16:22)*_MARK_K;
     var tcx=mp[0]-gd.dx*sz,tcy=mp[1]-gd.dy*sz;
     drawTriangle(tcx,tcy,Math.atan2(gd.dy,gd.dx),sz,'#222222');stats.gosra=true;
