@@ -1,8 +1,30 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-10-29",
+"updated":"2026-11-04",
 "source":"https://www.younhyunmall.com",
 "items":[
+{
+"id":"1000006504",
+"name":"칼라카타 그린 북매치",
+"en":"CALACATTA GREEN BOOKMATCH",
+"size":"1600×3200×12T",
+"price":1126400,
+"m2":220000,
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006504/image/list/1000006504_list_093.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006504",
+"cate":"009003"
+},
+{
+"id":"1000006502",
+"name":"브레치아 카프라이아 북매치",
+"en":"BRECCIA CAPRAIA BOOKMATCH",
+"size":"1600×3200×12T",
+"price":1070080,
+"m2":209000,
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006502/image/list/1000006502_list_014.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006502",
+"cate":"009003"
+},
 {
 "id":"1000006505",
 "name":"에메랄드 알프스 북매치",
