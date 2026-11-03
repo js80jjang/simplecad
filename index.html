@@ -4648,9 +4648,10 @@ function _cutProj(L,x,y){var best=null,n=L.pts.length;
     var t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/l2)),px=a[0]+dx*t,py=a[1]+dy*t,d=Math.hypot(x-px,y-py);
     if(!best||d<best.d)best={d:d,s:L.cum[i]+t*Math.sqrt(l2),i:i};}
   return best;}
-function _cutAt(L,s){
-  s=L.open?Math.max(0,Math.min(L.total,s)):((s%L.total)+L.total)%L.total;var n=L.pts.length;
-  for(var i=0;i<L.m;i++)if(s<=L.cum[i+1]+1e-9||i===L.m-1){var a=L.pts[i],b=L.pts[(i+1)%n],l=L.cum[i+1]-L.cum[i],t=l>0?(s-L.cum[i])/l:0;
+function _cutAt(L,s,back){ // back = 둘레를 거꾸로 왔음: 꼭짓점 위면 지나온(번호 큰) 변으로
+  var s0=s;s=L.open?Math.max(0,Math.min(L.total,s)):((s%L.total)+L.total)%L.total;var n=L.pts.length;
+  if(!L.open&&!back&&s<1e-9&&s0>1e-9)s=L.total; // 앞으로 한 바퀴 돌아 시작 꼭짓점 = 마지막 변 끝
+  for(var i=0;i<L.m;i++)if((back?s<L.cum[i+1]-1e-9:s<=L.cum[i+1]+1e-9)||i===L.m-1){var a=L.pts[i],b=L.pts[(i+1)%n],l=L.cum[i+1]-L.cum[i],t=l>0?(s-L.cum[i])/l:0;
     return{x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,i:i,u:l>0?[(b[0]-a[0])/l,(b[1]-a[1])/l]:[1,0],s:s};}
 }
 function _cutIn(L,x,y){var c=false,P=L.pts;for(var i=0,j=P.length-1;i<P.length;j=i++){var a=P[i],b=P[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
@@ -4680,15 +4681,22 @@ function _cutSetP(st){
   var S=st.tgt.s;
   if(S&&(S.kind==='circle'||S.kind==='ellipse')){var p0=_cutAt(st.loop,st.sA+st.sign*st.dist),q=_cutOnCurve(S,p0.x,p0.y);p0.x=q[0];p0.y=q[1];st.P=p0;return;} // 원·타원은 근사 선분 말고 진짜 둘레 위
   if(st.rc){ // 사각형 꼭짓점에서 시작: 라운드·모따기여도 진짜 꼭짓점에서 변 따라 잰 거리 (1000×500 → 400 / 600)
-    var c=st.rc,d=Math.min(st.dist,c.len[c.k]),x=c.o[0]+c.d[c.k][0]*d,y=c.o[1]+c.d[c.k][1]*d,L=st.loop,pr=_cutProj(L,x,y),p=_cutAt(L,pr.s);
+    // 거리는 라운드·모따기 코너를 뺀 곧은 구간 안으로 맞춤 (코너 안쪽 = 재료 밖, 꼭짓점 = 수직선이 옆 변을 따라감)
+    var c=st.rc,K=['tl','tr','br','bl'],rS=_rcInfo(S,K[c.ci]).r,rE=_rcInfo(S,K[c.k===0?(c.ci+1)%4:(c.ci+3)%4]).r,
+      d=st.dist>0?Math.max(Math.max(rS,1),Math.min(st.dist,c.len[c.k]-Math.max(rE,1))):0,x=c.o[0]+c.d[c.k][0]*d,y=c.o[1]+c.d[c.k][1]*d,L=st.loop,pr=_cutProj(L,x,y),p=_cutAt(L,pr.s);
+    var N=L.pts.length,dv=c.d[c.k]; // P가 라운드 접점이면 곡선 선분이 아니라 곧은 변(진행 방향과 나란한 것)을 기준으로
+    for(var j=0;j<L.m;j++){var a=L.pts[j],b=L.pts[(j+1)%N],sx=b[0]-a[0],sy=b[1]-a[1],sl=Math.hypot(sx,sy);if(sl<1e-6)continue;
+      if(Math.abs((sx*dv[1]-sy*dv[0])/sl)<1e-3&&Math.abs(((x-a[0])*sy-(y-a[1])*sx)/sl)<0.5){var tt=((x-a[0])*sx+(y-a[1])*sy)/(sl*sl);if(tt>=-1e-6&&tt<=1+1e-6){p.i=j;p.u=[sx/sl,sy/sl];break;}}}
     p.x=x;p.y=y;st.dist=d;st.sign=(p.u[0]*c.d[c.k][0]+p.u[1]*c.d[c.k][1])<0?-1:1;st.P=p;return;}
-  st.P=_cutAt(st.loop,st.sA+st.sign*st.dist);
+  st.P=_cutAt(st.loop,st.sA+st.sign*st.dist,st.sign<0);
 }
 // 2단계: P에서 재료 쪽으로 가르는 방향 → 맞은편 변 Q
 function _cutChord(st,shift){
-  var L=st.loop,P=st.P,u=[P.u[0]*st.sign,P.u[1]*st.sign],n=[-u[1],u[0]],S=st.tgt.s;
-  if(!_cutIn(L,P.x+n[0]*0.5,P.y+n[1]*0.5)){n=[-n[0],-n[1]];if(!_cutIn(L,P.x+n[0]*0.5,P.y+n[1]*0.5)){st.Q=null;return;}}
-  if(S&&(S.kind==='circle'||S.kind==='ellipse')){ // 원·타원은 근사 선분 말고 진짜 법선(안쪽)으로
+  var L=st.loop,P=st.P,u=[P.u[0]*st.sign,P.u[1]*st.sign],n=[-u[1],u[0]],S=st.tgt.s,curve=S&&(S.kind==='circle'||S.kind==='ellipse');
+  // 재료 쪽 판정은 지나온 변 위(P에서 0.5 뒤)에서 — 꺾인 꼭짓점(ㄱ자 안쪽 모서리)에 P가 있어도 판정됨. 원·타원은 아래에서 진짜 법선으로
+  function inSide(nn){return _cutIn(L,P.x-u[0]*0.5+nn[0]*0.5,P.y-u[1]*0.5+nn[1]*0.5);}
+  if(!curve&&!inSide(n)){n=[-n[0],-n[1]];if(!inSide(n)){st.Q=null;st.why='edge';return;}}
+  if(curve){ // 원·타원은 근사 선분 말고 진짜 법선(안쪽)으로 (P가 진짜 곡선 위라 근사 선분보다 살짝 바깥 — 큰 원에서 판정이 틀리던 것)
     var w;if(S.kind==='circle')w=[S.cx-P.x,S.cy-P.y];
     else{var lc=_ellLocal(S,P.x,P.y),gx=-lc[0]/(S.rx*S.rx),gy=-lc[1]/(S.ry*S.ry),ro=S.rotation||0;w=[gx*Math.cos(ro)-gy*Math.sin(ro),gx*Math.sin(ro)+gy*Math.cos(ro)];}
     var wl=Math.hypot(w[0],w[1]);if(wl>1e-9){n=[w[0]/wl,w[1]/wl];var u2=[n[1],-n[0]];if(u2[0]*u[0]+u2[1]*u[1]<0)u2=[-u2[0],-u2[1]];u=u2;}
@@ -4697,11 +4705,13 @@ function _cutChord(st,shift){
   if(shift&&st.mouse){var vx=st.mouse[0]-P.x,vy=st.mouse[1]-P.y,vl=Math.hypot(vx,vy);if(vl>1e-6&&(vx*n[0]+vy*n[1])/vl>0.02)d=[vx/vl,vy/vl];}
   else if(st.ang!=null){var r=st.ang*Math.PI/180;d=[u[0]*Math.cos(r)+n[0]*Math.sin(r),u[1]*Math.cos(r)+n[1]*Math.sin(r)];}
   st.angNow=Math.round(Math.atan2(d[0]*n[0]+d[1]*n[1],d[0]*u[0]+d[1]*u[1])*1800/Math.PI)/10;
-  var best=null,N=L.pts.length;
-  for(var j=0;j<L.m;j++){var a=L.pts[j],b=L.pts[(j+1)%N],ex=b[0]-a[0],ey=b[1]-a[1],den=d[0]*ey-d[1]*ex;if(Math.abs(den)<1e-12)continue;
+  var best=null,N=L.pts.length,minT=curve?3:0.5;
+  for(var j=0;j<L.m;j++){if(j===P.i)continue;var a=L.pts[j],b=L.pts[(j+1)%N],ex=b[0]-a[0],ey=b[1]-a[1],den=d[0]*ey-d[1]*ex;if(Math.abs(den)<1e-12)continue;
     var wx=a[0]-P.x,wy=a[1]-P.y,t=(wx*ey-wy*ex)/den,q=(wx*d[1]-wy*d[0])/den;
-    if(t>0.5&&q>=-1e-6&&q<=1+1e-6&&(!best||t<best.t))best={t:t,j:j,x:P.x+d[0]*t,y:P.y+d[1]*t};}
-  st.Q=best&&best.j!==P.i?best:null;
+    if(t>minT&&q>=-1e-6&&q<=1+1e-6&&(!best||t<best.t))best={t:t,j:j,x:P.x+d[0]*t,y:P.y+d[1]*t};}
+  // 가르는 선 가운데가 재료 안이어야 (모서리에서 변을 따라가는 선 = 못 자름)
+  var ok=false;if(best){var hx=(P.x+best.x)/2,hy=(P.y+best.y)/2,e=Math.min(0.5,best.t/4);ok=_cutIn(L,hx-d[1]*e,hy+d[0]*e)&&_cutIn(L,hx+d[1]*e,hy-d[0]*e);} // 선 양옆 모두 재료
+  st.Q=ok?best:null;st.why=ok?null:'corner';
   if(st.Q&&S&&(S.kind==='circle'||S.kind==='ellipse')){var qq=_cutOnCurve(S,st.Q.x,st.Q.y);st.Q.x=qq[0];st.Q.y=qq[1];}
 }
 // 둘레 고리를 P(변 i)–Q(변 j) 가르는 선으로 두 고리 → [[{a,b,src}],…]
@@ -4825,7 +4835,7 @@ function _cutDown(mx,my,e){
       if(Math.hypot(mx-p[0],my-p[1])<=vt){sA=L.cum[Math.min(i,L.m)];break;}}
     var rc=null,R=f.tgt.s;
     if(R&&R.kind==='rect'){var cn=_rectCorners(R),ux=(cn[1].x-cn[0].x)/R.w,uy=(cn[1].y-cn[0].y)/R.w,dirs=[[ux,uy],[-uy,ux],[-ux,-uy],[uy,-ux]]; // 꼭짓점 tl,tr,br,bl → 시계 방향 다음 변 / 앞 변
-      cn.forEach(function(c,i){if(!rc&&Math.hypot(mx-c.x,my-c.y)<=vt){var lens=[R.w,R.h,R.w,R.h];rc={o:[c.x,c.y],d:[dirs[i],[-dirs[(i+3)%4][0],-dirs[(i+3)%4][1]]],len:[lens[i],lens[(i+3)%4]],k:0};}});}
+      cn.forEach(function(c,i){if(!rc&&Math.hypot(mx-c.x,my-c.y)<=vt){var lens=[R.w,R.h,R.w,R.h];rc={o:[c.x,c.y],d:[dirs[i],[-dirs[(i+3)%4][0],-dirs[(i+3)%4][1]]],len:[lens[i],lens[(i+3)%4]],k:0,ci:i};}});}
     _cutSt={stage:1,loop:L,tgt:f.tgt,sA:sA,sign:1,dist:0,buf:'',down:[e.offsetX,e.offsetY],mouse:[mx,my],rc:rc};
     _cutSetP(_cutSt);_cutRedraw();return;
   }
@@ -4884,7 +4894,7 @@ function _cutPreview(){
       ctx.fillStyle='#FF5252';ctx.beginPath();ctx.arc(qc2[0],qc2[1],4,0,2*Math.PI);ctx.fill();}
     if(st.stage===1){l1='거리 '+(st.buf?st.buf+'▏':st.dist)+'   (이 변 남은 '+rem+')';hint='변 따라 마우스 · 숫자+Enter = 거리 · 클릭 = 이 점 · Esc = 취소';}
     else{var cl=st.Q?Math.round(Math.hypot(st.Q.x-P.x,st.Q.y-P.y)):0;
-      l1=st.Q?('각도 '+(st.buf?st.buf+'▏':st.angNow+'°')+'   자르는 선 '+cl+'   (나뉘는 변 '+st.dist+' / '+rem+')'):'자를 수 없는 방향';
+      l1=st.Q?('각도 '+(st.buf?st.buf+'▏':st.angNow+'°')+'   자르는 선 '+cl+'   (나뉘는 변 '+st.dist+' / '+rem+')'):'이 점·방향으로는 못 자름 (모서리를 따라감) — 거리를 바꾸거나 Shift로 방향';
       hint='클릭·Enter = 자르기 · Shift = 마우스 방향 · 숫자+Enter = 각도 · Esc = 뒤로';}
   } else {l1=_cutHover?'시작점 클릭 (꼭짓점에 붙음)':'자를 도형의 변을 클릭';hint='사각형·선 조각·원·타원·선 — 고스라·졸리컷·밑면연마도 같이 나뉨';}
   ctx.font='bold 13px "Malgun Gothic",sans-serif';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic",sans-serif';var w=Math.max(w1,ctx.measureText(hint).width)+14,x=px[0]+18,y=px[1]+18;
