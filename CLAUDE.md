@@ -101,7 +101,8 @@
     `dimLabels` 자리는 치수 틀 좌표(화면 ÷ `_annDimCur`) — `hitDim`·치수 끌기(document mousemove, `_annRun`)·`_dimInputPopup`이 변환. 그리기 미리보기 도형도 `_annDraw`. 도면화(printRender)는 k=1. 휠 = ×1.1 / ÷1.1
   - 크기 손잡이(2026-10-30 개발판에서 만들어 합침): 선택 도형 하나(싱크볼·쿡탑 묶음이면 본체) `_rszTarget` → `drawHandles`가 손잡이(`_rszHandles`, 위치 `_rszHs`) —
     사각형 꼭짓점 4·변 가운데 4(반대쪽 고정, 돌린 사각형은 그 축 `_rszFrame`) / 원 둘레 4(지름) / 타원 두 축 끝 / 선 양 끝. 누르면 `_rszStart`(saveHistory) → 끌기 `_rszApply`(자기 점엔 스냅 안 함) → 놓으면 `_rszEnd`
-    (싱크볼 `syncGroupShapes`, 바뀌었으면 저장 배치 초기화). 끄는 중 숫자+Enter = `_rszTyped`(사각 꼭짓점 "가로,세로"·하나면 가로, 변 = 그 치수, 원 = 지름, 타원 = 그 축 길이, 선 = 길이), Esc = 처음 크기, 마우스 옆 `_rszOverlay`
+    (싱크볼 `syncGroupShapes`, 바뀌었으면 저장 배치 초기화). 끄는 중 숫자+Enter = `_rszTyped`(사각 꼭짓점 "가로,세로"·빈 쪽은 그대로, 변 = 그 치수, 원 = 지름, 타원 = 그 축 길이, 선 = 길이), Esc = 처음 크기, 마우스 옆 `_rszOverlay`
+    사각 꼭짓점(`_rszCorner`, 싱크볼·쿡탑 포함)은 가로·세로 두 칸 — Tab(또는 , 스페이스 x)으로 `_rsz.fi` 전환, 겹쳐 보기 "가로 700 × 세로 ▏"(2026-11-03 사용자 요청)
   - 움직임 효과: `_fxScan`(redraw마다 지난번 도형 Set과 비교) → 새 도형 `_fxIn` 0.22초 나타나기, 지운 도형 `_fxOut` 0.18초 사라지기(`_fxDraw`), 대부분 새 객체(불러오기)면 효과 없음.
     되돌리기는 `undo()`가 `_fxUndoPrev`(id → 복사본)를 남겨 id로 비교: 다시 생김 = 나타나기, 없어짐 = 사라지기, 자리·크기·각도(`_FX_KEYS`) 바뀜 = `_fxMorph` 0.24초 미끄러지기. 효과 중 rAF로 다시 그림(선·타원·손잡이 미리보기 같이)
   - 3D 디자인 창을 누르면(capture, 바꾸기 전) `_3dSnapFade` = 3D 화면을 찍어 덮었다가 0.38초 동안 걷어냄(디자인 바뀔 때 스며들듯)
