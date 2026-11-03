@@ -1559,7 +1559,8 @@ function _drawGrindDepthLabel(x,y,depth,band){
   ctx.save();
   ctx.font='bold '+dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
   var dtw=ctx.measureText(dtxt).width;
-  if(band&&!printRender){var bx0=Math.min(band[0],band[2]),bx1=Math.max(band[0],band[2]),by0=Math.min(band[1],band[3]),by1=Math.max(band[1],band[3]);
+  if(band&&band.out&&!printRender){x=band.pt[0]+band.out[0]*(dtw/2+7);y=band.pt[1]+band.out[1]*(dfSz/2+6);} // 짧은 띠(150×150 원클릭 등): 변 바깥(상판 밖)에
+  else if(band&&!printRender){var bx0=Math.min(band[0],band[2]),bx1=Math.max(band[0],band[2]),by0=Math.min(band[1],band[3]),by1=Math.max(band[1],band[3]);
     if(bx1-bx0>=by1-by0){x=bx0-dtw/2-7;y=(by0+by1)/2;}else{x=(bx0+bx1)/2;y=by0-dfSz/2-6;}}
   if(!printRender){ctx.fillStyle='rgba(9,18,31,0.85)';ctx.fillRect(x-dtw/2-3,y-dfSz/2-2,dtw+6,dfSz+4);}
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';
@@ -1811,8 +1812,12 @@ function drawGrindRegion(s,preview){
       else if(edge_==='right'){dcx=rx+rw+_gOff;dcy=ry+rh/2;}
       else{dcx=rx+rw/2;dcy=ry-_gOff;}
     } else {dcx=rx+rw/2;dcy=ry+rh/2;}
-    var dcp=toCanvas(dcx,dcy);
-    _drawGrindDepthLabel(dcp[0],dcp[1],depth,[px,py,px+pw,py+ph]);
+    var dcp=toCanvas(dcx,dcy),_gb=[px,py,px+pw,py+ph];
+    if((isH?rw:rh)<=depth*1.5){ // 짧은 띠(150×150 원클릭 등): 변 가운데에서 띠 반대쪽(상판 바깥)으로 (2026-11-03 사용자 요청)
+      if(isH){var _dn=ry+rh/2>s.y1;_gb={pt:toCanvas(rx+rw/2,_dn?ry:ry+rh),out:[0,_dn?-1:1]};} // 띠의 변 쪽 끝에서 바깥으로
+      else{var _rt=rx+rw/2>s.x1;_gb={pt:toCanvas(_rt?rx:rx+rw,ry+rh/2),out:[_rt?-1:1,0]};}
+    }
+    _drawGrindDepthLabel(dcp[0],dcp[1],depth,_gb);
   }
 }
 
@@ -1836,7 +1841,11 @@ function drawJollyMark(s,preview){
     ctx.strokeStyle=refCol;ctx.lineWidth=refW;ctx.setLineDash(hov?[]:[4,3]);
     ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.stroke();ctx.setLineDash([]);
   }
-  if(s.sym!==false)drawStar(pc[0],pc[1],(printRender?24:13)*_MARK_K,printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':'#2A4F92')); // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기, 도면화는 빨간색 (타원 둘레 조각은 몇 곳에만: sym)
+  if(s.sym!==false){ // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기, 도면화는 빨간색 (타원 둘레 조각은 몇 곳에만: sym)
+    var _sp=!printRender&&!preview?_markSym(s,1):null,_sl=_sp&&(hov||isSelected(s)); // 편집 화면: 변 안쪽으로 비켜(같은 변 고스라 ▲와 안 겹치게), 올림·선택이면 크게·밝게
+    if(_sl){ctx.beginPath();ctx.arc(_sp.x,_sp.y,_sp.r*1.7,0,2*Math.PI);ctx.fillStyle=hov?'rgba(41,121,255,0.28)':'rgba(255,109,0,0.25)';ctx.fill();}
+    drawStar(_sp?_sp.x:pc[0],_sp?_sp.y:pc[1],(printRender?24:13)*_MARK_K*(_sl?1.5:1),printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':(_sl?(hov?'#2979FF':'#FF6D00'):'#2A4F92')));
+  }
   // 졸리컷은 길이 치수를 표기하지 않음 (편집 화면·도면화 모두) — 길이는 속성 칸에서만 확인
 }
 
@@ -1904,9 +1913,11 @@ function drawGosraMark(s,preview){
   // 직선 고스라: 꼭지점이 변에 닿도록, 방향은 _gosraDir 규칙(조각=안쪽, 싱크볼/쿡탑=선 쪽)
   var _gd=_corner?null:_gosraDir(s);
   if(s.sym===false)return; // 타원 둘레 고스라 조각: ▲·길이는 몇 곳에만
-  var _tz=(hov?13:11)*_MARK_K;
-  if(_gd){triAngle=Math.atan2(_gd.dy,_gd.dx);drawTriangle(pc[0]-_gd.dx*11*_MARK_K,pc[1]-_gd.dy*11*_MARK_K,triAngle,_tz,preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':'#F44336'));}
-  else drawTriangle(pc[0],pc[1],triAngle,_tz,preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':'#F44336'));
+  // 올림·선택(편집 화면): ▲ 둘레 빛 + 1.5배, 선택은 주황 — 작은 ▲도 지금 고른 게 무엇인지 보이게 (2026-11-03)
+  var _gsl=!preview&&!printRender&&(hov||isSelected(s)),_tz=11*_MARK_K*(_gsl?1.5:1),_tc=preview?'rgba(244,67,54,0.5)':(hov?'#FF1744':(_gsl?'#FF6D00':'#F44336'));
+  if(_gsl){var _gp=_markSym(s,1);if(_gp){ctx.beginPath();ctx.arc(_gp.x,_gp.y,_gp.r*1.8,0,2*Math.PI);ctx.fillStyle=hov?'rgba(255,23,68,0.25)':'rgba(255,109,0,0.25)';ctx.fill();}}
+  if(_gd){triAngle=Math.atan2(_gd.dy,_gd.dx);drawTriangle(pc[0]-_gd.dx*11*_MARK_K,pc[1]-_gd.dy*11*_MARK_K,triAngle,_tz,_tc);}
+  else drawTriangle(pc[0],pc[1],triAngle,_tz,_tc);
   if(!preview&&!(s.hideDims&&s.hideDims['dist'])){var dist=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(!printRender){ctx.fillStyle='rgba(9,18,31,0.8)';ctx.fillRect(pc[0]-22,pc[1]+14,44,13);}ctx.fillStyle=printRender?'#1F3F7A':'#EF9A9A';ctx.font='9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(_fmtD(dist),pc[0],pc[1]+20);}
 }
 
@@ -5247,11 +5258,21 @@ function _shapeHit(s,mx,my,tol){
   }
   return false;
 }
-// 밑면연마 빗금 띠(재료 쪽 depth mm) / 고스라 ▲(변 가운데 바깥, 11px) 안인지 — 같은 변에 겹쳐 있어도 골라 누르기 쉽게
+// 편집 화면 고스라 ▲·졸리컷 ★ 자리(px, 지금 toCanvas 기준 — k = 주석 배율(그릴 땐 틀 안이라 1, 누르기 판정은 화면이라 _annK)) → {x,y,r}, 없으면 null
+//   ▲ = 변 가운데 바깥(꼭지점이 변에 닿음), ★ = 변 가운데에서 안쪽으로 반지름만큼 (2026-11-03: 같은 변의 ▲·★·밑면연마가 겹쳐 고르기 어렵던 것)
+function _markSym(s,k){
+  if((s.kind!=='gosramark'&&s.kind!=='jollymark')||s.groupId||s.sym===false)return null;
+  if(_findCornerAttach(s.x1,s.y1,s.x2,s.y2))return null; // 라운드 코너 둘레는 예전대로
+  var gd=_gosraDir(s);if(!gd)return null;var c=toCanvas(gd.mx,gd.my);
+  if(s.kind==='gosramark'){var o=11*_MARK_K*k;return{x:c[0]-gd.dx*o,y:c[1]-gd.dy*o,r:11*_MARK_K*k};}
+  var r=13*_MARK_K*k;return{x:c[0]+gd.dx*r,y:c[1]+gd.dy*r,r:r};
+}
+// ▲·★ 기호 위를 눌렀는지 (작아도 누르기 쉽게 최소 9px)
+function _markSymHit(s,mx,my){var p=_markSym(s,_annK());if(!p)return false;var q=toCanvas(mx,my);return Math.hypot(q[0]-p.x,q[1]-p.y)<=Math.max(9,p.r*1.3);}
+// 밑면연마 빗금 띠(재료 쪽 depth mm) / 고스라 ▲·졸리컷 ★ 위인지 — 같은 변에 겹쳐 있어도 골라 누르기 쉽게
 function _markAreaHit(s,mx,my){
-  if(s.kind==='jollymark')return false;
+  if(s.kind==='jollymark'||s.kind==='gosramark')return _markSymHit(s,mx,my);
   var gd=_gosraDir(s);if(!gd)return false;
-  if(s.kind==='gosramark'){var c=toCanvas(gd.mx,gd.my),q=toCanvas(mx,my);var o=11*_MARK_K*_annK();return Math.hypot(q[0]-(c[0]-gd.dx*o),q[1]-(c[1]-gd.dy*o))<=Math.max(7,13*_MARK_K*_annK());} // 작은 ▲도 누르기 쉽게 최소 7px
   var L=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(L<0.5)return false;
   var t=((mx-s.x1)*(s.x2-s.x1)+(my-s.y1)*(s.y2-s.y1))/(L*L),dn=(mx-s.x1)*gd.dx+(my-s.y1)*gd.dy;
   return t>=0&&t<=1&&dn>=0&&dn<=(s.depth||30);
@@ -5278,7 +5299,8 @@ function hitTestAll(mx,my){
       pri=onEdge?0:1;
     }
     // 조각 변의 밑면연마·고스라·졸리컷은 그 아래 조각보다 먼저 (싱크볼 둘레 표시는 싱크볼과 같이 다루므로 그대로)
-    if((s.kind==='grindregion'||s.kind==='gosramark'||s.kind==='jollymark')&&!s.groupId)pri=-1;
+    if((s.kind==='grindregion'||s.kind==='gosramark'||s.kind==='jollymark')&&!s.groupId)pri=s.kind==='grindregion'?-1:-0.5; // 같은 변에 겹치면 선·띠는 밑면연마 먼저, 고스라·졸리컷은 ▲·★ 기호로 고름
+    if(_markSymHit(s,mx,my))pri=-2; // ▲·★ 기호를 누르면 그 표시가 맨 먼저 (겹친 밑면연마·다른 표시보다)
     res.push({s:s,pri:pri,zi:i});
   }
   // 우선순위 낮은 것(rect 내부) 뒤로, 같은 우선순위는 z-order(뒤에 그린 것=위) 순
