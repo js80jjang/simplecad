@@ -386,6 +386,7 @@ canvas{display:block;cursor:crosshair}
           <button onclick="movePieceTo(-1)" id="board-move-prev" style="background:#16233D;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">&#9650; 이전 장</button>
           <button onclick="movePieceTo(1)" id="board-move-next" style="background:#16233D;border:1px solid #FFD740;color:#FFD740;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:11px">다음 장 &#9660;</button>
         </span>
+        <span id="board-prod-ctrl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-right:6px"></span>
         <button onclick="resetBoardLayout()" style="background:#16233D;border:1px solid #56647E;color:#E3B861;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px;margin-right:4px">↺ 초기화</button>
         <button id="board-modal-close" onclick="closeBoardModal()">✕</button>
       </div>
@@ -6131,7 +6132,7 @@ function _updateBoardQty(){
   }
   products.forEach(function(p){p.qty=0;});
   function add(label,n){var i=_prodIdxOf(label);products[Math.max(0,i)].qty+=n;}
-  boards.forEach(function(b){if(b&&b.length)add(_boardLabel(b),1);}); // 장마다 고른 제품별로 셈
+  boards.forEach(function(b){if(b&&(b.length||b.keep))add(_boardLabel(b),1);}); // 장마다 고른 제품별로 셈 (원판 배치에서 더한 빈 원판도)
   products.forEach(function(p,i){var el=document.getElementById('pq-'+i);if(el)el.value=p.qty;if(p.name)_slabImgFor(_prodNames()[i]);}); // 원판 이미지도 미리 불러 둠 (도면화 때 바로 쓰게)
 }
 function deleteSelected(){
@@ -6759,6 +6760,7 @@ function _restoreSavedBoards(saved,items){
   boards.forEach(function(b){b.forEach(function(p){delete p._adj;});});
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
+    if(saved.boardKeep&&saved.boardKeep[i])b.keep=true; // 손으로 더한 원판
     var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 원판 크기
   });
   return boards;
@@ -7312,7 +7314,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       }
     }
   });
-  if(!targetCanvas&&_bs)_bsDrawPark(bctx,bcv,sc,ref,k); // 오른쪽 미배치 칸 (창에서만, 도면화 그림엔 없음)
+  if(!targetCanvas&&_bs){_bsDrawPark(bctx,bcv,sc,ref,k);_bsProdCtrl();} // 오른쪽 미배치 칸 (창에서만, 도면화 그림엔 없음) + 머리줄 제품별 장수 단추
 }
 
 // ─── 미배치 칸 (2026-11-02): 원판 오른쪽에 조각을 잠시 빼 두었다가 원하는 자리로 다시 끌어 놓기 ───
@@ -7361,17 +7363,44 @@ function _bsResolve(bi,p){
   }
   if(best){p.x=best[0];p.y=best[1];}else{p.x=x0;p.y=y0;}
 }
-// 빈 장 정리 — 제품(그룹)마다 최소 1장, 빈 장은 그 제품 이름을 남김
+// 제품별 원판 장수 조절 (2026-11-03 사용자 요청 "원판 갯수를 늘렸다 줄였다, 제품별로"): 머리줄 "제품 N장 [−][+]"
+//   + = 그 제품 마지막 장 뒤에 빈 원판(keep = 빈 채로 남김, 수량에 셈), − = 그 제품의 빈 원판(뒤에서부터)을 빼고, 없으면 마지막 장의 조각을 미배치 칸으로 옮기고 뺌. 제품마다 최소 1장
+function _bsProdCtrl(){
+  var el=document.getElementById('board-prod-ctrl');if(!el||!_bs)return;
+  var B='background:#16233D;border:1px solid #2A4F92;color:#E3B861;border-radius:3px;width:20px;height:20px;padding:0;cursor:pointer;font-size:13px;line-height:1';
+  el.innerHTML=(_bs.groups||[]).map(function(gm,gi){
+    return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#A9B4C8"><span style="color:'+(gm.color||'#E3B861')+'">■</span>'+escHtml(gm.label||'원판')
+      +' <b style="color:#F1D69A;min-width:30px;text-align:center">'+gm.count+'장</b><button title="원판 한 장 빼기" style="'+B+'" onclick="_bsDelBoard('+gi+')">−</button><button title="빈 원판 한 장 더하기" style="'+B+'" onclick="_bsAddBoard('+gi+')">+</button></span>';
+  }).join('');
+}
+function _bsShiftGroups(gi,d){_bs.groups.forEach(function(g2,j){if(j>gi)g2.startBi+=d;});}
+function _bsAddBoard(gi){
+  var gm=_bs&&_bs.groups&&_bs.groups[gi];if(!gm)return;
+  var at=gm.startBi+gm.count,nb=[];nb.prod=gm.label;nb.keep=true;var ref=_bs.boards[gm.startBi];if(ref&&ref.bw){nb.bw=ref.bw;nb.bh=ref.bh;}
+  _bs.boards.splice(at,0,nb);gm.count++;_bsShiftGroups(gi,1);
+  _bs.boardPage=Math.floor(at/2);_bs.pickedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
+}
+function _bsDelBoard(gi){
+  var gm=_bs&&_bs.groups&&_bs.groups[gi];if(!gm)return;
+  if(gm.count<=1){alert('제품마다 원판은 최소 1장입니다.');return;}
+  var bi=-1;for(var i=gm.startBi+gm.count-1;i>=gm.startBi;i--)if(!_bs.boards[i].length){bi=i;break;} // 빈 원판부터
+  if(bi<0){bi=gm.startBi+gm.count-1;var b=_bs.boards[bi];
+    if(!confirm('빈 원판이 없습니다. 마지막 원판(원판 '+(bi+1)+')의 조각 '+b.length+'개를 미배치 칸으로 옮기고 그 원판을 뺄까요?'))return;
+    (_bs.parked||(_bs.parked=[])).push.apply(_bs.parked,b);}
+  _bs.boards.splice(bi,1);gm.count--;_bsShiftGroups(gi,-1);
+  _bs.pickedPiece=null;_bs.selectedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
+}
+// 빈 장 정리 — 제품(그룹)마다 최소 1장, 빈 장은 그 제품 이름을 남김, 손으로 더한 빈 원판(keep)은 그대로
 function _bsCleanBoards(){
   if(_bs.groups&&_bs.groups.length>0){
     var nb=[];
     _bs.groups.forEach(function(gm){
-      var gb=_bs.boards.slice(gm.startBi,gm.startBi+gm.count).filter(function(b){return b.length>0;});
+      var gb=_bs.boards.slice(gm.startBi,gm.startBi+gm.count).filter(function(b){return b.length>0||b.keep;});
       if(!gb.length){var e=[];e.prod=gm.label;gb=[e];}
       gm.startBi=nb.length;gm.count=gb.length;gb.forEach(function(b){nb.push(b);});
     });
     _bs.boards=nb;
-  } else {_bs.boards=_bs.boards.filter(function(b){return b.length>0;});if(!_bs.boards.length)_bs.boards=[[]];}
+  } else {_bs.boards=_bs.boards.filter(function(b){return b.length>0||b.keep;});if(!_bs.boards.length)_bs.boards=[[]];}
 }
 // 이 장 유효 영역에 맞는 칸 크기 (지금 방향 → 안 되면 돌려서), 안 들어가면 null
 function _bsFitDims(p,bi,prefRot){
@@ -7439,7 +7468,7 @@ function movePieceTo(dir){
   var idx=_bs.boards[srcBi].indexOf(p);
   if(idx>=0)_bs.boards[srcBi].splice(idx,1);
   // 빈 장 제거 — 최소 1장 유지
-  if(_bs.boards[srcBi].length===0&&_bs.boards.length>1){
+  if(_bs.boards[srcBi].length===0&&!_bs.boards[srcBi].keep&&_bs.boards.length>1){
     _bs.boards.splice(srcBi,1);
     if(tgtBi>srcBi)tgtBi--; // 인덱스 보정
   }
@@ -7479,6 +7508,7 @@ function closeBoardModal(){
       boardSizes:_bs.boards.map(function(b){return _boardDims(b);}), // 장마다 원판 크기
       groups:_bs.groups,
       boardProds:_bs.boards.map(function(b){return _boardLabel(b);}), // 장마다 제품
+      boardKeep:_bs.boards.map(function(b){return !!b.keep;}), // 손으로 더한 원판(빈 채로도 남김·수량에 셈)
       boards:_bs.boards.map(function(board){
         return board.map(function(p){
           var _sh=p.item&&p.item.shape;
