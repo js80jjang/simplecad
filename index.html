@@ -967,11 +967,16 @@ function edgePairToCorner(e1,e2){
   return p[e1+'-'+e2]||null;
 }
 // 모따기: 꼭짓점별 경로 생성
+// 코너별 라운드·모따기 최대 크기 (2026-11-03 사용자 요청 "R 190을 줬는데 126"): 이웃 코너(같은 변의 반대 끝)가 둥글지 않으면 그 변 길이 전체까지,
+//   둥글면 그 변의 절반까지 — 예전엔 늘 짧은 변의 절반이라 코너 하나만 둥글게 해도 막혔음. (균일 cornerType = 네 코너 모두라 절반 그대로)
+var _CN_NB={tl:['tr','bl'],tr:['tl','br'],br:['bl','tr'],bl:['br','tl']}; // [가로 이웃, 세로 이웃]
+function _cornerLim(corners,ck,w,h){var c=corners||{},nb=_CN_NB[ck];function on(k){var v=c[k];return !!(v&&v.type&&(v.r||0)>0);}
+  return Math.min(on(nb[0])?w/2:w,on(nb[1])?h/2:h);}
 function buildCornerPath(x,y,w,h,corners){
   var c=corners||{};
   // corners[k].r는 mm 단위로 저장되어 있으므로, px 단위인 w/h와 비교/사용 전에 mm2px로 변환해야 함
   // (변환 누락 시 확대/축소 시 라운드 반경이 실제 mm 크기와 어긋나 보이는 버그 발생)
-  function cr(k){var v=c[k];return(v&&v.type==='fillet')?Math.min(mm2px(v.r||0),w/2,h/2):0;}
+  function cr(k){var v=c[k];return(v&&v.type==='fillet')?Math.min(mm2px(v.r||0),_cornerLim(c,k,w,h)):0;}
   var tl=cr('tl'),tr=cr('tr'),bl=cr('bl'),br=cr('br');
   ctx.beginPath();
   ctx.moveTo(x+tl,y);ctx.lineTo(x+w-tr,y);
@@ -988,7 +993,7 @@ function buildCornerPath(x,y,w,h,corners){
 function _rcInfo(s,ck){
   var w=s.w,h=s.h;
   if(s.corners&&s.corners[ck]&&s.corners[ck].type&&(s.corners[ck].r||0)>0){
-    return{type:s.corners[ck].type,r:Math.min(s.corners[ck].r||0,w/2,h/2)};
+    return{type:s.corners[ck].type,r:Math.min(s.corners[ck].r||0,_cornerLim(s.corners,ck,Math.abs(w),Math.abs(h)))};
   }
   if((s.cornerType==='fillet'||s.cornerType==='chamfer')&&(s.cornerSize||0)>0){
     return{type:s.cornerType,r:Math.min(s.cornerSize,w/2,h/2)};
@@ -2463,7 +2468,7 @@ function drawDims(s,col){
     Object.keys(s.corners).forEach(function(ck){
       var cv3=s.corners[ck];if(!cv3||cv3.type!=='fillet'||(cv3.r||0)<=0)return;
       var cm3=_cmap3_[ck];if(!cm3)return;
-      var cr3=Math.min(cv3.r,s.w/2,s.h/2);
+      var cr3=Math.min(cv3.r,_cornerLim(s.corners,ck,Math.abs(s.w),Math.abs(s.h)));
       var lbl3='R '+cr3.toFixed(1),lLen3=printRender?55:36;
       var _dirs3=[{dx:cm3.dx,dy:cm3.dy},{dx:cm3.indx,dy:cm3.indy}];
       var _bd3=_dirs3[0];
@@ -4663,7 +4668,7 @@ function doTrim(mx,my){
     function _cornerInfo(ck){
       if(G._pts)return{type:null,r:0};
       if(G.corners&&G.corners[ck]&&G.corners[ck].type&&(G.corners[ck].r||0)>0){
-        var cv=G.corners[ck];return{type:cv.type,r:Math.min(cv.r||0,rw/2,rh/2)};
+        var cv=G.corners[ck];return{type:cv.type,r:Math.min(cv.r||0,_cornerLim(G.corners,ck,rw,rh))};
       }
       if((G.cornerType==='fillet'||G.cornerType==='chamfer')&&(G.cornerSize||0)>0){
         return{type:G.cornerType,r:Math.min(G.cornerSize,rw/2,rh/2)};

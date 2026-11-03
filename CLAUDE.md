@@ -127,6 +127,8 @@
   도구별 변 붙이기(밑면연마·고스라 'edge') → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음
   - 마그넷 `doMagnet(arr)`: 여러 개·그룹도 — 전체 상자 + 각 도형 `getEdges`(회전 포함 상자 왼·가운데·오른/위·가운데·아래, 선은 양 끝)를 다른 도형 기준에 맞춰 선택 전체를 `shiftS`(+싱크볼 `syncGroupShapes`),
     거리 = max(마그넷 mm, 10px/scale), 분홍 보조선 `magnetLineX/Y`. 마우스 줄맞춤 하늘색 `drawGuides`도 getEdges·4px
+- 코너별 라운드·모따기(`s.corners`) 최대 = `_cornerLim(corners,ck,w,h)`(2026-11-03): 같은 변 이웃 코너가 둥글지 않으면 그 변 전체, 둥글면 절반 —
+  `_rcInfo`(도면화·3D·DXF·원판 `_expRectGeo`)·`buildCornerPath`(편집 화면)·코너 R 치수·트림 `_cornerInfo`가 씀. 균일 cornerType은 예전대로 짧은 변 절반
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
   - 공통 도우미(새 코드는 이걸 쓰고 같은 계산을 다시 쓰지 않기): `_rectXf/_rectCorners`(회전 rect 꼭짓점), `_isAnnot`(주석 도형 제외),
     `_nearestEdge`(트림·호버 변 찾기), `_isCutRect`(타공부 사각형), `_drawRLeader`(R·C 지시선 글자), `_ymd`(20261021), `_TOOL_SUBS/_TOOL_FOCUS`(도구 보조 칸)
