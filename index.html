@@ -1552,12 +1552,15 @@ function drawTriangle(cx,cy,angle,sz,col){
 }
 
 // 밑면연마 깊이 라벨 (x,y는 현재 ctx 변환 좌표계 기준)
-function _drawGrindDepthLabel(x,y,depth){
+// band = [x0,y0,x1,y1] 띠 상자(px)를 주면 편집 화면에서 띠 끝 바깥에 (가로 띠 = 왼쪽 끝 옆, 세로 띠 = 위쪽 끝 위 — 2026-11-03 사용자 요청: 띠 가운데는 다른 치수와 겹침)
+function _drawGrindDepthLabel(x,y,depth,band){
   var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';
   var dfSz=printRender?32:9;
   ctx.save();
   ctx.font='bold '+dfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
   var dtw=ctx.measureText(dtxt).width;
+  if(band&&!printRender){var bx0=Math.min(band[0],band[2]),bx1=Math.max(band[0],band[2]),by0=Math.min(band[1],band[3]),by1=Math.max(band[1],band[3]);
+    if(bx1-bx0>=by1-by0){x=bx0-dtw/2-7;y=(by0+by1)/2;}else{x=(bx0+bx1)/2;y=by0-dfSz/2-6;}}
   if(!printRender){ctx.fillStyle='rgba(9,18,31,0.85)';ctx.fillRect(x-dtw/2-3,y-dfSz/2-2,dtw+6,dfSz+4);}
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';
   ctx.fillText(dtxt,x,y);_numUnderline(ctx,dtxt,x,y);
@@ -1734,7 +1737,7 @@ function drawGrindRegion(s,preview){
     if(!preview&&!(s.hideDims&&s.hideDims['dist'])&&!(printRender&&s._skipGrindLabel)){
       ctx.save();ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
       var _dlx2=_lx+_lw/2,_dly2=_ly+_lh/2;
-      _drawGrindDepthLabel(_dlx2,_dly2,depth);
+      _drawGrindDepthLabel(_dlx2,_dly2,depth,[_lx,_ly,_lx+_lw,_ly+_lh]);
       ctx.restore();
     }
     return;
@@ -1809,7 +1812,7 @@ function drawGrindRegion(s,preview){
       else{dcx=rx+rw/2;dcy=ry-_gOff;}
     } else {dcx=rx+rw/2;dcy=ry+rh/2;}
     var dcp=toCanvas(dcx,dcy);
-    _drawGrindDepthLabel(dcp[0],dcp[1],depth);
+    _drawGrindDepthLabel(dcp[0],dcp[1],depth,[px,py,px+pw,py+ph]);
   }
 }
 
