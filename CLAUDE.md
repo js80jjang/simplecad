@@ -136,7 +136,7 @@
   (아무것도 선택 안 했을 때 올리기만으로 잡힌 선택(`_hoverSelected`)보다 강조색이 먼저)
 - 곡선 트림(2026-11-03 사용자 요청): `doTrim`이 `_nearestCurve`(원형 절단 `holeType:'cut'`·호·타원, 타공 원 제외)가 변보다 가까우면 `_trimCurve` —
   원·호는 각도로(교점 `_segCirc` 선-원·`_circCirc` 원-원, 호 범위 `_arcNorm/_angIn`): 원 = 클릭 구간 빼고 호 하나(교점 1개면 못 자름, 0개면 지움), 호 = 줄이거나 둘로;
-  타원 = `_ELL_N` 꺾은선 위치로 → 남는 부분은 line들. 선·사각형 변을 자를 때 교점은 `_trimHitsSeg`(선·사각형 변·원·호·타원 모두). 트림 호버는 곡선 전체 빛(`trimHoverEdge.curve`)
+  타원 = `_ELL_N` 꺾은선 위치로 → 남는 부분은 line들(`ellArc:'타원 장축×단축'`, 가운데 하나 `ellMid` — arcR처럼 길이·각도 치수 없이 그 글자만: drawDimsLine·_lineAngleMarks·_lineDimPlan·도면화·DXF, 선 트림하면 복사). 선·사각형 변을 자를 때 교점은 `_trimHitsSeg`(선·사각형 변·원·호·타원 모두). 트림 호버는 곡선 전체 빛(`trimHoverEdge.curve`)
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
