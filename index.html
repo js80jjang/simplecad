@@ -3034,7 +3034,7 @@ function _rszTyped(txt){ // 입력한 치수로
     else if(h.sx)nw=nums[0];else nh=nums[0];
     _rszSetRect(nw,nh);}
   else if(s.kind==='circle'||s.kind==='hole')s.r=nums[0]/2;
-  else if(s.kind==='ellipse')s[h.ax]=nums[0]/2;
+  else if(s.kind==='ellipse'){if(/,/.test(txt)){var ep=String(txt).split(','),ea=parseFloat(ep[0]),eb=parseFloat(ep[1]);if(ea>0)s.rx=ea/2;if(eb>0)s.ry=eb/2;}else s[h.ax]=nums[0]/2;} // "축1,축2"(Tab 입력) — 빈 쪽은 그대로
   else if(s.kind==='line'){var fx=h.end===1?s.x2:s.x1,fy=h.end===1?s.y2:s.y1,mx2=h.end===1?s.x1:s.x2,my2=h.end===1?s.y1:s.y2,L=Math.hypot(mx2-fx,my2-fy)||1,nx=fx+(mx2-fx)/L*nums[0],ny=fy+(my2-fy)/L*nums[0];
     if(h.end===1){s.x1=nx;s.y1=ny;}else{s.x2=nx;s.y2=ny;}}
   return true;
@@ -3054,11 +3054,14 @@ function _rszInfo(){ // 끄는 동안 마우스 옆 치수 글자
   else t=_fmtDim(Math.hypot(s.x2-s.x1,s.y2-s.y1));
   return t;
 }
-function _rszCorner(){return _rsz&&_rsz.s.kind==='rect'&&_rsz.h.sx&&_rsz.h.sy;}
+// 가로·세로(두 축) 두 칸 입력: 사각형(싱크볼·쿡탑 포함) 모서리 손잡이·타원 축 손잡이 (2026-11-03 사용자 요청 "가로·세로가 같이 들어가는 도형은 모두 Tab")
+function _rszCorner(){return !!_rsz&&(_rsz.s.kind==='rect'&&_rsz.h.sx&&_rsz.h.sy||_rsz.s.kind==='ellipse');}
+function _rszNames(){var s=_rsz.s;return s.kind==='ellipse'&&s.rotation&&Math.abs(s.rotation)>1e-6?['축1','축2']:['가로','세로'];}
 function _rszOverlay(px,py){
-  if(!_rsz)return;var R=_rsz,cn=_rszCorner(),hint=cn?'치수 입력 + Enter · Tab = 가로/세로 바꾸기':'치수 입력 + Enter';
+  if(!_rsz)return;var R=_rsz,cn=_rszCorner(),nm=cn?_rszNames():null,hint=cn?'치수 입력 + Enter · Tab = '+nm[0]+'/'+nm[1]+' 바꾸기':'치수 입력 + Enter';
+  if(cn&&R.fi==null)R.fi=R.s.kind==='ellipse'&&R.h.ax==='ry'?1:0; // 타원은 잡은 축부터
   ctx.save();ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.textBaseline='top';ctx.textAlign='left';
-  var pp=R.buf.split(','),l1=cn&&R.buf?('가로 '+(pp[0]||'—')+(R.fi?'':'▏')+'  ×  세로 '+(pp[1]||'—')+(R.fi?'▏':'')):(R.buf?R.buf+'▏':_rszInfo()); // 모서리 손잡이: 지금 치는 칸에 커서w=Math.max(ctx.measureText(l1).width,(ctx.font='11px "Malgun Gothic",sans-serif',ctx.measureText(hint).width))+14,x=px+18,y=py+18;
+  var pp=R.buf.split(','),l1=cn&&(R.buf||R.fi)?(nm[0]+' '+(pp[0]||'—')+(R.fi?'':'▏')+'  ×  '+nm[1]+' '+(pp[1]||'—')+(R.fi?'▏':'')):(R.buf?R.buf+'▏':_rszInfo()); // 두 칸: 지금 치는 칸에 커서w=Math.max(ctx.measureText(l1).width,(ctx.font='11px "Malgun Gothic",sans-serif',ctx.measureText(hint).width))+14,x=px+18,y=py+18;
   ctx.fillStyle='rgba(10,18,34,0.94)';ctx.fillRect(x,y,w,38);ctx.strokeStyle='#2A4F92';ctx.lineWidth=1;ctx.strokeRect(x,y,w,38);
   ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.fillStyle=R.buf?'#FFD740':'#E3B861';ctx.fillText(l1,x+7,y+4);
   ctx.font='11px "Malgun Gothic",sans-serif';ctx.fillStyle='#A9B4C8';ctx.fillText(hint,x+7,y+21);ctx.restore();
@@ -3066,8 +3069,8 @@ function _rszOverlay(px,py){
 function _rszKey(e){
   if(!_rsz)return false;
   if(e.key==='Escape'){_rszEnd(true);return true;}
-  if(_rszCorner()){ // 사각형(싱크볼·쿡탑 포함) 모서리 손잡이: 가로·세로 두 칸, Tab(또는 , 스페이스 x)으로 오가며 입력 (2026-11-03 사용자 요청)
-    var R=_rsz,pp=R.buf?R.buf.split(','):['',''];if(pp.length<2)pp.push('');R.fi=R.fi||0;
+  if(_rszCorner()){ // 사각형(싱크볼·쿡탑 포함) 모서리·타원 축 손잡이: 가로·세로 두 칸, Tab(또는 , 스페이스 x)으로 오가며 입력 (2026-11-03 사용자 요청)
+    var R=_rsz,pp=R.buf?R.buf.split(','):['',''];if(pp.length<2)pp.push('');if(R.fi==null)R.fi=R.s.kind==='ellipse'&&R.h.ax==='ry'?1:0;
     if(e.key==='Tab'||e.key===','||e.key===' '||e.key==='x'||e.key==='*')R.fi=1-R.fi;
     else if(/^[0-9.]$/.test(e.key))pp[R.fi]+=e.key;
     else if(e.key==='Backspace')pp[R.fi]=pp[R.fi].slice(0,-1);
@@ -4488,8 +4491,85 @@ function _nearestEdge(mx,my,tol){
   });
   return best;
 }
+// ── 곡선 트림 (2026-11-03 사용자 요청 "트림이 직선에만 된다"): 원(원형 절단)·호·타원도 자르고, 선·사각형도 원·호·타원에 맞춰 자름 ──
+//   원·호 = 각도로 정확히(교점은 선-원·원-원 공식), 타원 = 둘레 _ELL_N 점 꺾은선으로 교점 → 남는 부분은 선들로 (타원 호 도형이 없어서)
+function _trimCurveOK(s){return s.kind==='arc'||s.kind==='ellipse'&&!s.hole||s.kind==='circle'&&s.holeType==='cut';} // 수전·콘센트 타공 원은 그대로
+function _arcNorm(s){var a0=s.a0,a1=s.a1;while(a1<=a0)a1+=2*Math.PI;return[a0,a1];}
+function _angIn(a,a0,a1){while(a<a0)a+=2*Math.PI;while(a>=a0+2*Math.PI)a-=2*Math.PI;return a<=a1+1e-9?a:null;} // 호 범위 안이면 a0 기준 각도
+function _segCirc(x1,y1,x2,y2,cx,cy,r){
+  var dx=x2-x1,dy=y2-y1,fx=x1-cx,fy=y1-cy,A=dx*dx+dy*dy,B=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-r*r,D=B*B-4*A*C,out=[];if(A<1e-9||D<0)return out;
+  var sq=Math.sqrt(D);[(-B-sq)/(2*A),(-B+sq)/(2*A)].forEach(function(t,i){if(t>=-1e-9&&t<=1+1e-9&&!(i&&D<1e-9))out.push({x:x1+t*dx,y:y1+t*dy,t:t});});return out;
+}
+function _circCirc(ax,ay,ar,bx,by,br){
+  var d=Math.hypot(bx-ax,by-ay);if(d<1e-6||d>ar+br||d<Math.abs(ar-br))return[];
+  var a=(ar*ar-br*br+d*d)/(2*d),h=Math.sqrt(Math.max(0,ar*ar-a*a)),mx=ax+a*(bx-ax)/d,my=ay+a*(by-ay)/d;
+  return[{x:mx+h*(by-ay)/d,y:my-h*(bx-ax)/d},{x:mx-h*(by-ay)/d,y:my+h*(bx-ax)/d}];
+}
+// 자르는 기준이 되는 도형의 선분 목록 (선·사각형 변·타원 꺾은선) — 원·호는 따로(정확한 공식)
+function _trimSegsOf(s){
+  if(s.kind==='rect')return _trimRectEdges(_trimRectGeo(s)).map(function(e){return[e.ax,e.ay,e.bx,e.by];});
+  if(s.kind==='ellipse'){var P=_ellPts(s,_ELL_N),o=[];for(var i=0;i<P.length;i++){var q=P[(i+1)%P.length];o.push([P[i][0],P[i][1],q[0],q[1]]);}return o;}
+  if(s.x1!==undefined)return[[s.x1,s.y1,s.x2,s.y2]];
+  return[];
+}
+function _isRound(s){return s.kind==='circle'||s.kind==='hole'||s.kind==='arc';}
+// 선분 (x1,y1)-(x2,y2) 위에서 도형 s와 만나는 점들
+function _trimHitsSeg(s,x1,y1,x2,y2){
+  if(_isRound(s)){var r=_segCirc(x1,y1,x2,y2,s.cx,s.cy,s.r);if(s.kind!=='arc')return r;var ar=_arcNorm(s);return r.filter(function(p){return _angIn(Math.atan2(p.y-s.cy,p.x-s.cx),ar[0],ar[1])!=null;});}
+  var out=[];_trimSegsOf(s).forEach(function(e){var p=lineSegIntersect(x1,y1,x2,y2,e[0],e[1],e[2],e[3]);if(p)out.push(p);});return out;
+}
+// 마우스에서 가장 가까운 자를 수 있는 곡선 {s,d,u} (u = 원·호는 각도, 타원은 꺾은선 위치 0~N)
+function _nearestCurve(mx,my,tol){
+  var best=null;
+  shapes.forEach(function(s){
+    if(_isAnnot(s)||!_trimCurveOK(s))return;var d,u;
+    if(s.kind==='ellipse'){var P=_ellPts(s,_ELL_N),bd=Infinity,bu=0;for(var i=0;i<P.length;i++){var q=P[(i+1)%P.length],dx=q[0]-P[i][0],dy=q[1]-P[i][1],L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((mx-P[i][0])*dx+(my-P[i][1])*dy)/L2)),dd=Math.hypot(mx-P[i][0]-t*dx,my-P[i][1]-t*dy);if(dd<bd){bd=dd;bu=i+t;}}d=bd;u=bu;}
+    else{d=Math.abs(Math.hypot(mx-s.cx,my-s.cy)-s.r);u=Math.atan2(my-s.cy,mx-s.cx);if(s.kind==='arc'){var ar=_arcNorm(s);u=_angIn(u,ar[0],ar[1]);if(u==null)return;}}
+    if(d<=tol&&(!best||d<best.d))best={s:s,d:d,u:u};
+  });
+  return best;
+}
+function _trimCurve(nc){
+  var s=nc.s,N=_ELL_N,cuts=[];
+  shapes.forEach(function(o){
+    if(o===s||_isAnnot(o))return;
+    if(s.kind==='ellipse'){ // 타원: 꺾은선 i번째 마디와의 교점 → 위치 i+t
+      var P=_ellPts(s,N);for(var i=0;i<N;i++){var q=P[(i+1)%N],L=Math.hypot(q[0]-P[i][0],q[1]-P[i][1])||1;
+        _trimHitsSeg(o,P[i][0],P[i][1],q[0],q[1]).forEach(function(p){cuts.push(i+Math.hypot(p.x-P[i][0],p.y-P[i][1])/L);});}
+    } else {
+      var pts=[];
+      if(_isRound(o)){pts=_circCirc(s.cx,s.cy,s.r,o.cx,o.cy,o.r);if(o.kind==='arc'){var oa=_arcNorm(o);pts=pts.filter(function(p){return _angIn(Math.atan2(p.y-o.cy,p.x-o.cx),oa[0],oa[1])!=null;});}}
+      else _trimSegsOf(o).forEach(function(e){pts=pts.concat(_segCirc(e[0],e[1],e[2],e[3],s.cx,s.cy,s.r));});
+      pts.forEach(function(p){cuts.push(Math.atan2(p.y-s.cy,p.x-s.cx));});
+    }
+  });
+  var closed=s.kind!=='arc',P0=closed?0:_arcNorm(s)[0],SPAN=s.kind==='ellipse'?N:(closed?2*Math.PI:_arcNorm(s)[1]-P0);
+  function rel(u){if(s.kind==='ellipse')return((u%N)+N)%N;var a=u-P0;a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);return a;}
+  var uc=rel(nc.u),cs=cuts.map(rel).filter(function(u){return closed||(u>1e-6&&u<SPAN-1e-6);}).sort(function(a,b){return a-b;}),dd=[];
+  cs.forEach(function(u){if(!dd.length||u-dd[dd.length-1]>1e-4)dd.push(u);});
+  saveHistory();
+  function drop(){shapes=shapes.filter(function(x){return x!==s;});selectedShapes=selectedShapes.filter(function(x){return x!==s;});}
+  // 남길 구간 [a,b] (rel 기준) → 도형으로
+  function keep(a,b){if(b-a<1e-4)return;
+    if(s.kind==='ellipse'){var P=_ellPts(s,N);function pt(u){var i=Math.floor(u)%N,t=u-Math.floor(u),q=P[(i+1)%N];return[P[i][0]+(q[0]-P[i][0])*t,P[i][1]+(q[1]-P[i][1])*t];}
+      var vs=[pt(a)];for(var k=Math.floor(a)+1;k<b;k++)vs.push(P[k%N]);vs.push(pt(b));
+      for(var j=1;j<vs.length;j++)if(Math.hypot(vs[j][0]-vs[j-1][0],vs[j][1]-vs[j-1][1])>0.3)shapes.push(makeShape('line',{x1:vs[j-1][0],y1:vs[j-1][1],x2:vs[j][0],y2:vs[j][1]}));}
+    else shapes.push(makeShape('arc',{cx:s.cx,cy:s.cy,r:s.r,a0:P0+a,a1:P0+b}));}
+  if(closed){
+    if(dd.length<2){if(!dd.length)drop();return redraw(),calcCost();} // 교점 없음 = 지움, 하나뿐이면 못 자름
+    var lo=null,hi=null;dd.forEach(function(u){if(u<uc)lo=u;});dd.forEach(function(u){if(u>uc&&hi==null)hi=u;});
+    if(lo==null)lo=dd[dd.length-1]-SPAN;if(hi==null)hi=dd[0]+SPAN; // 한 바퀴 넘어감
+    drop();keep(hi,lo+SPAN);
+  } else {
+    var lo2=null,hi2=null;dd.forEach(function(u){if(u<uc)lo2=u;});dd.forEach(function(u){if(u>uc&&hi2==null)hi2=u;});
+    drop();if(lo2!=null)keep(0,lo2);if(hi2!=null)keep(hi2,SPAN);
+  }
+  redraw();calcCost();
+}
 function doTrim(mx,my){
-  var ne=_nearestEdge(mx,my,10/scale);if(!ne)return;
+  var ne=_nearestEdge(mx,my,10/scale),nc=_nearestCurve(mx,my,10/scale);
+  if(nc&&(!ne||nc.d<ne.d))return _trimCurve(nc); // 원·호·타원을 눌렀으면 곡선 트림
+  if(!ne)return;
   var hit=ne.s,hitT=ne.t,hitEdge=ne.e,hitGeo=ne.g;
   var hx1=hitEdge.ax,hy1=hitEdge.ay,hx2=hitEdge.bx,hy2=hitEdge.by;
   var hlen=Math.hypot(hx2-hx1,hy2-hy1);if(hlen<1)return;
@@ -4511,14 +4591,7 @@ function doTrim(mx,my){
   var ixs=[];
   shapes.forEach(function(s){
     if(s===hit||_isAnnot(s))return;
-    var edges=[];
-    if(s.kind==='rect'){
-      edges=_trimRectEdges(_trimRectGeo(s)).map(function(e){return[e.ax,e.ay,e.bx,e.by];});
-    } else if(s.x1!==undefined){
-      edges=[[s.x1,s.y1,s.x2,s.y2]];
-    }
-    edges.forEach(function(e){
-      var p=lineSegIntersect(hx1,hy1,hx2,hy2,e[0],e[1],e[2],e[3]);
+    _trimHitsSeg(s,hx1,hy1,hx2,hy2).forEach(function(p){ // 선·사각형 변·원·호·타원 모두 자르는 기준
       if(p){
         var t=Math.hypot(p.x-hx1,p.y-hy1)/hlen;
         // 끝점에서 0.5mm 이상인 교점만 수집
@@ -5182,7 +5255,12 @@ function redraw(){
   drawSelBox();
   if(magnetLineX!==null||magnetLineY!==null)drawMagnetLines();
   // trim/fillet 호버 하이라이트
-  if((tool==='trim'||tool==='fillet')&&trimHoverShape&&trimHoverEdge){
+  if(tool==='trim'&&trimHoverShape&&trimHoverEdge&&trimHoverEdge.curve){ // 곡선(원·호·타원) 전체를 빛나게
+    var _cs=trimHoverShape,_cc=toCanvas(_cs.cx,_cs.cy);ctx.save();ctx.strokeStyle='rgba(0,229,255,0.92)';ctx.lineWidth=3.5;ctx.setLineDash([]);ctx.shadowColor='rgba(0,229,255,0.55)';ctx.shadowBlur=10;ctx.beginPath();
+    if(_cs.kind==='ellipse')ctx.ellipse(_cc[0],_cc[1],mm2px(_cs.rx),mm2px(_cs.ry),_cs.rotation||0,0,2*Math.PI);else if(_cs.kind==='arc')ctx.arc(_cc[0],_cc[1],mm2px(_cs.r),_cs.a0,_cs.a1);else ctx.arc(_cc[0],_cc[1],mm2px(_cs.r),0,2*Math.PI);
+    ctx.stroke();ctx.restore();
+  }
+  else if((tool==='trim'||tool==='fillet')&&trimHoverShape&&trimHoverEdge){
     var hep1_=toCanvas(trimHoverEdge.ax,trimHoverEdge.ay);
     var hep2_=toCanvas(trimHoverEdge.bx,trimHoverEdge.by);
     ctx.save();
@@ -5658,8 +5736,9 @@ cv.addEventListener('mousemove',function(e){
   // trim/fillet 호버 감지
   if(tool==='trim'||tool==='fillet'){
     var _ne=_nearestEdge(mx,my,12/scale); // 트림과 같은 판정 (돌린 사각형도 보이는 변)
-    trimHoverShape=_ne?_ne.s:null;
-    trimHoverEdge=_ne?_ne.e:null;
+    var _nc=tool==='trim'?_nearestCurve(mx,my,12/scale):null; // 트림은 원·호·타원도
+    if(_nc&&(!_ne||_nc.d<_ne.d)){trimHoverShape=_nc.s;trimHoverEdge={curve:true};}
+    else{trimHoverShape=_ne?_ne.s:null;trimHoverEdge=_ne?_ne.e:null;}
   } else {
     trimHoverShape=null;trimHoverEdge=null;
   }
@@ -5896,8 +5975,8 @@ function showDimInput(d){
         updatePropsPanel();redraw();calcCost();
       }
     },
-    onTab:(fld==='w'||fld==='h')?function(){
-      var _nf=(fld==='w')?'h':'w';
+    onTab:(fld==='w'||fld==='h'||fld==='rx'||fld==='ry')?function(){ // 가로↔세로 (타원은 RX↔RY)
+      var _nf={w:'h',h:'w',rx:'ry',ry:'rx'}[fld];
       setTimeout(function(){
         for(var _i=0;_i<dimLabels.length;_i++){
           // 치수선 잡기용 항목(.line, 글자 위치 없음)은 건너뛰고 글자 항목으로
