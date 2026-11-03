@@ -313,6 +313,7 @@ canvas{display:block;cursor:crosshair}
   </div>
   <button class="tool-btn" data-tool="jollycut"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#2A4F92" stroke-width="1.8" stroke-linecap="round"/><circle cx="7" cy="5.5" r="2.5" stroke="#2A4F92" stroke-width="1.2" fill="#0A1222"/></svg> 졸리컷</button>
   <button class="tool-btn" data-tool="trim"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="5.5" x2="5" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="10" y1="5.5" x2="15" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="3" y1="0" x2="12" y2="11" stroke="#75839C" stroke-width="1.5"/><line x1="5" y1="4.5" x2="10" y2="6.5" stroke="#0A1222" stroke-width="3"/></svg> 트림</button>
+  <button class="tool-btn" data-tool="cut" title="자르기: 변의 시작점 클릭 → 변 따라 거리(숫자+Enter) → 맞은편 변까지 수직(Shift = 각도)으로 두 조각"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><rect x="0.8" y="2" width="13.4" height="7" fill="none" stroke="#75839C" stroke-width="1.3"/><line x1="6" y1="0" x2="6" y2="11" stroke="#E53935" stroke-width="1.6" stroke-dasharray="2 1.5"/></svg> 자르기</button>
   <button class="tool-btn" data-tool="gosra"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="3.5" x2="15" y2="3.5" stroke="#E53935" stroke-width="1.5"/><line x1="1" y1="7.5" x2="15" y2="7.5" stroke="#E53935" stroke-width="1.5"/></svg> 고스라</button>
   <div class="collapsible-hd" id="snap-hd" onclick="toggleSnap()">스냅 설정 <span class="arrow">&#9660;</span></div>
   <div id="snap-body" style="display:none">
@@ -2090,6 +2091,7 @@ function drawDimsLine(s,col){
   // DXF 곡선을 근사한 선분: 가운데 선분 하나에만 R값 표시 (길이 치수/편집 없음)
   // 트림한 타원을 근사한 선분(ellArc)도 같이: 가운데 선분 하나에만 원래 타원 치수 "타원 장축×단축"
   var isArc=s.arcR!==undefined||s.ellArc!==undefined;if(isArc&&!(s.arcMid||s.ellMid))return;
+  if(s.cutTwin&&shapes.some(function(o){return o!==s&&o.kind==='line'&&o.lp&&o.lp!==s.lp&&((Math.hypot(o.x1-s.x2,o.y1-s.y2)<1&&Math.hypot(o.x2-s.x1,o.y2-s.y1)<1)||(Math.hypot(o.x1-s.x1,o.y1-s.y1)<1&&Math.hypot(o.x2-s.x2,o.y2-s.y2)<1));}))return; // 자르기로 맞댄 두 선 중 하나만 치수
   var lbl=s.ellArc!==undefined?s.ellArc:(isArc?'R'+_fmtDim(s.arcR):_fmtDim(dist));
   var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2);
   var angle=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
@@ -4583,6 +4585,243 @@ function _trimCurve(nc){
   }
   redraw();calcCost();
 }
+// ═══ 자르기(나누기) 도구 (2026-11-03 사용자 요청 "1000×500을 400×500 / 600×500으로") ═══
+// 도형 변(시작점, 꼭짓점에 붙음) 클릭 → 둘레를 따라 마우스로 자를 점 P(또는 거리 숫자+Enter, 끌다 놓아도 됨) → 기본 = 그 변에 수직으로 맞은편 변(Q)까지 가르는 선
+//   (Shift = 마우스 방향, 숫자+Enter = 지나온 변과의 각도) → 클릭/빈 Enter = 두 조각. 둘레의 고스라·졸리컷·밑면연마는 P·Q에서 같이 나눔. Esc = 한 단계 뒤로
+//   사각형(회전 없음)을 축 방향으로 자르면 사각형 둘(코너는 제자리 쪽에), 그 밖(비스듬히·돌린 사각형·선 조각·원·타원)은 선 조각 둘 —
+//   선마다 lp(조각 표지): 맞붙은 두 선 조각이 끝점으로 하나로 묶이지 않게(_cutLpOk). 열린 선은 P에서 둘로. 곡선은 짧은 선분(arcR·ellArc, 가운데만 치수 글자)
+var _cutSt=null;
+function _cutLpOk(a,b){return !a.lp||!b.lp||a.lp===b.lp;}
+function _cutPrep(L){var n=L.pts.length,m=L.open?n-1:n,cum=[0];
+  for(var i=0;i<m;i++){var a=L.pts[i],b=L.pts[(i+1)%n];cum.push(cum[i]+Math.hypot(b[0]-a[0],b[1]-a[1]));}
+  L.m=m;L.cum=cum;L.total=cum[m];return L;}
+// 도형 둘레 → {pts, src}: 변 i = pts[i]→pts[i+1], src[i] = 그 변으로 만들 선의 속성
+function _cutLoop(s){
+  var pts=[],src=[],base=s.label?{label:s.label}:{};
+  if(s.kind==='rect'){
+    var x=s.x,y=s.y,w=s.w,h=s.h,N=8,cr=_rcInfo;
+    ['tl','tr','br','bl'].forEach(function(ck){
+      var info=cr(s,ck);
+      if(info.type==='fillet'&&info.r>0){var a=_rcArc(s,ck);for(var k=0;k<=N;k++){var t=a.a0+(a.a1-a.a0)*k/N;pts.push([a.x+a.r*Math.cos(t),a.y+a.r*Math.sin(t)]);src.push(k<N?{arcR:Math.round(info.r*10)/10}:{});}}
+      else if(info.type==='chamfer'&&info.r>0){var p1=_rcPIn(s,ck),p2=_rcPOut(s,ck);pts.push([p1.x,p1.y],[p2.x,p2.y]);src.push({},{});}
+      else{pts.push({tl:[x,y],tr:[x+w,y],br:[x+w,y+h],bl:[x,y+h]}[ck]);src.push({});}
+    });
+    if(s.rotation){var f=_rectXf(s),cx=x+w/2,cy=y+h/2;pts=pts.map(function(p){var q=f(p[0]-cx,p[1]-cy);return[q.x,q.y];});}
+  } else if(s.kind==='circle'){for(var i=0;i<72;i++){var t2=i/72*2*Math.PI;pts.push([s.cx+s.r*Math.cos(t2),s.cy+s.r*Math.sin(t2)]);src.push({arcR:Math.round(s.r*10)/10});}}
+  else if(s.kind==='ellipse'){pts=_ellPts(s,_ELL_N);var lab='타원 '+_fmtDim(s.rx*2)+'×'+_fmtDim(s.ry*2);pts.forEach(function(){src.push({ellArc:lab});});}
+  return _cutPrep({pts:pts,src:src.map(function(o){return Object.assign({},base,o);}),base:base});
+}
+// 이어진 선 목록 → 닫힌 고리면 {pts, src(= 선 도형)}, 아니면 null
+function _cutLineLoop(L){
+  var used=L.map(function(){return false;}),pts=[[L[0].x1,L[0].y1]],src=[L[0]],end=[L[0].x2,L[0].y2];used[0]=true;
+  function eq(a,b,c){return Math.hypot(a-b[0],c-b[1])<2;}
+  for(var g=1;g<L.length;g++){var nx=-1,rev=false;
+    for(var i=0;i<L.length;i++){if(used[i])continue;if(eq(L[i].x1,end,L[i].y1)){nx=i;break;}if(eq(L[i].x2,end,L[i].y2)){nx=i;rev=true;break;}}
+    if(nx<0)return null;used[nx]=true;pts.push(end);src.push(L[nx]);end=rev?[L[nx].x1,L[nx].y1]:[L[nx].x2,L[nx].y2];}
+  if(L.length<3||Math.hypot(end[0]-pts[0][0],end[1]-pts[0][1])>=2)return null;
+  return _cutPrep({pts:pts,src:src,base:L[0].label?{label:L[0].label}:{}});
+}
+function _cutProj(L,x,y){var best=null,n=L.pts.length;
+  for(var i=0;i<L.m;i++){var a=L.pts[i],b=L.pts[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l2=dx*dx+dy*dy;if(l2<1e-9)continue;
+    var t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/l2)),px=a[0]+dx*t,py=a[1]+dy*t,d=Math.hypot(x-px,y-py);
+    if(!best||d<best.d)best={d:d,s:L.cum[i]+t*Math.sqrt(l2),i:i};}
+  return best;}
+function _cutAt(L,s){
+  s=L.open?Math.max(0,Math.min(L.total,s)):((s%L.total)+L.total)%L.total;var n=L.pts.length;
+  for(var i=0;i<L.m;i++)if(s<=L.cum[i+1]+1e-9||i===L.m-1){var a=L.pts[i],b=L.pts[(i+1)%n],l=L.cum[i+1]-L.cum[i],t=l>0?(s-L.cum[i])/l:0;
+    return{x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,i:i,u:l>0?[(b[0]-a[0])/l,(b[1]-a[1])/l]:[1,0],s:s};}
+}
+function _cutIn(L,x,y){var c=false,P=L.pts;for(var i=0,j=P.length-1;i<P.length;j=i++){var a=P[i],b=P[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+// 마우스 아래 자를 도형 (변에서 12px 안, 가장 가까운 것)
+function _cutFind(mx,my){
+  var tol=12/scale,best=null;
+  function test(L,tgt){if(!L||!L.m)return;var pr=_cutProj(L,mx,my);if(!pr)return;var d=pr.d;
+    if(tgt.s&&tgt.s.kind==='rect')_rectCorners(tgt.s).forEach(function(c){d=Math.min(d,Math.hypot(mx-c.x,my-c.y));}); // 라운드 코너도 진짜 꼭짓점을 누르면 잡힘
+    if(d<=tol&&(!best||d<best.d))best={loop:L,tgt:tgt,d:d};}
+  shapes.forEach(function(s){
+    if(s.kind==='rect'&&!s.groupId&&s.w>0&&s.h>0)test(_cutLoop(s),{s:s});
+    else if((s.kind==='circle'&&s.holeType!=='faucet'&&s.holeType!=='outlet'&&!s.groupId)||(s.kind==='ellipse'&&!s.hole&&!s.groupId))test(_cutLoop(s),{s:s});
+  });
+  _lineBoundaryGroups().forEach(function(g){
+    var L=g.map(function(it){return it.s;}),lp=_cutLineLoop(L);
+    if(lp)test(lp,{lines:L});
+    else L.forEach(function(l){test(_cutPrep({pts:[[l.x1,l.y1],[l.x2,l.y2]],src:[l],open:true}),{line:l});});
+  });
+  return best;
+}
+function _cutSetP(st){
+  if(st.rc){ // 사각형 꼭짓점에서 시작: 라운드·모따기여도 진짜 꼭짓점에서 변 따라 잰 거리 (1000×500 → 400 / 600)
+    var c=st.rc,d=Math.min(st.dist,c.len[c.k]),x=c.o[0]+c.d[c.k][0]*d,y=c.o[1]+c.d[c.k][1]*d,L=st.loop,pr=_cutProj(L,x,y),p=_cutAt(L,pr.s);
+    p.x=x;p.y=y;st.dist=d;st.sign=(p.u[0]*c.d[c.k][0]+p.u[1]*c.d[c.k][1])<0?-1:1;st.P=p;return;}
+  st.P=_cutAt(st.loop,st.sA+st.sign*st.dist);
+}
+// 2단계: P에서 재료 쪽으로 가르는 방향 → 맞은편 변 Q
+function _cutChord(st,shift){
+  var L=st.loop,P=st.P,u=[P.u[0]*st.sign,P.u[1]*st.sign],n=[-u[1],u[0]],S=st.tgt.s;
+  if(!_cutIn(L,P.x+n[0]*0.5,P.y+n[1]*0.5)){n=[-n[0],-n[1]];if(!_cutIn(L,P.x+n[0]*0.5,P.y+n[1]*0.5)){st.Q=null;return;}}
+  if(S&&(S.kind==='circle'||S.kind==='ellipse')){ // 원·타원은 근사 선분 말고 진짜 법선(안쪽)으로
+    var w;if(S.kind==='circle')w=[S.cx-P.x,S.cy-P.y];
+    else{var lc=_ellLocal(S,P.x,P.y),gx=-lc[0]/(S.rx*S.rx),gy=-lc[1]/(S.ry*S.ry),ro=S.rotation||0;w=[gx*Math.cos(ro)-gy*Math.sin(ro),gx*Math.sin(ro)+gy*Math.cos(ro)];}
+    var wl=Math.hypot(w[0],w[1]);if(wl>1e-9){n=[w[0]/wl,w[1]/wl];var u2=[n[1],-n[0]];if(u2[0]*u[0]+u2[1]*u[1]<0)u2=[-u2[0],-u2[1]];u=u2;}
+  }
+  var d=n;
+  if(shift&&st.mouse){var vx=st.mouse[0]-P.x,vy=st.mouse[1]-P.y,vl=Math.hypot(vx,vy);if(vl>1e-6&&(vx*n[0]+vy*n[1])/vl>0.02)d=[vx/vl,vy/vl];}
+  else if(st.ang!=null){var r=st.ang*Math.PI/180;d=[u[0]*Math.cos(r)+n[0]*Math.sin(r),u[1]*Math.cos(r)+n[1]*Math.sin(r)];}
+  st.angNow=Math.round(Math.atan2(d[0]*n[0]+d[1]*n[1],d[0]*u[0]+d[1]*u[1])*1800/Math.PI)/10;
+  var best=null,N=L.pts.length;
+  for(var j=0;j<L.m;j++){var a=L.pts[j],b=L.pts[(j+1)%N],ex=b[0]-a[0],ey=b[1]-a[1],den=d[0]*ey-d[1]*ex;if(Math.abs(den)<1e-12)continue;
+    var wx=a[0]-P.x,wy=a[1]-P.y,t=(wx*ey-wy*ex)/den,q=(wx*d[1]-wy*d[0])/den;
+    if(t>0.5&&q>=-1e-6&&q<=1+1e-6&&(!best||t<best.t))best={t:t,j:j,x:P.x+d[0]*t,y:P.y+d[1]*t};}
+  st.Q=best&&best.j!==P.i?best:null;
+}
+// 둘레 고리를 P(변 i)–Q(변 j) 가르는 선으로 두 고리 → [[{a,b,src}],…]
+function _cutSplit(L,P,Q,cutSrc){
+  var N=L.pts.length;
+  function walk(p,i,q,j){var segs=[],cur=[p.x,p.y],k=i;
+    for(var g=0;g<=N+1;g++){if(k===j){segs.push({a:cur,b:[q.x,q.y],src:L.src[k]});segs.push({a:[q.x,q.y],b:[p.x,p.y],src:cutSrc});
+        return segs.filter(function(sg){return Math.hypot(sg.b[0]-sg.a[0],sg.b[1]-sg.a[1])>0.3;});}
+      var nx=L.pts[(k+1)%N];segs.push({a:cur,b:nx,src:L.src[k]});cur=nx;k=(k+1)%N;}
+    return null;}
+  var A=walk(P,P.i,Q,Q.j);cutSrc=Object.assign({},cutSrc,{cutTwin:true});var B=walk(Q,Q.j,P,P.i); // 둘째 조각의 가르는 선 = 편집 화면 치수 안 겹치게
+  return A&&B&&A.length>=3&&B.length>=3?[A,B]:null;
+}
+function _cutProps(o){var p=JSON.parse(JSON.stringify(o||{}));['id','kind','x1','y1','x2','y2','arcMid','ellMid','lp','shapeNum','pos3d','mid3d','midFace','ops','userGroupId','dimOffPx','angR'].forEach(function(k){delete p[k];});return p;}
+// 한 조각 고리 → 선 도형들 (곡선 근사 구간마다 가운데 선분에만 치수 글자)
+function _cutLines(segs){
+  var lp='lp'+(nextId++),out=segs.map(function(sg){return makeShape('line',Object.assign(_cutProps(sg.src),{x1:sg.a[0],y1:sg.a[1],x2:sg.b[0],y2:sg.b[1],lp:lp}));});
+  for(var i=0;i<out.length;){var k=out[i].arcR!==undefined?'arcR':out[i].ellArc!==undefined?'ellArc':null;
+    if(!k){i++;continue;}var j=i;while(j+1<out.length&&out[j+1][k]===out[i][k])j++;out[(i+j)>>1][k==='arcR'?'arcMid':'ellMid']=true;i=j+1;}
+  return out;
+}
+// 둘레 가공 표시(고스라·졸리컷·밑면연마)가 (x,y)를 지나면 거기서 둘로
+function _cutMarksAt(x,y){
+  shapes.slice().forEach(function(m){
+    if(['gosramark','jollymark','grindregion'].indexOf(m.kind)<0||m.groupId)return;
+    var dx=m.x2-m.x1,dy=m.y2-m.y1,L=Math.hypot(dx,dy);if(L<2)return;
+    var t=((x-m.x1)*dx+(y-m.y1)*dy)/(L*L),d=Math.abs((x-m.x1)*dy-(y-m.y1)*dx)/L;
+    if(d>2||t*L<1||t*L>L-1)return;
+    var ex=m.x1+dx*t,ey=m.y1+dy*t,m2=JSON.parse(JSON.stringify(m));m2.id=nextId++;
+    m.x2=ex;m.y2=ey;m2.x1=ex;m2.y1=ey;shapes.splice(shapes.indexOf(m)+1,0,m2);
+  });
+}
+// 회전 없는 사각형을 축 방향으로 끝까지 자르면 사각형 둘 (가르는 선이 라운드·모따기 코너를 지나면 false → 선 조각으로)
+function _cutRectAxis(s,P,Q){
+  if(s.rotation)return false;
+  var x=s.x,y=s.y,w=s.w,h=s.h,e=0.5,v=Math.abs(P.x-Q.x)<0.01,hz=Math.abs(P.y-Q.y)<0.01;if(!v&&!hz)return false;
+  var lo=v?Math.min(P.y,Q.y):Math.min(P.x,Q.x),hi=v?Math.max(P.y,Q.y):Math.max(P.x,Q.x);
+  if(v?(Math.abs(lo-y)>e||Math.abs(hi-y-h)>e):(Math.abs(lo-x)>e||Math.abs(hi-x-w)>e))return false;
+  var c=v?P.x:P.y,a=v?c-x:c-y,b=v?x+w-c:y+h-c;if(a<1||b<1)return false;
+  var C={};['tl','tr','br','bl'].forEach(function(ck){var r=_rcInfo(s,ck);if(r.type&&r.r>0)C[ck]={type:r.type,r:r.r};});
+  var K1=v?['tl','bl']:['tl','tr'],K2=v?['tr','br']:['bl','br'];
+  if(K1.some(function(k){return C[k]&&C[k].r>a+0.01;})||K2.some(function(k){return C[k]&&C[k].r>b+0.01;}))return false;
+  var s2=JSON.parse(JSON.stringify(s));s2.id=nextId++;['shapeNum','pos3d','mid3d','midFace','userGroupId'].forEach(function(k){delete s2[k];});
+  function pick(K){var o={};K.forEach(function(k){if(C[k])o[k]=C[k];});return o;}
+  s.cornerType=s2.cornerType='none';s.cornerSize=s2.cornerSize=0;s.corners=pick(K1);s2.corners=pick(K2);
+  if(v){s.w=a;s2.x=c;s2.w=b;}else{s.h=a;s2.y=c;s2.h=b;}
+  shapes.splice(shapes.indexOf(s)+1,0,s2);return true;
+}
+function _cutDo(){
+  var st=_cutSt;if(!st||!st.Q)return;
+  var t=st.tgt,L=st.loop,P=st.P,Q=st.Q,polys=_cutSplit(L,P,Q,Object.assign({},L.base));if(!polys)return;
+  saveHistory();
+  _cutMarksAt(P.x,P.y);_cutMarksAt(Q.x,Q.y);
+  if(!(t.s&&t.s.kind==='rect'&&_cutRectAxis(t.s,P,Q))){
+    var olds=t.s?[t.s]:t.lines,at=Math.min.apply(null,olds.map(function(o){return shapes.indexOf(o);}));
+    shapes=shapes.filter(function(o){return olds.indexOf(o)<0;});
+    var nl=_cutLines(polys[0]).concat(_cutLines(polys[1]));
+    shapes.splice.apply(shapes,[at,0].concat(nl));
+  }
+  _savedBoardLayout=null;_savedBoardImg=null;selectedShapes=[];hoverShape=null;_cutSt=null;
+  updatePropsPanel();redraw();calcCost();
+}
+// 열린 선 하나: P에서 둘로
+function _cutLineAt(st){
+  var l=st.tgt.line,P=st.P;if(st.dist<1||st.dist>st.loop.total-1)return;
+  saveHistory();_cutMarksAt(P.x,P.y);
+  var l2=JSON.parse(JSON.stringify(l));l2.id=nextId++;delete l2.shapeNum;
+  l.x2=P.x;l.y2=P.y;l2.x1=P.x;l2.y1=P.y;shapes.splice(shapes.indexOf(l)+1,0,l2);
+  _savedBoardLayout=null;_savedBoardImg=null;_cutSt=null;selectedShapes=[];updatePropsPanel();redraw();calcCost();
+}
+function _cutFixP(){var st=_cutSt;if(!st||st.dist<1)return;
+  if(st.tgt.line){_cutLineAt(st);return;}
+  st.stage=2;st.buf='';st.ang=null;_cutChord(st,shiftDown);_cutRedraw();}
+function _cutDown(mx,my,e){
+  var st=_cutSt;
+  if(!st){
+    var f=_cutFind(mx,my);if(!f)return;
+    var L=f.loop,pr=_cutProj(L,mx,my),sA=pr.s,vt=10/scale;
+    // 꼭짓점(곡선 근사 안쪽 점은 빼고) 가까이면 꼭짓점에서 시작
+    for(var i=0;i<=L.m;i++){var p=L.pts[i%L.pts.length];if(!p)continue;var prev=L.src[(i-1+L.pts.length)%L.pts.length],cur=L.src[i%L.pts.length];
+      if(!L.open&&prev&&cur&&((prev.arcR!==undefined&&cur.arcR!==undefined)||(prev.ellArc!==undefined&&cur.ellArc!==undefined)))continue;
+      if(Math.hypot(mx-p[0],my-p[1])<=vt){sA=L.cum[Math.min(i,L.m)];break;}}
+    var rc=null,R=f.tgt.s;
+    if(R&&R.kind==='rect'){var cn=_rectCorners(R),ux=(cn[1].x-cn[0].x)/R.w,uy=(cn[1].y-cn[0].y)/R.w,dirs=[[ux,uy],[-uy,ux],[-ux,-uy],[uy,-ux]]; // 꼭짓점 tl,tr,br,bl → 시계 방향 다음 변 / 앞 변
+      cn.forEach(function(c,i){if(!rc&&Math.hypot(mx-c.x,my-c.y)<=vt){var lens=[R.w,R.h,R.w,R.h];rc={o:[c.x,c.y],d:[dirs[i],[-dirs[(i+3)%4][0],-dirs[(i+3)%4][1]]],len:[lens[i],lens[(i+3)%4]],k:0};}});}
+    _cutSt={stage:1,loop:L,tgt:f.tgt,sA:sA,sign:1,dist:0,buf:'',down:[e.offsetX,e.offsetY],mouse:[mx,my],rc:rc};
+    _cutSetP(_cutSt);_cutRedraw();return;
+  }
+  st.mouse=[mx,my];
+  if(st.stage===1){_cutMove(mx,my,e.shiftKey);_cutFixP();return;}
+  if(st.stage===2){_cutMove(mx,my,e.shiftKey);_cutDo();}
+}
+function _cutUp(e){var st=_cutSt;if(!st)return;if(st.stage===1&&st.down&&Math.hypot(e.offsetX-st.down[0],e.offsetY-st.down[1])>6)_cutFixP();if(_cutSt)_cutSt.down=null;}
+function _cutMove(mx,my,shift){
+  var st=_cutSt;if(!st){_cutHover=_cutFind(mx,my);return;}
+  st.mouse=[mx,my];
+  if(st.stage===1&&!st.buf&&st.rc){ // 꼭짓점에서: 두 변 중 마우스 쪽으로 더 나간 변
+    var c=st.rc,vx=mx-c.o[0],vy=my-c.o[1],p0=vx*c.d[0][0]+vy*c.d[0][1],p1=vx*c.d[1][0]+vy*c.d[1][1];
+    c.k=p1>p0?1:0;st.dist=Math.max(0,Math.round(Math.max(p0,p1)));_cutSetP(st);
+  } else if(st.stage===1&&!st.buf){
+    var L=st.loop,pr=_cutProj(L,mx,my);if(!pr)return;var d=pr.s-st.sA;
+    if(!L.open){var T=L.total;d=((d%T)+T)%T;if(d>T/2)d-=T;}
+    if(Math.abs(d)>0.5)st.sign=d<0?-1:1;st.dist=Math.round(Math.abs(d));_cutSetP(st);
+  } else if(st.stage===2)_cutChord(st,shift);
+}
+var _cutHover=null;
+function _cutKey(e){
+  var st=_cutSt;if(!st)return false;
+  if(e.key==='Escape'){if(st.stage===2){st.stage=1;st.buf='';st.Q=null;}else _cutSt=null;_cutRedraw();return true;}
+  if(/^[0-9.]$/.test(e.key)){st.buf+=e.key;_cutRedraw();return true;}
+  if(e.key==='Backspace'){st.buf=st.buf.slice(0,-1);_cutRedraw();return true;}
+  if(e.key==='Enter'){
+    var v=parseFloat(st.buf);st.buf='';
+    if(st.stage===1){if(v>0){st.dist=st.rc||st.loop.open?Math.min(v,st.rc?Infinity:st.loop.total):v%st.loop.total;_cutSetP(st);}_cutFixP();}
+    else{if(v>0&&v<180)st.ang=v;_cutChord(st,false);_cutDo();}
+    return true;
+  }
+  return false;
+}
+function _cutRedraw(){redraw();_cutPreview();}
+// 미리보기: 고른 도형 둘레(하늘색), 시작점→P 구간(금색), 가르는 선(빨강 점선) + 마우스 옆 안내
+function _cutPreview(){
+  if(tool!=='cut')return;
+  var st=_cutSt,L=st?st.loop:(_cutHover&&_cutHover.loop);
+  ctx.save();ctx.setLineDash([]);
+  if(L){var n=L.pts.length;ctx.strokeStyle='rgba(0,229,255,0.85)';ctx.lineWidth=st?2:3;ctx.shadowColor='rgba(0,229,255,0.5)';ctx.shadowBlur=8;ctx.beginPath();
+    L.pts.forEach(function(p,i){var c=toCanvas(p[0],p[1]);if(i)ctx.lineTo(c[0],c[1]);else ctx.moveTo(c[0],c[1]);});if(!L.open)ctx.closePath();ctx.stroke();ctx.shadowBlur=0;}
+  var px=toCanvas(lastMx||0,lastMy||0),l1,hint;
+  if(st){
+    var P=st.P,pc=toCanvas(P.x,P.y),A=st.rc?{x:st.rc.o[0],y:st.rc.o[1]}:_cutAt(L,st.sA),ac=toCanvas(A.x,A.y);
+    if(st.dist>0&&st.rc){ctx.strokeStyle='#FFD740';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(ac[0],ac[1]);ctx.lineTo(pc[0],pc[1]);ctx.stroke();}
+    else if(st.dist>0){ctx.strokeStyle='#FFD740';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(ac[0],ac[1]);var steps=Math.max(1,Math.ceil(st.dist/5));
+      for(var k=1;k<=Math.min(steps,400);k++){var q=_cutAt(L,st.sA+st.sign*st.dist*k/Math.min(steps,400)),qc=toCanvas(q.x,q.y);ctx.lineTo(qc[0],qc[1]);}ctx.stroke();}
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ac[0],ac[1],4,0,2*Math.PI);ctx.fill();
+    ctx.fillStyle='#FFD740';ctx.beginPath();ctx.arc(pc[0],pc[1],5,0,2*Math.PI);ctx.fill();
+    var N=L.pts.length,seg=st.sign>0?L.pts[(P.i+1)%N]:L.pts[P.i],rem=st.rc?Math.round(st.rc.len[st.rc.k]-st.dist):seg?Math.round(Math.hypot(seg[0]-P.x,seg[1]-P.y)):0;
+    if(st.stage===2&&st.Q){var qc2=toCanvas(st.Q.x,st.Q.y);ctx.strokeStyle='#FF5252';ctx.lineWidth=2.5;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(pc[0],pc[1]);ctx.lineTo(qc2[0],qc2[1]);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#FF5252';ctx.beginPath();ctx.arc(qc2[0],qc2[1],4,0,2*Math.PI);ctx.fill();}
+    if(st.stage===1){l1='거리 '+(st.buf?st.buf+'▏':st.dist)+'   (이 변 남은 '+rem+')';hint='변 따라 마우스 · 숫자+Enter = 거리 · 클릭 = 이 점 · Esc = 취소';}
+    else{var cl=st.Q?Math.round(Math.hypot(st.Q.x-P.x,st.Q.y-P.y)):0;
+      l1=st.Q?('각도 '+(st.buf?st.buf+'▏':st.angNow+'°')+'   자르는 선 '+cl+'   (나뉘는 변 '+st.dist+' / '+rem+')'):'자를 수 없는 방향';
+      hint='클릭·Enter = 자르기 · Shift = 마우스 방향 · 숫자+Enter = 각도 · Esc = 뒤로';}
+  } else {l1=_cutHover?'시작점 클릭 (꼭짓점에 붙음)':'자를 도형의 변을 클릭';hint='사각형·선 조각·원·타원·선 — 고스라·졸리컷·밑면연마도 같이 나뉨';}
+  ctx.font='bold 13px "Malgun Gothic",sans-serif';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic",sans-serif';var w=Math.max(w1,ctx.measureText(hint).width)+14,x=px[0]+18,y=px[1]+18;
+  if(x+w>cv.width-4)x=px[0]-18-w;if(y+38>cv.height-4)y=px[1]-18-38;
+  ctx.fillStyle='rgba(10,18,34,0.94)';ctx.fillRect(x,y,w,38);ctx.strokeStyle='#2A4F92';ctx.lineWidth=1;ctx.strokeRect(x,y,w,38);
+  ctx.textBaseline='top';ctx.textAlign='left';ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.fillStyle=st&&st.buf?'#FFD740':'#E3B861';ctx.fillText(l1,x+7,y+4);
+  ctx.font='11px "Malgun Gothic",sans-serif';ctx.fillStyle='#A9B4C8';ctx.fillText(hint,x+7,y+21);
+  ctx.restore();
+}
 function doTrim(mx,my){
   var ne=_nearestEdge(mx,my,10/scale),nc=_nearestCurve(mx,my,10/scale);
   if(nc&&(!ne||nc.d<ne.d))return _trimCurve(nc); // 원·호·타원을 눌렀으면 곡선 트림
@@ -5036,7 +5275,7 @@ function _lineBoundaryGroups(){
   for(var a=0;a<n;a++){
     for(var b=a+1;b<n;b++){
       var la=items[a].s,lb=items[b].s;
-      if(ptEq(la.x1,la.y1,lb.x1,lb.y1)||ptEq(la.x1,la.y1,lb.x2,lb.y2)||ptEq(la.x2,la.y2,lb.x1,lb.y1)||ptEq(la.x2,la.y2,lb.x2,lb.y2)){
+      if(_cutLpOk(la,lb)&&(ptEq(la.x1,la.y1,lb.x1,lb.y1)||ptEq(la.x1,la.y1,lb.x2,lb.y2)||ptEq(la.x2,la.y2,lb.x1,lb.y1)||ptEq(la.x2,la.y2,lb.x2,lb.y2))){ // 자른 선 조각(lp 다름)끼리는 안 묶음
         union(a,b);
       }
     }
@@ -5571,6 +5810,9 @@ cv.addEventListener('mousedown',function(e){
   } else if(tool==='trim'){
     cv.focus();doTrim(mx,my);
 
+  } else if(tool==='cut'){
+    cv.focus();_cutDown(mx,my,e);
+
   } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&(_h.lineDim||_h.drag);})()){
     // 선 절단 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
     var _hd=hitDim(e.offsetX,e.offsetY);
@@ -5632,6 +5874,7 @@ cv.addEventListener('pointerup',function(e){
   if(e.button!==0)return;
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
   if(tool==='line'){if(!dimDragInfo)_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지 (치수 끌기 중이면 그쪽)
+  if(tool==='cut'){_cutUp(e);return;} // 자르기: 시작점에서 끌다 놓으면 그 점이 P
   if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
   // 길이 치수: 첫 점에서 끌어서 놓으면 놓은 곳이 두 번째 점
   if(tool==='dimline'&&_dimSt&&_dimSt.stage===1&&_dimSt.down&&Math.hypot(e.offsetX-_dimSt.down[0],e.offsetY-_dimSt.down[1])>6){
@@ -5765,6 +6008,7 @@ cv.addEventListener('mousemove',function(e){
   drawGuides(mx,my);
   if(tool==='dimline'&&_dimSt)_dimPreview(mx,my,e.shiftKey);
   if(tool==='ellipse')_ellPreview(mx,my);
+  if(tool==='cut'){_cutMove(mx,my,e.shiftKey);_cutPreview();}
 
   if(drawStart){
     var x0=drawStart[0],y0=drawStart[1];
@@ -6267,6 +6511,11 @@ document.addEventListener('keydown',function(e){
   if(tool==='ellipse'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
     if(_ellKey(e)){e.preventDefault();e.stopPropagation();return;}
   }
+  // 자르기: 숫자·Backspace·Enter·Esc (입력칸에 쓰는 중이면 제외), Shift = 각도 미리보기 바로
+  if(tool==='cut'&&_cutSt&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
+    if(_cutKey(e)){e.preventDefault();e.stopPropagation();return;}
+    if(e.key==='Shift'&&_cutSt.stage===2){_cutChord(_cutSt,true);_cutRedraw();}
+  }
   // 글자 입력칸(현장·제품명·단가 등)에서는 Ctrl+C·V·X·Z·A·Y를 브라우저 기본(글자 복사·붙여넣기·되돌리기)으로 — 도형 복사/붙여넣기·되돌리기로 가로채지 않음 (2026-10-29)
   var _ae=document.activeElement||{};
   if((e.ctrlKey||e.metaKey)&&!e.altKey&&(/^Key[CVXZAY]$/.test(e.code||'')||/^(c|v|x|z|a|y)$/i.test(e.key||''))&&(/INPUT|TEXTAREA|SELECT/.test(_ae.tagName||'')||_ae.isContentEditable)&&!(_ae.type==='checkbox'||_ae.type==='radio'||_ae.type==='button'))return;
@@ -6326,7 +6575,7 @@ document.addEventListener('keydown',function(e){
     redraw();
   }
 });
-document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;}});
+document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;if(tool==='cut'&&_cutSt&&_cutSt.stage===2){_cutChord(_cutSt,false);_cutRedraw();}}});
 
 // ═══ 도구 버튼 ═══
 var _TOOL_SUBS={fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
@@ -6335,7 +6584,7 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
     if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 절단 이어 그리기 끝
-    tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;_ellSt=null;
+    tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;_ellSt=null;_cutSt=null;_cutHover=null;
     document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
     // 도구별 보조 칸: 고른 도구 것만 보이기
@@ -6695,7 +6944,7 @@ function _collectBoardItems(){
   });
   // 같은 자리에 두 번 그린 선(양 끝이 같음)은 하나만 — 겹친 선이 있으면 닫힌 조각으로 안 이어짐
   freeLines=freeLines.filter(function(s,i){return !freeLines.slice(0,i).some(function(o){
-    return (Math.hypot(o.x1-s.x1,o.y1-s.y1)<1&&Math.hypot(o.x2-s.x2,o.y2-s.y2)<1)||(Math.hypot(o.x1-s.x2,o.y1-s.y2)<1&&Math.hypot(o.x2-s.x1,o.y2-s.y1)<1);});});
+    return _cutLpOk(o,s)&&((Math.hypot(o.x1-s.x1,o.y1-s.y1)<1&&Math.hypot(o.x2-s.x2,o.y2-s.y2)<1)||(Math.hypot(o.x1-s.x2,o.y1-s.y2)<1&&Math.hypot(o.x2-s.x1,o.y2-s.y1)<1));});}); // 자른 두 조각의 맞댄 선(lp 다름)은 둘 다 남김
   var usedLines=freeLines.map(function(){return false;});
   var lineTol=2; // 연결 판정 허용 오차(mm)
   for(var li=0;li<freeLines.length;li++){
@@ -6706,8 +6955,8 @@ function _collectBoardItems(){
       for(var lj=0;lj<freeLines.length;lj++){if(usedLines[lj])continue;
         var ll=freeLines[lj];
         var conn=grp.some(function(g){
-          return Math.hypot(g.x1-ll.x1,g.y1-ll.y1)<lineTol||Math.hypot(g.x1-ll.x2,g.y1-ll.y2)<lineTol||
-                 Math.hypot(g.x2-ll.x1,g.y2-ll.y1)<lineTol||Math.hypot(g.x2-ll.x2,g.y2-ll.y2)<lineTol;
+          return _cutLpOk(g,ll)&&(Math.hypot(g.x1-ll.x1,g.y1-ll.y1)<lineTol||Math.hypot(g.x1-ll.x2,g.y1-ll.y2)<lineTol||
+                 Math.hypot(g.x2-ll.x1,g.y2-ll.y1)<lineTol||Math.hypot(g.x2-ll.x2,g.y2-ll.y2)<lineTol);
         });
         if(conn){grp.push(ll);usedLines[lj]=true;changed2=true;}
       }

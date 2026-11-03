@@ -139,6 +139,10 @@
 - 곡선 트림(2026-11-03 사용자 요청): `doTrim`이 `_nearestCurve`(원형 절단 `holeType:'cut'`·호·타원, 타공 원 제외)가 변보다 가까우면 `_trimCurve` —
   원·호는 각도로(교점 `_segCirc` 선-원·`_circCirc` 원-원, 호 범위 `_arcNorm/_angIn`): 원 = 클릭 구간 빼고 호 하나(교점 1개면 못 자름, 0개면 지움), 호 = 줄이거나 둘로;
   타원 = `_ELL_N` 꺾은선 위치로 → 남는 부분은 line들(`ellArc:'타원 장축×단축'`, 가운데 하나 `ellMid` — arcR처럼 길이·각도 치수 없이 그 글자만: drawDimsLine·_lineAngleMarks·_lineDimPlan·도면화·DXF, 선 트림하면 복사). 선·사각형 변을 자를 때 교점은 `_trimHitsSeg`(선·사각형 변·원·호·타원 모두). 트림 호버는 곡선 전체 빛(`trimHoverEdge.curve`)
+- 자르기 도구(`cut`, 2026-11-03 사용자 요청 "1000×500 → 400×500 / 600×500", 트림 아래 단추): `_cutSt` 단계 — 변 클릭(`_cutFind`: rect·선 조각 고리 `_cutLineLoop`·원·타원·열린 선, 사각형은 진짜 꼭짓점 `st.rc`에서 변 따라 잼)
+  → 1단계 P = 둘레 따라 마우스(`_cutMove`/`_cutSetP`, 정수 mm)·숫자+Enter = 거리·끌다 놓기 → 2단계 가르는 선 `_cutChord`(기본 = 변에 수직, 원·타원은 진짜 법선, Shift = 마우스 방향, 숫자+Enter = 지나온 변과의 각도) → 맞은편 변 Q
+  → `_cutDo`: 회전 없는 사각형 축 방향 = `_cutRectAxis`(사각형 둘, 코너는 제자리 쪽), 그 밖 = `_cutSplit` 두 고리 → `_cutLines`(선 조각, 곡선 근사 = arcR/ellArc 가운데만 글자). `_cutMarksAt`가 P·Q에서 고스라·졸리컷·밑면연마를 둘로.
+  선 `lp`(조각 표지) = 맞댄 두 선 조각이 끝점으로 안 묶이게 — `_cutLpOk`를 `_collectBoardItems`(겹친 선 하나만·이어짐)·`_lineBoundaryGroups`가 씀. 둘째 조각 가르는 선 `cutTwin` = 편집 화면 길이 치수 하나만. 미리보기·안내 `_cutPreview`
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
