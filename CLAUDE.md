@@ -142,7 +142,7 @@
     `_unfitReason`(조각 번호·이름·크기·제품 + 긴 변/짧은 변이 원판 유효 길이/폭(여백 10씩 뺌)보다 큰지) — 저장 배치 복원 때는 없음(못 놓은 조각이 있으면 복원 안 됨)
   - 미배치 칸(2026-11-02 사용자 요청): 원판 배치 창 오른쪽 `_bsParkW` 폭(창에서만, 도면화 그림엔 없음, `_bs.parkX` = 칸 시작 px, 다음 쪽 화살표도 그 왼쪽).
     조각을 끌어 칸 위에서 놓으면(`_bs.overPark`) `_bs.parked`로, 칸 조각을 누르면 `_bs.parkDrag`(원판 배율로 커서에, 놓을 수 없는 원판이면 빨간 테두리) → 원판 위 놓기 `_bsPlaceParked`(같은 제품만·`_bsFitDims`),
-    칸에서 오른쪽 클릭 = 90°. 겹침 정리 `_bsResolve`(밀어내고 그래도 겹치면 놓은 조각을 가장 가까운 빈 자리로), 빈 장 정리 `_bsCleanBoards`(빈 장도 제품 이름 유지).
+    칸에서 오른쪽 클릭 = 90°. 칸 조각마다 위에 제품명(`_itemProd`, 제품 색 ■, 칸 폭에 맞게 …로 줄임). 겹침 정리 `_bsResolve`(밀어내고 그래도 겹치면 놓은 조각을 가장 가까운 빈 자리로), 빈 장 정리 `_bsCleanBoards`(빈 장도 제품 이름 유지).
     남긴 채 닫으면 confirm → `_bsAutoPlaceParked`(같은 제품 원판 빈 자리 10mm 훑기, 없으면 그 제품 새 장)
   - 원판 장수(2026-11-03 사용자 요청 — 머리줄 단추는 보기 싫다고 해서 오른쪽 클릭 메뉴로): 원판 빈 곳 오른쪽 클릭(oncontextmenu, 조각 위는 돌리기) → `_bsCtxShow(bi)` 메뉴 `#board-ctx`
     → `_bsAddBoard(bi)` = 그 장 바로 뒤에 같은 제품 빈 장 `keep`(그룹 count·뒤 그룹 startBi `_bsShiftGroups`), `_bsDelBoard(bi)` = 그 장 빼기(조각은 `_bs.parked`로, 제품마다 최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,

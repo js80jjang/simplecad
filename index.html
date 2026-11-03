@@ -7328,6 +7328,10 @@ function _bsDrawPark(g,cv,sc,ref,k){
   (par.length?['원판으로 끌어 다시 놓기','오른쪽 클릭 = 90° 돌리기']:['조각을 여기로 끌어','잠시 빼 둘 수 있어요']).forEach(function(t,i){g.fillText(t,x0+pw/2,34+i*14);});
   var y=70,pad=12;_bs.parkRects=[];
   par.forEach(function(p,i){
+    // 제품명 (2026-11-03 사용자 요청 — 어느 제품 원판에 놓을 조각인지): 제품 색 ■ + 이름, 칸 폭에 맞게 줄임
+    var pn=_itemProd(p.item.shape)||'',pi2=_prodIdxOf(pn);
+    if(pn){g.font='bold 11px '+_EXP_FONT;g.textAlign='center';g.textBaseline='top';var t=pn;while(t.length>2&&g.measureText('■ '+t).width>pw-2*pad)t=t.slice(0,-2)+'…';
+      var tw=g.measureText('■ '+t).width,tx=x0+(pw-tw)/2;g.textAlign='left';g.fillStyle=pi2>=0?_prodColor(pi2):'#56647E';g.fillText('■',tx,y);g.fillStyle='#1F3F7A';g.fillText(' '+t,tx+g.measureText('■').width,y);y+=15;}
     var s2=Math.min(sc,(pw-2*pad)/p.pw,(H*0.42)/p.ph),w=p.pw*s2,h=p.ph*s2,x=x0+(pw-w)/2;
     _bs.parkRects.push({p:p,x:x,y:y,w:w,h:h,s:s2});
     if(!(_bs.parkDrag&&_bs.parkDrag.p===p))_boardPiece(g,p,i,x,y,s2,ref,k*Math.min(1,s2/sc),{img:null,bx:x0,by:y,w:pw,h:h,board:[]});
