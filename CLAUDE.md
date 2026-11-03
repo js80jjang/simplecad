@@ -84,6 +84,8 @@
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
   `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
+  - 편집 화면 자기 폭·높이 치수(`drawDims`, 2026-11-03 사용자 요청 "겹쳐서 고르기 어렵다"): 화면에서 90×60px 넘으면 안쪽(`inW/inH`: 아래 변·왼쪽 변 14px 안, 보조선 없음),
+    작으면 위치 치수(drawNestDims = 상판 변에 가까운 쪽)의 반대쪽 바깥. 사용자가 끌어 옮겼으면(dimUserOffsetW/H) 그대로
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)

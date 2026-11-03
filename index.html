@@ -2331,10 +2331,14 @@ function drawDims(s,col){
   var sel=isSelected(s);
   var rot=s.rotation||0;
   var offW=s.dimOffsetW||15,offH=s.dimOffsetH||15;
-  // 싱크볼/쿡탑: 일반 뷰에서 H=왼쪽, W=아래
+  // 싱크볼/쿡탑: 자기 폭·높이 치수는 위치 치수(drawNestDims = 상판 변에 가까운 쪽)의 반대쪽에 — 같은 쪽에 겹쳐 고르기 어렵던 것 (2026-11-03)
+  //   위·아래 중 상판 변까지 먼 쪽에 W, 왼·오른쪽 중 먼 쪽에 H (같으면 예전대로 W 아래·H 왼쪽)
   if(s.groupRole==='main'){
-    if(!s.dimUserOffsetH)offH=-Math.abs(offH);
-    if(!s.dimUserOffsetW)offW=Math.abs(offW);
+    var _ob=null,_oa=Infinity;shapes.forEach(function(o){if(o!==s&&o.kind==='rect'&&!o.groupId&&isInsideRect(s,o)&&o.w*o.h<_oa){_oa=o.w*o.h;_ob=o;}});
+    _ob=_ob?_axisBox(_ob):_boundaryBBox(s);var _ib=getBBox(s);
+    var _gT=_ob?_ib.t-_ob.y:1,_gB=_ob?_ob.y+_ob.h-_ib.b:1,_gL=_ob?_ib.l-_ob.x:1,_gR=_ob?_ob.x+_ob.w-_ib.r:0;
+    if(!s.dimUserOffsetH)offH=_gL<=_gR?Math.abs(offH):-Math.abs(offH); // 위치 치수가 왼쪽이면 H는 오른쪽
+    if(!s.dimUserOffsetW)offW=_gT<=_gB?Math.abs(offW):-Math.abs(offW); // 위치 치수가 위면 W는 아래, 아래면 W는 위
   }
   // printRender: H 치수 오른쪽에 인접 rect 있으면 → 왼쪽 여백으로 자동 이동
   if(printRender&&!s.groupRole&&!s.dimUserOffsetH&&offH>=0){
@@ -2353,6 +2357,8 @@ function drawDims(s,col){
     if(_bn_)offW=-Math.abs(offW);
   }
   var rw_=mm2px(s.w),rh_=mm2px(s.h);
+  // 싱크볼/쿡탑이 화면에서 충분히 크면 폭·높이 치수를 안쪽(아래 변·왼쪽 변 바로 안)에 — 바깥은 위치 치수·밑면연마 빗금·상판 치수가 몰려 있음 (편집 화면만)
+  var inW=s.groupRole==='main'&&!printRender&&!s.dimUserOffsetW&&rw_>90&&rh_>60,inH=s.groupRole==='main'&&!printRender&&!s.dimUserOffsetH&&rw_>90&&rh_>60;
   var cx_mm=s.x+s.w/2,cy_mm=s.y+s.h/2;
   var cc_=toCanvas(cx_mm,cy_mm);
   // 회전 변환 적용: 회전된 rect는 로컬 좌표계(중심=0,0)에서 그림
@@ -2366,9 +2372,10 @@ function drawDims(s,col){
   var mx2=(x1c+x2c)/2;
   // W 치수 (offW>=0: 아래, offW<0: 위)
   if(!(s.hideDims&&s.hideDims['w'])&&!(printRender&&s._skipPrintW)){
-  var wy=offW>=0?y2c+offW:y1c+offW;
+  var wy=inW?y2c-14:(offW>=0?y2c+offW:y1c+offW);
   var filletH1=(tool==='fillet'&&filletSel.length===1&&filletSel[0].shape===s&&filletSel[0].field==='w');
-  if(offW>=0){
+  if(inW){} // 안쪽: 보조선 없이 치수선만
+  else if(offW>=0){
     ctx.beginPath();ctx.moveTo(x1c,y2c);ctx.lineTo(x1c,wy+4);ctx.stroke();
     ctx.beginPath();ctx.moveTo(x2c,y2c);ctx.lineTo(x2c,wy+4);ctx.stroke();
   } else {
@@ -2379,7 +2386,7 @@ function drawDims(s,col){
   // 양 끝 화살촉 + 치수선 자체도 잡아서 옮길 수 있게 등록
   if(x2c-x1c>3*_DIM_AH()){arrowHead(x1c,wy,Math.PI,_DIM_AH(),'#E53935');arrowHead(x2c,wy,0,_DIM_AH(),'#E53935');}
   dimLabels.push({shape:s,field:'w',px:NaN,py:NaN,line:[l2c(x1c,wy),l2c(x2c,wy)]});
-  var wlpy=offW>=0?wy+(printRender?35:9):wy-(printRender?40:4);
+  var wlpy=inW?wy-8:(offW>=0?wy+(printRender?35:9):wy-(printRender?40:4));
   if(filletH1){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(mx2-38,wlpy-9,76,18);}
   // 회전된 사각형이어도 글자는 거꾸로 서지 않게 (_uprightAng)
@@ -2388,10 +2395,11 @@ function drawDims(s,col){
   } // end W dim
   // H 치수 (offH>=0: 오른쪽, offH<0: 왼쪽)
   if(!(s.hideDims&&s.hideDims['h'])&&!(printRender&&s._skipPrintH)){
-  var hx=offH>=0?x2c+offH:x1c+offH;
+  var hx=inH?x1c+14:(offH>=0?x2c+offH:x1c+offH);
   var my2=(y1c+y2c)/2;
   var filletH2=(tool==='fillet'&&filletSel.length===1&&filletSel[0].shape===s&&filletSel[0].field==='h');
-  if(offH>=0){
+  if(inH){} // 안쪽: 보조선 없이 치수선만
+  else if(offH>=0){
     ctx.beginPath();ctx.moveTo(x2c,y1c);ctx.lineTo(hx+4,y1c);ctx.stroke();
     ctx.beginPath();ctx.moveTo(x2c,y2c);ctx.lineTo(hx+4,y2c);ctx.stroke();
   } else {
@@ -2401,7 +2409,7 @@ function drawDims(s,col){
   ctx.beginPath();ctx.moveTo(hx,y1c);ctx.lineTo(hx,y2c);ctx.stroke();
   if(y2c-y1c>3*_DIM_AH()){arrowHead(hx,y1c,-Math.PI/2,_DIM_AH(),'#E53935');arrowHead(hx,y2c,Math.PI/2,_DIM_AH(),'#E53935');}
   dimLabels.push({shape:s,field:'h',px:NaN,py:NaN,line:[l2c(hx,y1c),l2c(hx,y2c)]});
-  var hlpx=offH>=0?hx+(printRender?40:13):hx-(printRender?40:13);
+  var hlpx=inH?hx+11:(offH>=0?hx+(printRender?40:13):hx-(printRender?40:13));
   // H 텍스트는 세로(90° 회전)로 그리므로 음영도 텍스트 중심(hlpx,my2) 기준 세로 박스
   if(filletH2){ctx.fillStyle='rgba(255,109,0,0.2)';ctx.fillRect(hlpx-9,my2-38,18,76);}
   else if(sel){ctx.fillStyle='rgba(255,215,64,0.12)';ctx.fillRect(hlpx-9,my2-38,18,76);}
