@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-11-04",
+"updated":"2026-11-05",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -142,8 +142,19 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006415/image/list/1000006415_list_093.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006415/image/list/1000006415_list_077.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006415",
+"cate":"009003"
+},
+{
+"id":"1000006413",
+"name":"슬레이트 다크",
+"en":"SLATE DARK",
+"size":"1600×3200×12T",
+"price":732100,
+"m2":143000,
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006413/image/list/1000006413_list_065.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006413",
 "cate":"009003"
 },
 {
@@ -329,7 +340,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006408/image/list/1000006408_list_042.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006408/image/list/1000006408_list_06.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006408",
 "cate":"009003"
 },
@@ -384,7 +395,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006402/image/list/1000006402_list_039.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006402/image/list/1000006402_list_032.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006402",
 "cate":"009003"
 },
