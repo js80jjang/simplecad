@@ -5796,7 +5796,9 @@ cv.addEventListener('mousedown',function(e){
     var _lgAt=_lineGroupAt(mx,my);
     // 여러 개 선택된 도형 위를 누르면 치수 글자보다 끌어 옮기기가 먼저 (선 길이 글자가 선 바로 옆이라 옮기려다 길이 편집이 열리던 것)
     var _onSel=selectedShapes.length>1&&(hitTestAll(mx,my).some(function(h){return selectedShapes.indexOf(h)>=0;})||(_lgAt&&_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;})));
-    var dh=_onSel?null:hitDim(e.offsetX,e.offsetY);
+    var dh=hitDim(e.offsetX,e.offsetY);
+    // 단, 싱크볼·쿡탑 묶음(본체+고스라 = 여러 개 선택)의 안쪽 폭·높이 글자는 도형 위에 있어도 치수 편집 (2026-11-04 사용자 요청)
+    if(_onSel&&!(dh&&dh.shape&&dh.shape.groupRole==='main'&&(dh.field==='w'||dh.field==='h')&&isFinite(dh.px)))dh=null;
     if(dh&&(dh.field!=='_dist'||dh.drag)){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}

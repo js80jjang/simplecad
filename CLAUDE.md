@@ -86,6 +86,7 @@
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
   - 편집 화면 자기 폭·높이 치수(`drawDims`, 2026-11-03 사용자 요청 "겹쳐서 고르기 어렵다"): 화면에서 90×60px 넘으면 안쪽(`inW/inH`: 아래 변·왼쪽 변 14px 안, 보조선 없음),
     작으면 위치 치수(drawNestDims = 상판 변에 가까운 쪽)의 반대쪽 바깥. 사용자가 끌어 옮겼으면(dimUserOffsetW/H) 그대로
+    — 묶음이 선택돼 있으면(여러 개 선택 `_onSel` = 도형 끌기 우선) 원래 치수 클릭을 건너뛰지만, 본체의 w/h 글자는 예외로 치수 편집(2026-11-04)
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
