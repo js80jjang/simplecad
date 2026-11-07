@@ -8871,13 +8871,6 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;path([[qb.l,qb.t],[qb.r,qb.t],[qb.r,qb.b],[qb.l,qb.b]]);g.fill();g.stroke();});
     pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
     // 객체 이름 (싱크볼·쿡탑·식기세척기·타공…) — 구멍 가운데, 칸에 맞게 줄이고 너무 작으면 생략 (2026-11-07 사용자 요청)
-    var _cn=function(q,cx,cy,bw,bh){var nm=_objName(q);if(!nm)return;
-      g.save();var f=Math.min(26*k,bh*0.45);g.font='bold '+Math.round(f)+'px '+FONT;var tw=g.measureText(nm).width;
-      if(tw>bw*0.9){f*=bw*0.9/tw;g.font='bold '+Math.round(f)+'px '+FONT;}
-      if(f>=9*k){g.textAlign='center';g.textBaseline='middle';g.fillStyle=_hexA(cc[0],0.9);g.fillText(nm,cx,cy);}
-      g.restore();};
-    pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var a=M(qb.l,qb.t),b=M(qb.r,qb.b);_cn(q,(a[0]+b[0])/2,(a[1]+b[1])/2,Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]));});
-    pc.holes.forEach(function(q){var m=M(q.cx,q.cy),d=2*q.r*sc;_cn(q,m[0],m[1],d*0.95,d*0.6);});
   }
   // 이름 + 크기 (회전 배치는 ↻)
   var nm=pc?_expPieceName(pc.s):'',sz=p.item.label?_pLabel(p):(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
@@ -8909,6 +8902,29 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
       }
       if(_best){lx=_best[0];ly=_best[1];}
     }
+  }
+  // 객체 이름 (싱크볼·쿡탑·식기세척기·타공…) — 구멍 가운데, 칸에 맞게 줄이고 너무 작으면 생략 (2026-11-07 사용자 요청)
+  //   조각 이름·크기 글자가 빈 곳을 못 찾아 구멍 위에 남았으면 그 글자 위/아래(안 되면 옆)로 비켜 그림 — 겹치면 안 그림
+  if(pc){
+    var _LB=null;
+    if(fs>=minF){
+      g.save();var _lw=0;lines.forEach(function(t,li){var isName=nm&&li===0,f=isName?fs:Math.max(minF,fs*0.72);g.font=(isName?'bold ':'')+Math.round(f)+'px '+FONT;_lw=Math.max(_lw,g.measureText(t).width);});g.restore();
+      var _a=_lw/2+4*k,_b=lines.length*fs*0.75+2*k;if(vertical){var _t=_a;_a=_b;_b=_t;}
+      _LB=[lx-_a,ly-_b,lx+_a,ly+_b];
+    }
+    var _cn=function(q,cx,cy,bw,bh,X0,Y0,X1,Y1){var nm2=_objName(q);if(!nm2)return;
+      g.save();var f=Math.min(26*k,bh*0.45);g.font='bold '+Math.round(f)+'px '+FONT;var tw=g.measureText(nm2).width;
+      if(tw>bw*0.9){f*=bw*0.9/tw;g.font='bold '+Math.round(f)+'px '+FONT;tw=g.measureText(nm2).width;}
+      var hx=tw/2+2*k,hy=f/2+1*k,ov=function(x,y){return _LB&&x+hx>_LB[0]&&x-hx<_LB[2]&&y+hy>_LB[1]&&y-hy<_LB[3];};
+      if(f>=9*k&&ov(cx,cy)){
+        var gp=3*k,cand=[[cx,_LB[1]-gp-hy],[cx,_LB[3]+gp+hy],[_LB[0]-gp-hx,cy],[_LB[2]+gp+hx,cy]],ok=null,bd=Infinity;
+        cand.forEach(function(c){if(c[0]-hx<X0||c[0]+hx>X1||c[1]-hy<Y0||c[1]+hy>Y1||ov(c[0],c[1]))return;var d=Math.hypot(c[0]-cx,c[1]-cy);if(d<bd){bd=d;ok=c;}});
+        if(ok){cx=ok[0];cy=ok[1];}else f=0;
+      }
+      if(f>=9*k){g.textAlign='center';g.textBaseline='middle';g.fillStyle=_hexA(cc[0],0.9);g.fillText(nm2,cx,cy);}
+      g.restore();};
+    pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var a=M(qb.l,qb.t),b=M(qb.r,qb.b),X0=Math.min(a[0],b[0]),Y0=Math.min(a[1],b[1]),X1=Math.max(a[0],b[0]),Y1=Math.max(a[1],b[1]);_cn(q,(X0+X1)/2,(Y0+Y1)/2,X1-X0,Y1-Y0,X0+2*k,Y0+2*k,X1-2*k,Y1-2*k);});
+    pc.holes.forEach(function(q){var m=M(q.cx,q.cy),d=2*q.r*sc,r=q.r*sc*0.8;_cn(q,m[0],m[1],d*0.95,d*0.6,m[0]-r,m[1]-r,m[0]+r,m[1]+r);});
   }
   // 조각 번호 (번호 표시가 켜져 있을 때)
   var _pn=null;
