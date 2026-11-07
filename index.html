@@ -778,7 +778,7 @@ function assignProduct(i){
     shapes.forEach(function(sh){if((s.groupId&&sh.groupId===s.groupId)||(s.userGroupId&&sh.userGroupId===s.userGroupId))set.add(sh);});
   });
   // 선 조각은 이어진 선 전체를 같은 제품으로
-  _collectBoardItems().forEach(function(it){var sh=it.shape;if(sh.kind==='linegroup'&&sh.lines.some(function(l){return set.has(l);}))sh.lines.forEach(function(l){set.add(l);});});
+  _collectBoardItems().forEach(function(it){var sh=it.shape;if(sh.kind==='linegroup'&&sh.lines.some(function(l){return set.has(_realOf(l));}))sh.lines.forEach(function(l){set.add(_realOf(l));});});
   set.forEach(function(s){s.label=name;});
   _savedBoardLayout=null;_savedBoardImg=null; // 제품이 바뀌면 원판 배치는 새로
   redraw();calcCost();
@@ -5748,7 +5748,7 @@ function _lineGroupAt(mx,my){
     var loop=_expChain(sh.lines);if(!loop)return;
     var inside=false;
     for(var i=0,j=loop.length-1;i<loop.length;j=i++){var a=loop[i],b=loop[j];if((a[1]>my)!==(b[1]>my)&&mx<(b[0]-a[0])*(my-a[1])/(b[1]-a[1])+a[0])inside=!inside;}
-    if(inside&&sh.w*sh.h<ba){ba=sh.w*sh.h;best=sh.lines;}
+    if(inside&&sh.w*sh.h<ba){ba=sh.w*sh.h;best=sh.lines.map(_realOf).filter(function(l,i,a){return a.indexOf(l)===i;});} // 호 대리 선분 → 원래 호
   });
   return best;
 }
@@ -7013,6 +7013,19 @@ function _lineInRect(s,r){
   function on(a,b,v){return Math.abs(a-v)<=t&&Math.abs(b-v)<=t;}
   return !(on(s.y1,s.y2,T)||on(s.y1,s.y2,B)||on(s.x1,s.x2,L)||on(s.x1,s.x2,R));
 }
+// 호(arc)를 선 조각에 넣을 때 쓰는 대리 선분(5° 간격, 도형 목록에는 없음, arcR = 곡선 근사 → 길이·각도 치수 없음, 가운데 하나 arcMid = R 글자).
+//   같은 호면 같은 객체를 돌려줌(조각 Map·배치 복원이 객체로 비교). _realOf(l) = 대리 선분이면 원래 호
+var _arcSegCache=new WeakMap();
+function _arcSegs(a){
+  var r=_arcNorm(a),sig=[a.cx,a.cy,a.r,r[0],r[1],a.label,a.pieceName,a.shapeNum,a.piece3d].join('|'),c=_arcSegCache.get(a);
+  if(c&&c.sig===sig)return c.segs;
+  var n=Math.max(2,Math.min(Math.ceil((r[1]-r[0])/(Math.PI/36)),Math.floor((r[1]-r[0])*a.r/4))),segs=[]; // 선분이 이음 허용 오차(2mm)보다 길게 (작은 호)
+  for(var i=0;i<n;i++){var t0=r[0]+(r[1]-r[0])*i/n,t1=r[0]+(r[1]-r[0])*(i+1)/n;
+    segs.push({kind:'line',id:a.id,_arcOf:a,x1:a.cx+a.r*Math.cos(t0),y1:a.cy+a.r*Math.sin(t0),x2:a.cx+a.r*Math.cos(t1),y2:a.cy+a.r*Math.sin(t1),arcR:a.r,label:a.label,pieceName:a.pieceName,piece3d:a.piece3d});}
+  segs[n>>1].arcMid=true;
+  _arcSegCache.set(a,{sig:sig,segs:segs});return segs;
+}
+function _realOf(l){return l&&l._arcOf||l;}
 function _collectBoardItems(){
   var physical=['rect','circle','hole','ellipse'];
   var allPhysical=shapes.filter(function(s){return physical.indexOf(s.kind)>=0;});
@@ -7029,6 +7042,12 @@ function _collectBoardItems(){
   // 같은 자리에 두 번 그린 선(양 끝이 같음)은 하나만 — 겹친 선이 있으면 닫힌 조각으로 안 이어짐
   freeLines=freeLines.filter(function(s,i){return !freeLines.slice(0,i).some(function(o){
     return _cutLpOk(o,s)&&((Math.hypot(o.x1-s.x1,o.y1-s.y1)<1&&Math.hypot(o.x2-s.x2,o.y2-s.y2)<1)||(Math.hypot(o.x1-s.x2,o.y1-s.y2)<1&&Math.hypot(o.x2-s.x1,o.y2-s.y1)<1));});}); // 자른 두 조각의 맞댄 선(lp 다름)은 둘 다 남김
+  // 트림으로 생긴 호(arc)도 선 조각의 변으로 — 짧은 대리 선분(_arcSegs)으로 이어 붙임 (2026-11-07 사용자 요청 "원판 배치에 여러 모양")
+  shapes.forEach(function(a){
+    if(a.kind!=='arc'||a.groupId||!(a.r>0))return;
+    var sg=_arcSegs(a);if(allRects.some(function(r){return _lineInRect(sg[sg.length>>1],r);}))return;
+    freeLines=freeLines.concat(sg);
+  });
   var usedLines=freeLines.map(function(){return false;});
   var lineTol=2; // 연결 판정 허용 오차(mm)
   for(var li=0;li<freeLines.length;li++){
@@ -7045,6 +7064,7 @@ function _collectBoardItems(){
         if(conn){grp.push(ll);usedLines[lj]=true;changed2=true;}
       }
     }
+    grp.sort(function(a,b){return (a._arcOf?1:0)-(b._arcOf?1:0);}); // 진짜 선을 앞에 (조각 key = lines[0])
     // 그룹 BBox 계산
     var lx1=Infinity,ly1=Infinity,lx2=-Infinity,ly2=-Infinity;
     grp.forEach(function(l){lx1=Math.min(lx1,l.x1,l.x2);ly1=Math.min(ly1,l.y1,l.y2);lx2=Math.max(lx2,l.x1,l.x2);ly2=Math.max(ly2,l.y1,l.y2);});
@@ -7998,7 +8018,7 @@ function _expCollect(){
     pieces.push({s:s,bb:bb});
   });
   // 조각 순서 = 도면 순서(배열 위치) → 색/번호 일관
-  function firstIdx(p){return p.s.kind==='linegroup'?Math.min.apply(null,p.s.lines.map(function(l){return shapes.indexOf(l);})):shapes.indexOf(p.s);}
+  function firstIdx(p){return p.s.kind==='linegroup'?Math.min.apply(null,p.s.lines.map(function(l){return shapes.indexOf(_realOf(l));})):shapes.indexOf(p.s);}
   pieces.sort(function(a,b){return firstIdx(a)-firstIdx(b);});
   pieces.forEach(function(p,i){p.col=_EXP_COLS[i%_EXP_COLS.length];p.cutouts=[];p.holes=[];});
   var inPieces=pieces.map(function(p){return p.s;});
@@ -8608,7 +8628,7 @@ function _drawCleanExport(){
   });
   // ⑥-1b 선 각도 (편집 화면과 같은 자리, 조각 색)
   if(!SO)_drawAngleMarks({R:48,fs:24,exp:true,colOf:function(s){
-    for(var i=0;i<pieces.length;i++){var ps=pieces[i].s;if(ps===s||(ps.kind==='linegroup'&&ps.lines.indexOf(s)>=0))return pieces[i].col[0];}
+    for(var i=0;i<pieces.length;i++){var ps=pieces[i].s;if(ps===s||(ps.kind==='linegroup'&&ps.lines.some(function(l){return _realOf(l)===s;})))return pieces[i].col[0];}
     return '#333';
   }});
   // ⑥-2 R값(조각·싱크볼·쿡탑 라운드/모따기)과 Φ값(타공): 대각선 지시선으로, 어떤 선에도 걸치지 않는 빈 자리에
@@ -8926,7 +8946,7 @@ function _drawingBoards(){
 // 어느 조각에도 없으면(조각 밖 글자·치수선 등) 가장 가까운 조각. 싱크볼 등 그룹은 main 도형 자리로
 function _shapePieceMap(items){
   var map=new Map();
-  items.forEach(function(it,i){var sh=it.shape;if(sh.kind==='linegroup')sh.lines.forEach(function(l){map.set(l,i);});else map.set(sh,i);});
+  items.forEach(function(it,i){var sh=it.shape;if(sh.kind==='linegroup')sh.lines.forEach(function(l){map.set(_realOf(l),i);});else map.set(sh,i);});
   function inPiece(it,x,y){
     var sh=it.shape;
     if(_expPieceContains({s:sh},x,y))return true;
@@ -9331,7 +9351,7 @@ function _3dIsPanel(t){return t==='panel'||t==='front'||t==='side';} // 하부�
 function _3dFaceOf(key){return key.midFace!=null?key.midFace:(_3dIsPanel(key.piece3d)?1:0);} // 무늬 면 (판은 기본 1 = 바깥)
 // 판 자리: 상판 변 그대로(법선 = 상판 안쪽) 바닥 0부터 → 바깥면이 상판 끝과 같은 선, 두께만큼 안쪽으로
 function _3dPanelEdge(e){return Object.assign({},e,{y:0});}
-function _3dSetType(sh,t){(sh.kind==='linegroup'?sh.lines:[sh]).forEach(function(s){s.piece3d=t;});}
+function _3dSetType(sh,t){(sh.kind==='linegroup'?sh.lines:[sh]).forEach(function(s){s.piece3d=t;_realOf(s).piece3d=t;});}
 // 장면 만들기: 조각마다 {loops, bb, th, tex(캔버스), side(옆면 색), type, label}, waiting(사진 불러오는 중)
 function _3dBuildScene(){
   var pieces=_expCollect(),DB=_drawingBoards(),place=new Map(),boardCv=[];

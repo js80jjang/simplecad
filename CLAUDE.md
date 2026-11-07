@@ -154,6 +154,8 @@
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
+  - 트림으로 생긴 호(`arc`)도 선 그룹에 들어감(2026-11-07 사용자 요청): `_arcSegs(a)` = 대리 선분(5° 간격, 짧으면 4mm 이상으로 줄임, `arcR`·가운데 `arcMid`, 도형 목록엔 없음, WeakMap 캐시로 같은 객체),
+    그룹은 진짜 선을 앞에(조각 key = lines[0]). 대리 선분 → 원래 호는 `_realOf(l)` — 제품 지정·`_lineGroupAt`(끌기)·3D 구분·조각 순서·`_shapePieceMap`이 씀
   - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
   - 원판보다 커서 못 놓은 조각(2026-11-02): `_packBoardItems`가 `unplaced`([{item,prod,bw,bh,ew,eh}])로 돌려줌 → `showBoardLayout`이 머리줄 아래 빨간 상자 `#board-modal-warn`에
     `_unfitReason`(조각 번호·이름·크기·제품 + 긴 변/짧은 변이 원판 유효 길이/폭(여백 10씩 뺌)보다 큰지) — 저장 배치 복원 때는 없음(못 놓은 조각이 있으면 복원 안 됨)
