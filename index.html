@@ -3282,7 +3282,7 @@ function newProject(){
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
   _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null);_3dStyleLoad(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정·3D 디자인도 기본
   offsetX=60;offsetY=60;
-  renderProductList();updatePropsPanel();redraw();calcCost();
+  renderProductList();updatePropsPanel();redraw();calcCost();_markSaved();
 }
 // 뷰 맞춤: 모든 도형이 화면 가운데에 들어오게 확대·이동 (치수 글자 자리만큼 여백)
 function fitView(){
@@ -3325,6 +3325,25 @@ function _makeProjectData(){
   });
 }
 
+// ── 저장 안 한 변경 알림 (2026-11-07 사용자 요청 "저장하지 않고 창을 닫으려 하면 한 번 물어보기") ──
+//   도면 내용(도형·제품·작업 정보·원판 배치·3D 설정)만 비교 — 화면 이동·확대·단가는 안 셈, '_'로 시작하는 임시 속성은 뺌
+//   기준 = 저장·다른 이름으로 저장·불러오기·새로 만들기·DXF 불러오기 직후(_markSaved). 창 닫기·새로 고침 때 다르면 브라우저 확인 창(문구는 브라우저가 정함)
+var _savedSig=null;
+function _docSig(){
+  return JSON.stringify({p:products,c:(document.getElementById('company-name')||{}).value||'',a:(document.getElementById('site-addr')||{}).value||'',
+    d:(document.getElementById('deliv-date')||{}).value||'',t:(document.getElementById('deliv-time')||{}).value||'',s:shapes,b:_savedBoardLayout,o:_3dOpts,v:_3dStyle},
+    function(k,v){return k&&k.charAt(0)==='_'?undefined:v;});
+}
+function _markSaved(){try{_savedSig=_docSig();}catch(e){}}
+function _isDirty(){
+  if(_savedSig===null)return false;
+  try{return _docSig()!==_savedSig;}catch(e){return false;}
+}
+window.addEventListener('beforeunload',function(e){
+  if(!_isDirty())return;
+  e.preventDefault();e.returnValue='저장하지 않은 변경 내용이 있습니다. 창을 닫을까요?';return e.returnValue;
+});
+window.addEventListener('load',function(){setTimeout(function(){if(_savedSig===null)_markSaved();},300);}); // 처음 연 빈 도면 = 기준
 // 마지막으로 저장한 파일(핸들)을 이 PC 브라우저(IndexedDB)에 기억 → 다음 저장 창이 그 폴더에서 열림 (처음엔 바탕화면/문서)
 //   kind: 'save'(.ceramic) · 'dxf'. 핸들을 못 쓰는 환경이면 조용히 기본 위치로
 function _lastDirDb(){return new Promise(function(res,rej){var r=indexedDB.open('scd-files',1);r.onupgradeneeded=function(){r.result.createObjectStore('h');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};});}
@@ -3351,8 +3370,8 @@ async function saveProject(){
   rememberHist('siteinfo',(document.getElementById('site-info')||{}).value);
   try{
     if(_curFile.requestPermission&&(await _curFile.requestPermission({mode:'readwrite'}))!=='granted')return saveProjectAs();
-    var w=await _curFile.createWritable();await w.write(_makeProjectData());await w.close();
-    _savedFlash('btn-save');
+    var _sg=_docSig(),w=await _curFile.createWritable();await w.write(_makeProjectData());await w.close();
+    _savedSig=_sg;_savedFlash('btn-save');
   }catch(err){
     if(err.name==='AbortError')return;
     alert('불러온 파일에 저장하지 못했습니다 ('+(err.message||err.name)+').\n다른 이름으로 저장합니다.');saveProjectAs();
@@ -3360,7 +3379,7 @@ async function saveProject(){
 }
 async function saveProjectAs(){
   var defaultName=_saveBaseName(); // 업체명-주소-작성일(20261021)
-  var data=_makeProjectData();
+  var data=_makeProjectData(),_sg=_docSig();window._saveModalSig=_sg;
   rememberHist('siteinfo',(document.getElementById('site-info')||{}).value);
 
   // showSaveFilePicker 지원 시: 탐색기 형식 Save As 창 (처음 = 바탕화면, 그다음부터 지난번에 저장한 폴더, 폴더+파일명 모두 바꿀 수 있음)
@@ -3374,7 +3393,7 @@ async function saveProjectAs(){
       await writable.write(data);
       await writable.close();
       _setCurFile(fh); // 다음 "저장"은 이 파일에 그대로
-      _savedFlash('btn-save-as');
+      _savedSig=_sg;_savedFlash('btn-save-as');
       return;
     }catch(err){
       if(err.name==='AbortError')return;
@@ -3414,7 +3433,7 @@ function _doSave(){
   if(!modal)return;
   var name=(document.getElementById('sm-name').value||'도면').trim()||'도면';
   var data=window._saveModalData;
-  modal.remove();
+  modal.remove();if(window._saveModalSig)_savedSig=window._saveModalSig; // 다운로드로 저장
   var blob=new Blob([data],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -4477,7 +4496,7 @@ async function loadProject(){
 function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸들 → "💾 저장"이 그 파일에 그대로
     var reader=new FileReader();
     reader.onload=function(e){
-      if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);_setCurFile(null);}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
+      if(/\.dxf$/i.test(file.name)){try{importDxf(e.target.result);_setCurFile(null);_markSaved();}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
         var data=JSON.parse(e.target.result);
         _setCurFile(fh);_3dOptsLoad(data.view3dOpts);_3dStyleLoad(data.view3d); // 3D 보기 설정(예전 파일은 기본: 하부장·상부장 켬) · 3D 디자인 설정
@@ -4507,7 +4526,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         }
         if(data.tier&&TIER_PREFIX[data.tier])setTier(data.tier);
         selectedShapes=[];
-        renderProductList();updatePropsPanel();redraw();calcCost();
+        renderProductList();updatePropsPanel();redraw();calcCost();_markSaved();
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
     };
     reader.readAsText(file);

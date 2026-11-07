@@ -79,6 +79,8 @@
     불러오기 `loadProject`도 `showOpenFilePicker`로 지난번 불러온 폴더('open', 없으면 'save' → 바탕화면), 없는 브라우저는 파일 칸 → `_loadProjectFile(file,핸들)`
   — "💾 저장"(`saveProject`, `#btn-save`, Ctrl+S) = 지금 파일 핸들 `_curFile`(`_setCurFile`: 열기 창으로 불러온 .ceramic·다른 이름으로 저장한 파일, 새로만들기·DXF·파일 칸 불러오기면 없음)에 창 없이 덮어씀(권한 `requestPermission`),
     없으면 "다른 이름으로 저장"(`saveProjectAs`, `#btn-save-as`, Ctrl+Shift+S = 예전 저장 창 → 고른 파일이 `_curFile`)
+- 저장 안 한 변경 알림(2026-11-07 사용자 요청): `_docSig()` = 도형·제품·작업 정보·원판 배치·3D 설정 JSON('_' 속성 뺌, 화면 이동·배율·단가 제외),
+  `_markSaved()` = 기준(처음 열 때 load+300ms·새로 만들기·불러오기·DXF 불러오기, 저장·다른 이름으로 저장·다운로드 저장 성공 때 `_savedSig`) → `beforeunload`에서 `_isDirty()`면 브라우저 확인 창(문구는 크롬이 정함, 저장 단추 넣을 수 없음)
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
