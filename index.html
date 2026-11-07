@@ -8839,6 +8839,12 @@ function _objName(q){
   if(q.kind==='circle'||q.kind==='hole'){var t=q.holeType;return t==='faucet'?'수전':t==='food'?'음식물':t==='cut'?'':'콘센트';}
   return '';
 }
+function _objSize(q){ // 원판 배치 객체 이름 아래 "(가로×세로)"·"(Φ지름)"
+  if(q.kind==='rect')return '('+_fmtDim(q.w)+'×'+_fmtDim(q.h)+')';
+  if(q.kind==='ellipse')return '('+_fmtDim(2*q.rx)+'×'+_fmtDim(2*q.ry)+')';
+  if((q.kind==='circle'||q.kind==='hole')&&q.r)return '(Φ'+_fmtDim(2*q.r)+')';
+  return '';
+}
 function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
@@ -8913,15 +8919,20 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
       _LB=[lx-_a,ly-_b,lx+_a,ly+_b];
     }
     var _cn=function(q,cx,cy,bw,bh,X0,Y0,X1,Y1){var nm2=_objName(q);if(!nm2)return;
-      g.save();var f=Math.min(26*k,bh*0.45);g.font='bold '+Math.round(f)+'px '+FONT;var tw=g.measureText(nm2).width;
-      if(tw>bw*0.9){f*=bw*0.9/tw;g.font='bold '+Math.round(f)+'px '+FONT;tw=g.measureText(nm2).width;}
-      var hx=tw/2+2*k,hy=f/2+1*k,ov=function(x,y){return _LB&&x+hx>_LB[0]&&x-hx<_LB[2]&&y+hy>_LB[1]&&y-hy<_LB[3];};
+      // 이름 아래 (크기) 줄 — 두 줄이 안 들어가면 이름만 (2026-11-07 사용자 요청)
+      var s2=_objSize(q),R=0.78,fit=function(two){var f=Math.min(26*k,two?bh*0.85/(1+R*1.15):bh*0.45);g.font='bold '+Math.round(f)+'px '+FONT;var w=g.measureText(nm2).width;
+        if(two){g.font=Math.round(f*R)+'px '+FONT;w=Math.max(w,g.measureText(s2).width);}if(w>bw*0.9){f*=bw*0.9/w;w=bw*0.9;}return[f,w];};
+      g.save();var two=!!s2,fw=fit(two);if(two&&fw[0]<9*k){two=false;fw=fit(false);}
+      var f=fw[0],tw=fw[1],L2=two?f*R*1.15:0;
+      var hx=tw/2+2*k,hy=(f+L2)/2+1*k,ov=function(x,y){return _LB&&x+hx>_LB[0]&&x-hx<_LB[2]&&y+hy>_LB[1]&&y-hy<_LB[3];};
       if(f>=9*k&&ov(cx,cy)){
         var gp=3*k,cand=[[cx,_LB[1]-gp-hy],[cx,_LB[3]+gp+hy],[_LB[0]-gp-hx,cy],[_LB[2]+gp+hx,cy]],ok=null,bd=Infinity;
         cand.forEach(function(c){if(c[0]-hx<X0||c[0]+hx>X1||c[1]-hy<Y0||c[1]+hy>Y1||ov(c[0],c[1]))return;var d=Math.hypot(c[0]-cx,c[1]-cy);if(d<bd){bd=d;ok=c;}});
         if(ok){cx=ok[0];cy=ok[1];}else f=0;
       }
-      if(f>=9*k){g.textAlign='center';g.textBaseline='middle';g.fillStyle=_hexA(cc[0],0.9);g.fillText(nm2,cx,cy);}
+      if(f>=9*k){g.textAlign='center';g.textBaseline='middle';g.fillStyle=_hexA(cc[0],0.9);
+        g.font='bold '+Math.round(f)+'px '+FONT;g.fillText(nm2,cx,cy-L2/2);
+        if(two){g.font=Math.round(f*R)+'px '+FONT;g.fillText(s2,cx,cy+f/2);}}
       g.restore();};
     pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var a=M(qb.l,qb.t),b=M(qb.r,qb.b),X0=Math.min(a[0],b[0]),Y0=Math.min(a[1],b[1]),X1=Math.max(a[0],b[0]),Y1=Math.max(a[1],b[1]);_cn(q,(X0+X1)/2,(Y0+Y1)/2,X1-X0,Y1-Y0,X0+2*k,Y0+2*k,X1-2*k,Y1-2*k);});
     pc.holes.forEach(function(q){var m=M(q.cx,q.cy),d=2*q.r*sc,r=q.r*sc*0.8;_cn(q,m[0],m[1],d*0.95,d*0.6,m[0]-r,m[1]-r,m[0]+r,m[1]+r);});
