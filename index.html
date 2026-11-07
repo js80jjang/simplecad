@@ -8789,6 +8789,13 @@ function _boardSheen(g,bx,by,w,h,gloss,k){
 }
 // 조각 하나: 도면과 같은 색 채움+외곽, 타공부/타공(흰색), 이름+크기, 번호. (ox,oy)=배치 좌상단 px
 // tex: {img,bx,by,w,h} 제품 원판 사진과 원판 상자(px) — 있으면 조각을 무늬로 채움
+// 조각 안 객체(타공부·타공) 이름 — 원판 배치 글자용
+function _objName(q){
+  if(q.kind==='rect'){var at=_applianceType(q);return at==='sink'?'싱크볼':at==='cook'?'쿡탑':at==='dish'?'식기세척기':at==='hole'?'사각타공':'타공';}
+  if(q.kind==='ellipse')return q.hole?'타원타공':'타원';
+  if(q.kind==='circle'||q.kind==='hole'){var t=q.holeType;return t==='faucet'?'수전':t==='food'?'음식물':t==='cut'?'':'콘센트';}
+  return '';
+}
 function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
@@ -8803,6 +8810,7 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var rot=p.item.rot||0,cr=Math.cos(rot),sr=Math.sin(rot);
   var iw=rot?p.item.w:bb.r-bb.l;
   function M(x,y){var u=rot?x*cr-y*sr-p.item.rx0:x-bb.l,v=rot?x*sr+y*cr-p.item.ry0:y-bb.t;return p.rotated?[ox+v*sc,oy+(iw-u)*sc]:[ox+u*sc,oy+v*sc];}
+  function _Minv(px,py){var a=(px-ox)/sc,b=(py-oy)/sc,u=p.rotated?iw-b:a,v=p.rotated?a:b;if(rot){var U=u+p.item.rx0,V=v+p.item.ry0;return[U*cr+V*sr,-U*sr+V*cr];}return[u+bb.l,v+bb.t];} // 배치 px → 도형 mm (M의 반대)
   function path(pts){g.beginPath();pts.forEach(function(q,i){var m=M(q[0],q[1]);if(i)g.lineTo(m[0],m[1]);else g.moveTo(m[0],m[1]);});g.closePath();}
   g.setLineDash([]);g.fillStyle='#ffffff';g.strokeStyle=cc[0];g.lineWidth=3*k; // 조각 안 음영 없이 흰색, 외곽선만 조각 색
   if(sh.kind==='linegroup'){var loop=_expChain(sh.lines);if(loop)path(loop);else{g.beginPath();g.rect(ox,oy,pw,ph);}}
@@ -8819,6 +8827,14 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     g.fillStyle='#ffffff';g.lineWidth=2*k;
     pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;path([[qb.l,qb.t],[qb.r,qb.t],[qb.r,qb.b],[qb.l,qb.b]]);g.fill();g.stroke();});
     pc.holes.forEach(function(q){var m=M(q.cx,q.cy);g.beginPath();g.arc(m[0],m[1],Math.max(2,q.r*sc),0,2*Math.PI);g.fill();g.stroke();});
+    // 객체 이름 (싱크볼·쿡탑·식기세척기·타공…) — 구멍 가운데, 칸에 맞게 줄이고 너무 작으면 생략 (2026-11-07 사용자 요청)
+    var _cn=function(q,cx,cy,bw,bh){var nm=_objName(q);if(!nm)return;
+      g.save();var f=Math.min(26*k,bh*0.45);g.font='bold '+Math.round(f)+'px '+FONT;var tw=g.measureText(nm).width;
+      if(tw>bw*0.9){f*=bw*0.9/tw;g.font='bold '+Math.round(f)+'px '+FONT;}
+      if(f>=9*k){g.textAlign='center';g.textBaseline='middle';g.fillStyle=_hexA(cc[0],0.9);g.fillText(nm,cx,cy);}
+      g.restore();};
+    pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var a=M(qb.l,qb.t),b=M(qb.r,qb.b);_cn(q,(a[0]+b[0])/2,(a[1]+b[1])/2,Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]));});
+    pc.holes.forEach(function(q){var m=M(q.cx,q.cy),d=2*q.r*sc;_cn(q,m[0],m[1],d*0.95,d*0.6);});
   }
   // 이름 + 크기 (회전 배치는 ↻)
   var nm=pc?_expPieceName(pc.s):'',sz=p.item.label?_pLabel(p):(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
@@ -8831,6 +8847,25 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var lx=ox+pw/2,ly=oy+ph/2;
   if(sh.kind==='linegroup'&&pc){ // ㄱ자 등: 상자 가운데가 빈 곳일 수 있어 도형 면적 중심에
     var cpt=_expLabelPoint(pc),wpt=[(cpt[0]-offsetX)/scale,(cpt[1]-offsetY)/scale],mp=M(wpt[0],wpt[1]);lx=mp[0];ly=mp[1];
+  }
+  // 조각 이름·크기 글자가 타공부·타공(객체 이름) 위에 겹치면 조각 안 빈 곳으로 옮김
+  if(pc&&(pc.cutouts.length||pc.holes.length)&&fs>=minF&&!vertical){
+    var _ob=[];
+    pc.cutouts.forEach(function(q){var qb=getBBoxAny(q);if(!qb)return;var a=M(qb.l,qb.t),b=M(qb.r,qb.b);_ob.push([Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])]);});
+    pc.holes.forEach(function(q){var m=M(q.cx,q.cy),r=q.r*sc;_ob.push([m[0]-r,m[1]-r,m[0]+r,m[1]+r]);});
+    g.save();g.font='bold '+Math.round(fs)+'px '+FONT;var _tw=Math.max.apply(null,lines.map(function(t){return g.measureText(t).width;}));g.restore();
+    var _hw=_tw/2+4*k,_hh=lines.length*fs*0.75+2*k;
+    var _hit=function(x,y){return _ob.some(function(o){return x+_hw>o[0]&&x-_hw<o[2]&&y+_hh>o[1]&&y-_hh<o[3];});};
+    if(_hit(lx,ly)){
+      var _best=null,_bd=Infinity;
+      for(var _fy=0.05;_fy<=0.951;_fy+=0.05)for(var _fx=0.05;_fx<=0.951;_fx+=0.05){
+        var _x=ox+pw*_fx,_y=oy+ph*_fy;
+        if(_x-_hw<ox+2||_x+_hw>ox+pw-2||_y-_hh<oy+2||_y+_hh>oy+ph-2||_hit(_x,_y))continue;
+        if(sh.kind==='linegroup'&&![[-1,-1],[1,-1],[1,1],[-1,1]].every(function(c){var w=_Minv(_x+c[0]*_hw,_y+c[1]*_hh);return _expPieceContains(pc,w[0],w[1]);}))continue; // ㄱ자 등: 글자 상자가 조각 안에
+        var _d=Math.hypot(_x-lx,(_y-ly)*1.5);if(_d<_bd){_bd=_d;_best=[_x,_y];}
+      }
+      if(_best){lx=_best[0];ly=_best[1];}
+    }
   }
   // 조각 번호 (번호 표시가 켜져 있을 때)
   var _pn=null;
