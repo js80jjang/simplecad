@@ -242,8 +242,8 @@ canvas{display:block;cursor:crosshair}
     <button onclick="groupSelected()" style="flex:1;padding:4px 2px;font-size:11px;background:#121D33;border:1px solid #16233D;color:#E3B861;border-radius:3px;cursor:pointer" title="선택 도형 그룹화">&#128279; 그룹화</button>
     <button onclick="ungroupSelected()" style="flex:1;padding:4px 2px;font-size:11px;background:#121D33;border:1px solid #16233D;color:#FFB74D;border-radius:3px;cursor:pointer" title="그룹 해제">&#128278; 해제</button>
   </div>
-  <div class="tgl">절단 가공</div>
-  <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 절단</button>
+  <div class="tgl">커팅 가공</div>
+  <button class="tool-btn" data-tool="rect"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="13.5" height="9.5" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 사각 커팅</button>
   <button class="tool-btn" data-tool="circle"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/></svg> 타공</button>
   <div class="fillet-sub" id="circle-sub">
     <label id="circle-phi-row">Φ(mm):<input type="number" id="circle-phi" value="35" min="1" step="1"></label>
@@ -255,24 +255,38 @@ canvas{display:block;cursor:crosshair}
       <button id="hole-type-ell" onclick="setPendingHoleType('ell')" title="타원 타공 (W×H 칸 크기, 가공비 = 콘센트 타공)" style="flex:1;padding:3px 2px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:#121D33;color:#fff">타원</button>
     </div>
   </div>
-  <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 절단</button>
+  <button class="tool-btn" data-tool="circlecut"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 원형 커팅</button>
   <div class="fillet-sub" id="circlecut-sub">
     <label>Φ(mm):<input type="number" id="circlecut-phi" value="300" min="1" step="1"></label>
   </div>
-  <button class="tool-btn" data-tool="ellipse"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><ellipse cx="8" cy="5.5" rx="7" ry="4.5" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 타원 절단</button>
+  <button class="tool-btn" data-tool="ellipse"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><ellipse cx="8" cy="5.5" rx="7" ry="4.5" stroke="#ffffff" stroke-width="1.5" fill="none"/></svg> 타원형 커팅</button>
   <div class="fillet-sub" id="ellipse-sub" style="font-size:10.5px;color:#A9B4C8;line-height:1.5">
     오토캐드 ELLIPSE처럼: 축 끝점 → 다른 끝점 → 다른 축 거리<br>
     <b style="color:#E3B861">C</b> = 중심부터 · 숫자+Enter = 길이 · Shift = 비스듬히 · Esc = 취소
   </div>
-  <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg> 선 절단 <span style="font-size:9px;color:#56647E;margin-left:2px">Shift=자유</span></button>
+  <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg> 직선 커팅 <span style="font-size:9px;color:#56647E;margin-left:2px">Shift=자유</span></button>
+  <div class="tgl">객체 삽입</div>
   <button class="tool-btn" data-tool="sinkbowl"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="1.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><ellipse cx="8" cy="6" rx="4.5" ry="3" stroke="#2A4F92" stroke-width="1.2" fill="rgba(33,150,243,0.2)"/></svg> 싱크볼</button>
   <button class="tool-btn" data-tool="cooktop"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><circle cx="5" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="5" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/></svg> 쿡탑</button>
-  <div class="tgl">추가 가공 / 편집</div>
-  <button class="tool-btn" data-tool="fillet"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><path d="M5,1 L13,1 L13,10 L1,10 L1,5 Q1,1 5,1 Z" stroke="#FFD740" stroke-width="1.5" fill="none"/></svg> 라운드</button>
+  <button class="tool-btn" data-tool="dishwasher" title="식기세척기(상부개폐형) 타공 470×460, 고스라 없음, 가공비 = 쿡탑 단가"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#AB47BC" stroke-width="1.5" fill="none"/><line x1="3" y1="4" x2="13" y2="4" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="6.5" x2="13" y2="6.5" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="9" x2="13" y2="9" stroke="#AB47BC" stroke-width="1"/></svg> 식기세척기 <span style="font-size:9px;color:#56647E;margin-left:2px">상부개폐형</span></button>
+  <button class="tool-btn" data-tool="foodhole" title="음식물투입구 Φ160, 고스라 없음"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#8D6E63" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/><circle cx="6.5" cy="6.5" r="2" fill="#8D6E63"/></svg> 음식물투입구</button>
+  <div class="tgl">추가 가공</div>
+  <button class="tool-btn" data-tool="fillet"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><path d="M5,1 L13,1 L13,10 L1,10 L1,5 Q1,1 5,1 Z" stroke="#FFD740" stroke-width="1.5" fill="none"/></svg> 모서리 라운드</button>
   <div class="fillet-sub" id="fillet-sub">
     <label>R(mm):<input type="number" id="fillet-r" value="5" min="0.5" step="0.5"></label>
     <button onclick="applyChamfer5()" style="margin-top:4px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#CE93D8;border-radius:3px;cursor:pointer;font-size:11px">C5 라운드 적용</button>
   </div>
+  <button class="tool-btn" data-tool="grind"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="9.5" x2="15" y2="9.5" stroke="#FFD740" stroke-width="1.5"/><line x1="3" y1="2" x2="5" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="2" x2="9" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="2" x2="13" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/></svg> 밑면연마</button>
+  <div class="fillet-sub" id="grind-sub" style="display:none">
+    <label>깊이(mm):<input type="number" id="grind-depth" value="50" min="1" step="1" style="width:50px;margin-left:4px"></label>
+    <button id="grind-150-btn" onclick="toggleGrind150()" style="margin-top:4px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#FFD740;border-radius:3px;cursor:pointer;font-size:11px">150×150 원클릭</button>
+    <button id="grind-100-btn" onclick="toggleGrind100()" style="margin-top:2px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#80DEEA;border-radius:3px;cursor:pointer;font-size:11px">100mm+ 모드</button>
+  </div>
+  <button class="tool-btn" data-tool="jollycut"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#2A4F92" stroke-width="1.8" stroke-linecap="round"/><circle cx="7" cy="5.5" r="2.5" stroke="#2A4F92" stroke-width="1.2" fill="#0A1222"/></svg> 졸리컷</button>
+  <button class="tool-btn" data-tool="gosra"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="3.5" x2="15" y2="3.5" stroke="#E53935" stroke-width="1.5"/><line x1="1" y1="7.5" x2="15" y2="7.5" stroke="#E53935" stroke-width="1.5"/></svg> 고스라</button>
+  <div class="tgl">편집</div>
+  <button class="tool-btn" data-tool="trim"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="5.5" x2="5" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="10" y1="5.5" x2="15" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="3" y1="0" x2="12" y2="11" stroke="#75839C" stroke-width="1.5"/><line x1="5" y1="4.5" x2="10" y2="6.5" stroke="#0A1222" stroke-width="3"/></svg> 트림</button>
+  <button class="tool-btn" data-tool="cut" title="분할: 변의 시작점 클릭 → 변 따라 거리(숫자+Enter) → 맞은편 변까지 수직(Shift = 각도)으로 두 조각"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><rect x="0.8" y="2" width="13.4" height="7" fill="none" stroke="#75839C" stroke-width="1.3"/><line x1="6" y1="0" x2="6" y2="11" stroke="#E53935" stroke-width="1.6" stroke-dasharray="2 1.5"/></svg> 분할</button>
   <button class="tool-btn" data-tool="dimline"><svg width="16" height="10" viewBox="0 0 16 10" style="vertical-align:middle;margin-right:4px"><line x1="2.5" y1="5" x2="13.5" y2="5" stroke="#E53935" stroke-width="1.5"/><line x1="2.5" y1="2" x2="2.5" y2="8" stroke="#E53935" stroke-width="1.5"/><line x1="13.5" y1="2" x2="13.5" y2="8" stroke="#E53935" stroke-width="1.5"/><polygon points="5,4 2.5,5 5,6" fill="#E53935"/><polygon points="11,4 13.5,5 11,6" fill="#E53935"/></svg> 치수선</button>
   <div class="fillet-sub" id="dimline-sub" style="display:none">
     <div style="font-size:10px;color:#A9B4C8;margin-bottom:3px">라벨 형식</div>
@@ -284,12 +298,17 @@ canvas{display:block;cursor:crosshair}
     </div>
     <div id="dl-hint" style="font-size:9px;color:#75839C;margin-top:4px;line-height:1.4">두 점 클릭(또는 끌기) → 마우스로 치수선 위치 → 클릭. Shift = 비스듬히</div>
   </div>
-  <button class="tool-btn" data-tool="note"><svg width="14" height="12" viewBox="0 0 14 12" style="vertical-align:middle;margin-right:4px"><text x="7" y="10.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#E3B861" font-family="Malgun Gothic,sans-serif">가</text></svg> 글자 <span style="font-size:9px;color:#56647E;margin-left:2px">도면 메모</span></button>
+  <button class="tool-btn" data-tool="linkmark"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M1,4.5 C4,-0.5 6,1.5 8,4 C10,6.5 12,8.5 15,3.5" stroke="#E3B861" stroke-width="1.3" fill="none"/><path d="M1,8.5 C4,3.5 6,5.5 8,8 C10,10.5 12,12.5 15,7.5" stroke="#E3B861" stroke-width="1.3" fill="none"/></svg> 연결 표시</button>
+  <div class="fillet-sub" id="link-sub" style="display:none">
+    <div style="font-size:10px;color:#A9B4C8">이어지는 방향으로 드래그 (길이만큼 물결 2줄)</div>
+    <div id="ann-cols-link" style="display:flex;gap:3px;margin-top:4px"></div>
+  </div>
+  <button class="tool-btn" data-tool="note"><svg width="14" height="12" viewBox="0 0 14 12" style="vertical-align:middle;margin-right:4px"><text x="7" y="10.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#E3B861" font-family="Malgun Gothic,sans-serif">가</text></svg> 글자 삽입</button>
   <div class="fillet-sub" id="note-sub" style="display:none">
     <div style="font-size:10px;color:#A9B4C8">도면 위를 클릭 → 글자 입력</div>
     <div id="ann-cols-note" style="display:flex;gap:3px;margin-top:4px"></div>
   </div>
-  <button class="tool-btn" data-tool="arrow"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M2,10 Q6,1 13,4" stroke="#E3B861" stroke-width="1.6" fill="none"/><polygon points="14.5,4.6 10.6,6.2 11.6,2.3" fill="#E3B861"/></svg> 화살표</button>
+  <button class="tool-btn" data-tool="arrow"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M2,10 Q6,1 13,4" stroke="#E3B861" stroke-width="1.6" fill="none"/><polygon points="14.5,4.6 10.6,6.2 11.6,2.3" fill="#E3B861"/></svg> 지시선</button>
   <div class="fillet-sub" id="arrow-sub" style="display:none">
     <div style="font-size:10px;color:#A9B4C8;margin-bottom:3px">시작점에서 끝점(촉)으로 드래그</div>
     <div style="display:flex;gap:3px">
@@ -300,21 +319,6 @@ canvas{display:block;cursor:crosshair}
     <div style="font-size:10px;color:#A9B4C8;margin-top:4px">그린 뒤에는 양 끝 주황 점을 끌어 길이·방향 수정</div>
     <div id="ann-cols-arrow" style="display:flex;gap:3px;margin-top:4px"></div>
   </div>
-  <button class="tool-btn" data-tool="linkmark"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M1,4.5 C4,-0.5 6,1.5 8,4 C10,6.5 12,8.5 15,3.5" stroke="#E3B861" stroke-width="1.3" fill="none"/><path d="M1,8.5 C4,3.5 6,5.5 8,8 C10,10.5 12,12.5 15,7.5" stroke="#E3B861" stroke-width="1.3" fill="none"/></svg> 연결 표시</button>
-  <div class="fillet-sub" id="link-sub" style="display:none">
-    <div style="font-size:10px;color:#A9B4C8">이어지는 방향으로 드래그 (길이만큼 물결 2줄)</div>
-    <div id="ann-cols-link" style="display:flex;gap:3px;margin-top:4px"></div>
-  </div>
-  <button class="tool-btn" data-tool="grind"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="9.5" x2="15" y2="9.5" stroke="#FFD740" stroke-width="1.5"/><line x1="3" y1="2" x2="5" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="2" x2="9" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="2" x2="13" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/></svg> 밑면연마</button>
-  <div class="fillet-sub" id="grind-sub" style="display:none">
-    <label>깊이(mm):<input type="number" id="grind-depth" value="50" min="1" step="1" style="width:50px;margin-left:4px"></label>
-    <button id="grind-150-btn" onclick="toggleGrind150()" style="margin-top:4px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#FFD740;border-radius:3px;cursor:pointer;font-size:11px">150×150 원클릭</button>
-    <button id="grind-100-btn" onclick="toggleGrind100()" style="margin-top:2px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#80DEEA;border-radius:3px;cursor:pointer;font-size:11px">100mm+ 모드</button>
-  </div>
-  <button class="tool-btn" data-tool="jollycut"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#2A4F92" stroke-width="1.8" stroke-linecap="round"/><circle cx="7" cy="5.5" r="2.5" stroke="#2A4F92" stroke-width="1.2" fill="#0A1222"/></svg> 졸리컷</button>
-  <button class="tool-btn" data-tool="trim"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="5.5" x2="5" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="10" y1="5.5" x2="15" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="3" y1="0" x2="12" y2="11" stroke="#75839C" stroke-width="1.5"/><line x1="5" y1="4.5" x2="10" y2="6.5" stroke="#0A1222" stroke-width="3"/></svg> 트림</button>
-  <button class="tool-btn" data-tool="cut" title="자르기: 변의 시작점 클릭 → 변 따라 거리(숫자+Enter) → 맞은편 변까지 수직(Shift = 각도)으로 두 조각"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><rect x="0.8" y="2" width="13.4" height="7" fill="none" stroke="#75839C" stroke-width="1.3"/><line x1="6" y1="0" x2="6" y2="11" stroke="#E53935" stroke-width="1.6" stroke-dasharray="2 1.5"/></svg> 자르기</button>
-  <button class="tool-btn" data-tool="gosra"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="3.5" x2="15" y2="3.5" stroke="#E53935" stroke-width="1.5"/><line x1="1" y1="7.5" x2="15" y2="7.5" stroke="#E53935" stroke-width="1.5"/></svg> 고스라</button>
   <div class="collapsible-hd" id="snap-hd" onclick="toggleSnap()">스냅 설정 <span class="arrow">&#9660;</span></div>
   <div id="snap-body" style="display:none">
     <label class="snap-check"><input type="checkbox" id="ck-ortho" checked> 직교 모드</label>
@@ -447,6 +451,8 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">사각 절단</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
     <div class="proc-row2"><span class="pr-name">싱크볼</span><span class="pr-qty" id="pl-sink">-</span><span class="pr-sub" id="ps-sink">-</span></div>
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
+    <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
+    <div class="proc-row2"><span class="pr-name">음식물투입구</span><span class="pr-qty" id="pl-food">-</span><span class="pr-sub" id="ps-food">-</span></div>
     <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
     <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
@@ -497,6 +503,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="su-sink" type="text" inputmode="numeric" value="50,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="su-cook" type="text" inputmode="numeric" value="30,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="su-food" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="su-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="su-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -514,6 +521,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="du-rect" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="du-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="du-cook" type="text" inputmode="numeric" value="36,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="du-food" type="text" inputmode="numeric" value="24,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="du-holef" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="du-holeo" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -531,6 +539,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="ru-rect" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="ru-sink" type="text" inputmode="numeric" value="65,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="ru-cook" type="text" inputmode="numeric" value="39,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="ru-food" type="text" inputmode="numeric" value="26,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="ru-holef" type="text" inputmode="numeric" value="6,500" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="ru-holeo" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -548,6 +557,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="cu-food" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="cu-holef" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="cu-holeo" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -565,6 +575,7 @@ canvas{display:block;cursor:crosshair}
         <div class="su-row"><label>사각 절단</label><input id="xt-rect" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="xt-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="xt-cook" type="text" inputmode="numeric" value="35,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
+        <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="xt-food" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="xt-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="xt-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>선 절단</label><input id="xt-line" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -592,7 +603,7 @@ var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
 var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
 var TIER_PREFIX={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
-var TIER_KEYS=['rect','sink','cook','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+var TIER_KEYS=['rect','sink','cook','food','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
 
 function setTier(t){
   _tier=t;
@@ -1058,7 +1069,7 @@ function _findCornerAttach(x1,y1,x2,y2){
         if(!info||info.type!=='fillet'||info.r<=0)continue;
         var pin=_rcPIn(s,ck),pout=_rcPOut(s,ck);
         // 싱크볼/쿡탑은 이 rect가 "구멍"이라 재료가 코너 바깥쪽에 있음 (일반 사각 절단은 반대로 안쪽)
-        var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook');
+        var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook'||_atCk==='dish');
         if(Math.hypot(x1-pin.x,y1-pin.y)<=tol&&Math.hypot(x2-pout.x,y2-pout.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
         if(Math.hypot(x1-pout.x,y1-pout.y)<=tol&&Math.hypot(x2-pin.x,y2-pin.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
       }
@@ -1320,7 +1331,7 @@ function applySnap(cx,cy,excl){
   if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
   // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)
-  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'));
+  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'));
   if(applyOrtho){var dx=Math.abs(mx-drawStart[0]),dy=Math.abs(my-drawStart[1]);if(dx>=dy)my=drawStart[1];else mx=drawStart[0];}
   return[mx,my];
 }
@@ -1498,7 +1509,7 @@ function findEdgeContext(x1,y1,x2,y2){
       // 따라서 일반 사각 절단(재료=rect 안쪽)과 반대로 inward/outward를 뒤집어, 밑면연마/고스라 등이
       // 도형 바깥쪽(둘러싼 상판 재료 쪽)으로 적용되도록 함.
       var _at=_applianceType(s);
-      if(_at==='sink'||_at==='cook'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
+      if(_at==='sink'||_at==='cook'||_at==='dish'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
     }
     if(found&&area<bestArea){bestArea=area;best=Object.assign({shape:s,groupId:s.groupId||null},found);}
   }
@@ -1539,6 +1550,8 @@ function _baseColor(s){
   var _at=_applianceType(s);
   if(_at==='sink')return '#2A4F92';
   if(_at==='cook')return '#FFA726';
+  if(_at==='dish')return '#AB47BC';
+  if(s.holeType==='food')return '#A1887F';
   if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return '#26A69A'; // 사각·타원 타공
   return SCOL[s.kind]||'#1F3F7A';
 }
@@ -1546,6 +1559,7 @@ function _baseFill(s){
   var _at=_applianceType(s);
   if(_at==='sink')return 'rgba(66,165,245,0.10)';
   if(_at==='cook')return 'rgba(255,167,38,0.10)';
+  if(_at==='dish')return 'rgba(171,71,188,0.10)';
   if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return 'rgba(38,166,154,0.12)';
   return SFILL[s.kind]||'';
 }
@@ -1724,7 +1738,7 @@ function drawGrindRegion(s,preview){
     var _lx,_ly,_lw,_lh;
     var _isLH=Math.abs(_ly2-_ly1)<1;
     // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
-    var _matOutRot=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})();
+    var _matOutRot=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})();
     if(_isLH){
       var _lxa=Math.min(_lx1,_lx2),_lxb=Math.max(_lx1,_lx2);
       if(_ly1<0){_lx=_lxa;_ly=_matOutRot?(-_lrh/2-_dpx):(-_lrh/2);_lw=_lxb-_lxa;_lh=_dpx;}
@@ -1767,7 +1781,7 @@ function drawGrindRegion(s,preview){
 
   if(parentShape&&parentShape.kind==='rect'&&edge_!=='unknown'){
     // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
-    var _matOutEdge=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})();
+    var _matOutEdge=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})();
     // 부모 rect의 실제 엣지 좌표 기준 — 대각선으로 그려도 올바른 직사각형 보장
     if(edge_==='top'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y-depth):parentShape.y;rh=depth;}
     else if(edge_==='bottom'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y+parentShape.h):(parentShape.y+parentShape.h-depth);rh=depth;}
@@ -1783,7 +1797,7 @@ function drawGrindRegion(s,preview){
   var px=c1[0],py=c1[1],pw=c2[0]-c1[0],ph=c2[1]-c1[1];
   // 싱크볼/쿡탑처럼 재료가 rect 바깥쪽에 있는 경우, 안쪽 라운드 경계로 추가 클리핑하면 바깥쪽 스트립이
   // 통째로 지워지므로(겹치는 영역이 거의 없음) 이 경우엔 라운드 경계 클리핑을 적용하지 않음
-  var _matOutForClip=!!(parentShape&&(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook';})());
+  var _matOutForClip=!!(parentShape&&(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})());
   // Yellow hatch fill — 부모 도형이 라운드/챔퍼(개별 코너 s.corners 또는 균일 cornerType)이면 그 경계에 맞춰 클리핑
   ctx.save();
   // 먼저 항상 스트립 영역(px,py,pw,ph) 자체로 클리핑을 제한한다 — 해칭 선은 스트립보다 훨씬 넓은 범위로
@@ -5333,6 +5347,11 @@ function finalizeShape(fmx,fmy){
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main',applianceType:'cook'});
     saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
+  else if(tool==='dishwasher'){ // 식기세척기(상부개폐형) 타공 470×460, 고스라 없음 (2026-11-07)
+    var dws=makeShape('rect',{x:x0-235,y:y0-230,w:470,h:460,cornerType:'none',cornerSize:0,groupId:'grp'+nextId,groupRole:'main',applianceType:'dish'});
+    saveHistory();shapes.push(dws);selectedShapes=[dws];_savedBoardLayout=null;_savedBoardImg=null;s=null;
+  }
+  else if(tool==='foodhole'){s=makeShape('circle',{cx:x0,cy:y0,r:80,holeType:'food'});} // 음식물투입구 Φ160, 고스라 없음
   if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];if(tool!=='note'&&tool!=='arrow'&&tool!=='linkmark'){_savedBoardLayout=null;_savedBoardImg=null;}} // 주석은 원판 배치와 무관
   else{}
   drawStart=null;lastMx=null;lastMy=null;
@@ -6117,6 +6136,8 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
     else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
+    else if(tool==='dishwasher'){ps={kind:'rect',x:x0-235,y:y0-230,w:470,h:460,cornerType:'none',cornerSize:0,applianceType:'dish',ops:[]};}
+    else if(tool==='foodhole'){ps={kind:'circle',cx:x0,cy:y0,r:80,holeType:'food',ops:[]};}
     if(ps){ctx.globalAlpha=0.8;_annDraw(function(){drawShape(ps,true);});ctx.globalAlpha=1;}
     if(tool==='line')_lineOverlay(); // 선 절단: 미리보기 + 길이/입력 상자
   }
@@ -6450,11 +6471,12 @@ function loadAllTierPrices(){
 function calcCost(){
   _fullVer++; // 원판 그대로 판정 다시
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
-  var cnt={sink:0,cook:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
+  var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       if(s.groupId&&s.groupRole==='main'){
         if(s.applianceType==='hole')cnt.holeo++; // 사각 타공 = 콘센트 타공 금액
+        else if(s.applianceType==='dish')cnt.dish++; // 식기세척기 = 쿡탑 단가
         else if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
@@ -6470,7 +6492,7 @@ function calcCost(){
       else lenMm.circlecut+=perimeterMm(s); // 타원 절단 = 원형 절단 단가로 둘레 길이
     } else if(s.kind==='circle'||s.kind==='hole'){
       if(s.holeType==='cut')lenMm.circlecut+=perimeterMm(s);
-      else if(s.holeType==='faucet')cnt.holef++;else cnt.holeo++;
+      else if(s.holeType==='faucet')cnt.holef++;else if(s.holeType==='food')cnt.food++;else cnt.holeo++;
     } else if(s.kind==='line'){
       lenMm.line+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='grindregion'){
@@ -6498,6 +6520,8 @@ function calcCost(){
   var pRect=gta('rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
   var pSink=gta('sink'),subSink=cnt.sink*pSink*qty;
   var pCook=gta('cook'),subCook=cnt.cook*pCook*qty;
+  var subDish=cnt.dish*pCook*qty; // 식기세척기 = 쿡탑과 같은 단가
+  var pFood=gta('food'),subFood=cnt.food*pFood*qty;
   var pHolef=gta('holef'),subHolef=cnt.holef*pHolef*qty;
   var pHoleo=gta('holeo'),subHoleo=cnt.holeo*pHoleo*qty;
   var pLine=gta('line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
@@ -6512,6 +6536,8 @@ function calcCost(){
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
+  upd('pl-dish','ps-dish',cnt.dish>0?cnt.dish+'회':'-',subDish);
+  upd('pl-food','ps-food',cnt.food>0?cnt.food+'회':'-',subFood);
   upd('pl-holef','ps-holef',cnt.holef>0?cnt.holef+'회':'-',subHolef);
   upd('pl-holeo','ps-holeo',cnt.holeo>0?cnt.holeo+'회':'-',subHoleo);
   upd('pl-line','ps-line',mLine>0.001?mLine.toFixed(3)+'m':'-',subLine);
@@ -6522,7 +6548,7 @@ function calcCost(){
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subSink+subCook+subHolef+subHoleo+subLine+subCirclecut;
+  var totalCut=subRect+subSink+subCook+subDish+subFood+subHolef+subHoleo+subLine+subCirclecut;
   var totalAdd=subChamfer+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
@@ -6749,6 +6775,8 @@ function updatePropsPanel(){
     var _ht=s.holeType||'outlet';
     if(_ht==='cut'){
       html+='<div style="color:#E3B861;font-size:11px;padding:4px">원형 절단 (커팅비는 선 절단 단가 적용)</div>';
+    } else if(_ht==='food'){
+      html+='<div style="color:#E3B861;font-size:11px;padding:4px">음식물투입구 (고스라 없음)</div>';
     } else {
       html+='<div class="prop-row"><label>타공 유형:</label><div style="display:flex;gap:4px">';
       html+='<button style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;border:1px solid #56647E;cursor:pointer;background:'+(_ht==="faucet"?"#1F3F7A":"#121D33")+';color:#fff" onclick="setHoleType(\'faucet\')">수전</button>';
@@ -8478,7 +8506,7 @@ function _drawCleanExport(){
   pieces.forEach(function(p){
     p.cutouts.forEach(function(q){
       if(q.kind!=='rect')return;
-      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='hole'?'사각타공':'타공'));
+      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='dish'?'식기세척기':(at==='hole'?'사각타공':'타공')));
       var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
       var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
       _expText(nm,cen[0],cen[1],p.col[0],fs,'bold',[0,Math.max(8,fs*0.5)],14); // R값은 맨 마지막에 지시선으로
