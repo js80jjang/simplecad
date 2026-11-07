@@ -8840,7 +8840,9 @@ function _objName(q){
   return '';
 }
 function _objSize(q){ // 원판 배치 객체 이름 아래 "(가로×세로)"·"(Φ지름)"
-  if(q.kind==='rect')return '('+_fmtDim(q.w)+'×'+_fmtDim(q.h)+')';
+  if(q.kind==='rect'){ // 라운드(R)·모따기(C) 코너가 있으면 값도 — 코너마다 다르면 모두
+    var rs=[];['tl','tr','br','bl'].forEach(function(ck){var c=_rcInfo(q,ck);if(c.type&&c.r>0){var t=(c.type==='chamfer'?'C':'R')+_fmtDim(c.r);if(rs.indexOf(t)<0)rs.push(t);}});
+    return '('+_fmtDim(q.w)+'×'+_fmtDim(q.h)+(rs.length?' '+rs.join('/'):'')+')';}
   if(q.kind==='ellipse')return '('+_fmtDim(2*q.rx)+'×'+_fmtDim(2*q.ry)+')';
   if((q.kind==='circle'||q.kind==='hole')&&q.r)return '(Φ'+_fmtDim(2*q.r)+')';
   return '';
