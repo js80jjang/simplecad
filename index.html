@@ -9560,7 +9560,7 @@ function _3dStyleLoad(v){var d=_3dStyleDef();if(v){['lower','upper','handle'].fo
 var _3D_UTYPES={lower:[['swing','여닫이'],['drawer','서랍'],['pullout','풀아웃'],['dish','식세기장'],['oven','오븐장']],upper:[['swing','여닫이'],['flap','플랩'],['fold','폴딩'],['slide','슬라이딩']]};
 function _3dUnitOf(key){return (_3dStyle.units||{})[key]||null;}
 function _3dUnitSet(key,f){var U=_3dStyle.units=_3dStyle.units||{},u=Object.assign({},U[key]||{});f(u);
-  if(u.o&&!u.o[0]&&!u.o[1]&&!u.o[2])delete u.o;if(u.t==='swing')delete u.t;if(Object.keys(u).length)U[key]=u;else delete U[key];}
+  if(u.o&&!u.o[0]&&!u.o[1]&&!u.o[2])delete u.o;if(u.t==='swing')delete u.t;if(!u.r)delete u.r;if(Object.keys(u).length)U[key]=u;else delete U[key];}
 function _hex3(h){var n=parseInt(String(h||'#cccccc').slice(1),16);return[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255];}
 // 3D 무늬에 쓸 상품번호: 제품 바꿔 보기(_3dStyle.prod[제품 구분 이름] = 상품번호)가 있으면 그것, 없으면 도면 제품
 function _3dProdId(label){var o=_3dStyle.prod[label];if(o)return o;var p=_prodOf(label)||products[0];return p&&p.name?_mallIdFor(p.name,p.size):null;}
@@ -10254,23 +10254,46 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         }
         if(best>=0)(appAt[best]=appAt[best]||[]).push({a:ba,b:bz});
       });
+      // 모서리 칸 겹침 없애기 (2026-11-07 사용자 요청 "도어는 한쪽에서만 열려야"): 이웃한 두 변이 모두 앞면이면 모서리는 긴 변(같으면 앞 번호) 칸만 — 짧은 변은 그 변 칸 깊이만큼 비움
+      var bN=body.length,bLen=function(j){var a=body[j],b=body[(j+1)%bN];return Math.hypot(b[0]-a[0],b[1]-a[1]);};
+      var bFr=function(j){var a=body[j],b=body[(j+1)%bN],L=bLen(j),ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(a[0]+b[0])/2+nx,(a[1]+b[1])/2+nz)){nx=-nx;nz=-nz;}
+        var d=depthIn(body,[(a[0]+b[0])/2,(a[1]+b[1])/2],nx,nz);return{u:[ux,uz],d:(d>800)?d/2:d};};
+      var cornerCut=function(i,j){ // 변 i의 j쪽 모서리를 이웃 변 j가 차지하면 그 깊이(직각에 가까울 때만), 아니면 0
+        if(!front[j]||bLen(j)<150)return 0;var Li=bLen(i),Lj=bLen(j);if(Lj<Li||(Lj===Li&&j>i))return 0;
+        var fi=bFr(i),fj=bFr(j);if(Math.abs(fi.u[0]*fj.u[0]+fi.u[1]*fj.u[1])>0.3)return 0;return Math.min(fj.d,Li);};
+      var uCand=[]; // 칸 후보 → 긴 변부터 놓고, 이미 놓은 칸과 겹치는 칸은 버림 (한 자리에 칸 하나 = 도어는 한쪽에서만)
       for(var i=0;i<body.length;i++){
         if(!front[i])continue;
         var A=body[i],B=body[(i+1)%body.length],dx=B[0]-A[0],dz=B[1]-A[1],L=Math.hypot(dx,dz);if(L<150)continue;
         var ux=dx/L,uz=dz/L,nx=uz,nz=-ux;if(_3dInside({outer:body,holes:[]},(A[0]+B[0])/2+nx,(A[1]+B[1])/2+nz)){nx=-nx;nz=-nz;}
-        var parts=_3dDoorSplit(L,appAt[i]||[]);
+        var L0=L,cA=cornerCut(i,(i+bN-1)%bN),cB=cornerCut(i,(i+1)%bN);
+        if(cA||cB){if(L-cA-cB<150)continue;A=[A[0]+ux*cA,A[1]+uz*cA];L=L-cA-cB;}
+        var parts=_3dDoorSplit(L,(appAt[i]||[]).map(function(p){return{a:p.a-cA,b:p.b-cA};}));
         // 깊이가 800 넘는 칸(아일랜드 등, 2026-11-02 사용자 요청): 깊이를 절반으로 — 맞은편 변이 앞면 변이면 그쪽 칸도 절반이라 그대로, 아니면 뒤쪽에 반대로 보는 칸을 한 줄 더
         for(var k=0;k<parts.length;k++){
           var Mk=[A[0]+ux*(parts[k][0]+parts[k][1])/2,A[1]+uz*(parts[k][0]+parts[k][1])/2],dF=depthIn(body,Mk,nx,nz),hitF=!!front[depthIn.hit],deep=dF>800,dK=deep?dF/2:dF;
           var uk='L'+key.id+':'+i+':'+k;
-          oneUnit(uk,A,ux,uz,nx,nz,parts[k][0],parts[k][1],dK,_3dHandleSide(k,parts.length));
-          if(deep&&!hitF)oneUnit(uk+'b',[A[0]+ux*parts[k][1]-nx*dF,A[1]+uz*parts[k][1]-nz*dF],-ux,-uz,-nx,-nz,0,parts[k][1]-parts[k][0],dK,_3dHandleSide(parts.length-1-k,parts.length));
+          uCand.push({pr:L0,o:0,a:[uk,A,ux,uz,nx,nz,parts[k][0],parts[k][1],dK,_3dHandleSide(k,parts.length)]});
+          if(deep&&!hitF)uCand.push({pr:L0,o:1,a:[uk+'b',[A[0]+ux*parts[k][1]-nx*dF,A[1]+uz*parts[k][1]-nz*dF],-ux,-uz,-nx,-nz,0,parts[k][1]-parts[k][0],dK,_3dHandleSide(parts.length-1-k,parts.length)]});
         }
       }
+      var uFoot=function(a){var A=a[1],ux=a[2],uz=a[3],nx=a[4],nz=a[5],s0=a[6]+5,s1=a[7]-5,d0=-5,d1=-(a[8]-5);
+        return[[s0,d0],[s1,d0],[s1,d1],[s0,d1]].map(function(q){return[A[0]+ux*q[0]+nx*q[1],A[1]+uz*q[0]+nz*q[1]];});};
+      var uSep=function(P,Q){return [P,Q].some(function(R){for(var i=0;i<R.length;i++){var a=R[i],b=R[(i+1)%R.length],ax=b[1]-a[1],az=a[0]-b[0];
+        var pr=function(S){var lo=Infinity,hi=-Infinity;S.forEach(function(p){var t=p[0]*ax+p[1]*az;lo=Math.min(lo,t);hi=Math.max(hi,t);});return[lo,hi];},p1=pr(P),p2=pr(Q);
+        if(p1[1]<=p2[0]||p2[1]<=p1[0])return true;}return false;});};
+      var uPut=[];uCand.sort(function(p,q){return (q.pr-p.pr)||(p.o-q.o);}).forEach(function(c){var f=uFoot(c.a);
+        if(uPut.some(function(g){return !uSep(f,g);}))return;uPut.push(f);oneUnit.apply(null,c.a);});
       // 하부장 한 칸: 앞 선 A(바깥 법선 n)의 s0~s1, 깊이 bd — 옮기거나 지웠으면 그 자리는 빈 칸
       function oneUnit(uk,A,ux,uz,nx,nz,s0u,s1u,bd,hside){
-          var parts=[[s0u,s1u]],k=0;
           var UO=_3dUnitOf(uk)||{},uo=UO.o,moved=!!(uo&&(uo[0]||uo[1]||uo[2])); // 옮긴 자리·종류 (칸 단위)
+          // 도어 방향 (2026-11-07 사용자 요청, UO.r = 0~3: 앞 → 오른쪽 끝 → 뒤 → 왼쪽 끝): 같은 바닥 자리에서 앞면(도어)만 다른 면으로
+          var rr=((UO.r||0)%4+4)%4;
+          if(rr){var hd=ux*nz-uz*nx,F=[[A[0]+ux*s0u,A[1]+uz*s0u],[A[0]+ux*s1u,A[1]+uz*s1u]],Bk=[[F[0][0]-nx*bd,F[0][1]-nz*bd],[F[1][0]-nx*bd,F[1][1]-nz*bd]],w0=s1u-s0u;
+            var nn=rr===1?[ux,uz]:rr===2?[-nx,-nz]:[-ux,-uz],side=rr===1?[F[1],Bk[1]]:rr===2?[Bk[0],Bk[1]]:[F[0],Bk[0]];
+            var uu=[hd*nn[1],-hd*nn[0]],P=side[0],Qs=side[1];if((Qs[0]-P[0])*uu[0]+(Qs[1]-P[1])*uu[1]<0){P=side[1];}
+            A=P;ux=uu[0];uz=uu[1];nx=nn[0];nz=nn[1];s0u=0;s1u=rr===2?w0:bd;bd=rr===2?bd:w0;}
+          var parts=[[s0u,s1u]],k=0;
           // 싱크볼 구멍과 겹치는 칸은 몸통·선반을 볼 밑(상판 밑 200)까지만 — 구멍으로 칸 옆판·선반이 들여다보이지 않게 (2026-10-29, 빈 자리도 같이 2026-11-02)
           var byt=y0,bx0=parts[k][0],bx1=parts[k][1],bc=[[bx0,0],[bx1,0],[bx1,-bd],[bx0,-bd]].map(function(q){return[A[0]+ux*q[0]+nx*q[1],A[1]+uz*q[0]+nz*q[1]];}),
             bl=Math.min.apply(null,bc.map(function(p){return p[0];})),br=Math.max.apply(null,bc.map(function(p){return p[0];})),bt=Math.min.apply(null,bc.map(function(p){return p[1];})),bb2=Math.max.apply(null,bc.map(function(p){return p[1];}));
@@ -10602,12 +10625,14 @@ function _3dUTypeBar(){
   function grp(nm,list,keys){if(!keys.length)return'';var cur=keys.map(function(k){return (_3dUnitOf(k)||{}).t||'swing';}),one=cur.every(function(t){return t===cur[0];})?cur[0]:null;
     return '<span style="color:#E3B861;font-weight:bold">'+nm+(keys.length>1?' '+keys.length+'칸':'')+'</span>'+list.map(function(t){return '<button data-ut="'+t[0]+'" data-uk="'+nm+'" style="'+bs+(one===t[0]?';background:#1F3F7A;border-color:#E3B861;color:#F1D69A':'')+'">'+t[1]+'</button>';}).join('');}
   bar.innerHTML=grp('하부장',_3D_UTYPES.lower,lo)+(lo.length&&up.length?'<span style="width:8px"></span>':'')+grp('상부장',_3D_UTYPES.upper,up)
-    +'<span style="width:8px"></span><button data-ua="home" style="'+bs+'" title="옮긴 칸을 처음 자리로">↺ 자리</button><button data-ua="del" style="'+bs+';border-color:#8E3B3B" title="Delete">삭제</button>';
+    +'<span style="width:8px"></span>'+(lo.length?'<button data-ua="rot" style="'+bs+';border-color:#E3B861;color:#F1D69A" title="그 칸의 도어 면을 앞 → 옆 → 뒤 → 옆으로">↻ 도어 방향</button>':'')+'<button data-ua="home" style="'+bs+'" title="옮긴 칸을 처음 자리로">↺ 자리</button><button data-ua="del" style="'+bs+';border-color:#8E3B3B" title="Delete">삭제</button>';
   bar.style.display='flex';
   bar.querySelectorAll('[data-ut]').forEach(function(b){b.onclick=function(){var keys=b.dataset.uk==='하부장'?lo:up;_3dFOp({t:'units',prev:JSON.stringify(_3dStyle.units||{})});
     keys.forEach(function(k){_3dUnitSet(k,function(u){u.t=b.dataset.ut;});if(st.doorAng)delete st.doorAng[k];if(st.doorOpen)delete st.doorOpen[k];});_3dRegeom();_3dUTypeBar();};});
   bar.querySelector('[data-ua="home"]').onclick=function(){_3dFOp({t:'units',prev:JSON.stringify(_3dStyle.units||{})});ks.forEach(function(k){_3dUnitSet(k,function(u){delete u.o;});});_3dRegeom();};
   bar.querySelector('[data-ua="del"]').onclick=function(){_3dUnitDelete(st.selUnit);};
+  var rb=bar.querySelector('[data-ua="rot"]');if(rb)rb.onclick=function(){_3dFOp({t:'units',prev:JSON.stringify(_3dStyle.units||{})});
+    lo.forEach(function(k){_3dUnitSet(k,function(u){u.r=((u.r||0)+1)%4;});if(st.doorAng)delete st.doorAng[k];});_3dRegeom();};
 }
 function _3dPick(ray){
   var st=_3d;if(!st||!st.r||!ray)return null;var best=null;
