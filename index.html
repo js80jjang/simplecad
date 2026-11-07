@@ -425,7 +425,7 @@ canvas{display:block;cursor:crosshair}
     <canvas id="cv"></canvas>
     <div id="dim-popup" style="position:absolute;display:none;z-index:21;background:#050912;border:1px solid #FFD740;border-radius:3px;display:none;flex-direction:row;align-items:center;gap:0">
       <input type="number" id="dim-inline" step="0.1" style="position:static;display:block;border:none;border-right:1px solid #1C2A47;border-radius:3px 0 0 3px;margin:0">
-      <button id="dim-hide-btn" title="이 치수 숨기기" style="background:none;border:none;color:#E53935;font-size:14px;padding:2px 6px;cursor:pointer;line-height:1;flex-shrink:0">×</button>
+      <button id="dim-hide-btn" title="이 치수 지우기 (Delete) — 속성 칸의 치수 단추로 다시 켤 수 있음" style="background:#3A1520;border:1px solid #E53935;border-radius:3px;color:#FF8A80;font-size:11px;padding:2px 6px;margin-left:3px;cursor:pointer;line-height:1.2;flex-shrink:0;white-space:nowrap">✕ 삭제</button>
     </div>
     <!-- 선 절단: 드래그로 방향을 정하고 놓으면 나오는 길이 입력란 -->
     <div id="line-pop" style="position:absolute;display:none;z-index:22;background:#050912;border:1px solid #FFD740;border-radius:3px;padding:3px 5px;font:11px 'Malgun Gothic';color:#75839C;box-shadow:0 2px 8px rgba(0,0,0,.5)">
@@ -2874,7 +2874,7 @@ function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir){
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';ctx.font=(printRender?'bold ':'')+_gfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
   if(outer&&inner&&dir)dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,field:'_gap',shape:inner,px:tx,py:ty});
 }
-function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir){
+function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir,mid){ // mid = 글자를 선 가운데 (4방향 모두 그릴 때 글자끼리 안 겹치게)
   // 원 중심 → 싱크볼/외곽 엣지까지 직선 치수선
   if(inner&&inner.hideDims&&inner.hideDims[dir])return; // 숨김 처리
   var dist=Math.hypot(ex-cx,ey-cy);if(dist<0.5)return;
@@ -2892,7 +2892,7 @@ function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir){
   // 라벨: 원 중심에서 고정 오프셋(40px) 위치에 표시 → 항상 원 근처에 보임
   var fixOff=printRender?60:40;
   var lineLen=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
-  var ratio=Math.min(fixOff/lineLen,0.45); // 선 길이의 45% 이내
+  var ratio=mid?0.5:Math.min(fixOff/lineLen,0.45); // 선 길이의 45% 이내
   var lx=p1[0]+(p2[0]-p1[0])*ratio;
   var ly=p1[1]+(p2[1]-p1[1])*ratio;
   if(isH)ly-=(printRender?16:12); else lx-=(printRender?20:15);
@@ -2979,7 +2979,7 @@ function drawNestDims(){
         if(isInsideRect(inner,s)&&s.w*s.h<bestArea){bestArea=s.w*s.h;bestOuter=s;}
       }
     }
-    if(isCirc&&inner.holeType==='cut'&&(!bestOuter||bestDistSq>0))continue; // 원형 절단이 조각 밖(단독 조각)이면 위치(관계) 치수 없음 (2026-11-03 사용자 요청)
+    if((isCirc&&inner.holeType==='cut')||(inner.kind==='ellipse'&&!inner.hole))continue; // 원형·타원형 커팅은 다른 객체와 관계(위치) 치수 없음 (2026-11-07 사용자 요청, 타공만 씀)
     if(!bestOuter){
       // 사각 절단(rect)으로 둘러싸여 있지 않은 경우(선 절단으로만 상판 외곽을 그린 경우 등)에도
       // 싱크볼/쿡탑/타공의 위치를 치수로 지정할 수 있도록, 전체 도형(선/사각/아크 등)의 바운딩박스를
@@ -2994,6 +2994,23 @@ function drawNestDims(){
     if(outerShape.rotation&&!_rightAngle(outerShape.rotation))continue;
     var outer=_axisBox(outerShape);
     var ib=getBBox(inner);
+    // 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구) = 상판 변 4군데 모두 (2026-11-07 사용자 요청, 치수를 눌러 × / Delete = 지우기)
+    //   타공(수전·콘센트·사각·타원)도 같게 (2026-11-07 사용자 요청 "타공도 동일하게")
+    var _ins=isCirc?inner.holeType!=='cut':((inner.kind==='rect'&&inner.groupRole==='main')||(inner.kind==='ellipse'&&inner.hole));
+    if(_ins){
+      if(isCirc){
+        drawCircleGapDim(inner.cx,inner.cy,outer.x,inner.cy,true,outer,inner,'left',1);
+        drawCircleGapDim(inner.cx,inner.cy,outer.x+outer.w,inner.cy,true,outer,inner,'right',1);
+        drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y,false,outer,inner,'top',1);
+        drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y+outer.h,false,outer,inner,'bottom',1);
+      } else {
+        drawGapDim(outer.x,ib.my,ib.l,ib.my,true,outer,inner,'left');
+        drawGapDim(ib.r,ib.my,outer.x+outer.w,ib.my,true,outer,inner,'right');
+        drawGapDim(ib.mx,outer.y,ib.mx,ib.t,false,outer,inner,'top');
+        drawGapDim(ib.mx,ib.b,ib.mx,outer.y+outer.h,false,outer,inner,'bottom');
+      }
+      continue;
+    }
     if(isCirc){
       // 타공: 가장 가까운 싱크볼/쿡탑 라인 기준 — 없으면 사각절단 경계
       var _ngr=null,_ngd=Infinity;
@@ -5817,7 +5834,7 @@ cv.addEventListener('mousedown',function(e){
     var _onSel=selectedShapes.length>1&&(hitTestAll(mx,my).some(function(h){return selectedShapes.indexOf(h)>=0;})||(_lgAt&&_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;})));
     var dh=hitDim(e.offsetX,e.offsetY);
     // 단, 싱크볼·쿡탑 묶음(본체+고스라 = 여러 개 선택)의 안쪽 폭·높이 글자는 도형 위에 있어도 치수 편집 (2026-11-04 사용자 요청)
-    if(_onSel&&!(dh&&dh.shape&&dh.shape.groupRole==='main'&&(dh.field==='w'||dh.field==='h')&&isFinite(dh.px)))dh=null;
+    if(_onSel&&!(dh&&dh.shape&&dh.shape.groupRole==='main'&&(dh.field==='w'||dh.field==='h'||dh.kind==='gap')&&isFinite(dh.px)))dh=null; // 위치 치수(gap)도 (2026-11-07)
     if(dh&&(dh.field!=='_dist'||dh.drag)){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}
@@ -6300,6 +6317,7 @@ function _dimInputPopup(opts){
     if(e.key==='Enter'){e.preventDefault();commit();}
     else if(e.key==='Tab'){e.preventDefault();commit();if(opts.onTab)opts.onTab();return;}
     else if(e.key==='Escape'){_dimPopupHide();inp.removeEventListener('keydown',onKey);inp.removeEventListener('blur',commit);}
+    else if(e.key==='Delete'&&opts.onHide&&inp.value===opts.initVal.toFixed(1)){e.preventDefault();hideBtn.onclick();} // 값을 안 고친 채 Delete = 이 치수 지우기 (2026-11-07, number 칸이라 선택 범위는 못 읽음)
     e.stopPropagation();
   }
   inp.addEventListener('keydown',onKey);
@@ -6393,6 +6411,11 @@ function showGapDimInput(d){
           inner.x+=_shiftX;inner.y+=_shiftY;
           syncGroupShapes(inner);
           if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+        } else if(inner.kind==='ellipse'){ // 타원 타공: 상자 기준으로 옮김
+          if(dir==='left')inner.cx+=(outer.x+v)-ib.l;
+          else if(dir==='right')inner.cx+=(outer.x+outer.w-v)-ib.r;
+          else if(dir==='top')inner.cy+=(outer.y+v)-ib.t;
+          else if(dir==='bottom')inner.cy+=(outer.y+outer.h-v)-ib.b;
         }
         selectedShapes=[inner];
         if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
@@ -6795,6 +6818,7 @@ function updatePropsPanel(){
   } else if(s.kind==='ellipse'){
     html+='<div class="prop-row"><label>RX(mm):</label><input type="number" id="pp-rx" value="'+s.rx.toFixed(2)+'" step="0.5" oninput="liveProp(\'rx\',this.value)"></div>';
     html+='<div class="prop-row"><label>RY(mm):</label><input type="number" id="pp-ry" value="'+s.ry.toFixed(2)+'" step="0.5" oninput="liveProp(\'ry\',this.value)"></div>';
+    if(s.hole){var hdE=s.hideDims||{};html+=_DIM_HDR+'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+_dimToggleBtn('left','←',hdE['left'])+_dimToggleBtn('right','→',hdE['right'])+_dimToggleBtn('top','↑',hdE['top'])+_dimToggleBtn('bottom','↓',hdE['bottom'])+'</div>';} // 타원 타공 위치 치수 켜기/끄기
   } else if(s.kind==='dimline'&&s.labelType==='ang'){
     html+='<div style="color:#EF9A9A;font-size:11px;padding:4px">각도 치수: '+_fmtAng((s.sweep||0)*180/Math.PI)+'<br><small style="color:#56647E">옮기기는 끌기, 다시 그리려면 지우고 치수선 → 각도</small></div>';
   } else if(s.kind==='dimline'){

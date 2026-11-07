@@ -90,6 +90,9 @@
 - 왼쪽 도구 묶음(2026-11-07 사용자 확정): 커팅 가공(사각·타공·원형·타원형·직선 커팅) / 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구) / 추가 가공(모서리 라운드·밑면연마·졸리컷·고스라) / 편집(트림·분할(`cut`)·치수선·연결 표시·글자 삽입(`note`)·지시선(`arrow`))
   - 식기세척기(상부개폐형) `dishwasher` 도구 = 누른 자리 가운데 470×460 `groupRole:'main'`·`applianceType:'dish'` rect(고스라 없음, 쿡탑처럼 재료가 바깥) → 가공비 `cnt.dish` × 쿡탑 단가(`gta('cook')`), 편집 색 보라, 도면화 이름 "식기세척기"
   - 음식물투입구 `foodhole` 도구 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)
+- 위치(관계) 치수 `drawNestDims`(2026-11-07 사용자 요청): 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구)과 타공(수전·콘센트 원, 사각 타공, 타원 타공) = 상판 상자 네 변 모두
+  (사각·타원 = 상자 변에서, 원 = 중심에서 `drawCircleGapDim(...,mid)` 글자는 선 가운데). 원형 커팅(holeType cut)·타원형 커팅(hole 아님)은 위치 치수 없음.
+  치수를 누르면 `showGapDimInput`(타원 타공 이동 포함) — "✕ 삭제" 단추(`#dim-hide-btn`) 또는 값을 안 고친 채 Delete = `hideDims[dir]`, 속성 칸 ← → ↑ ↓로 다시 켬. 묶음 선택 중에도 gap 치수는 클릭됨
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
