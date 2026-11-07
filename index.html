@@ -9774,6 +9774,12 @@ function _3dFrontEdges(outer,marks){
     var a=outer[i],b=outer[(i+1)%n],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<50){front.push(false);continue;}
     front.push(marks.some(function(m){var mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2;return ptLD(mx,my,a[0],a[1],b[0],b[1])<5&&ptLD(m.x1,m.y1,a[0],a[1],b[0],b[1])<5&&ptLD(m.x2,m.y2,a[0],a[1],b[0],b[1])<5;}));
   }
+  // 짧은 옆변(800 미만, 상판 끝 마감으로 밑면연마·고스라만 붙은 측면)은 이웃한 더 긴 앞면 변이 있으면 도어 없음 — 측판에 도어·손잡이가 붙지 않게
+  var lenOf=function(i){var a=outer[i],b=outer[(i+1)%n];return Math.hypot(b[0]-a[0],b[1]-a[1]);},drop=[];
+  for(var i=0;i<n;i++){if(!front[i]||lenOf(i)>=800)continue;var p=(i+n-1)%n,q=(i+1)%n,g=0;
+    while(lenOf(p)<50&&g++<n)p=(p+n-1)%n;g=0;while(lenOf(q)<50&&g++<n)q=(q+1)%n; // 라운드 코너의 짧은 변은 건너뜀
+    if((front[p]&&lenOf(p)>lenOf(i))||(front[q]&&lenOf(q)>lenOf(i)))drop.push(i);}
+  drop.forEach(function(i){front[i]=false;});
   if(front.indexOf(true)<0){
     var best=-1,bl=0;
     for(var i=0;i<n;i++){var a=outer[i],b=outer[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);
@@ -9783,6 +9789,17 @@ function _3dFrontEdges(outer,marks){
     if(best>=0)front[best]=true;
   }
   return front;
+}
+// 도어 면 손으로 (2026-11-07 사용자 요청 "자동이라 임의로 정해진다"): 상판 도형 front3d = {n: 외곽 변 수, e: [도어 변 번호]} — 변 수가 바뀌면(도형 수정) 자동으로
+function _3dFront(key,outer,marks){
+  var f3=key.front3d;
+  if(f3&&f3.n===outer.length&&Array.isArray(f3.e))return outer.map(function(_,i){return f3.e.indexOf(i)>=0;});
+  return _3dFrontEdges(outer,marks);
+}
+function _3dToggleFront(tp,i){
+  var key=tp.key,cur=tp.front.slice();cur[i]=!cur[i];saveHistory();
+  key.front3d={n:cur.length,e:cur.map(function(v,j){return v?j:-1;}).filter(function(j){return j>=0;})};
+  _3dRegeom();
 }
 // 미드웨이 상자: 상판 변 e의 s0~s0+Lm 구간, 벽쪽 W0·W1 / 앞쪽(상판 쪽 tm) F0·F1, 높이 yA(상판 윗면)~yB
 function _3dMidBox(e,s0,Lm,Hm,tm){
@@ -10185,8 +10202,8 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
     if(AP.r<1){dyp=(th-_3D_H)+(dyF-(th-_3D_H))*AP.r;y0=_3D_H-th+dyp;y1=y0+th;}
     function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+pdx,czp+x*si+z*co+pdz];}
     var loops={outer:pc.loops.outer.map(X),holes:pc.loops.holes.map(function(h){return h.map(X);}),kinds:pc.loops.kinds};
-    var front=_3dFrontEdges(pc.loops.outer,marks); // 앞면 판정은 도면 자리로(변 번호는 같음)
-    var tpE={key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0],obj:isObj,hang:0};tops.push(tpE); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준), hang = 매달린 판 높이(오브제)
+    var front=_3dFront(key,pc.loops.outer,marks); // 앞면(도어) 변 — 손으로 정했으면(front3d) 그것, 아니면 자동
+    var tpE={key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0],obj:isObj,hang:0,front:front};tops.push(tpE); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준), hang = 매달린 판 높이(오브제)
     loops.outer.forEach(function(a,i){ // 상판 변(200 이상) = 미드웨이를 세울 수 있는 자리, 안쪽(상판 쪽) 법선과 함께. 뒷변 = 앞면이 아닌 300 이상 변
       var b=loops.outer[(i+1)%loops.outer.length],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(L<200)return;
       var nx=dz/L,nz=-dx/L;if(!_3dInside(loops,(a[0]+b[0])/2+nx,(a[1]+b[1])/2+nz)){nx=-nx;nz=-nz;}
@@ -10492,7 +10509,18 @@ function _3dLabels(){
   pts.forEach(function(o){if(!o.p||!idx.has(o.key))return;var on=o.key===st.sel,hv=o.key===st.hover;
     html+='<div style="position:absolute;left:'+o.p[0].toFixed(1)+'px;top:'+o.p[1].toFixed(1)+'px;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:flex;align-items:center;justify-content:center;'
       +'background:'+(on?'#EF6C00':(hv?'#1E88E5':'rgba(13,24,34,0.82)'))+';color:#fff;font:bold 12px/1 Arial,sans-serif;font-variant-numeric:tabular-nums;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4)">'+(idx.get(o.key)+1)+'</div>';});
+  // 고른 상판의 도어 면 표: 변마다(300 이상) 하부장 앞 가운데에 "도어"(켬)/"+ 도어"(끔) — 누르면 그 변 도어 켜고 끄기 (_3dToggleFront)
+  var feTp=null;
+  if(st.sel&&st.furn&&!st.anim&&!st.closing)st.r.tops.forEach(function(tp){if(tp.key===st.sel&&!tp.obj&&tp.front)feTp=tp;});
+  if(feTp){var L=feTp.loops.outer;
+    for(var i=0;i<L.length;i++){var a=L[i],b=L[(i+1)%L.length],dx=b[0]-a[0],dz=b[1]-a[1],ln=Math.hypot(dx,dz);if(ln<300)continue;
+      var nx=dz/ln,nz=-dx/ln,mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;if(_3dInside(feTp.loops,mx+nx,mz+nz)){nx=-nx;nz=-nz;}
+      var p=proj(mx+nx*40,feTp.y-feTp.th-380,mz+nz*40);if(!p)continue;var on=!!feTp.front[i];
+      html+='<div data-fe="'+i+'" title="이 면에 도어 '+(on?'없애기':'달기')+'" style="position:absolute;left:'+p[0].toFixed(1)+'px;top:'+p[1].toFixed(1)+'px;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;padding:3px 8px;border-radius:4px;white-space:nowrap;font:bold 12px/1.2 sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.45);'
+        +(on?'background:#E3B861;color:#060B16;border:2px solid #fff':'background:rgba(10,18,34,0.78);color:#D9DFEA;border:2px dashed #A9B4C8')+'">'+(on?'🚪 도어':'+ 도어')+'</div>';}
+  }
   box.innerHTML=html;
+  if(feTp)box.querySelectorAll('[data-fe]').forEach(function(el){el.onmousedown=function(e){e.stopPropagation();e.preventDefault();if(e.button===0)_3dToggleFront(feTp,+el.dataset.fe);};});
   document.querySelectorAll('#v3d-pieces [data-row]').forEach(function(rw){var k=_3dKey(st.scene.pieces[+rw.dataset.row].shape);
     rw.style.background=k===st.sel?'rgba(239,108,0,0.35)':(k===st.hover?'rgba(30,136,229,0.35)':'');});
 }
