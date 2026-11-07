@@ -1,0 +1,18 @@
+{
+  "name": "심플 실측 - 세라믹 상판 현장 실측",
+  "short_name": "심플 실측",
+  "description": "현장에서 상판 치수를 재서 심플 캐드 파일로 보내기",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060B16",
+  "theme_color": "#0A1222",
+  "lang": "ko",
+  "icons": [
+    { "src": "../icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-maskable-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

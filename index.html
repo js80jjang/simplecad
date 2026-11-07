@@ -130,20 +130,20 @@ canvas{display:block;cursor:crosshair}
 .tier-save-btn{width:100%;margin-top:6px;background:#0A1222;border:none;color:#E3B861;font-size:11px;padding:4px 0;border-radius:3px;cursor:pointer;letter-spacing:.3px;}
 .tier-save-btn:hover{background:#1F3F7A;}
 /* 패치 노트 팝업 */
-#pn-modal{position:fixed;inset:0;z-index:4800;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
-#pn-modal .pn-box{background:#050912;border:1px solid #2A4F92;border-radius:8px;width:620px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.6)}
-#pn-modal .pn-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #1A2843}
-#pn-modal .pn-head b{flex:1;color:#fff;font-size:16px}
-#pn-modal .pn-head button{background:none;border:none;color:#75839C;font-size:18px;cursor:pointer}
-#pn-modal .pn-body{overflow:auto;padding:6px 18px 10px;color:#D9DFEA;font-size:13px;line-height:1.6}
-#pn-modal .pn-ver{margin:14px 0 4px;color:#FFD740;font-weight:bold;font-size:14px}
-#pn-modal .pn-ver span{display:inline-block;background:#E53935;color:#fff;font-size:10px;border-radius:8px;padding:0 6px;margin-left:6px;vertical-align:middle}
-#pn-modal .pn-grp{margin:8px 0 2px;color:#E3B861;font-weight:bold;font-size:12px}
-#pn-modal ul{margin:0 0 0 18px;padding:0}
-#pn-modal li{margin:2px 0}
-#pn-modal .pn-old{color:#75839C}
-#pn-modal .pn-foot{padding:10px 18px;border-top:1px solid #1A2843;display:flex;justify-content:flex-end;gap:8px}
-#pn-modal .pn-foot button{background:#1F3F7A;border:none;color:#fff;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:13px}
+#pn-modal,#ms-modal{position:fixed;inset:0;z-index:4800;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+#pn-modal .pn-box,#ms-modal .pn-box{background:#050912;border:1px solid #2A4F92;border-radius:8px;width:620px;max-width:calc(100vw - 32px);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#pn-modal .pn-head,#ms-modal .pn-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #1A2843}
+#pn-modal .pn-head b,#ms-modal .pn-head b{flex:1;color:#fff;font-size:16px}
+#pn-modal .pn-head button,#ms-modal .pn-head button{background:none;border:none;color:#75839C;font-size:18px;cursor:pointer}
+#pn-modal .pn-body,#ms-modal .pn-body{overflow:auto;padding:6px 18px 10px;color:#D9DFEA;font-size:13px;line-height:1.6}
+#pn-modal .pn-ver,#ms-modal .pn-ver{margin:14px 0 4px;color:#FFD740;font-weight:bold;font-size:14px}
+#pn-modal .pn-ver span,#ms-modal .pn-ver span{display:inline-block;background:#E53935;color:#fff;font-size:10px;border-radius:8px;padding:0 6px;margin-left:6px;vertical-align:middle}
+#pn-modal .pn-grp,#ms-modal .pn-grp{margin:8px 0 2px;color:#E3B861;font-weight:bold;font-size:12px}
+#pn-modal ul,#ms-modal ul{margin:0 0 0 18px;padding:0}
+#pn-modal li,#ms-modal li{margin:2px 0}
+#pn-modal .pn-old,#ms-modal .pn-old{color:#75839C}
+#pn-modal .pn-foot,#ms-modal .pn-foot{padding:10px 18px;border-top:1px solid #1A2843;display:flex;justify-content:flex-end;gap:8px}
+#pn-modal .pn-foot button,#ms-modal .pn-foot button{background:#1F3F7A;border:none;color:#fff;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:13px}
 .other-row{display:flex;align-items:center;gap:4px;padding:2px 4px;margin-bottom:1px}
 .other-row label{font-size:11px;color:#8D9AB2;flex:1}
 .other-row input{width:78px;background:#121D33;border:none;color:#fff;padding:2px 5px;font-size:11px;border-radius:2px;text-align:right}
@@ -348,6 +348,8 @@ canvas{display:block;cursor:crosshair}
     <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#A5D6A7" onclick="exportDxf()" title="기본 양식(가공의뢰서)에 넣어 DXF로 내보내기 (mm, 레이어별)">📐 DXF 내보내기</button><button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#A5D6A7;padding-left:6px;padding-right:6px;margin-left:-4px" onclick="dxfFormSettings()" title="DXF 양식 설정: 기본 양식 바꾸기 / 양식 없이 내보내기">⚙</button>
     <button class="canvas-btn" id="btn-shape-num" style="background:#121D33;border:1px solid #16233D;color:#E3B861" onclick="toggleShapeNumbers()">번호</button>
     <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#FFD740" onclick="showPatchNotes(true)" title="업데이트 내용 (패치 노트)">📢 새 소식</button>
+    <button class="canvas-btn" id="btn-measure" style="display:none;background:#1F3F7A;border:1px solid #2A4F92;color:#F1D69A" onclick="showMeasure()" title="실측 앱에서 받은 메모·현장 사진">📋 실측 메모</button>
+    <button class="canvas-btn" style="background:#121D33;border:1px solid #16233D;color:#A9B4C8" onclick="window.open('measure/','_blank')" title="현장 실측용 앱 (휴대폰에서 열어 설치)">📏 실측 앱</button>
     <button class="canvas-btn" id="btn-install" style="display:none;background:#2E7D32;color:#fff" onclick="installApp()" title="바탕화면·시작 메뉴에 앱으로 설치 (별도 창으로 실행)">⬇ 앱 설치</button>
     <div id="board-panel">
       <label>원판</label>
@@ -3280,7 +3282,7 @@ function newProject(){
   _setSiteInfo('','');
   document.getElementById('deliv-date').value='';document.getElementById('deliv-time').value='';
   ['r-pkg','r-ship1','r-ship2','r-other'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='0';});
-  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null);_3dStyleLoad(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정·3D 디자인도 기본
+  _savedBoardLayout=null;_savedBoardImg=null;_setCurFile(null);_3dOptsLoad(null);_3dStyleLoad(null);_setMeasure(null); // 새 도면은 처음 저장 때 이름을 고름, 3D 보기 설정·3D 디자인도 기본
   offsetX=60;offsetY=60;
   renderProductList();updatePropsPanel();redraw();calcCost();_markSaved();
 }
@@ -3321,6 +3323,7 @@ function _makeProjectData(){
     tier:_tier,
     view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
     view3d:_3dStyle, // 3D 디자인(가구 색·도어·손잡이·제품 바꿔 보기·상부장 높이·지운 가구 칸)
+    measure:_measure||undefined, // 실측 앱에서 받은 메모·사진·실측 원본 (다시 저장해도 유지)
     saved:new Date().toISOString()
   });
 }
@@ -4526,7 +4529,14 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         }
         if(data.tier&&TIER_PREFIX[data.tier])setTier(data.tier);
         selectedShapes=[];
-        renderProductList();updatePropsPanel();redraw();calcCost();_markSaved();
+        // 실측 앱(measure/)에서 만든 파일: 마감 변(밑면연마·고스라)의 방향을 판 안쪽으로 맞추고, 화면 맞춤 + 메모·사진 창
+        var _fromMeasure=!!(data.measure&&data.scale===undefined);
+        if(_fromMeasure)shapes.forEach(function(s){if(s.groupId||(s.kind!=='grindregion'&&s.kind!=='gosramark'))return;var ec=findEdgeContext(s.x1,s.y1,s.x2,s.y2);
+          if(s.kind==='grindregion'&&s.inward==null)s.inward=ec.inward;if(s.kind==='gosramark'&&s.outward==null)s.outward=ec.outward;});
+        _setMeasure(data.measure);
+        renderProductList();updatePropsPanel();redraw();calcCost();
+        if(_fromMeasure){fitView();setTimeout(showMeasure,200);}
+        _markSaved();
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
     };
     reader.readAsText(file);
@@ -11287,6 +11297,24 @@ function showPatchNotes(all){
   document.body.appendChild(d);
 }
 setTimeout(function(){showPatchNotes(false);},600);
+// ── 실측 앱(measure/) 파일의 메모·사진 (2026-11-07) ── 파일의 measure = {v, app, memo, photos:[{d:data URL, c:설명}], units(실측 원본), created}
+var _measure=null;
+function _setMeasure(m){_measure=m||null;var b=document.getElementById('btn-measure');if(b)b.style.display=_measure?'':'none';}
+function showMeasure(){
+  var m=_measure;if(!m)return;var ph=m.photos||[];
+  var h='<div class="pn-grp">메모</div><div style="white-space:pre-wrap;color:#D9DFEA;margin:4px 0 12px;line-height:1.6">'+(m.memo?escHtml(m.memo):'<span style="color:#75839C">(메모 없음)</span>')+'</div>'
+    +'<div class="pn-grp">현장 사진 '+ph.length+'장</div>'
+    +(ph.length?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:6px">'+ph.map(function(p,i){return '<div style="border:1px solid #1C2A47;border-radius:6px;overflow:hidden;background:#121D33"><img data-mi="'+i+'" src="'+p.d+'" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover;cursor:zoom-in">'+(p.c?'<div style="padding:5px 7px;font-size:12px;color:#A9B4C8">'+escHtml(p.c)+'</div>':'')+'</div>';}).join('')+'</div>':'<div style="color:#75839C;margin-top:4px">(사진 없음)</div>')
+    +'<div style="color:#56647E;font-size:11px;margin-top:12px">'+escHtml((m.app||'실측 앱')+(m.created?' · '+m.created.slice(0,10):''))+'</div>';
+  var old=document.getElementById('ms-modal');if(old)old.remove();
+  var d=document.createElement('div');d.id='ms-modal';d.className='pn-wrap';d.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center';
+  d.innerHTML='<div class="pn-box" style="width:min(820px,94vw)"><div class="pn-head"><b>📋 실측 메모·사진</b><button title="닫기">✕</button></div><div class="pn-body">'+h+'</div><div class="pn-foot"><button>확인</button></div></div>';
+  function close(){d.remove();}
+  d.querySelector('.pn-head button').onclick=close;d.querySelector('.pn-foot button').onclick=close;
+  d.addEventListener('mousedown',function(e){if(e.target===d)close();});
+  d.querySelectorAll('[data-mi]').forEach(function(im){im.onclick=function(){var w=window.open('','_blank');if(w)w.document.write('<title>현장 사진</title><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+ph[+im.dataset.mi].d+'" style="max-width:100%;max-height:100vh">');};});
+  document.body.appendChild(d);
+}
 function installApp(){
   if(!_installEvt){alert('브라우저 주소창 오른쪽의 설치 아이콘(⊕)이나 메뉴 → "앱 설치"로 설치할 수 있습니다.');return;}
   _installEvt.prompt();

@@ -15,6 +15,7 @@ while ($l.IsListening) {
     elseif ($path -eq '/' -or $path -eq '/index.html') { $file = Join-Path $Root 'index.html'; $type = 'text/html; charset=utf-8' }
     else {
       $file = Join-Path $Root ([Uri]::UnescapeDataString($path.TrimStart('/')))
+      if ($path.EndsWith('/')) { $file = Join-Path $file 'index.html' } # 하위 폴더 (measure/ 실측 앱)
       $type = switch ([IO.Path]::GetExtension($file).ToLower()) { '.html' { 'text/html; charset=utf-8' } '.json' { 'application/json; charset=utf-8' } '.png' { 'image/png' } default { 'application/javascript; charset=utf-8' } }
     }
     if (Test-Path -LiteralPath $file) {

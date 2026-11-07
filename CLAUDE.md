@@ -15,6 +15,19 @@
   (`showPatchNotes`, 본 버전 `scd_patch_seen`), 도구줄 "📢 새 소식"으로 전체 보기. **사용자에게 보이는 변경을 올릴 때 맨 위에 새 버전 추가**
 - 로컬 실행: `세라믹 심플 캐드 계산기.bat` → `launch.ps1`(index.html 열기만). 제품 목록은 윤현몰(`mall-catalog.js`)만 씀 — 엑셀 목록 기능은 없앰
 
+## 심플 실측 (`measure/`, 2026-11-07 사용자 요청 — 현장 실측 휴대폰 앱)
+- `measure/index.html` 한 파일(인라인, 외부 라이브러리 없음, 제품 검색은 `../mall-catalog.js`) + `measure/manifest.webmanifest`(id·scope `./` = 심플 캐드와 따로 설치) + `measure/sw.js`
+  (네트워크 먼저, 캐시 이름 `simplemeasure-` — 루트 sw.js는 이 이름의 캐시를 안 지움, 서로 지우지 않게). 주소 https://js80jjang.github.io/simplecad/measure/, 심플 캐드 도구줄 "📏 실측 앱"
+- 입력(사용자 확정 "모양 고르고 치수 입력"): `TYPES` 일자 I·ㄱ자 L(side 꺾이는 쪽·corner 모서리 판)·ㄷ자 U·아일랜드 S·사각 판 P → `pieces(u)` 사각형들(x 오른쪽, y 아래 = 앞, `ax` 길이 방향, `fr` 앞 변),
+  변 누르기 = 마감(노출) `u.marks['판번호'+t|r|b|l]`(이음 구간은 `edgeParts`로 뺌, 처음 = `defaultMarks`), 객체 `OBJ`(싱크볼·쿡탑·식기세척기·사각 타공·수전·콘센트·음식물) = 판 + 끝에서 가운데(al, from 반대 끝) + 앞에서 가운데(ac, 비우면 가운데)
+- 사진: 긴 쪽 1600 JPEG 0.8 data URL, 현장 정보(업체명·주소·납품일·제품·메모). 쓰던 내용 = IndexedDB `simple-measure`/kv/'draft' 자동 저장
+- 보내기 `toSimplecad()` = 심플 캐드 저장 형식(version 3, products·company·siteAddr·delivDate·shapes) + `measure:{v,app,memo,photos,units,created}`, offset/scale 없음.
+  판 = rect, 마감 변 = grindregion(50)+gosramark(방향 없음), 싱크볼 = 그룹 rect+고스라 4, 쿡탑·식기세척기·사각 타공 = 그룹 rect, 원 = circle. 상판 여러 개는 위→아래 800 간격.
+  휴대폰은 공유 창(navigator.share files), 그 밖은 다운로드. 파일 이름 `업체명-주소-20261107-실측.ceramic`. "열기" = measure.units가 있는 파일만 다시 고침
+- 심플 캐드 쪽(`_loadProjectFile`): `data.measure`이고 scale 없음 = 실측 파일 → 그룹 아닌 grindregion/gosramark의 inward/outward를 `findEdgeContext`로, `fitView`, `showMeasure()` 창(메모·사진, `#ms-modal`, 패치노트 창 CSS 같이 씀).
+  `_measure`(`_setMeasure`)는 저장 파일 `measure`로 그대로 유지, 도구줄 `#btn-measure` "📋 실측 메모"(있을 때만), 새로 만들기면 지움
+- 업데이트: 고치고 올리면 끝(서비스 워커 네트워크 먼저 → 다음에 열 때 최신). 파일 형식을 바꿀 땐 `measure.v`를 올리고 심플 캐드가 예전 v도 읽게. 화면 버전 글자 `VER`
+
 ## 윤현몰 제품 목록 (`mall-catalog.js`, 자동 생성 — 직접 고치지 않음)
 - `.github/workflows/mall-catalog.yml`이 매일 03:00(KST) `tools/update_mall_catalog.py` 실행 → 바뀌었으면 봇이 커밋·푸시
   → 로컬 작업 전 pull 필수(봇 커밋이 생김). 손으로 돌리기: Actions → "윤현몰 제품 목록 갱신" → Run workflow
