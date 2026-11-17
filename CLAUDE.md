@@ -42,6 +42,11 @@
   변 가공 = 변마다 `g/s/j`(닫는 변 `cf`), 예전 `m`/`mc`는 `norm()`이 g+s로. 원형 조각 `{circ,x,y,d}` = 다른 조각 안이면 원형 커팅(`isCut`). 라운드 `roundInfo`(접점·중심) → 사각은 `corners`, 선 조각은 줄인 선 + `arc`.
   내보내기: 졸리컷 = jollymark, 글자 = note, 지시선 = arrow(+note), 연결표시 = linkmark, 원형 커팅 = circle holeType cut. 원형 표시(표기)는 본앱 도형이 없어 그림·measure.doc에만.
   삭제: 객체·원형·표기를 누르면 위에 떠 있는 `#fab` "🗑 삭제"(`delSel`), 숫자판이 열리면 `keepVisible`이 고른 것을 숫자판 위로
+- 2026-11-17 (3) 사용자 요청: 사각 기본 가공 없음 / 표기 원형 = 특이사항 작은 원(크기 없음, `{t:'circle',x,y}`) /
+  객체 = 가로·세로·R(`o.r`, `objR`) + 위치 기준 `posRef` 'e' 모서리(좌측-모서리·앞변-모서리) | 'c' 센터(localStorage `sm_posref`, `posFields/posApply/posToggle`, 치수 표시도 따름) /
+  수전 = 가까운 싱크볼에 붙음(`o.on`, `attach/sinkOf`): 숫자판 싱크 센터→수전·싱크 뒷변→수전·⊕ 센터 맞춤, 끌면 센터 스냅(14px), 싱크볼 옮기기·크기 바꾸기에 따라감 /
+  가공 범위 = 변 값 `true` 또는 `[시작,끝]`(변 시작점에서 mm, `rangeOf/spans`), 가공 도구에서 끝점 ○ 끌기(`hitHandle`, `drag.h`) /
+  조각 이동 = 조각 안 누르기 → `sel={p,w:true}` → 끌기(`dragStart` carry: 안의 객체·붙은 수전·원형 커팅·표기, 다른 조각 꼭짓점 스냅)
 - 그리기(`draw`): 누른 자리마다 꼭짓점(`drawTap`, 방향 45° 단위 `dirLen`, 끌면 미리보기 `draw.rub`) → 바로 숫자판에 그 변 길이 → 다음 점을 누르면 확정, 처음 점(○) 또는 "✔ 닫기" = 닫힘(`closeDraw`).
   조각 = `{x0,y0,e:[{a 각도,L,m 마감}],closed,mc 닫는 변 마감,rect}` — 닫는 변 길이는 자동(기울면 빨간 점선 경고 `closeBad`). 사각(`rect`) = 누른 자리 왼쪽 위 + 가로·세로(앞 변에 마감), 가로 고치면 마주 변도(`setLen`)
 - 숫자판 `K`(`keysOpen/keysRender/keysCommit`, 시스템 키보드 안 씀): 칸 여러 개면 "다음"→"확인", `live`로 바로 그림에 반영. 변 누르기 = 길이·"▲ 마감(노출)"·조각 지우기(`edgeKeys`)
