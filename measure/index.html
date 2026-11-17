@@ -28,10 +28,20 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--
 body{display:flex;flex-direction:column}
 button{font:inherit;color:var(--tx);background:var(--bt);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;cursor:pointer}
 button:active{filter:brightness(1.35)}
-header{flex:none;background:var(--pn);border-bottom:1px solid var(--bd);padding:calc(6px + env(safe-area-inset-top)) 8px 6px;display:flex;align-items:center;gap:6px}
+#filebar{flex:none;display:flex;gap:4px;padding:calc(5px + env(safe-area-inset-top)) 6px 0;background:var(--pn)}
+#filebar button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;font-size:11px;white-space:nowrap;overflow:hidden}
+#filebar button i{font-style:normal;font-size:17px;line-height:1;position:relative}
+#f-save.dirty i::after{content:'';position:absolute;right:-6px;top:-2px;width:8px;height:8px;border-radius:50%;background:var(--or)}
+header{flex:none;background:var(--pn);border-bottom:1px solid var(--bd);padding:5px 6px 6px;display:flex;align-items:center;gap:6px}
 header .site{flex:1;min-width:0;text-align:left;background:var(--in);padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header .site b{color:var(--gold)}
-#b-send{flex:none;background:var(--gold);border-color:var(--gold);color:#060B16;font-weight:800;padding:8px 10px}
+#b-send{background:var(--gold);border-color:var(--gold);color:#060B16;font-weight:800}
+#files-bd .big{display:block;width:100%;padding:13px;font-size:15px;margin-bottom:8px;text-align:left}
+#files-bd h4{margin:16px 2px 8px;color:var(--tx2);font-size:13px}
+.fi{display:flex;align-items:center;gap:8px;background:var(--in);border:1px solid var(--bd);border-radius:10px;padding:10px 10px;margin-bottom:6px}
+.fi.cur{border-color:var(--gold)}
+.fi div{flex:1;min-width:0}.fi b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fi small{color:var(--tx3);font-size:11.5px}
+.fi button{padding:6px 10px;font-size:13px;border-color:#5a2a2a;color:#f0a0a0}
 #wrap{flex:1;position:relative;min-height:0}
 #cv{position:absolute;left:var(--rail);top:0;right:0;bottom:0;width:calc(100% - var(--rail));height:100%;touch-action:none;background:#0d1628}
 #hint{position:absolute;left:calc(var(--rail) + 8px);right:8px;top:8px;text-align:center;pointer-events:none;color:var(--gold2);font-size:13px;text-shadow:0 1px 3px #000}
@@ -99,11 +109,17 @@ header .site b{color:var(--gold)}
 </style>
 </head>
 <body>
+<nav id="filebar">
+  <button id="f-new"><i>📄</i>새로 만들기</button>
+  <button id="f-open"><i>📂</i>열기</button>
+  <button id="f-save"><i>💾</i>저장</button>
+  <button id="f-saveas"><i>📝</i>다른 이름 저장</button>
+  <button id="b-send"><i>📤</i>보내기</button>
+</nav>
 <header>
   <button class="site" id="b-info"></button>
   <button id="b-undo" title="되돌리기">↶</button>
   <button id="b-fit" title="화면 맞춤">⤢</button>
-  <button id="b-send">📤 보내기</button>
 </header>
 <div id="wrap">
   <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -123,10 +139,13 @@ header .site b{color:var(--gold)}
     <label>메모<textarea id="i-memo" placeholder="벽 상태, 고객 요청 등"></textarea></label>
     <label>현장 사진 <button id="b-photo" style="margin-left:6px;padding:4px 10px;font-size:13px">📷 추가</button><input type="file" id="f-photo" accept="image/*" multiple style="display:none"></label>
     <div class="photos" id="photos"></div>
-    <div class="row2"><button id="b-open">📂 받은 파일 열기</button><button id="b-new" style="border-color:#5a2a2a;color:#f0a0a0">🗑 새로 시작</button></div>
-    <input type="file" id="f-open" style="display:none">
-    <div style="color:var(--tx3);font-size:11.5px;margin-top:14px;line-height:1.6">쓰던 내용은 이 휴대폰에 자동 저장됩니다. 인터넷이 되면 항상 최신 버전으로 열립니다.<br>심플 실측 v<span id="ver"></span></div>
+    <div style="color:var(--tx3);font-size:11.5px;margin-top:14px;line-height:1.6">위 "💾 저장"으로 이 휴대폰에 보관하고 "📂 열기"로 다시 엽니다. 인터넷이 되면 항상 최신 버전으로 열립니다.<br>심플 실측 v<span id="ver"></span></div>
   </div>
+</div>
+<div class="full" id="files">
+  <div class="hd"><b>열기</b><button id="files-x">닫기</button></div>
+  <div class="bd" id="files-bd"></div>
+  <input type="file" id="f-file" style="display:none">
 </div>
 <div class="full" id="send">
   <div class="hd"><b>보내기</b><button id="send-x">닫기</button></div>
@@ -142,7 +161,7 @@ header .site b{color:var(--gold)}
 <script src="../mall-catalog.js"></script>
 <script>
 'use strict';
-var VER='2026.11.17 (3)';
+var VER='2026.11.17 (4)';
 document.getElementById('ver').textContent=VER;
 var OBJ={sink:{nm:'싱크볼',i:'🚰',w:828,h:432,r:24},cook:{nm:'쿡탑',i:'🔥',w:560,h:480,r:0},dish:{nm:'식기세척기',i:'🍽',w:470,h:460,r:0},food:{nm:'음식물투입구',i:'♻️',d:160},
   faucet:{nm:'수전',i:'💧',d:35},outlet:{nm:'콘센트',i:'🔌',d:70},hole:{nm:'사각타공',i:'▭',w:200,h:50,r:0}};
@@ -317,6 +336,7 @@ function render(){
   $('warn').textContent=D.pieces.some(closeBad)?'빨간 점선 = 치수가 안 맞아 닫는 변이 비스듬합니다. 변 길이를 확인하세요.':'';
   $('hint').textContent=hintText();
   $('b-info').innerHTML=D.site?'<b>📋</b> '+esc(D.site):'<b>📋 현장 정보</b> <span style="color:var(--tx3)">업체·주소·제품·사진</span>';
+  if(savedSig!=null)$('f-save').classList.toggle('dirty',dirty()); // 저장 안 한 변경 = 저장 단추에 주황 점
   $('chips').style.display=mode==='hole'?'flex':'none';
   if(mode==='hole')$('chips').innerHTML=HOLES.map(function(k){var T=OBJ[k];return '<button data-h="'+k+'"'+(holeSub===k?' class="on"':'')+'>'+T.i+' '+T.nm+' '+(T.d?'Φ'+T.d:T.w+'×'+T.h)+'</button>';}).join('');
   $('b-close').style.display=mode==='draw'&&draw&&draw.p&&draw.p.e.length>=2?'block':'none';
@@ -590,11 +610,49 @@ $('f-photo').onchange=function(e){var fs=[].slice.call(e.target.files||[]);e.tar
   fs.forEach(function(f){shrink(f,1600,0.8,function(d){if(d)D.photos.push({d:d,c:''});if(--left===0){renderPhotos();save();toast('사진 '+fs.length+'장 추가');}});});};
 function shrink(file,max,q,cb){var url=URL.createObjectURL(file),img=new Image();img.onload=function(){var k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);cb(c.toDataURL('image/jpeg',q));};img.onerror=function(){URL.revokeObjectURL(url);cb(null);};img.src=url;}
-$('b-new').onclick=function(){if(!confirm('지금 실측 내용을 모두 지우고 새로 시작할까요?'))return;D=blank();hist=[];draw=null;sel=null;pend=null;$('info').style.display='none';view={s:0.12,ox:40,oy:120};setMode('sel');save();};
-$('b-open').onclick=function(){$('f-open').click();};
-$('f-open').onchange=function(e){var f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result),m=d.measure;
-  if(!m||!m.doc){alert('심플 실측에서 만든 파일이 아니라서 열 수 없습니다.');return;}D=Object.assign(blank(),m.doc);D.photos=m.photos||[];norm();hist=[];$('info').style.display='none';fit();save();toast('불러왔습니다');}
+// ── 파일: 새로 만들기 / 열기 / 저장 / 다른 이름 저장 ──
+//   저장 = 이 휴대폰 IndexedDB에 이름 붙여 보관: 'files' = [{id,name,saved,n}], 'f:'+id = 실측 내용. 새로고침하면 빈 첫 화면(쓰던 것은 'doc2' 자동 저장 → 열기에서 이어서)
+var cur=null,savedSig=null;
+function sig(){return JSON.stringify([D.pieces,D.objs,D.ann,D.site,D.prod,D.memo,D.photos.length]);}
+function dirty(){return sig()!==savedSig;}
+function markSaved(){savedSig=sig();render();}
+function kv(mode,key,val,cb){db(function(d){if(!d){if(cb)cb(null);return;}try{var st=d.transaction('kv',mode==='get'?'readonly':'readwrite').objectStore('kv'),rq=mode==='get'?st.get(key):mode==='del'?st.delete(key):st.put(val,key);
+  rq.onsuccess=function(){if(cb)cb(mode==='get'?rq.result:true);};rq.onerror=function(){if(cb)cb(null);};}catch(e){if(cb)cb(null);}});}
+function fileList(cb){kv('get','files',null,function(v){cb(v||[]);});}
+function defName(){var d=new Date();return (D.site||'실측')+' '+(d.getMonth()+1)+'.'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+function writeFile(id,name){keysCommit();endDraw();var doc=JSON.parse(JSON.stringify(D));
+  kv('put','f:'+id,doc,function(ok){if(!ok){alert('저장하지 못했습니다 (휴대폰 저장 공간을 확인하세요).');return;}
+    fileList(function(L){L=L.filter(function(x){return x.id!==id;});L.unshift({id:id,name:name,saved:Date.now(),n:D.pieces.length});kv('put','files',L,function(){
+      cur={id:id,name:name};kv('put','cur2',cur);markSaved();toast('💾 저장했습니다 · '+name,1800);});});});}
+function saveFile(){if(cur)writeFile(cur.id,cur.name);else saveFileAs();}
+function saveFileAs(){keysCommit();askText('저장할 이름',cur?cur.name:defName(),function(n){if(!n)return;writeFile(nid(),n);});}
+function guard(msg){return !dirty()||confirm((msg||'')+'저장하지 않은 내용이 있습니다. 저장하지 않고 계속할까요?');}
+function loadDoc(doc,c,clean){D=Object.assign(blank(),doc);norm();hist=[];draw=null;sel=null;pend=null;K=null;keysRender();cur=c||null;kv('put','cur2',cur);
+  $('files').style.display='none';$('info').style.display='none';openG=null;setMode('sel');savedSig=clean?sig():'';fit();save();}
+function newFile(){keysCommit();endDraw();if(!guard())return;D=blank();hist=[];draw=null;sel=null;pend=null;K=null;keysRender();cur=null;kv('put','cur2',null);openG=null;
+  view={s:0.12,ox:40,oy:120};setMode('sel');markSaved();toast('📄 새로 만들기',1200);}
+function fmtD(t){var d=new Date(t);return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+function openFiles(){keysCommit();endDraw();fileList(function(L){kv('get','doc2',null,function(auto){kv('get','cur2',null,function(ac){
+  var h='',hasAuto=auto&&auto.pieces&&(auto.pieces.length||auto.objs&&auto.objs.length);
+  if(hasAuto)h+='<button class="big" data-auto>⟲ 마지막 작업 이어서 <small style="color:var(--tx3)">(자동 저장'+(ac&&ac.name?' · '+esc(ac.name):'')+')</small></button>';
+  h+='<button class="big" data-recv>📂 받은 파일 열기 (.ceramic)</button>';
+  h+='<h4>이 휴대폰에 저장한 실측 ('+L.length+')</h4>';
+  h+=L.length?L.map(function(x){return '<div class="fi'+(cur&&cur.id===x.id?' cur':'')+'" data-id="'+x.id+'"><div><b>'+esc(x.name)+'</b><small>'+fmtD(x.saved)+' · 조각 '+(x.n||0)+'개</small></div><button data-del="'+x.id+'">삭제</button></div>';}).join('')
+    :'<div style="color:var(--tx3);font-size:13px;padding:8px 2px">아직 저장한 실측이 없습니다. 위 "💾 저장"으로 보관하세요.</div>';
+  $('files-bd').innerHTML=h;$('files-bd').dataset.ac=JSON.stringify(ac||null);$('files').style.display='flex';});});});}
+$('files-bd').addEventListener('click',function(e){var t=e.target.closest('[data-auto],[data-recv],[data-del],[data-id]');if(!t)return;
+  if(t.dataset.recv!=null){$('f-file').click();return;}
+  if(t.dataset.auto!=null){if(!guard())return;kv('get','doc2',null,function(d){if(d)loadDoc(d,JSON.parse($('files-bd').dataset.ac||'null'),false);toast('마지막 작업을 이어서 엽니다');});return;}
+  if(t.dataset.del){var id=t.dataset.del;fileList(function(L){var x=L.filter(function(q){return q.id===id;})[0];if(!x||!confirm('"'+x.name+'"을(를) 이 휴대폰에서 지울까요?\n지우면 되돌릴 수 없습니다.'))return;
+    kv('del','f:'+id,null,function(){kv('put','files',L.filter(function(q){return q.id!==id;}),function(){if(cur&&cur.id===id){cur=null;kv('put','cur2',null);}openFiles();});});});return;}
+  var id2=t.dataset.id;if(!guard())return;fileList(function(L){var x=L.filter(function(q){return q.id===id2;})[0];if(!x)return;
+    kv('get','f:'+id2,null,function(d){if(!d){alert('파일을 찾을 수 없습니다.');return;}loadDoc(d,{id:x.id,name:x.name},true);toast('📂 '+x.name);});});});
+$('files-x').onclick=function(){$('files').style.display='none';};
+$('f-file').onchange=function(e){var f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;if(!guard())return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result),m=d.measure;
+  if(!m||!m.doc){alert('심플 실측에서 만든 파일이 아니라서 열 수 없습니다.');return;}var doc=m.doc;doc.photos=m.photos||[];loadDoc(doc,null,false);toast('받은 파일을 열었습니다 · 💾 저장하면 보관됩니다',2400);}
   catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}};r.readAsText(f);};
+$('f-new').onclick=newFile;$('f-open').onclick=openFiles;$('f-save').onclick=saveFile;$('f-saveas').onclick=saveFileAs;
+window.addEventListener('beforeunload',function(e){if(dirty()){e.preventDefault();e.returnValue='';}});
 
 // ── 심플 캐드 파일 ──  사각 조각 = rect(코너 라운드 = corners), 그 밖 = 선(line)들 + 라운드 = 호(arc), 원형 = circle(원형 커팅),
 //   밑면연마 = grindregion(50) / 고스라 = gosramark (재료 쪽, 앱이 정함) / 졸리컷 = jollymark, 싱크볼 = 고스라 4개 묶음, 쿡탑·식기세척기·사각타공 = 묶음 rect, 수전·콘센트·음식물 = circle
@@ -630,14 +688,14 @@ function toSimplecad(){
 }
 function prodOut(){var s=(D.prod||'').trim();if(!s)return[{name:'',size:'',qty:1}];var m=s.match(/^(.*?)\s*(\d{3,4}\s*[×xX*]\s*\d{3,4}(?:\s*[×xX*]\s*\d+\s*T?)?)\s*$/);
   return[{name:m?m[1].trim():s,size:m?m[2].replace(/\s+/g,'').replace(/[xX*]/g,'×'):'',qty:1}];}
-function baseName(){var d=new Date(),ymd=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2),b=(D.site||'').replace(/\s*\/\s*/g,'-').replace(/[\\\/:*?"<>|]+/g,' ').trim();return (b?b+'-':'')+ymd+'-실측';}
+function baseName(){var d=new Date(),ymd=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2),b=(D.site||(cur&&cur.name)||'').replace(/\s*\/\s*/g,'-').replace(/[\\\/:*?"<>|]+/g,' ').trim();return (b?b+'-':'')+ymd+'-실측';}
 // 그림(PNG): 흰 바탕, 위에 현장·제품·날짜, 객체 위치 치수까지 — 문자로도 보이게
 function pngBlob(cb){
   var B=bboxAll();if(!B)return cb(null,null);var Wd=1400,pad=120,top=120,w=Math.max(200,B.r-B.l),h=Math.max(200,B.b-B.t),s=Math.min((Wd-pad*2)/w,1.2),Hd=Math.round(h*s+pad*2+top);
   var V=function(x,y){return[(x-B.l)*s+pad,(y-B.t)*s+pad+top];},keep=sel;sel=null;
   var body=paint(V,{halo:'#fff',bg:'#fff',fill:'#F4F6FA',fillSel:'#F4F6FA',line:'#1C2A47',grind:'#E8590C',grindBg:'rgba(232,89,12,.10)',gos:'#111',jolly:'#D32F2F',
     dim:'#111',auto:'#555',selc:'#1565C0',obj:'#8a5a00',hole:'#0b6e99',odim:'#666',ann:'#C62828',allDims:true},28);sel=keep;
-  var head='<text x="40" y="56" font-size="36" font-weight="bold" fill="#111">'+esc(D.site||'현장 실측')+'</text><text x="40" y="98" font-size="25" fill="#444">'+esc((D.prod?D.prod+' · ':'')+new Date().toLocaleDateString('ko-KR'))+' · ▨ 밑면연마 · ▲ 고스라 · ★ 졸리컷 · 단위 mm</text>';
+  var head='<text x="40" y="56" font-size="36" font-weight="bold" fill="#111">'+esc(D.site||(cur&&cur.name)||'현장 실측')+'</text><text x="40" y="98" font-size="25" fill="#444">'+esc((D.prod?D.prod+' · ':'')+new Date().toLocaleDateString('ko-KR'))+' · ▨ 밑면연마 · ▲ 고스라 · ★ 졸리컷 · 단위 mm</text>';
   var x='<svg xmlns="http://www.w3.org/2000/svg" width="'+Wd+'" height="'+Hd+'" viewBox="0 0 '+Wd+' '+Hd+'" font-family="Malgun Gothic,Apple SD Gothic Neo,sans-serif"><rect width="100%" height="100%" fill="#fff"/>'+head+body+'</svg>';
   var url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(x),img=new Image();
   img.onload=function(){var c=document.createElement('canvas');c.width=Wd;c.height=Hd;c.getContext('2d').drawImage(img,0,0);try{c.toBlob(function(b){cb(b,b?URL.createObjectURL(b):url);},'image/png');}catch(e){cb(null,url);}};
@@ -665,10 +723,10 @@ function download(blob,nm){var a=document.createElement('a'),u=URL.createObjectU
 // ── 이 기기에 자동 저장 (IndexedDB) ──
 var _db=null;
 function db(cb){if(_db)return cb(_db);try{var rq=indexedDB.open('simple-measure',1);rq.onupgradeneeded=function(){rq.result.createObjectStore('kv');};rq.onsuccess=function(){_db=rq.result;cb(_db);};rq.onerror=function(){cb(null);};}catch(e){cb(null);}}
-function save(){clearTimeout(save.t);save.t=setTimeout(function(){db(function(d){if(!d)return;try{d.transaction('kv','readwrite').objectStore('kv').put(JSON.parse(JSON.stringify(D)),'doc2');}catch(e){}});},400);}
+function save(){clearTimeout(save.t);save.t=setTimeout(function(){if(!D.pieces.length&&!D.objs.length&&!D.ann.length)return; // 빈 화면은 자동 저장 안 함 (지난 작업을 지우지 않게)
+  db(function(d){if(!d)return;try{d.transaction('kv','readwrite').objectStore('kv').put(JSON.parse(JSON.stringify(D)),'doc2');}catch(e){}});},400);}
 window.addEventListener('resize',function(){renderRail();render();});
-renderRail();render();
-db(function(d){if(!d)return;try{var rq=d.transaction('kv').objectStore('kv').get('doc2');rq.onsuccess=function(){if(rq.result&&rq.result.pieces){D=Object.assign(blank(),rq.result);norm();fit();}};}catch(e){}});
+savedSig=sig();renderRail();render(); // 새로고침 = 빈 첫 화면 (자동 저장본 'doc2'는 지우지 않음 → 열기에서 "마지막 작업 이어서")
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 </script>
 </body>

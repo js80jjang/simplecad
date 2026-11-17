@@ -47,6 +47,9 @@
   수전 = 가까운 싱크볼에 붙음(`o.on`, `attach/sinkOf`): 숫자판 싱크 센터→수전·싱크 뒷변→수전·⊕ 센터 맞춤, 끌면 센터 스냅(14px), 싱크볼 옮기기·크기 바꾸기에 따라감 /
   가공 범위 = 변 값 `true` 또는 `[시작,끝]`(변 시작점에서 mm, `rangeOf/spans`), 가공 도구에서 끝점 ○ 끌기(`hitHandle`, `drag.h`) /
   조각 이동 = 조각 안 누르기 → `sel={p,w:true}` → 끌기(`dragStart` carry: 안의 객체·붙은 수전·원형 커팅·표기, 다른 조각 꼭짓점 스냅)
+- 2026-11-17 (4) 파일 줄 `#filebar`(사용자 요청): 새로 만들기 `newFile` / 열기 `openFiles`(`#files` 창: 마지막 작업 이어서 = 'doc2', 받은 .ceramic, 저장 목록) / 저장 `saveFile` / 다른 이름 저장 `saveFileAs` / 보내기.
+  저장 = IndexedDB kv 'files'(목록 [{id,name,saved,n}]) + 'f:'+id(내용), 지금 파일 `cur`('cur2'). 저장 안 한 변경 `dirty()`(= `sig()` ≠ `savedSig`) → 저장 단추 주황 점, `guard()` 확인, beforeunload.
+  **새로고침 = 빈 첫 화면**(자동 복원 안 함, 'doc2'는 빈 화면이면 안 덮어씀 → 열기에서 이어서)
 - 그리기(`draw`): 누른 자리마다 꼭짓점(`drawTap`, 방향 45° 단위 `dirLen`, 끌면 미리보기 `draw.rub`) → 바로 숫자판에 그 변 길이 → 다음 점을 누르면 확정, 처음 점(○) 또는 "✔ 닫기" = 닫힘(`closeDraw`).
   조각 = `{x0,y0,e:[{a 각도,L,m 마감}],closed,mc 닫는 변 마감,rect}` — 닫는 변 길이는 자동(기울면 빨간 점선 경고 `closeBad`). 사각(`rect`) = 누른 자리 왼쪽 위 + 가로·세로(앞 변에 마감), 가로 고치면 마주 변도(`setLen`)
 - 숫자판 `K`(`keysOpen/keysRender/keysCommit`, 시스템 키보드 안 씀): 칸 여러 개면 "다음"→"확인", `live`로 바로 그림에 반영. 변 누르기 = 길이·"▲ 마감(노출)"·조각 지우기(`edgeKeys`)
