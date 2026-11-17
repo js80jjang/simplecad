@@ -18,13 +18,15 @@
 ## 심플 실측 (`measure/`, 2026-11-07 사용자 요청 — 현장 실측 휴대폰 앱)
 - `measure/index.html` 한 파일(인라인, 외부 라이브러리 없음, 제품 검색은 `../mall-catalog.js`) + `measure/manifest.webmanifest`(id·scope `./` = 심플 캐드와 따로 설치) + `measure/sw.js`
   (네트워크 먼저, 캐시 이름 `simplemeasure-` — 루트 sw.js는 이 이름의 캐시를 안 지움, 서로 지우지 않게). 주소 https://js80jjang.github.io/simplecad/measure/, 심플 캐드 도구줄 "📏 실측 앱"
-- 입력(사용자 확정 "모양 고르고 치수 입력"): `TYPES` 일자 I·ㄱ자 L(side 꺾이는 쪽·corner 모서리 판)·ㄷ자 U·아일랜드 S·사각 판 P → `pieces(u)` 사각형들(x 오른쪽, y 아래 = 앞, `ax` 길이 방향, `fr` 앞 변),
-  변 누르기 = 마감(노출) `u.marks['판번호'+t|r|b|l]`(이음 구간은 `edgeParts`로 뺌, 처음 = `defaultMarks`), 객체 `OBJ`(싱크볼·쿡탑·식기세척기·사각 타공·수전·콘센트·음식물) = 판 + 끝에서 가운데(al, from 반대 끝) + 앞에서 가운데(ac, 비우면 가운데)
-- 사진: 긴 쪽 1600 JPEG 0.8 data URL, 현장 정보(업체명·주소·납품일·제품·메모). 쓰던 내용 = IndexedDB `simple-measure`/kv/'draft' 자동 저장
-- 보내기 `toSimplecad()` = 심플 캐드 저장 형식(version 3, products·company·siteAddr·delivDate·shapes) + `measure:{v,app,memo,photos,units,created}`, offset/scale 없음.
-  판 = rect, 마감 변 = grindregion(50)+gosramark(방향 없음), 싱크볼 = 그룹 rect+고스라 4, 쿡탑·식기세척기·사각 타공 = 그룹 rect, 원 = circle. 상판 여러 개는 위→아래 800 간격.
-  휴대폰은 공유 창(navigator.share files), 그 밖은 다운로드. 파일 이름 `업체명-주소-20261107-실측.ceramic`. "열기" = measure.units가 있는 파일만 다시 고침
-- 심플 캐드 쪽(`_loadProjectFile`): `data.measure`이고 scale 없음 = 실측 파일 → 그룹 아닌 grindregion/gosramark의 inward/outward를 `findEdgeContext`로, `fitView`, `showMeasure()` 창(메모·사진, `#ms-modal`, 패치노트 창 CSS 같이 씀).
+- 2026-11-17 사용자 요청 "현장에서 바로 그리고 사이즈를 쉽게, 카톡·문자로 보내기, 간단한 구조"로 다시 만듦 (예전 모양 고르기 방식은 없앰). 한 화면 = SVG 그림판 + 아래 도구 막대 + 숫자판
+- 그리기(`draw`): 누른 자리마다 꼭짓점(`drawTap`, 방향 45° 단위 `dirLen`, 끌면 미리보기 `draw.rub`) → 바로 숫자판에 그 변 길이 → 다음 점을 누르면 확정, 처음 점(○) 또는 "✔ 닫기" = 닫힘(`closeDraw`).
+  조각 = `{x0,y0,e:[{a 각도,L,m 마감}],closed,mc 닫는 변 마감,rect}` — 닫는 변 길이는 자동(기울면 빨간 점선 경고 `closeBad`). 사각(`rect`) = 누른 자리 왼쪽 위 + 가로·세로(앞 변에 마감), 가로 고치면 마주 변도(`setLen`)
+- 숫자판 `K`(`keysOpen/keysRender/keysCommit`, 시스템 키보드 안 씀): 칸 여러 개면 "다음"→"확인", `live`로 바로 그림에 반영. 변 누르기 = 길이·"▲ 마감(노출)"·조각 지우기(`edgeKeys`)
+- 객체 `OBJ`(싱크볼·쿡탑·수전·콘센트·음식물·식기세척기·사각타공) = 누른 자리 + 숫자판 크기·위치(`objRef` = 가운데에서 왼쪽·앞(아래)으로 가장 가까운 실제 변, ㄱ자도 맞음), 끌어서 옮기기.
+  손가락: 한 손가락 끌기 = 화면 이동/객체 옮기기, 두 손가락 = 확대(`pinch`), 변이 10px 안이면 객체보다 변 먼저. 되돌리기 `hist`. 현장 정보 창(`#info`): 업체명/주소 한 칸·제품·메모·사진·받은 파일 열기·새로 시작
+- 보내기: 파일 먼저 만들고(`pngBlob` 흰 바탕 그림 + 객체 위치 치수, `toSimplecad`) 창 `#send`에서 "💬 카톡·문자로 보내기"(navigator.share files — 아이폰은 누른 순간 바로 열어야 해서 미리 만듦, 그림까지 못 보내는 폰은 도면 파일만) / "💾 휴대폰에 저장"
+- 파일: 심플 캐드 형식 + `measure:{v:2,app,memo,photos,doc(앱 원본),created}`. 사각 조각 = rect, 그 밖 = line들(심플 캐드 선 조각), 마감 = grindregion(50)+gosramark(inward/outward = 재료 쪽, 앱이 정함).
+  자동 저장 IndexedDB `simple-measure`/kv/'doc2'. "받은 파일 열기" = measure.doc 있는 파일만- 심플 캐드 쪽(`_loadProjectFile`): `data.measure`이고 scale 없음 = 실측 파일 → 그룹 아닌 grindregion/gosramark의 inward/outward를 `findEdgeContext`로, `fitView`, `showMeasure()` 창(메모·사진, `#ms-modal`, 패치노트 창 CSS 같이 씀).
   `_measure`(`_setMeasure`)는 저장 파일 `measure`로 그대로 유지, 도구줄 `#btn-measure` "📋 실측 메모"(있을 때만), 새로 만들기면 지움
 - 업데이트: 고치고 올리면 끝(서비스 워커 네트워크 먼저 → 다음에 열 때 최신). 파일 형식을 바꿀 땐 `measure.v`를 올리고 심플 캐드가 예전 v도 읽게. 화면 버전 글자 `VER`
 
