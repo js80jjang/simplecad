@@ -1,3 +1,21 @@
+# ★ 이 폴더 = 실측 앱(심플 실측) 전용 작업 폴더 — 먼저 읽기
+이 폴더(`C:\Users\pc\Documents\GitHub\simplecad-measure`)는 `measure-app` 브랜치 작업 폴더(worktree)이고, 여기서 여는 Claude 세션은 **실측 앱 담당**이다.
+본앱(심플 캐드)은 따로 `C:\Users\pc\Documents\GitHub\simplecad`(main) 폴더의 다른 세션이 맡는다. (2026-11-17 사용자 확정: 두 앱은 업데이트를 따로)
+
+1. **고치는 곳은 `measure/` 폴더만.** 이 폴더에도 본앱 파일(`index.html`·`sw.js`·`patch-notes.js` 등)이 있지만 고치지 않는다.
+   본앱 쪽이 필요하면(예: 실측 파일 읽기·실측 메모 창) 사용자에게 "본앱 세션에서 할 일"로 내용을 정리해 알려 준다.
+2. **코어 = 도면 파일 형식(.ceramic)만 같이 씀**(코드는 공유 안 함). 실측 앱은 심플 캐드 저장 형식과 같은 도형 데이터를 만들고, 실측 전용 내용은 `measure` 칸(`v` 형식 번호·memo·photos·doc…)에.
+   형식은 **더하기만**(있던 칸 바꾸거나 빼지 않기). 본앱이 알아야 하는 새 내용이면 본앱을 먼저 고쳐 올리고 그다음 실측 앱 — 그때 `measure.v`를 올림.
+3. **작업 시작 때 main 최신을 합치기**: `git fetch origin` → `git merge origin/main`(이 폴더에서, 충돌은 본앱 파일이면 main 쪽으로).
+4. **버전·새 소식은 실측 앱 것만**: `measure/index.html`의 `VER`, 실측 패치 노트(`measure/patch-notes.js`, 아직 없으면 만들어 씀), 서비스 워커 `measure/sw.js`의 `CACHE`(`simplemeasure-vN`)를 올림. 본앱 `patch-notes.js`·`sw.js`는 건드리지 않음.
+5. **커밋 메시지 앞에 `실측:`** (한국어). 커밋은 measure-app 브랜치에.
+6. **올리기(push)·main에 합치기는 사용자가 "올려줘"라고 할 때만.** 안정화 전이라 원격에 안 올리는 게 기본. 올릴 때는 GitHub Desktop(simplecad 저장소에서 브랜치 고름)으로 — 명령줄 push 인증 불가.
+7. **시험 서버는 8766 번**(본앱 세션이 8765를 씀): `powershell -ExecutionPolicy Bypass -File tools\serve.ps1 -Port 8766` → http://localhost:8766/measure/ (휴대폰 크기는 브라우저 패널 resize mobile).
+   PC에선 공유 창(카톡·문자)이 없어 "휴대폰에 저장"만 보임 — 실제 공유·설치 시험은 https에 올린 뒤.
+8. 대화·다음 단계 상자(요약·질문·버튼)는 모두 한국어. 고객 도면(.ceramic/.dxf)·단가 파일은 커밋하지 않음.
+
+아래는 본앱 설명(참고용) — 실측 앱 설명은 "## 심플 실측" 절.
+
 # 심플 캐드 (세라믹 상판 가공비 계산기)
 
 세라믹 상판 도면을 그리고 가공비 견적·도면(PDF)·원판 배치를 만드는 **단일 파일 웹 앱**.
