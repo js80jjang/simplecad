@@ -36,7 +36,12 @@
 ## 심플 실측 (`measure/`, 2026-11-07 사용자 요청 — 현장 실측 휴대폰 앱)
 - `measure/index.html` 한 파일(인라인, 외부 라이브러리 없음, 제품 검색은 `../mall-catalog.js`) + `measure/manifest.webmanifest`(id·scope `./` = 심플 캐드와 따로 설치) + `measure/sw.js`
   (네트워크 먼저, 캐시 이름 `simplemeasure-` — 루트 sw.js는 이 이름의 캐시를 안 지움, 서로 지우지 않게). 주소 https://js80jjang.github.io/simplecad/measure/, 심플 캐드 도구줄 "📏 실측 앱"
-- 2026-11-17 사용자 요청 "현장에서 바로 그리고 사이즈를 쉽게, 카톡·문자로 보내기, 간단한 구조"로 다시 만듦 (예전 모양 고르기 방식은 없앰). 한 화면 = SVG 그림판 + 아래 도구 막대 + 숫자판
+- 2026-11-17 사용자 요청 "현장에서 바로 그리고 사이즈를 쉽게, 카톡·문자로 보내기, 간단한 구조"로 다시 만듦 (예전 모양 고르기 방식은 없앰). 한 화면 = SVG 그림판 + 왼쪽 도구 탭 + 숫자판
+- 왼쪽 도구 탭(2026-11-17 (2) 사용자 요청, `GROUPS`/`renderRail`, 묶음 누르면 옆에 `#fly`): 👆선택 / 그리기(사각·직선·원형 `circ`·타공 `hole`+위 `#chips` 수전/콘센트/사각) / 객체삽입(싱크볼·쿡탑·식기세척기·음식물투입구) /
+  추가가공(모서리 라운드 `round` = 꼭짓점 → `p.r[k]`, 밑면연마·졸리컷·고스라 `flag:g|j|s` = 변 누를 때마다 켜고 끔) / 기타 표기(`D.ann`: circle·text·link·arrow, 두 점은 `pend`).
+  변 가공 = 변마다 `g/s/j`(닫는 변 `cf`), 예전 `m`/`mc`는 `norm()`이 g+s로. 원형 조각 `{circ,x,y,d}` = 다른 조각 안이면 원형 커팅(`isCut`). 라운드 `roundInfo`(접점·중심) → 사각은 `corners`, 선 조각은 줄인 선 + `arc`.
+  내보내기: 졸리컷 = jollymark, 글자 = note, 지시선 = arrow(+note), 연결표시 = linkmark, 원형 커팅 = circle holeType cut. 원형 표시(표기)는 본앱 도형이 없어 그림·measure.doc에만.
+  삭제: 객체·원형·표기를 누르면 위에 떠 있는 `#fab` "🗑 삭제"(`delSel`), 숫자판이 열리면 `keepVisible`이 고른 것을 숫자판 위로
 - 그리기(`draw`): 누른 자리마다 꼭짓점(`drawTap`, 방향 45° 단위 `dirLen`, 끌면 미리보기 `draw.rub`) → 바로 숫자판에 그 변 길이 → 다음 점을 누르면 확정, 처음 점(○) 또는 "✔ 닫기" = 닫힘(`closeDraw`).
   조각 = `{x0,y0,e:[{a 각도,L,m 마감}],closed,mc 닫는 변 마감,rect}` — 닫는 변 길이는 자동(기울면 빨간 점선 경고 `closeBad`). 사각(`rect`) = 누른 자리 왼쪽 위 + 가로·세로(앞 변에 마감), 가로 고치면 마주 변도(`setLen`)
 - 숫자판 `K`(`keysOpen/keysRender/keysCommit`, 시스템 키보드 안 씀): 칸 여러 개면 "다음"→"확인", `live`로 바로 그림에 반영. 변 누르기 = 길이·"▲ 마감(노출)"·조각 지우기(`edgeKeys`)
