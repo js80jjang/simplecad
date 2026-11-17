@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-11-05",
+"updated":"2026-11-08",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -3145,7 +3145,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002876/1000002876_list_080.jpg",
+"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002876/image/list/1000002876_list_058.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002876",
 "cate":"009001"
 },
