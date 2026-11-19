@@ -1588,7 +1588,7 @@ function drawTriangle(cx,cy,angle,sz,col){
 
 // 밑면연마 깊이 라벨 (x,y는 현재 ctx 변환 좌표계 기준)
 // band = [x0,y0,x1,y1] 띠 상자(px)를 주면 편집 화면에서 띠 끝 바깥에 (가로 띠 = 왼쪽 끝 옆, 세로 띠 = 위쪽 끝 위 — 2026-11-03 사용자 요청: 띠 가운데는 다른 치수와 겹침)
-function _drawGrindDepthLabel(x,y,depth,band){
+function _drawGrindDepthLabel(x,y,depth,band,s){
   var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';
   var dfSz=printRender?32:9;
   ctx.save();
@@ -1601,6 +1601,8 @@ function _drawGrindDepthLabel(x,y,depth,band){
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';
   ctx.fillText(dtxt,x,y);_numUnderline(ctx,dtxt,x,y);
   ctx.restore();
+  // 누르면 깊이 고치기·✕ 삭제(hideDims.dist) (2026-11-19 사용자 요청) — 주석 틀(k) 좌표 → 치수 틀(kd) 좌표로
+  if(s&&!printRender){var _r=(_dimDraw.on?1:_annCur/_annDimCur);dimLabels.push({shape:s,field:'depth',px:x*_r,py:y*_r});}
 }
 function drawGrindRegion(s,preview){
   var isH=Math.abs(s.y2-s.y1)<0.5;
@@ -1657,7 +1659,7 @@ function drawGrindRegion(s,preview){
         var _midA=(ai.a0+ai.a1)/2,_midR=(rOuter+rInner)/2;
         var dmx=ai.x+_midR*Math.cos(_midA),dmy=ai.y+_midR*Math.sin(_midA);
         var dcp=toCanvas(dmx,dmy);
-        _drawGrindDepthLabel(dcp[0],dcp[1],depth);
+        _drawGrindDepthLabel(dcp[0],dcp[1],depth,null,s);
       }
       return;
     }
@@ -1705,7 +1707,7 @@ function drawGrindRegion(s,preview){
     if(!preview&&!(s.hideDims&&s.hideDims['dist'])&&!(printRender&&s._skipGrindLabel)){
       var dmx=(s.x1+s.x2)/2+nx/2,dmy=(s.y1+s.y2)/2+ny/2;
       var dcp=toCanvas(dmx,dmy);
-      _drawGrindDepthLabel(dcp[0],dcp[1],depth);
+      _drawGrindDepthLabel(dcp[0],dcp[1],depth,null,s);
     }
     return;
   }
@@ -1773,7 +1775,7 @@ function drawGrindRegion(s,preview){
     if(!preview&&!(s.hideDims&&s.hideDims['dist'])&&!(printRender&&s._skipGrindLabel)){
       ctx.save();ctx.translate(_pc[0],_pc[1]);ctx.rotate(_rot);
       var _dlx2=_lx+_lw/2,_dly2=_ly+_lh/2;
-      _drawGrindDepthLabel(_dlx2,_dly2,depth,[_lx,_ly,_lx+_lw,_ly+_lh]);
+      _drawGrindDepthLabel(_dlx2,_dly2,depth,[_lx,_ly,_lx+_lw,_ly+_lh],s);
       ctx.restore();
     }
     return;
@@ -1852,7 +1854,7 @@ function drawGrindRegion(s,preview){
       if(isH){var _dn=ry+rh/2>s.y1;_gb={pt:toCanvas(rx+rw/2,_dn?ry:ry+rh),out:[0,_dn?-1:1]};} // 띠의 변 쪽 끝에서 바깥으로
       else{var _rt=rx+rw/2>s.x1;_gb={pt:toCanvas(_rt?rx:rx+rw,ry+rh/2),out:[_rt?-1:1,0]};}
     }
-    _drawGrindDepthLabel(dcp[0],dcp[1],depth,_gb);
+    _drawGrindDepthLabel(dcp[0],dcp[1],depth,_gb,s);
   }
 }
 
@@ -6387,13 +6389,14 @@ function showDimInput(d){
   else if(fld==='ry')cur=s.ry;
   else if(fld==='dist')cur=Math.hypot(s.x2-s.x1,s.y2-s.y1)*dispF;
   else if(fld==='cornerSize')cur=s.cornerSize||0;
+  else if(fld==='depth')cur=s.depth||30; // 밑면연마 깊이 (숨김 키는 dist)
   else return;
   _dimInputPopup({
     px:d.px,py:d.py,initVal:cur,
     onHide:function(){
       saveHistory();
       s.hideDims=s.hideDims||{};
-      s.hideDims[fld]=true;
+      s.hideDims[fld==='depth'?'dist':fld]=true;
       redraw();
     },
     onCommit:function(v){
@@ -6405,6 +6408,7 @@ function showDimInput(d){
         else if(fld==='rx')s.rx=v*saveF;
         else if(fld==='ry')s.ry=v*saveF;
         else if(fld==='cornerSize'){s.cornerSize=Math.max(0,v);if(!s.cornerType||s.cornerType==='none')s.cornerType='fillet';}
+        else if(fld==='depth')s.depth=v;
         else if(fld==='dist'){var _d0=Math.hypot(s.x2-s.x1,s.y2-s.y1);if(_d0>0){var _nx=(s.x2-s.x1)/_d0,_ny=(s.y2-s.y1)/_d0;s.x2=s.x1+_nx*(v*saveF);s.y2=s.y1+_ny*(v*saveF);}}
         syncGroupShapes(s);
         if(s.groupId&&s.groupRole==='main')selectedShapes=getGroupShapes(s);
