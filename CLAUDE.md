@@ -94,6 +94,8 @@
   - 음식물투입구 `foodhole` 도구 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)
 - 위치(관계) 치수 `drawNestDims`(2026-11-07 사용자 요청): 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구)과 타공(수전·콘센트 원, 사각 타공, 타원 타공) = 상판 상자 네 변 모두
   (사각·타원 = 상자 변에서, 원 = 중심에서 `drawCircleGapDim(...,mid)` 글자는 선 가운데). 원형 커팅(holeType cut)·타원형 커팅(hole 아님)은 위치 치수 없음.
+  원 타공(수전·콘센트·음식물)은 같은 상판 상자 안 가장 가까운 싱크볼(`_nearSinkBox`)의 가까운 세로·가로 변까지도(2026-11-19 사용자 요청, 숨김 키 `sinkH/sinkV` = drawCircleGapDim 10번째 인자·dimLabels `hk`, 싱크볼 안이면 없음).
+  도면화·DXF 타공도 같게: 가까운 외부 끝변(상판 바깥 변 `pV/pH`, DXF `refs(o)`) + 싱크볼 변(도면화 `_holeRowDims(sinkSegs,true)` 가로 치수 아래쪽, DXF `refs(o,'sink')`) — 같은 줄 타공 사이 간격은 한 번만.
   치수를 누르면 `showGapDimInput`(타원 타공 이동 포함) — "✕ 삭제" 단추(`#dim-hide-btn`) 또는 값을 안 고친 채 Delete = `hideDims[dir]`, 속성 칸 ← → ↑ ↓로 다시 켬. 묶음 선택 중에도 gap 치수는 클릭됨
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
@@ -350,7 +352,7 @@
   - 표제란 채움(레이어 `SC-TITLE`): 도면명=제품명, 축척=A3 1/N, 납품일정=출고 예정일, 납품장소=현장 주소
   - 검증: ezdxf(`python -m pip install --user ezdxf matplotlib`)로 recover/audit + PNG 렌더 (앱에는 안 씀)
 - 치수(도면화와 같은 규칙): 조각 W/H, 선 절단 선 길이(`_lineOutwardSide`로 바깥쪽, 곡선 근사 선분은 R값만), 싱크볼·쿡탑 W/H + 가까운 좌/우·위/아래 조각 변까지 위치, R·C값 지시선,
-  수전 → 가장 가까운 싱크볼 변(같은 줄 여러 개는 이어서 간격), 콘센트 등 → 가까운 선, Φ값은 치수 없는 쪽 지시선
+  타공 → 가까운 상판 바깥 변 + 같은 조각 싱크볼이 있으면 가장 가까운 싱크볼 변까지도(같은 줄 여러 개는 이어서 간격, 2026-11-19), Φ값은 치수 없는 쪽 지시선
 - 레이어 색·선 종류(`_DXF_LAYERS` = [이름, ACI, 트루컬러 420(R2000+), 선 종류], 2026-10-30 사용자 지정): `SC-GRIND` #F2F051 · `SC-DIM` #EB3324 · `SC-GOSRA` #D62E21 ·
   졸리컷 ★만 엔티티 색 #000000(ACI 7, 엔티티 `tc` → 420), 졸리컷 선·나머지 레이어는 예전 ACI. `SC-HOLE`(원 타공 + 사각 타공 rect) = 점선 `SC-DASH`(`_dxfDashPat(H)`, LTYPE 표에 추가)
 - 해치 엔티티 `{t:'HATCH',pts,solid?,spacing,r12}`(92=3 폴리선 경로): 밑면연마 = ANSI31 45° 빗금(경계 = 띠 사각형), 졸리컷 ★(`star`)·고스라 ▲(`fillPoly`) = SOLID 채운 해치 한 개체.
