@@ -1345,6 +1345,23 @@ function getEdges(s){
   return{xs:[],ys:[]};
 }
 function shiftS(s,dx,dy){if(s.kind==='rect'||s.kind==='note'){s.x+=dx;s.y+=dy;}else if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||s.kind==='arc'){s.cx+=dx;s.cy+=dy;}else if(s.x1!==undefined){s.x1+=dx;s.y1+=dy;s.x2+=dx;s.y2+=dy;}}
+// 끌어 옮기는 중 스냅·마그넷·줄맞춤 보조선 대상 = 옮기는 것을 처음 감싸는 바깥 사각형(가장 작은 것) 하나만 (2026-11-19 사용자 요청
+//   "최초 외부 사각에 대해서만 스냅, 그 밖의 객체까지 잡혀서 이동점 잡기 어렵다"). 감싸는 사각형이 없으면(선으로 그린 상판) 그 바깥 선들. 끄는 중이 아니면 null
+function _dragSnapScope(){
+  if(!dragStart||!selectedShapes.length)return null;
+  var bb=null;
+  selectedShapes.forEach(function(s){if(_isAnnot(s))return;var b=getBBoxAny(s);if(!b)return;if(!bb)bb={l:b.l,t:b.t,r:b.r,b:b.b};else{bb.l=Math.min(bb.l,b.l);bb.t=Math.min(bb.t,b.t);bb.r=Math.max(bb.r,b.r);bb.b=Math.max(bb.b,b.b);}});
+  if(!bb)return null;
+  var best=null,ba=Infinity;
+  shapes.forEach(function(s){
+    if(s.kind!=='rect'||selectedShapes.indexOf(s)>=0)return;
+    var q=_axisBox(s),a=Math.abs(q.w*q.h);
+    if(bb.l>=q.x-0.5&&bb.r<=q.x+Math.abs(q.w)+0.5&&bb.t>=q.y-0.5&&bb.b<=q.y+Math.abs(q.h)+0.5&&a<ba){ba=a;best=s;}
+  });
+  var out=best?[best]:shapes.filter(function(s){return s.kind==='line'&&!s.groupId&&selectedShapes.indexOf(s)<0;});
+  return out.length?out.concat(selectedShapes):null;
+}
+function _inSnapScope(fn){var sc=_dragSnapScope();if(!sc)return fn();var keep=shapes;shapes=sc;try{return fn();}finally{shapes=keep;}}
 // 끄는 도형(여러 개·그룹이면 전체 상자 + 각 도형 기준)을 다른 도형 기준 x·y에 맞춤 → 선택한 것 모두 같이 옮김 + 분홍 보조선.
 //   거리 = 마그넷 칸(mm)과 화면 10px 중 큰 것 (멀리 보면 mm만으로는 1px도 안 돼서 안 붙던 것)
 function doMagnet(arr){
@@ -1356,7 +1373,7 @@ function doMagnet(arr){
     if(arr.length<=40){var e=getEdges(s);xs=xs.concat(e.xs);ys=ys.concat(e.ys);}});
   if(bb){xs.push(bb.l,(bb.l+bb.r)/2,bb.r);ys.push(bb.t,(bb.t+bb.b)/2,bb.b);}
   var bDX=null,bDY=null,mnx=tol,mny=tol,mxv=null,myv=null;
-  shapes.forEach(function(s){if(selectedShapes.indexOf(s)>=0)return;var oe=getEdges(s);
+  (_dragSnapScope()||shapes).forEach(function(s){if(selectedShapes.indexOf(s)>=0)return;var oe=getEdges(s);
     xs.forEach(function(a){oe.xs.forEach(function(b){var d=Math.abs(a-b);if(d<mnx){mnx=d;bDX=b-a;mxv=b;}});});
     ys.forEach(function(a){oe.ys.forEach(function(b){var d=Math.abs(a-b);if(d<mny){mny=d;bDY=b-a;myv=b;}});});});
   if(bDX===null&&bDY===null)return;
@@ -3080,7 +3097,7 @@ function drawNestDims(){
     var outerShape=bestOuter;
     // 관계 치수는 그 객체를 고르거나 마우스를 올렸을 때만 (상판을 고르거나 올렸을 때 안의 객체 치수가 모두 나와 이동점을 잡기 어려웠음, 2026-11-19 사용자 요청)
     if(!printMode&&inner!==hoverShape&&!(isSelected(inner)&&!isSelected(outerShape)))continue;
-    var _onlyOut=!printMode&&!!dragStart&&isSelected(inner); // 끄는 중 = 처음 바깥 상판 변까지만 (싱크볼·이웃 치수 없이)
+    var _onlyOut=false;
     // 회전된 상판: 90° 배수면 화면상 상자로 위치 치수, 비스듬하면 축 방향 위치 치수가 의미 없으므로 생략
     if(outerShape.rotation&&!_rightAngle(outerShape.rotation))continue;
     var outer=_axisBox(outerShape);
@@ -6147,7 +6164,7 @@ cv.addEventListener('pointermove',function(e){
 cv.addEventListener('mousemove',function(e){
   // 버튼이 이미 해제됐는데 drawStart가 남아있으면 즉시 도형 완성
   var _dragExcl=(dragStart&&selectedShapes.length)?selectedShapes:(_rsz?[_rsz.s]:null); // 크기 바꾸는 도형 자신의 점에는 안 붙음
-  var sn=applySnap(e.offsetX,e.offsetY,_dragExcl),mx=sn[0],my=sn[1];
+  var sn=_inSnapScope(function(){return applySnap(e.offsetX,e.offsetY,_dragExcl);}),mx=sn[0],my=sn[1];
   var snm={e:'끝점',m:'중간점',c:'중심',grid:'그리드',x:'교차점',v:'가상 교차점',ext:'연장선',edge:'변 위'};
   document.getElementById('coord-lbl').textContent='X: '+mx.toFixed(3)+'  Y: '+my.toFixed(3);
   document.getElementById('snap-lbl').textContent=snapKind?(snm[snapKind]||''):'';
