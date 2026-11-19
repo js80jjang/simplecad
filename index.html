@@ -2847,8 +2847,8 @@ function _dimPreview(mx,my,free){
 }
 
 // ─── Gap 치수 ───
-function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir){
-  if(inner&&inner.hideDims&&inner.hideDims[dir])return; // 숨김 처리
+function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir,hk){ // hk = 숨김 키(없으면 dir)
+  if(inner&&inner.hideDims&&inner.hideDims[hk||dir])return; // 숨김 처리
   var dist=Math.hypot(x2mm-x1mm,y2mm-y1mm);if(dist<0.5)return;
   var p1=toCanvas(x1mm,y1mm),p2=toCanvas(x2mm,y2mm);
   var _gdOff=printRender?16:10;var ox=isH?0:-_gdOff,oy=isH?-_gdOff:0;
@@ -2874,8 +2874,44 @@ function drawGapDim(x1mm,y1mm,x2mm,y2mm,isH,outer,inner,dir){
     ctx.fillStyle='rgba(9,18,31,0.85)';ctx.fillRect(tx-(_gfSz*2+4),ty-(_gfSz/2+3),_glw,_glh);
   }
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';ctx.font=(printRender?'bold ':'')+_gfSz+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dist.toFixed(1),tx,ty);
-  if(outer&&inner&&dir)dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,field:'_gap',shape:inner,px:tx,py:ty});
+  if(outer&&inner&&dir)dimLabels.push({kind:'gap',outer:outer,inner:inner,dir:dir,hk:hk,field:'_gap',shape:inner,px:tx,py:ty});
 }
+// 이웃 타공·객체까지 관계 치수 (2026-11-19 사용자 요청 "주위 관계 치수 모두, 옆 타공 중심까지 거리도")
+//   이웃 = 같은 상판 상자 안의 타공(원 = 중심, 사각·타원 타공) · 객체 삽입(싱크볼·쿡탑·식기세척기) — 원은 중심, 나머지는 상자 변
+//   왼·오른·위·아래 방향마다 그쪽에 완전히 있는 것 중 가장 가까운 하나 → 내 기준(원 = 중심, 나머지 = 그쪽 변)부터 그 기준까지.
+//   누르면 showGapDimInput(이웃 기준 점 상자 {x,y,w:0,h:0}) = 그 거리로 옮김, 숨김 키 nL/nR/nT/nB
+var _NEST_NB_M=300; // 이웃으로 보는 옆 범위 여유(mm)
+function _isNestItem(s){
+  if(s.kind==='circle'||s.kind==='hole')return s.holeType!=='cut';
+  return (s.kind==='rect'&&s.groupRole==='main')||(s.kind==='ellipse'&&!!s.hole);
+}
+function _nestRef(s){ // {L,R,T,B} 기준 (원 = 중심 점)
+  if(s.kind==='circle'||s.kind==='hole')return{L:s.cx,R:s.cx,T:s.cy,B:s.cy,c:1};
+  var b=getBBox(s);return{L:b.l,R:b.r,T:b.t,B:b.b};
+}
+function _nestNeighborDims(inner,outer,skip){
+  var A=_nestRef(inner),ib=getBBox(inner),ay=A.c?inner.cy:ib.my,ax=A.c?inner.cx:ib.mx,best={};
+  shapes.forEach(function(o){
+    if(o===inner||!_isNestItem(o)||(inner.groupId&&o.groupId===inner.groupId))return;
+    if(o.rotation&&!_rightAngle(o.rotation))return;
+    var B=_nestRef(o);
+    if(B.L<outer.x-0.5||B.R>outer.x+outer.w+0.5||B.T<outer.y-0.5||B.B>outer.y+outer.h+0.5)return; // 같은 상판 상자 안만
+    if(skip&&o.kind==='rect'){var q=_axisBox(o);if(Math.abs(q.x-skip.x)<0.01&&Math.abs(q.y-skip.y)<0.01)return;} // 싱크볼 치수로 이미 나온 것
+    var dx=Math.max(B.L-A.R,0,A.L-B.R),dy=Math.max(B.T-A.B,0,A.T-B.B),d=Math.hypot(dx,dy),M=_NEST_NB_M;
+    var oy=B.B>=A.T-M&&B.T<=A.B+M,ox=B.R>=A.L-M&&B.L<=A.R+M; // 옆 방향은 위아래 범위가, 위아래 방향은 좌우 범위가 겹칠 때만 (멀리 비스듬한 것 제외)
+    [['nL',oy&&B.R<A.L-0.5],['nR',oy&&B.L>A.R+0.5],['nT',ox&&B.B<A.T-0.5],['nB',ox&&B.T>A.B+0.5]].forEach(function(k){
+      if(k[1]&&(!best[k[0]]||d<best[k[0]].d))best[k[0]]={d:d,B:B};
+    });
+  });
+  Object.keys(best).forEach(function(k){
+    var B=best[k].B,H=(k==='nL'||k==='nR'),dir={nL:'left',nR:'right',nT:'top',nB:'bottom'}[k];
+    var ex=k==='nL'?B.R:k==='nR'?B.L:ax,ey=k==='nT'?B.B:k==='nB'?B.T:ay,pb={x:H?ex:ax,y:H?ay:ey,w:0,h:0};
+    if(A.c)drawCircleGapDim(inner.cx,inner.cy,ex,ey,H,pb,inner,dir,1,k);
+    else if(H)drawGapDim(k==='nL'?ex:A.R,ay,k==='nL'?A.L:ex,ay,true,pb,inner,dir,k);
+    else drawGapDim(ax,k==='nT'?ey:A.B,ax,k==='nT'?A.T:ey,false,pb,inner,dir,k);
+  });
+}
+function _nbToggles(hd){return _dimToggleBtn('nL','이웃←',hd['nL'])+_dimToggleBtn('nR','이웃→',hd['nR'])+_dimToggleBtn('nT','이웃↑',hd['nT'])+_dimToggleBtn('nB','이웃↓',hd['nB']);}
 function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir,mid,hk){ // mid = 글자를 선 가운데 (4방향 모두 그릴 때 글자끼리 안 겹치게), hk = 숨김 키(없으면 dir)
   // 원 중심 → 싱크볼/외곽 엣지까지 직선 치수선
   if(inner&&inner.hideDims&&inner.hideDims[hk||dir])return; // 숨김 처리
@@ -2897,7 +2933,8 @@ function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir,mid,hk){ // mid = 글�
   var ratio=mid?0.5:Math.min(fixOff/lineLen,0.45); // 선 길이의 45% 이내
   var lx=p1[0]+(p2[0]-p1[0])*ratio;
   var ly=p1[1]+(p2[1]-p1[1])*ratio;
-  if(isH)ly-=(printRender?16:12); else lx-=(printRender?20:15);
+  var _nb=hk&&hk.charAt(0)==='n'?-1:1; // 이웃 치수 글자는 선 반대쪽(아래·오른쪽) — 같은 줄 상판 변 치수와 안 겹치게
+  if(isH)ly-=_nb*(printRender?16:12); else lx-=_nb*(printRender?20:15);
   if(!printRender){ctx.fillStyle='rgba(20,35,48,0.92)';ctx.fillRect(lx-(_fs*2+4),ly-(_fs/2+3),(_fs*4+8),_fs+6);}
   ctx.fillStyle=printRender?'#1F3F7A':'#FFD740';ctx.font='bold '+_fs+'px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(dist.toFixed(1),lx,ly);
@@ -3024,12 +3061,14 @@ function drawNestDims(){
           var _sy=Math.abs(inner.cy-_sk.y)<=Math.abs(inner.cy-(_sk.y+_sk.h))?_sk.y:_sk.y+_sk.h;
           drawCircleGapDim(inner.cx,inner.cy,_sx,inner.cy,true,_sk,inner,_sx===_sk.x?'left':'right',0,'sinkH');
           drawCircleGapDim(inner.cx,inner.cy,inner.cx,_sy,false,_sk,inner,_sy===_sk.y?'top':'bottom',0,'sinkV');
-        }
+        } else _sk=null;
+        _nestNeighborDims(inner,outer,_sk);
       } else {
         drawGapDim(outer.x,ib.my,ib.l,ib.my,true,outer,inner,'left');
         drawGapDim(ib.r,ib.my,outer.x+outer.w,ib.my,true,outer,inner,'right');
         drawGapDim(ib.mx,outer.y,ib.mx,ib.t,false,outer,inner,'top');
         drawGapDim(ib.mx,ib.b,ib.mx,outer.y+outer.h,false,outer,inner,'bottom');
+        _nestNeighborDims(inner,outer,null);
       }
       continue;
     }
@@ -6845,6 +6884,7 @@ function updatePropsPanel(){
     html+=_dimToggleBtn('right','→',hd['right']);
     html+=_dimToggleBtn('top','↑',hd['top']);
     html+=_dimToggleBtn('bottom','↓',hd['bottom']);
+    if(s.groupRole==='main')html+=_nbToggles(hd);
     html+='</div>';
     html+='<hr style="border:none;border-top:1px solid #1C2A47;margin:5px 0">';
     html+='<div class="prop-row"><label>모서리:</label><select id="pp-ctype" onchange="liveCorner()"><option value="none"'+((!s.cornerType||s.cornerType==='none')?' selected':'')+'>없음</option><option value="fillet"'+(s.cornerType==='fillet'?' selected':'')+'>라운드</option><option value="chamfer"'+(s.cornerType==='chamfer'?' selected':'')+'>챔퍼</option></select></div>';
@@ -6872,11 +6912,12 @@ function updatePropsPanel(){
     html+=_dimToggleBtn('bottom','↓',hd['bottom']);
     html+=_dimToggleBtn('sinkH','싱크볼↔',hd['sinkH']);
     html+=_dimToggleBtn('sinkV','싱크볼↕',hd['sinkV']);
+    html+=_nbToggles(hd);
     html+='</div>';
   } else if(s.kind==='ellipse'){
     html+='<div class="prop-row"><label>RX(mm):</label><input type="number" id="pp-rx" value="'+s.rx.toFixed(2)+'" step="0.5" oninput="liveProp(\'rx\',this.value)"></div>';
     html+='<div class="prop-row"><label>RY(mm):</label><input type="number" id="pp-ry" value="'+s.ry.toFixed(2)+'" step="0.5" oninput="liveProp(\'ry\',this.value)"></div>';
-    if(s.hole){var hdE=s.hideDims||{};html+=_DIM_HDR+'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+_dimToggleBtn('left','←',hdE['left'])+_dimToggleBtn('right','→',hdE['right'])+_dimToggleBtn('top','↑',hdE['top'])+_dimToggleBtn('bottom','↓',hdE['bottom'])+'</div>';} // 타원 타공 위치 치수 켜기/끄기
+    if(s.hole){var hdE=s.hideDims||{};html+=_DIM_HDR+'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+_dimToggleBtn('left','←',hdE['left'])+_dimToggleBtn('right','→',hdE['right'])+_dimToggleBtn('top','↑',hdE['top'])+_dimToggleBtn('bottom','↓',hdE['bottom'])+_nbToggles(hdE)+'</div>';} // 타원 타공 위치 치수 켜기/끄기
   } else if(s.kind==='dimline'&&s.labelType==='ang'){
     html+='<div style="color:#EF9A9A;font-size:11px;padding:4px">각도 치수: '+_fmtAng((s.sweep||0)*180/Math.PI)+'<br><small style="color:#56647E">옮기기는 끌기, 다시 그리려면 지우고 치수선 → 각도</small></div>';
   } else if(s.kind==='dimline'){
