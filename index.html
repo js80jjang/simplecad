@@ -1119,10 +1119,35 @@ function getGroupShapes(s){
         set.forEach(function(p){if(p.kind==='rect'&&!p.groupId&&isInsideRect(sh,p))gids.add(sh.groupId);});
     });
     if(gids.size)shapes.forEach(function(sh){if(sh.groupId&&gids.has(sh.groupId))set.add(sh);});
+    // 그룹 사각 조각 안의 다른 도형(그룹화 뒤 넣은 타공·가공 표시·글자 등, 다른 사용자 그룹 아닌 것)도 같이 (2026-11-19 사용자 요청 "그룹 안 객체를 눌러도 따로 움직임")
+    var pcs=[];set.forEach(function(p){if(p.kind==='rect'&&!p.groupId)pcs.push(_axisBox(p));});
+    if(pcs.length)shapes.forEach(function(sh){
+      if(set.has(sh)||sh.userGroupId)return;var b=getBBoxAny(sh);if(!b)return;
+      if(pcs.some(function(q){return b.l>=q.x-0.5&&b.r<=q.x+Math.abs(q.w)+0.5&&b.t>=q.y-0.5&&b.b<=q.y+Math.abs(q.h)+0.5;})){
+        set.add(sh);if(sh.groupId)shapes.forEach(function(g){if(g.groupId===sh.groupId)set.add(g);});
+      }
+    });
     return shapes.filter(function(sh){return set.has(sh);});
   }
   if(!s.groupId)return [s];
   return shapes.filter(function(sh){return sh.groupId===s.groupId;});
+}
+// 사용자 그룹을 대표하는 도형: 자신이 그룹이면 자신, 아니면 자신을 감싸는 그룹 사각 조각(가장 작은 것), 없으면 null
+function _ugRep(s){
+  if(!s)return null;if(s.userGroupId)return s;
+  if(s.groupId){var m=shapes.filter(function(g){return g.groupId===s.groupId&&g.userGroupId;})[0];if(m)return m;}
+  var b=getBBoxAny(s);if(!b)return null;var best=null,ba=Infinity;
+  shapes.forEach(function(p){
+    if(p===s||!p.userGroupId||p.kind!=='rect'||p.groupId)return;var q=_axisBox(p),a=Math.abs(q.w*q.h);
+    if(b.l>=q.x-0.5&&b.r<=q.x+Math.abs(q.w)+0.5&&b.t>=q.y-0.5&&b.b<=q.y+Math.abs(q.h)+0.5&&a<ba){ba=a;best=p;}
+  });
+  return best;
+}
+// 눌렀을 때(또는 올렸을 때) 같이 선택할 묶음: 사용자 그룹이면 그룹 전체, 싱크볼 둘레 표시 등은 그것만, 그 밖은 싱크볼·쿡탑 묶음
+function _selUnit(h){
+  var ug=_ugRep(h);if(ug)return getGroupShapes(ug);
+  if(h.groupId&&h.groupRole&&h.groupRole!=='main')return [h];
+  return getGroupShapes(h);
 }
 
 function perimeterMm(s){
@@ -6021,7 +6046,8 @@ cv.addEventListener('mousedown',function(e){
       // Ctrl: 클릭 = 그 도형 넣기/빼기, 드래그 = 상자 안 도형을 지금 선택에 더하기 (도형 위에서 시작해도 상자)
       selBox={x1:mx,y1:my,x2:mx,y2:my,add:true,hit:hit,px:e.offsetX,py:e.offsetY};
     } else if(hit){
-      if(selectedShapes.indexOf(hit)<0){if(hit.groupId&&hit.groupRole&&hit.groupRole!=='main'){selectedShapes=[hit];}else{selectedShapes=getGroupShapes(hit);}}
+      if(selectedShapes.indexOf(hit)<0)selectedShapes=_selUnit(hit);
+      else if(_ugRep(hit)){var _gu=_selUnit(hit);if(_gu.some(function(g){return selectedShapes.indexOf(g)<0;}))selectedShapes=_gu;} // 그룹 안 하나만 선택돼 있어도(올림 선택 등) 그룹 전체를 끔
       _hoverSelected=false;
       dragStart=[mx,my];
       dragOriginals={};
@@ -6244,7 +6270,7 @@ cv.addEventListener('mousemove',function(e){
         // 아무것도 선택 안 됐을 때만 호버로 자동 선택
         // 이미 선택된 도형이 있으면 커서 이동으로 선택이 바뀌지 않도록
         if(selectedShapes.length===0||_hoverSelected){
-          selectedShapes=(h.groupId&&h.groupRole&&h.groupRole!=='main')?[h]:getGroupShapes(h);
+          selectedShapes=_selUnit(h);
           _hoverSelected=true;
           updatePropsPanel();
         }
@@ -6549,6 +6575,7 @@ function showGapDimInput(d){
     onCommit:function(v){
       if(!isNaN(v)&&v>=0){
         saveHistory();_savedBoardLayout=null;_savedBoardImg=null;
+        var _b0=getBBoxAny(inner);
         if(isCirc){
           if(dir==='left')inner.cx=_outside?outer.x-v:outer.x+v;
           else if(dir==='right')inner.cx=_outside?outer.x+outer.w+v:outer.x+outer.w-v;
@@ -6574,6 +6601,18 @@ function showGapDimInput(d){
         }
         selectedShapes=[inner];
         if(inner.groupId&&inner.groupRole==='main')selectedShapes=getGroupShapes(inner);
+        // 사용자 그룹 안 객체: 기준(바깥 상판·이웃)이 그룹 밖이면 그룹 전체를 같이 옮김 (2026-11-19 사용자 요청), 그룹 안 기준이면 그 객체만
+        var _ug=_ugRep(inner);
+        if(_ug){
+          var _mem=getGroupShapes(_ug),gb=null;
+          _mem.forEach(function(m){var b=m===inner?_b0:getBBoxAny(m);if(!b)return;if(!gb)gb={l:b.l,t:b.t,r:b.r,b:b.b};else{gb.l=Math.min(gb.l,b.l);gb.t=Math.min(gb.t,b.t);gb.r=Math.max(gb.r,b.r);gb.b=Math.max(gb.b,b.b);}});
+          var _inside=gb&&outer.x>=gb.l-0.5&&outer.x+outer.w<=gb.r+0.5&&outer.y>=gb.t-0.5&&outer.y+outer.h<=gb.b+0.5;
+          var _b1=getBBoxAny(inner),_sx=_b1.l-_b0.l,_sy=_b1.t-_b0.t;
+          if(!_inside&&(Math.abs(_sx)>1e-9||Math.abs(_sy)>1e-9)){
+            _mem.forEach(function(m){if(m!==inner&&!(inner.groupId&&m.groupId===inner.groupId))shiftS(m,_sx,_sy);});
+            selectedShapes=_mem;
+          }
+        }
         updatePropsPanel();redraw();calcCost();
       }
     }

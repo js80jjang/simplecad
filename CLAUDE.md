@@ -109,7 +109,9 @@
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
 - 타공은 모두 점선: 편집 화면(`drawShape`의 `_holeDash` — 사각·타원 타공, 원 타공은 예전부터) · 도면화(`_drawCleanExport` ② `HD` — 원 타공·사각 타공·타원 타공) · DXF(`SC-HOLE` 선 종류). 싱크볼·쿡탑은 실선
 - 사용자 그룹 `userGroupId`(`groupSelected`, 새 id는 쓰는 중인 것과 안 겹치게): 싱크볼·쿡탑 그룹(groupId)은 그대로 두고 그 전체도 사용자 그룹에 넣음.
-  `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) → 그룹째 끌면 같이 이동.
+  `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) + 그룹 사각 조각 안에 든 다른 도형(다른 사용자 그룹 아닌 것, 2026-11-19) → 그룹째 끌면 같이 이동.
+  누르기·올림 선택은 `_selUnit(h)`(`_ugRep` = 자신·같은 groupId 멤버·감싸는 그룹 조각 중 사용자 그룹 → 그룹 전체, 싱크볼 둘레 표시 등은 그것만) — 그룹 안 하나만 선택돼 있어도 누르면 그룹 전체(2026-11-19 사용자 요청).
+  그룹 안 객체의 위치 치수 고치기(`showGapDimInput`)는 기준 상자가 그룹 상자 밖이면 그룹 전체를 같은 만큼 `shiftS`, 그룹 안 기준이면 그 객체만.
   싱크볼 크기 맞춤 `syncGroupShapes`는 groupId 멤버만
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
   - 주석 크기 = 도면 크기(2026-10-31 사용자 요청 "오토캐드처럼"): `redraw`가 격자 다음 `_annDraw(_redrawBody)` — 배율을 `_annRef`(뷰 맞춤 `fitView`·처음 화면 배율)로 바꿔 그리고 캔버스를 k=`_annK()`(scale/_annRef, 0.4~5)배.
