@@ -3078,7 +3078,9 @@ function drawNestDims(){
       if(!bestOuter)continue;
     }
     var outerShape=bestOuter;
-    if(!printMode&&!isSelected(inner)&&outerShape!==hoverShape&&!isSelected(outerShape)&&inner!==hoverShape)continue;
+    // 관계 치수는 그 객체를 고르거나 마우스를 올렸을 때만 (상판을 고르거나 올렸을 때 안의 객체 치수가 모두 나와 이동점을 잡기 어려웠음, 2026-11-19 사용자 요청)
+    if(!printMode&&inner!==hoverShape&&!(isSelected(inner)&&!isSelected(outerShape)))continue;
+    var _onlyOut=!printMode&&!!dragStart&&isSelected(inner); // 끄는 중 = 처음 바깥 상판 변까지만 (싱크볼·이웃 치수 없이)
     // 회전된 상판: 90° 배수면 화면상 상자로 위치 치수, 비스듬하면 축 방향 위치 치수가 의미 없으므로 생략
     if(outerShape.rotation&&!_rightAngle(outerShape.rotation))continue;
     var outer=_axisBox(outerShape);
@@ -3093,20 +3095,20 @@ function drawNestDims(){
         drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y,false,outer,inner,'top',1);
         drawCircleGapDim(inner.cx,inner.cy,inner.cx,outer.y+outer.h,false,outer,inner,'bottom',1);
         // 싱크볼까지: 가까운 세로 변(좌/우)·가로 변(위/아래) 하나씩, 싱크볼 안이면 생략
-        var _sk=_nearSinkBox(inner,outer);
+        var _sk=_onlyOut?null:_nearSinkBox(inner,outer);
         if(_sk&&!(inner.cx>_sk.x&&inner.cx<_sk.x+_sk.w&&inner.cy>_sk.y&&inner.cy<_sk.y+_sk.h)){
           var _sx=Math.abs(inner.cx-_sk.x)<=Math.abs(inner.cx-(_sk.x+_sk.w))?_sk.x:_sk.x+_sk.w;
           var _sy=Math.abs(inner.cy-_sk.y)<=Math.abs(inner.cy-(_sk.y+_sk.h))?_sk.y:_sk.y+_sk.h;
           drawCircleGapDim(inner.cx,inner.cy,_sx,inner.cy,true,_sk,inner,_sx===_sk.x?'left':'right',0,'sinkH');
           drawCircleGapDim(inner.cx,inner.cy,inner.cx,_sy,false,_sk,inner,_sy===_sk.y?'top':'bottom',0,'sinkV');
         } else _sk=null;
-        _nestNeighborDims(inner,outer,_sk);
+        if(!_onlyOut)_nestNeighborDims(inner,outer,_sk);
       } else {
         drawGapDim(outer.x,ib.my,ib.l,ib.my,true,outer,inner,'left');
         drawGapDim(ib.r,ib.my,outer.x+outer.w,ib.my,true,outer,inner,'right');
         drawGapDim(ib.mx,outer.y,ib.mx,ib.t,false,outer,inner,'top');
         drawGapDim(ib.mx,ib.b,ib.mx,outer.y+outer.h,false,outer,inner,'bottom');
-        _nestNeighborDims(inner,outer,null);
+        if(!_onlyOut)_nestNeighborDims(inner,outer,null);
       }
       continue;
     }
