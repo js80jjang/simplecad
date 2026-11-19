@@ -95,7 +95,9 @@
 - 위치(관계) 치수 `drawNestDims`(2026-11-07 사용자 요청): 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구)과 타공(수전·콘센트 원, 사각 타공, 타원 타공) = 상판 상자 네 변 모두
   (사각·타원 = 상자 변에서, 원 = 중심에서 `drawCircleGapDim(...,mid)` 글자는 선 가운데). 원형 커팅(holeType cut)·타원형 커팅(hole 아님)은 위치 치수 없음.
   원 타공(수전·콘센트·음식물)은 같은 상판 상자 안 가장 가까운 싱크볼(`_nearSinkBox`)의 가까운 세로·가로 변까지도(2026-11-19 사용자 요청, 숨김 키 `sinkH/sinkV` = drawCircleGapDim 10번째 인자·dimLabels `hk`, 싱크볼 안이면 없음).
-  이웃 관계 치수 `_nestNeighborDims`(2026-11-19 사용자 요청 "옆 타공 중심까지 거리도", 편집 화면만): 타공·객체 삽입(`_isNestItem`)마다 같은 상판 상자 안 이웃 중 왼·오른·위·아래 방향마다
+  도면화·DXF 이웃 치수 = `_nestNbPairs(조각 holes+cutouts, _nbSkipStd)`(같은 쌍·축 한 번, 같은 줄 같은 종류 원 타공 가로·원 ↔ 가장 가까운 싱크볼은 뺌, 원이 끼면 그 중심선을 따라)
+  → 도면화 `_expBestDim`(offsets 0~170, `txtLine:6` = 치수선이 다른 글자 지나면 큰 벌점), DXF `dim()` 가로 아래·세로 오른쪽. `_expBestDim`은 바로 옆(12px) 나란히 겹치는 선도 벌점(2026-11-19).
+  이웃 관계 치수 `_nestNeighborDims`(2026-11-19 사용자 요청 "옆 타공 중심까지 거리도", 편집 화면): 타공·객체 삽입(`_isNestItem`)마다 같은 상판 상자 안 이웃 중 왼·오른·위·아래 방향마다
   그쪽에 완전히 있고 옆 범위가 `_NEST_NB_M`(300) 안에서 겹치는 가장 가까운 하나 → 원 = 중심, 나머지 = 상자 변(`_nestRef`) 사이. 원 타공은 싱크볼 치수로 나온 싱크볼 제외.
   숨김 키 nL/nR/nT/nB(`drawGapDim`·`drawCircleGapDim`의 hk, 속성 칸 `_nbToggles`), 누르면 이웃 기준 점 상자 {x,y,w:0,h:0}로 `showGapDimInput`, 글자는 선 반대쪽(아래·오른쪽)
   도면화·DXF 타공도 같게: 가까운 외부 끝변(상판 바깥 변 `pV/pH`, DXF `refs(o)`) + 싱크볼 변(도면화 `_holeRowDims(sinkSegs,true)` 가로 치수 아래쪽, DXF `refs(o,'sink')`) — 같은 줄 타공 사이 간격은 한 번만.

@@ -2911,6 +2911,44 @@ function _nestNeighborDims(inner,outer,skip){
     else drawGapDim(ax,k==='nT'?ey:A.B,ax,k==='nT'?A.T:ey,false,pb,inner,dir,k);
   });
 }
+// 도면화·DXF용: 조각 안 항목(list = 타공·타공부 도형)끼리 이웃 치수 쌍 — 같은 쌍·같은 축은 한 번, skip(A,B,H)면 뺌(이미 다른 치수로 나온 것)
+//   → [{H, p1:[x,y], p2:[x,y], v:거리}] (mm, p1 = 왼/위)
+function _nestNbPairs(list,skip){
+  var out=[],seen={},M=_NEST_NB_M;
+  list.forEach(function(a,ia){
+    if(a.rotation&&!_rightAngle(a.rotation))return;
+    var A=_nestRef(a),ib=getBBox(a),ay=A.c?a.cy:ib.my,ax=A.c?a.cx:ib.mx,best={};
+    list.forEach(function(b,jb){
+      if(b===a||(a.groupId&&b.groupId===a.groupId)||(b.rotation&&!_rightAngle(b.rotation)))return;
+      var B=_nestRef(b),dx=Math.max(B.L-A.R,0,A.L-B.R),dy=Math.max(B.T-A.B,0,A.T-B.B),d=Math.hypot(dx,dy);
+      var oy=B.B>=A.T-M&&B.T<=A.B+M,ox=B.R>=A.L-M&&B.L<=A.R+M;
+      [['L',oy&&B.R<A.L-0.5],['R',oy&&B.L>A.R+0.5],['T',ox&&B.B<A.T-0.5],['B',ox&&B.T>A.B+0.5]].forEach(function(k){
+        if(k[1]&&(!best[k[0]]||d<best[k[0]].d))best[k[0]]={d:d,B:B,j:jb};
+      });
+    });
+    Object.keys(best).forEach(function(k){
+      var e=best[k],B=e.B,H=(k==='L'||k==='R'),b=list[e.j],key=Math.min(ia,e.j)+'_'+Math.max(ia,e.j)+(H?'H':'V');
+      if(seen[key])return;seen[key]=1;
+      if(skip&&(skip(a,b,H)||skip(b,a,H)))return;
+      var p1,p2,ly=(!A.c&&B.c)?b.cy:ay,lx=(!A.c&&B.c)?b.cx:ax; // 원 타공이 끼면 그 중심선을 따라 (객체 가운데 줄의 상판 변 치수와 안 겹치게)
+      if(H){var xa=k==='L'?A.L:A.R,xb=k==='L'?B.R:B.L;p1=[Math.min(xa,xb),ly];p2=[Math.max(xa,xb),ly];}
+      else{var ya=k==='T'?A.T:A.B,yb=k==='T'?B.B:B.T;p1=[lx,Math.min(ya,yb)];p2=[lx,Math.max(ya,yb)];}
+      var v=H?p2[0]-p1[0]:p2[1]-p1[1];if(v>0.5)out.push({H:H,p1:p1,p2:p2,v:v});
+    });
+  });
+  return out;
+}
+// 도면화·DXF 기본 빼기: 같은 줄 같은 종류 원 타공의 가로(사이 간격으로 이미 나옴), 원 타공 ↔ 가장 가까운 싱크볼(싱크볼 치수로 이미 나옴)
+function _nbSkipStd(list){
+  var sinks=list.filter(function(s){return _applianceType(s)==='sink';});
+  function isC(s){return s.kind==='circle'||s.kind==='hole';}
+  function nearSink(h){var best=null,bd=Infinity;sinks.forEach(function(q){var b=getBBox(q),d=Math.hypot(Math.max(b.l-h.cx,0,h.cx-b.r),Math.max(b.t-h.cy,0,h.cy-b.b));if(d<bd){bd=d;best=q;}});return best;}
+  return function(a,b,H){
+    if(!isC(a))return false;
+    if(isC(b))return H&&Math.abs(a.cy-b.cy)<5&&(a.holeType==='faucet')===(b.holeType==='faucet');
+    return _applianceType(b)==='sink'&&nearSink(a)===b;
+  };
+}
 function _nbToggles(hd){return _dimToggleBtn('nL','이웃←',hd['nL'])+_dimToggleBtn('nR','이웃→',hd['nR'])+_dimToggleBtn('nT','이웃↑',hd['nT'])+_dimToggleBtn('nB','이웃↓',hd['nB']);}
 function drawCircleGapDim(cx,cy,ex,ey,isH,outer,inner,dir,mid,hk){ // mid = 글자를 선 가운데 (4방향 모두 그릴 때 글자끼리 안 겹치게), hk = 숨김 키(없으면 dir)
   // 원 중심 → 싱크볼/외곽 엣지까지 직선 치수선
@@ -4182,6 +4220,9 @@ function _dxfCollect(H){
         leaderDim('dia',[o.cx,o.cy],o.r,a,e1,e2,lbl,[e2[0]+sx*lbl.length*H*0.38,e2[1]]);
       });
     });
+    // 이웃 타공·객체 사이 관계 치수 (도면화와 같은 규칙) — 가로는 아래쪽, 세로는 오른쪽으로 띄움
+    var nbl=p.holes.filter(_isNestItem).concat(p.cutouts.filter(_isNestItem));
+    _nestNbPairs(nbl,_nbSkipStd(nbl)).forEach(function(n){dim(n.p1,n.p2,n.H?[0,1]:[1,0],H*2.4,_fmtDim(n.v));});
   });
   return ents;
 }
@@ -8379,8 +8420,11 @@ function _expBestDim(p1,p2,nList,offList,text,col,fs,opt){
   offList.forEach(function(off){nList.forEach(function(n,ni){
     var a1=[p1[0]+n[0]*off,p1[1]+n[1]*off],a2=[p2[0]+n[0]*off,p2[1]+n[1]*off],m=[(a1[0]+a2[0])/2,(a1[1]+a2[1])/2];
     var dl=[a1[0],a1[1],a2[0],a2[1]],lineBad=Math.abs(off)*0.06+(opt.pen?opt.pen[ni]||0:0); // 가까울수록 우선 (멀리 띄운 치수는 어디 치수인지 헷갈림)
-    _pseg.forEach(function(s){if(!near(s,a1)&&!near(s,a2)&&_segX([dl[0],dl[1]],[dl[2],dl[3]],[s[0],s[1]],[s[2],s[3]]))lineBad+=2;});
-    _pdr.forEach(function(r){if(_segHitsBox(dl,r[0],r[1],r[2],r[3]))lineBad+=2;});
+    _pseg.forEach(function(s){if(!near(s,a1)&&!near(s,a2)&&_segX([dl[0],dl[1]],[dl[2],dl[3]],[s[0],s[1]],[s[2],s[3]]))lineBad+=2;
+      // 바로 옆에 나란히 겹쳐 지나는 선(다른 치수선 등) — 어느 치수인지 헷갈림 (2026-11-19)
+      if(horiz?(Math.abs(s[1]-s[3])<1&&Math.abs(s[1]-dl[1])<12&&Math.min(s[0],s[2])<Math.max(dl[0],dl[2])-4&&Math.max(s[0],s[2])>Math.min(dl[0],dl[2])+4)
+              :(Math.abs(s[0]-s[2])<1&&Math.abs(s[0]-dl[0])<12&&Math.min(s[1],s[3])<Math.max(dl[1],dl[3])-4&&Math.max(s[1],s[3])>Math.min(dl[1],dl[3])+4))lineBad+=3;});
+    _pdr.forEach(function(r){if(_segHitsBox(dl,r[0],r[1],r[2],r[3]))lineBad+=opt.txtLine||2;}); // txtLine = 치수선이 다른 글자를 지나는 벌점
     // 글자 자리: 치수선 양쪽 가운데, (짧은 치수면) 양 화살표 끝 너머 — 모두 따져서 가장 깨끗한 곳
     var tc=[[m[0]+n[0]*fs*0.65,m[1]+n[1]*fs*0.65,0],[m[0]-n[0]*fs*0.65,m[1]-n[1]*fs*0.65,0.3],[a2[0]+ux*ext,a2[1]+uy*ext,short?0:1],[a1[0]-ux*ext,a1[1]-uy*ext,short?0.1:1]];
     if(short){tc[0][2]+=1;tc[1][2]+=1;} // 짧으면 사이에 안 들어가므로 끝 너머 우선
@@ -8773,6 +8817,11 @@ function _drawCleanExport(){
       var vPen=hRef===null?null:(hRef<vx0?[0,4]:[4,0]); // LR2 = [오른쪽, 왼쪽]
       if(by!==null&&Math.abs(by-yRow)>rmax)_expBestDim(toCanvas(vx0,by),toCanvas(vx0,yRow),LR2,HOFF,_fmtDim(Math.abs(by-yRow)),col,22,{pen:vPen,pad:6});
       }
+    });
+    // 이웃 타공·객체 사이 관계 치수 (2026-11-19 사용자 요청, 편집 화면 _nestNeighborDims와 같은 규칙, 이미 나온 치수는 뺌)
+    var nbl=p.holes.filter(_isNestItem).concat(p.cutouts.filter(_isNestItem));
+    _nestNbPairs(nbl,_nbSkipStd(nbl)).forEach(function(n){
+      _expBestDim(toCanvas(n.p1[0],n.p1[1]),toCanvas(n.p2[0],n.p2[1]),n.H?[[0,1],[0,-1]]:[[1,0],[-1,0]],[0,30,60,95,130,170],_fmtDim(n.v),col,22,{pad:6,txtLine:6});
     });
   });
   // ⑥ 사용자가 그린 치수선/졸리컷/호 (기존 인쇄 표현 그대로)
