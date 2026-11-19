@@ -153,6 +153,8 @@
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
   - 공통 도우미(새 코드는 이걸 쓰고 같은 계산을 다시 쓰지 않기): `_rectXf/_rectCorners`(회전 rect 꼭짓점), `_isAnnot`(주석 도형 제외),
     `_nearestEdge`(트림·호버 변 찾기), `_isCutRect`(타공부 사각형), `_drawRLeader`(R·C 지시선 글자), `_ymd`(20261021), `_TOOL_SUBS/_TOOL_FOCUS`(도구 보조 칸)
+- 선택 도구 누르기·커서 공통 판정 `_selPick(ex,ey)`(2026-11-19 사용자 요청 "커서 모양과 달리 끌린다"): 스냅 안 한 실제 마우스 자리로 hits·선 조각 안쪽(`_lineGroupAt`, 필요할 때만)·치수(여러 개 선택 위 건너뛰기 포함) →
+  mousedown이 이걸로 고르고, mousemove 커서 `_selCursor` = 회전 손잡이 grab / 치수 화살표·글자 / 도형·선 조각 안 move / 빈 곳 crosshair. 선 잡는 범위 `hitTestAll` tol 8px(예전 6)
 - 선택: `hitTestAll`(조각 변의 밑면연마 -1·고스라/졸리컷 선 -0.5, ▲·★ 기호 위 = -2 맨 먼저, 싱크볼 둘레 표시는 제외), `_markAreaHit`(밑면연마 빗금 띠·고스라 ▲·졸리컷 ★ 위도 선택),
   `_markSym(s,k)` = 편집 화면 ▲(변 가운데 바깥)·★(변 가운데에서 안쪽으로 반지름만큼, 2026-11-03) 자리 → 그리기·`_markSymHit`(최소 9px) 공통, 올림·선택이면 둘레 빛 + 1.5배(선택 주황),
   마우스 올림 강조 `hoverShape` = `hitTestAll`의 첫 도형(클릭 결과와 같음): 고스라 진한 빨강 굵은 실선·큰 ▲, 밑면연마 빗금 칸 진하게+테두리, 졸리컷 진한 파랑, 도형 파란 테두리·채움

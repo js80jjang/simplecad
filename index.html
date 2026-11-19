@@ -5910,7 +5910,7 @@ function hitTest(mx,my){
 // 겹치는 도형 전체 반환 (순환 선택용)
 // rect 내부 클릭은 우선순위 낮춤 → 타공/원이 rect 안에 있어도 먼저 선택됨
 function hitTestAll(mx,my){
-  var tol=6/scale,res=[];
+  var tol=8/scale,res=[]; // 선 잡는 범위 8px (예전 6, 2026-11-19 사용자 요청 "선택이 쉽도록")
   for(var i=shapes.length-1;i>=0;i--){
     var s=shapes[i];
     if(!_shapeHit(s,mx,my,tol))continue;
@@ -5975,6 +5975,30 @@ function shapeInBox(s,bx1,by1,bx2,by2){
   return false;
 }
 
+// 선택 도구에서 (ex,ey) 화면 자리를 누르면 무엇이 잡히는지 — 누르기(mousedown)와 마우스 올림 커서가 같이 씀 (2026-11-19 사용자 요청 "커서 모양과 실제 잡히는 게 다르다")
+//   스냅 안 한 실제 마우스 자리 기준. dh = 누르면 열리는/끌리는 치수(없으면 null), hits = 도형, lg = 안쪽을 누른 닫힌 선 조각
+function _selPick(ex,ey){
+  var rx=(ex-offsetX)/scale,ry=(ey-offsetY)/scale;
+  var hits=hitTestAll(rx,ry);
+  // 선 조각 안쪽 판정은 무거우니(_collectBoardItems) 쓰일 때만: 도형이 안 잡혔거나 여러 개 선택(onSel)일 때
+  var lg=((!hits.length||selectedShapes.length>1)&&shapes.some(function(s){return s.kind==='line'||s.kind==='arc';}))?_lineGroupAt(rx,ry):null;
+  // 여러 개 선택된 도형 위를 누르면 치수 글자보다 끌어 옮기기가 먼저 (선 길이 글자가 선 바로 옆이라 옮기려다 길이 편집이 열리던 것)
+  var onSel=selectedShapes.length>1&&(hits.some(function(h){return selectedShapes.indexOf(h)>=0;})||(lg&&lg.every(function(l){return selectedShapes.indexOf(l)>=0;})));
+  var dh=hitDim(ex,ey);
+  // 단, 싱크볼·쿡탑 묶음(본체+고스라 = 여러 개 선택)의 안쪽 폭·높이 글자는 도형 위에 있어도 치수 편집 (2026-11-04 사용자 요청), 위치 치수(gap)도 (2026-11-07)
+  if(onSel&&!(dh&&dh.shape&&dh.shape.groupRole==='main'&&(dh.field==='w'||dh.field==='h'||dh.kind==='gap')&&isFinite(dh.px)))dh=null;
+  if(dh&&!(dh.field!=='_dist'||dh.drag))dh=null;
+  return{rx:rx,ry:ry,hits:hits,lg:lg,dh:dh};
+}
+// 그 자리 커서: 치수 = 끄는 방향 화살표/글자, 도형·선 조각 안 = 옮기기, 회전 손잡이 = 돌리기, 빈 곳 = 십자(상자 선택)
+function _selCursor(ex,ey,pk){
+  if(_rotHandlePx&&Math.hypot(ex-_rotHandlePx.x,ey-_rotHandlePx.y)<=11)return'grab';
+  var dh=pk.dh;
+  if(dh)return dh.lineDim?_lineDimCursor(dh):dh.drag?'move':(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text'));
+  if(pk.hits.length||pk.lg)return'move';
+  return'crosshair';
+}
+
 // ═══ 이벤트 ═══
 cv.addEventListener('mousedown',function(e){
   if(e.button===1){panOrigin=[e.offsetX,e.offsetY];panOrig=[offsetX,offsetY];e.preventDefault();return;}
@@ -6008,13 +6032,9 @@ cv.addEventListener('mousedown',function(e){
       e.preventDefault();return;
     }
     // 선 절단으로 만든 닫힌 조각: 선 위가 아니라 안쪽을 눌러도 그 조각(선 전체)으로
-    var _lgAt=_lineGroupAt(mx,my);
-    // 여러 개 선택된 도형 위를 누르면 치수 글자보다 끌어 옮기기가 먼저 (선 길이 글자가 선 바로 옆이라 옮기려다 길이 편집이 열리던 것)
-    var _onSel=selectedShapes.length>1&&(hitTestAll(mx,my).some(function(h){return selectedShapes.indexOf(h)>=0;})||(_lgAt&&_lgAt.every(function(l){return selectedShapes.indexOf(l)>=0;})));
-    var dh=hitDim(e.offsetX,e.offsetY);
-    // 단, 싱크볼·쿡탑 묶음(본체+고스라 = 여러 개 선택)의 안쪽 폭·높이 글자는 도형 위에 있어도 치수 편집 (2026-11-04 사용자 요청)
-    if(_onSel&&!(dh&&dh.shape&&dh.shape.groupRole==='main'&&(dh.field==='w'||dh.field==='h'||dh.kind==='gap')&&isFinite(dh.px)))dh=null; // 위치 치수(gap)도 (2026-11-07)
-    if(dh&&(dh.field!=='_dist'||dh.drag)){
+    // 고르기 판정은 스냅 전 실제 마우스 자리로 (스냅 점은 12px까지 옮겨져 커서 모양과 달리 잡히던 것, 2026-11-19) — 마우스 올림 커서(_selPick)와 같은 판정
+    var _pk=_selPick(e.offsetX,e.offsetY),_lgAt=_pk.lg,dh=_pk.dh;
+    if(dh){
       e.preventDefault();
       if(dh.kind==='gap'){redraw();showGapDimInput(dh);return;}
       // 클릭=크기편집, 드래그=치수선 위치 이동 (mouseup에서 판단)
@@ -6028,7 +6048,7 @@ cv.addEventListener('mousedown',function(e){
     }
     cv.focus();
     // 겹친 도형 순환 선택: 같은 위치 반복 클릭 → 다음 도형
-    var hits=hitTestAll(mx,my);
+    var hits=_pk.hits;
     var hit=null;
     if(hits.length>0){
       var ct=8/scale;
@@ -6264,7 +6284,8 @@ cv.addEventListener('mousemove',function(e){
       if(nonDim.length)doMagnet(nonDim);
       updatePropsPanel();redraw();return;
     }
-    var h=hitTestAll(mx,my)[0]||null; // 클릭하면 선택될 도형 = 마우스 올림 강조 (밑면연마·고스라가 조각보다 먼저)
+    var _rwx=(e.offsetX-offsetX)/scale,_rwy=(e.offsetY-offsetY)/scale; // 스냅 안 한 실제 자리 (누르기 판정과 같게)
+    var h=hitTestAll(_rwx,_rwy)[0]||null; // 클릭하면 선택될 도형 = 마우스 올림 강조 (밑면연마·고스라가 조각보다 먼저)
     if(h!==hoverShape){
       hoverShape=h;
       if(h&&!dragStart&&!selBox){
@@ -6281,10 +6302,8 @@ cv.addEventListener('mousemove',function(e){
       }
       redraw();
     }
-    var dh=hitDim(e.offsetX,e.offsetY);
-    // 자동 치수선 레이블: w/h는 이동 가능 → move 커서, _dist는 text 커서 없음
-    var dimCur=(dh&&(dh.field!=='_dist'||dh.drag))?(dh.lineDim?_lineDimCursor(dh):dh.drag?'move':(dh.kind==='gap'?'text':(dh.field==='w'?'ns-resize':dh.field==='h'?'ew-resize':'text'))):null;
-    cv.style.cursor=dimCur||(h?'move':'crosshair');
+    // 커서 = 지금 누르면 일어날 일 (누르기와 같은 판정 _selPick: 선 조각 안쪽·여러 개 선택 위 치수 건너뛰기 포함)
+    cv.style.cursor=_selCursor(e.offsetX,e.offsetY,_selPick(e.offsetX,e.offsetY));
   } else if(tool==='line'&&!(lineChain&&drawStart)&&!dimDragInfo){
     // 선 절단 도구에서도 선 치수 위에서는 옮기기 화살표
     var dhl=hitDim(e.offsetX,e.offsetY);
