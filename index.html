@@ -1631,6 +1631,7 @@ function drawTriangle(cx,cy,angle,sz,col){
 // 밑면연마 깊이 라벨 (x,y는 현재 ctx 변환 좌표계 기준)
 // band = [x0,y0,x1,y1] 띠 상자(px)를 주면 편집 화면에서 띠 끝 바깥에 (가로 띠 = 왼쪽 끝 옆, 세로 띠 = 위쪽 끝 위 — 2026-11-03 사용자 요청: 띠 가운데는 다른 치수와 겹침)
 function _drawGrindDepthLabel(x,y,depth,band,s){
+  if(Math.round(depth)===_GRIND_MM)return; // 기본 50 밑면연마는 깊이 글자 없음 (2026-11-19 사용자 요청 — 도면화는 예전부터 50 넘는 것만)
   var dtxt=printRender?Math.round(depth).toString():depth.toFixed(0)+' mm';
   var dfSz=printRender?32:9;
   ctx.save();
