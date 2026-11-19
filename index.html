@@ -3206,6 +3206,9 @@ function _rszTarget(){
   if(s.kind==='rect'||s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||(s.kind==='line'&&!s.groupId))return s;
   return null;
 }
+// 사각형이 90°·270° 쪽으로 돌아가 있으면(가장 가까운 90° 단위가 홀수) 화면의 가로 = s.h, 세로 = s.w
+//   → 속성 칸 W/H·치수 켜기 단추·크기 손잡이 "가로,세로" 입력을 화면 기준으로 바꿔 보여 줌 (회전 값은 그대로, 2026-11-19 사용자 요청)
+function _rotSwap(s){if(!s||s.kind!=='rect'||!s.rotation)return false;return Math.abs(Math.round(s.rotation/(Math.PI/2)))%2===1;}
 function _rszFrame(s){ // 사각형: 가운데·축(돌린 각도 포함)
   var r=s.rotation||0;return{c:[s.x+s.w/2,s.y+s.h/2],u:[Math.cos(r),Math.sin(r)],v:[-Math.sin(r),Math.cos(r)],w:Math.abs(s.w),h:Math.abs(s.h)};
 }
@@ -3242,7 +3245,7 @@ function _rszSetRect(nw,nh){ // 반대쪽 고정, 손잡이 쪽으로 늘리기 
 function _rszTyped(txt){ // 입력한 치수로
   var R=_rsz,s=R.s,h=R.h,o=R.orig,nums=String(txt).split(/[,x×*\s]+/).map(parseFloat).filter(function(v){return v>0;});if(!nums.length)return false;
   if(s.kind==='rect'){var F=R.F,nw=F.w,nh=F.h;
-    if(h.sx&&h.sy){var pp=String(txt).split(/[,x×*]/),a=parseFloat(pp[0]),b=parseFloat(pp[1]);nw=a>0?a:F.w;nh=b>0?b:F.h;} // "가로,세로" — 한쪽만 쳤으면 다른 쪽은 그대로 (Tab으로 세로만 칠 때)
+    if(h.sx&&h.sy){var pp=String(txt).split(/[,x×*]/),a=parseFloat(pp[0]),b=parseFloat(pp[1]);if(_rotSwap(s)){var _t=a;a=b;b=_t;}nw=a>0?a:F.w;nh=b>0?b:F.h;} // 90° 돌린 사각형은 화면 가로 = h // "가로,세로" — 한쪽만 쳤으면 다른 쪽은 그대로 (Tab으로 세로만 칠 때)
     else if(h.sx)nw=nums[0];else nh=nums[0];
     _rszSetRect(nw,nh);}
   else if(s.kind==='circle'||s.kind==='hole')s.r=nums[0]/2;
@@ -3260,7 +3263,7 @@ function _rszEnd(cancel){
 }
 function _rszInfo(){ // 끄는 동안 마우스 옆 치수 글자
   var R=_rsz,s=R.s,h=R.h,t;
-  if(s.kind==='rect')t=(h.sx&&h.sy)?_fmtDim(s.w)+' × '+_fmtDim(s.h):_fmtDim(h.sx?s.w:s.h);
+  if(s.kind==='rect')t=(h.sx&&h.sy)?(_rotSwap(s)?_fmtDim(s.h)+' × '+_fmtDim(s.w):_fmtDim(s.w)+' × '+_fmtDim(s.h)):_fmtDim(h.sx?s.w:s.h);
   else if(s.kind==='circle'||s.kind==='hole')t='Φ'+_fmtDim(s.r*2);
   else if(s.kind==='ellipse')t=_fmtDim(s[h.ax]*2)+' ('+(h.ax==='rx'?'축1':'축2')+')';
   else t=_fmtDim(Math.hypot(s.x2-s.x1,s.y2-s.y1));
@@ -6964,15 +6967,16 @@ function updatePropsPanel(){
       var s=mainRect;
       var grpHtml='<div class="prop-row"><label>번호:</label><input type="text" value="'+(s.shapeNum||'')+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>';
       grpHtml+='<div style="color:#FFD740;font-size:10px;padding:2px 4px 4px">그룹 (싱크볼/쿡탑)</div>';
-      grpHtml+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;w&quot;,this.value)"></div>';
-      grpHtml+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;h&quot;,this.value)"></div>';
+      var _gw=_rotSwap(s)?'h':'w',_gh=_gw==='w'?'h':'w'; // 90° 돌렸으면 W 칸 = 화면 가로 = s.h
+      grpHtml+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-'+_gw+'" value="'+s[_gw].toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;'+_gw+'&quot;,this.value)"></div>';
+      grpHtml+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-'+_gh+'" value="'+s[_gh].toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;'+_gh+'&quot;,this.value)"></div>';
       if(s.cornerType&&s.cornerType!=='none')grpHtml+='<div class="prop-row"><label>R(mm):</label><input type="number" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveGroupProp(&quot;r&quot;,this.value)"></div>';
       var hd3=s.hideDims||{};
       grpHtml+='<hr style="border:none;border-top:1px solid #1C2A47;margin:6px 0">';
       grpHtml+=_DIM_HDR;
       grpHtml+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
-      grpHtml+=_dimToggleBtn('w','W',hd3['w']);
-      grpHtml+=_dimToggleBtn('h','H',hd3['h']);
+      grpHtml+=_dimToggleBtn(_gw,'W',hd3[_gw]);
+      grpHtml+=_dimToggleBtn(_gh,'H',hd3[_gh]);
       grpHtml+='</div>';
       var _hasHidden3=Object.keys(hd3).some(function(k){return hd3[k];});
       grpHtml+='<div style="display:flex;flex-direction:column;gap:4px">';
@@ -6989,16 +6993,18 @@ function updatePropsPanel(){
   // (제품은 도형마다 붙이지 않고 원판 배치에서 장마다 고름)
   html+='<div class="prop-row"><label>번호:</label><input type="text" value="'+(s.shapeNum||'')+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>';
   if(s.kind==='rect'){
-    html+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="0.5" oninput="liveProp(\'w\',this.value)"></div>';
-    html+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="0.5" oninput="liveProp(\'h\',this.value)"></div>';
-    html+='<div class="prop-row"><label>W치수오프셋:</label><input type="number" id="pp-dimW" value="'+(s.dimOffsetW||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;W&quot;,this.value)"></div>';
-    html+='<div class="prop-row"><label>H치수오프셋:</label><input type="number" id="pp-dimH" value="'+(s.dimOffsetH||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;H&quot;,this.value)"></div>';
+    // 90°·270° 돌린 사각형은 화면 기준으로: W 칸 = 화면 가로(s.h), H 칸 = 화면 세로(s.w) — 회전 값은 그대로 (2026-11-19 사용자 요청)
+    var _pw=_rotSwap(s)?'h':'w',_ph=_pw==='w'?'h':'w',_PW=_pw.toUpperCase(),_PH=_ph.toUpperCase();
+    html+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-'+_pw+'" value="'+s[_pw].toFixed(2)+'" step="0.5" oninput="liveProp(\''+_pw+'\',this.value)"></div>';
+    html+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-'+_ph+'" value="'+s[_ph].toFixed(2)+'" step="0.5" oninput="liveProp(\''+_ph+'\',this.value)"></div>';
+    html+='<div class="prop-row"><label>W치수오프셋:</label><input type="number" id="pp-dim'+_PW+'" value="'+(s['dimOffset'+_PW]||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;'+_PW+'&quot;,this.value)"></div>';
+    html+='<div class="prop-row"><label>H치수오프셋:</label><input type="number" id="pp-dim'+_PH+'" value="'+(s['dimOffset'+_PH]||15)+'" step="1" min="5" max="80" oninput="livePropDim(&quot;'+_PH+'&quot;,this.value)"></div>';
     // 치수 표시 토글
     var hd=s.hideDims||{};
     html+=_DIM_HDR;
     html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">';
-    html+=_dimToggleBtn('w','W',hd['w']);
-    html+=_dimToggleBtn('h','H',hd['h']);
+    html+=_dimToggleBtn(_pw,'W',hd[_pw]);
+    html+=_dimToggleBtn(_ph,'H',hd[_ph]);
     html+=_dimToggleBtn('left','←',hd['left']);
     html+=_dimToggleBtn('right','→',hd['right']);
     html+=_dimToggleBtn('top','↑',hd['top']);
