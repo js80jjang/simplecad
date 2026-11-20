@@ -86,6 +86,8 @@
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
   `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
+  - 둘레 고스라 넣기/빼기(2026-11-20 사용자 요청 "인셋형은 고스라 없음"): 싱크볼 도구 보조 칸 `#sinkbowl-sub`(`setSinkGosra`, `_sinkGosra`·localStorage `scd_sink_gosra`) = 새 싱크볼 기본값 + 선택한 싱크볼에 적용,
+    속성 칸 `_sinkGosraRow` → `setSinkGosraSel(on)`(`_sinkAddGosra` = groupRole top/bottom/left/right 4개 + `syncGroupShapes`, `_sinkDelGosra`). 고스라 없는 싱크볼은 선택하면 본체 하나
   - 편집 화면 자기 폭·높이 치수(`drawDims`, 2026-11-03 사용자 요청 "겹쳐서 고르기 어렵다"): 화면에서 90×60px 넘으면 안쪽(`inW/inH`: 아래 변·왼쪽 변 14px 안, 보조선 없음),
     작으면 위치 치수(drawNestDims = 상판 변에 가까운 쪽)의 반대쪽 바깥. 사용자가 끌어 옮겼으면(dimUserOffsetW/H) 그대로
     — 묶음이 선택돼 있으면(여러 개 선택 `_onSel` = 도형 끌기 우선) 원래 치수 클릭을 건너뛰지만, 본체의 w/h 글자는 예외로 치수 편집(2026-11-04)

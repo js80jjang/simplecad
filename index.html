@@ -267,6 +267,13 @@ canvas{display:block;cursor:crosshair}
   <button class="tool-btn" data-tool="line"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg> 직선 커팅 <span style="font-size:9px;color:#56647E;margin-left:2px">Shift=자유</span></button>
   <div class="tgl">객체 삽입</div>
   <button class="tool-btn" data-tool="sinkbowl"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="1.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><ellipse cx="8" cy="6" rx="4.5" ry="3" stroke="#2A4F92" stroke-width="1.2" fill="rgba(33,150,243,0.2)"/></svg> 싱크볼</button>
+  <div class="fillet-sub" id="sinkbowl-sub" style="display:none">
+    <div style="font-size:11px;color:#A9B4C8;margin-bottom:3px">둘레 고스라 (인셋형은 빼기)</div>
+    <div style="display:flex;gap:4px">
+      <button id="sink-gos-on" onclick="setSinkGosra(true)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">넣기</button>
+      <button id="sink-gos-off" onclick="setSinkGosra(false)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">빼기</button>
+    </div>
+  </div>
   <button class="tool-btn" data-tool="cooktop"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><circle cx="5" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="5" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/></svg> 쿡탑</button>
   <button class="tool-btn" data-tool="dishwasher" title="식기세척기(상부개폐형) 타공 470×460, 고스라 없음, 가공비 = 쿡탑 단가"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#AB47BC" stroke-width="1.5" fill="none"/><line x1="3" y1="4" x2="13" y2="4" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="6.5" x2="13" y2="6.5" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="9" x2="13" y2="9" stroke="#AB47BC" stroke-width="1"/></svg> 식기세척기 <span style="font-size:9px;color:#56647E;margin-left:2px">상부개폐형</span></button>
   <button class="tool-btn" data-tool="foodhole" title="음식물투입구 Φ160, 고스라 없음"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#8D6E63" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/><circle cx="6.5" cy="6.5" r="2" fill="#8D6E63"/></svg> 음식물투입구</button>
@@ -936,6 +943,37 @@ function undo(){if(!_hist.length)return;
 function makeShape(k,p){var base={id:nextId++,kind:k,ops:[]};if(k==='gosramark')base.hideDims={dist:true};return Object.assign(base,p);}
 
 // 모따기: 사각형 엣지 클릭 감지
+// 싱크볼 둘레 고스라 넣기/빼기 (2026-11-20 사용자 요청 "인셋형 싱크볼은 고스라가 없어도 된다")
+//   _sinkGosra = 새로 넣는 싱크볼에 둘레 고스라 4개를 붙일지 (왼쪽 싱크볼 도구 아래 넣기/빼기, localStorage scd_sink_gosra)
+//   선택한 싱크볼이 있으면 그 싱크볼에도 바로 적용. 속성 칸에서도 싱크볼마다 바꿀 수 있음
+var _sinkGosra=true;try{_sinkGosra=localStorage.getItem('scd_sink_gosra')!=='0';}catch(e){}
+function _sinkHasGosra(m){return shapes.some(function(g){return g.kind==='gosramark'&&g.groupId===m.groupId&&g!==m;});}
+function _sinkAddGosra(m){
+  if(!m.groupId)m.groupId='grp'+(nextId++);
+  [['top',-1],['bottom',1],['left',1],['right',-1]].forEach(function(r){
+    var o={x1:0,y1:0,x2:0,y2:0,outward:r[1],groupId:m.groupId,groupRole:r[0]};if(m.userGroupId!=null)o.userGroupId=m.userGroupId;
+    shapes.push(makeShape('gosramark',o));});
+  syncGroupShapes(m); // 회전·크기에 맞춰 네 변 자리
+}
+function _sinkDelGosra(m){for(var i=shapes.length-1;i>=0;i--){var g=shapes[i];if(g.kind==='gosramark'&&g.groupId===m.groupId&&g!==m)shapes.splice(i,1);}}
+function _selSinks(){var o=[];selectedShapes.forEach(function(s){if(s.kind==='rect'&&s.groupRole==='main'&&_applianceType(s)==='sink'&&o.indexOf(s)<0)o.push(s);});return o;}
+function _sinkGosraBtns(){
+  var a=document.getElementById('sink-gos-on'),b=document.getElementById('sink-gos-off');if(!a||!b)return;
+  a.style.background=_sinkGosra?'#1F3F7A':'#121D33';a.style.borderColor=_sinkGosra?'#2A4F92':'#56647E';
+  b.style.background=_sinkGosra?'#121D33':'#1F3F7A';b.style.borderColor=_sinkGosra?'#56647E':'#2A4F92';
+}
+function setSinkGosra(on){ // 왼쪽 도구 칸: 새 싱크볼 기본값 + 선택한 싱크볼
+  _sinkGosra=!!on;try{localStorage.setItem('scd_sink_gosra',on?'1':'0');}catch(e){}
+  _sinkGosraBtns();if(_selSinks().length)setSinkGosraSel(on);
+}
+function setSinkGosraSel(on){ // 선택한 싱크볼들에 둘레 고스라 넣기/빼기
+  var ms=_selSinks().filter(function(m){return _sinkHasGosra(m)!==!!on;});if(!ms.length)return;
+  saveHistory();
+  ms.forEach(function(m){if(on)_sinkAddGosra(m);else _sinkDelGosra(m);});
+  var sel=[];ms.forEach(function(m){getGroupShapes(m).forEach(function(g){if(sel.indexOf(g)<0)sel.push(g);});});
+  selectedShapes=sel;_hoverSelected=false; // 고스라는 조각이 아니라 원판 배치는 그대로
+  updatePropsPanel();calcCost();redraw();
+}
 function syncGroupShapes(s){
   if(!s.groupId||s.kind!=='rect')return;
   var _hw=s.w/2,_hh=s.h/2,_f=_rectXf(s);
@@ -5531,10 +5569,7 @@ function finalizeShape(fmx,fmy){
     var sgid='grp'+(nextId);
     var rs=makeShape('rect',{x:rx,y:ry,w:828,h:432,cornerType:'fillet',cornerSize:24,groupId:sgid,groupRole:'main',applianceType:'sink'});
     saveHistory();shapes.push(rs);
-    shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx+828,y2:ry,outward:-1,groupId:sgid,groupRole:'top'}));
-    shapes.push(makeShape('gosramark',{x1:rx,y1:ry+432,x2:rx+828,y2:ry+432,outward:1,groupId:sgid,groupRole:'bottom'}));
-    shapes.push(makeShape('gosramark',{x1:rx,y1:ry,x2:rx,y2:ry+432,outward:1,groupId:sgid,groupRole:'left'}));
-    shapes.push(makeShape('gosramark',{x1:rx+828,y1:ry,x2:rx+828,y2:ry+432,outward:-1,groupId:sgid,groupRole:'right'}));
+    if(_sinkGosra)_sinkAddGosra(rs); // 둘레 고스라 — 왼쪽 싱크볼 칸 "빼기"면 안 넣음(인셋형, 2026-11-20 사용자 요청)
     selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
   else if(tool==='cooktop'){
@@ -6925,7 +6960,7 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;if(tool==='cut'&&_cutSt&&_cutSt.stage===2){_cutChord(_cutSt,false);_cutRedraw();}}});
 
 // ═══ 도구 버튼 ═══
-var _TOOL_SUBS={fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
+var _TOOL_SUBS={sinkbowl:'sinkbowl-sub',fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
 var _TOOL_FOCUS={fillet:'fillet-r',circle:'circle-phi',circlecut:'circlecut-phi',grind:'grind-depth'}; // 도구 → 먼저 입력할 칸
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
@@ -6936,6 +6971,7 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
     // 도구별 보조 칸: 고른 도구 것만 보이기
     Object.keys(_TOOL_SUBS).forEach(function(k){document.getElementById(_TOOL_SUBS[k]).style.display=(tool===k)?'block':'none';});
+    if(tool==='sinkbowl')_sinkGosraBtns();
     if(tool==='note'||tool==='arrow'||tool==='linkmark')_renderAnnCols();
     // 밑면연마 도구를 (다시) 고르면 깊이는 기본 50, 100·150 모드도 끔
     grind150mode=false;grind100mode=false;['grind-150-btn','grind-100-btn'].forEach(function(id){var gb=document.getElementById(id);if(gb)gb.style.background='#16233D';});
@@ -6951,6 +6987,11 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
 ].forEach(function(p){document.getElementById(p[0]).onchange=function(e){p[1](e.target.checked);};});
 
 // ═══ 속성 패널 ═══
+function _sinkGosraRow(s){ // 싱크볼 속성 칸: 둘레 고스라 넣기/빼기
+  if(!(s.kind==='rect'&&s.groupRole==='main'&&_applianceType(s)==='sink'))return '';
+  var on=_sinkHasGosra(s),b=function(v,t){var a=v===on;return '<button onclick="setSinkGosraSel('+v+')" style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;cursor:pointer;color:#fff;border:1px solid '+(a?'#2A4F92':'#56647E')+';background:'+(a?'#1F3F7A':'#121D33')+'">'+t+'</button>';};
+  return '<div class="prop-row"><label>고스라:</label><div style="display:flex;gap:4px;flex:1">'+b(true,'넣기')+b(false,'빼기')+'</div></div>';
+}
 function updatePropsPanel(){
   var pp=document.getElementById('props-panel');
   if(!selectedShapes.length){pp.innerHTML='<span style="color:#56647E;font-size:11px;padding:6px 4px;display:block">도형을 선택하세요</span>';return;}
@@ -6967,6 +7008,7 @@ function updatePropsPanel(){
       grpHtml+='<div class="prop-row"><label>W(mm):</label><input type="number" id="pp-w" value="'+s.w.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;w&quot;,this.value)"></div>';
       grpHtml+='<div class="prop-row"><label>H(mm):</label><input type="number" id="pp-h" value="'+s.h.toFixed(2)+'" step="1" oninput="liveGroupProp(&quot;h&quot;,this.value)"></div>';
       if(s.cornerType&&s.cornerType!=='none')grpHtml+='<div class="prop-row"><label>R(mm):</label><input type="number" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveGroupProp(&quot;r&quot;,this.value)"></div>';
+      grpHtml+=_sinkGosraRow(s);
       var hd3=s.hideDims||{};
       grpHtml+='<hr style="border:none;border-top:1px solid #1C2A47;margin:6px 0">';
       grpHtml+=_DIM_HDR;
@@ -7007,6 +7049,7 @@ function updatePropsPanel(){
     html+='</div>';
     html+='<hr style="border:none;border-top:1px solid #1C2A47;margin:5px 0">';
     html+='<div class="prop-row"><label>모서리:</label><select id="pp-ctype" onchange="liveCorner()"><option value="none"'+((!s.cornerType||s.cornerType==='none')?' selected':'')+'>없음</option><option value="fillet"'+(s.cornerType==='fillet'?' selected':'')+'>라운드</option><option value="chamfer"'+(s.cornerType==='chamfer'?' selected':'')+'>챔퍼</option></select></div>';
+    html+=_sinkGosraRow(s);
     if(s.cornerType&&s.cornerType!=='none')html+='<div class="prop-row"><label>R(mm):</label><input type="number" id="pp-csize" value="'+(s.cornerSize||0)+'" min="0" step="0.5" oninput="liveCorner()"></div>';
   } else if(s.kind==='circle'||s.kind==='hole'){
     html+='<div class="prop-row"><label>Φ(mm):</label><input type="number" id="pp-phi" value="'+(s.r*2).toFixed(2)+'" step="1" oninput="livePropPhi(this.value)"></div>';
