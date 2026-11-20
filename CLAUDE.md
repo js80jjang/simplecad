@@ -130,8 +130,10 @@
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
-  `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
+  `note`(도면 글자: x,y(가운데),text,fs=도면화 px,color — 편집 화면은 fs×0.34px 가운데 맞춤, 도면화는 줄마다 편집 화면에서 보이는 왼쪽 끝(`_noteLineLefts`, _annRef 기준 mm)에서 왼쪽 맞춤(2026-11-20 사용자 요청 "넣은 위치에 고정"), `getBBoxAny`는 편집 화면 글자 상자), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color; `vein:true` = 결 방향(2026-11-20, 편집 도구 `veinmark`·보조 칸 `#vein-sub`): `_linkWaves`가 큰 물결 한 줄(sin3πt·sinπt, 진폭 `_veinAmp` = 길이 7%, 양 끝 평평)+끝점(x2,y2)에만 화살촉을 돌려줘 선택·끌기·DXF 공통, 방향 바꾸기 `flipVein`(두 끝점 맞바꿈, 속성 칸 ⇄), 글자 `_VEIN_TXT` "결 방향"은 drawLinkMark·DXF text) — 주석이라 조각/가공비/원판 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
+  - 둘레 고스라 넣기/빼기(2026-11-20 사용자 요청 "인셋형은 고스라 없음"): 싱크볼 도구 보조 칸 `#sinkbowl-sub`(`setSinkGosra`, `_sinkGosra`·localStorage `scd_sink_gosra`) = 새 싱크볼 기본값 + 선택한 싱크볼에 적용,
+    속성 칸 `_sinkGosraRow` → `setSinkGosraSel(on)`(`_sinkAddGosra` = groupRole top/bottom/left/right 4개 + `syncGroupShapes`, `_sinkDelGosra`). 고스라 없는 싱크볼은 선택하면 본체 하나
   - 편집 화면 자기 폭·높이 치수(`drawDims`, 2026-11-03 사용자 요청 "겹쳐서 고르기 어렵다"): 화면에서 90×60px 넘으면 안쪽(`inW/inH`: 아래 변·왼쪽 변 14px 안, 보조선 없음),
     작으면 위치 치수(drawNestDims = 상판 변에 가까운 쪽)의 반대쪽 바깥. 사용자가 끌어 옮겼으면(dimUserOffsetW/H) 그대로
     — 묶음이 선택돼 있으면(여러 개 선택 `_onSel` = 도형 끌기 우선) 원래 치수 클릭을 건너뛰지만, 본체의 w/h 글자는 예외로 치수 편집(2026-11-04)
@@ -140,13 +142,30 @@
   - 음식물투입구 `foodhole` 도구 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)
 - 위치(관계) 치수 `drawNestDims`(2026-11-07 사용자 요청): 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구)과 타공(수전·콘센트 원, 사각 타공, 타원 타공) = 상판 상자 네 변 모두
   (사각·타원 = 상자 변에서, 원 = 중심에서 `drawCircleGapDim(...,mid)` 글자는 선 가운데). 원형 커팅(holeType cut)·타원형 커팅(hole 아님)은 위치 치수 없음.
+  원 타공(수전·콘센트·음식물)은 같은 상판 상자 안 가장 가까운 싱크볼(`_nearSinkBox`)의 가까운 세로·가로 변까지도(2026-11-19 사용자 요청, 숨김 키 `sinkH/sinkV` = drawCircleGapDim 10번째 인자·dimLabels `hk`, 싱크볼 안이면 없음).
+  도면화·DXF 이웃 치수 = `_nestNbPairs(조각 holes+cutouts, _nbSkipStd)`(같은 쌍·축 한 번, 같은 줄 같은 종류 원 타공 가로·원 ↔ 가장 가까운 싱크볼은 뺌, 원이 끼면 그 중심선을 따라)
+  → 도면화 `_expBestDim`(offsets 0~170, `txtLine:6` = 치수선이 다른 글자 지나면 큰 벌점), DXF `dim()` 가로 아래·세로 오른쪽. `_expBestDim`은 바로 옆(12px) 나란히 겹치는 선도 벌점(2026-11-19).
+  표시 조건(2026-11-19 사용자 요청 "상판 고르면 모든 객체 연장선이 나와 이동점 잡기 어렵다"): 그 객체 올림 또는 선택(바깥 상판도 같이 선택이면 안 나옴) — 상판 선택·올림으론 안 나옴.
+  끌어 옮기는 중 스냅(`applySnap`을 `_inSnapScope`로)·마그넷(`doMagnet`) 대상 = `_dragSnapScope()` = 선택 상자를 처음 감싸는 가장 작은 사각형 하나 + 선택 (2026-11-19 사용자 요청 "최초 외부 사각에만 스냅"),
+  사각형 안이 아니면 감싸는 닫힌 선 조각(`_lineGroupAt`)의 선들, 어디에도 안 든 조각이면 null = 모든 도형(2026-11-20 "조각끼리 꼭짓점 스냅이 안 된다" 수정). 끌기 한 번 동안 `_dssC`에 고정
+  이웃 관계 치수 `_nestNeighborDims`(2026-11-19 사용자 요청 "옆 타공 중심까지 거리도", 편집 화면): 타공·객체 삽입(`_isNestItem`)마다 같은 상판 상자 안 이웃 중 왼·오른·위·아래 방향마다
+  그쪽에 완전히 있고 옆 범위가 `_NEST_NB_M`(300) 안에서 겹치는 가장 가까운 하나 → 원 = 중심, 나머지 = 상자 변(`_nestRef`) 사이. 원 타공은 싱크볼 치수로 나온 싱크볼 제외.
+  숨김 키 nL/nR/nT/nB(`drawGapDim`·`drawCircleGapDim`의 hk, 속성 칸 `_nbToggles`), 누르면 이웃 기준 점 상자 {x,y,w:0,h:0}로 `showGapDimInput`, 글자는 선 반대쪽(아래·오른쪽)
+  도면화·DXF 타공도 같게: 가까운 외부 끝변(상판 바깥 변 `pV/pH`, DXF `refs(o)`) + 싱크볼 변(도면화 `_holeRowDims(sinkSegs,true)` 가로 치수 아래쪽, DXF `refs(o,'sink')`) — 같은 줄 타공 사이 간격은 한 번만.
   치수를 누르면 `showGapDimInput`(타원 타공 이동 포함) — "✕ 삭제" 단추(`#dim-hide-btn`) 또는 값을 안 고친 채 Delete = `hideDims[dir]`, 속성 칸 ← → ↑ ↓로 다시 켬. 묶음 선택 중에도 gap 치수는 클릭됨
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
+- 캡슐 타공(2026-11-20 사용자 요청, 타공 도구의 "타원" 단추를 대신함 — 예전 타원 타공 도형은 그대로 읽고 그림) = "캡슐(콘센트)"(`pendingHoleType='cap'`, 칸 `#hole-cap-d`(Φ 60)·`#hole-cap-l`(중심 거리 71), `_capHoleDL`)
+  → 사각 타공 rect + `capsule:true`(cornerType fillet, cornerSize = 짧은 변/2를 `redraw` 처음 `_capSync`가 늘 맞춤). `_capDims(s)`={D,L,hor}, `_capSet(s,D,L)` = 가운데 기준 크기.
+  편집 화면 `_drawCapDims`(drawDims 대신: 중심 사이 치수 `capL` + 오른쪽 아래 반원 Φ 지시선 `capD`, 누르면 showDimInput, Tab 전환, ✕ = hideDims.capL/capD), 속성 칸 Φ·중심 거리(`liveCap`).
+  도면화 = 자기 치수 대신 중심 사이 치수 + cornerLeaders가 R 대신 Φ, 이름 "캡슐타공" / DXF = 중심 사이 dim + rLeader가 'dia' 지시선(바깥) / `_objSize` "(Φ60 · 71)". 타공 단추 이름: 수전 / 원형(콘센트) / 사각(콘센트) / 캡슐(콘센트)
+- 타공을 하나 넣으면 크기 칸(`circle-phi`·`hole-rect-w/h`·`hole-cap-d/l`)은 `_holeInputsReset`으로 HTML 처음 값(35·200×50·60/71)으로 (2026-11-20 사용자 요청)
 - 타공은 모두 점선: 편집 화면(`drawShape`의 `_holeDash` — 사각·타원 타공, 원 타공은 예전부터) · 도면화(`_drawCleanExport` ② `HD` — 원 타공·사각 타공·타원 타공) · DXF(`SC-HOLE` 선 종류). 싱크볼·쿡탑은 실선
 - 사용자 그룹 `userGroupId`(`groupSelected`, 새 id는 쓰는 중인 것과 안 겹치게): 싱크볼·쿡탑 그룹(groupId)은 그대로 두고 그 전체도 사용자 그룹에 넣음.
-  `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) → 그룹째 끌면 같이 이동.
+  `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) + 그룹 사각 조각 안에 든 다른 도형(다른 사용자 그룹 아닌 것, 2026-11-19) → 그룹째 끌면 같이 이동.
+  누르기·올림 선택은 `_selUnit(h)`(`_ugRep` = 자신·같은 groupId 멤버·감싸는 그룹 조각 중 사용자 그룹 → 그룹 전체, 싱크볼 둘레 표시 등은 그것만) — 그룹 안 하나만 선택돼 있어도 누르면 그룹 전체(2026-11-19 사용자 요청).
+  그룹 안 객체의 위치 치수 고치기(`showGapDimInput`)는 기준 상자가 그룹 상자 밖이면 그룹 전체를 같은 만큼 `shiftS`, 그룹 안 기준이면 그 객체만.
   싱크볼 크기 맞춤 `syncGroupShapes`는 groupId 멤버만
 - 편집 화면: `redraw` → `drawShape`/`drawDims`/`drawNestDims`/`drawShapeNumbers` …
   - 주석 크기 = 도면 크기(2026-10-31 사용자 요청 "오토캐드처럼"): `redraw`가 격자 다음 `_annDraw(_redrawBody)` — 배율을 `_annRef`(뷰 맞춤 `fitView`·처음 화면 배율)로 바꿔 그리고 캔버스를 k=`_annK()`(scale/_annRef, 0.4~5)배.
@@ -176,7 +195,11 @@
   - 스냅(`snapPoints`): 타원 두 축 끝점 4개 + 중심(snapCircleCenter), `applySnap`에서 grind·gosra·jollycut 도구는 타원 둘레(360등분 가장 가까운 점)에도 'edge'
 - 치수선 도구(`dimline`, `dimLineType` dist|r|phi|ang, `_dimSt`, `_dimClick/_dimPreview`): 길이 = 두 점(클릭 또는 끌기) → 마우스로 위치 → 클릭
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
-  각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep), R/Φ는 예전대로 원 클릭
+  각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep),
+  R/Φ(2026-11-20 사용자 요청) = `_dimRClick`: 곡선 `_dimCurves`(원·트림 호 arc·곡선 근사 선분 arcR) 변 클릭 = 그 방향으로 바로, 중심점 클릭(`_dimSt.rc`, 미리보기 점선) → 변 클릭 = 그 방향
+  (변이 아니면 같은 중심 곡선 중 반지름이 가까운 것) → `_dimRMake`(x1,y1 중심·x2,y2 곡선 위 점). mousedown의 예전 원 클릭·`_dimRCircle` 끌기 코드는 이제 안 탐.
+  `_dimCurves`에 사각형 라운드 코너(`_expRectGeo`, 돌린 것 포함)·캡슐 반원도. 판정은 스냅 안 한 자리 `_dimRaw`, R·Φ 모드면 `_dimRHover`가 중심마다 + (잡힐 것 주황)·안내 글자
+- 코너 R·C 지시선 ✕ 삭제(2026-11-20): 균일 = `hideDims.cornerSize`, 코너별 = `hideDims.r_코너`(dimLabels `field:'cornerR'`+`key`, showDimInput이 값 고치기·삭제) → `_rcHidden(s,ck)`를 편집 화면·도면화 cornerLeaders·DXF rLeader가 봄, 속성 칸 R/R↘ 단추로 다시 켬
 - 스냅(2026-10-31 점검) `applySnap` 순서: 오브젝트 점(`snapPoints`) → 선 스냅 `_snapLinesAt`(마우스 가까이 지나는 선분만 `_snapSegs`: 선·사각형 변(회전 포함)·원,
   교차점 'x'(가장 가까운 것, 선-원 포함)·가상 교차점 'v'(`snapVirtInter`)·연장선 'ext'(`snapExtension`, 끝에서 3000 안), 보조선 `_snapGuide` → `drawSnapInd`가 점선) →
   도구별 변 붙이기(밑면연마·고스라 'edge', 타원 둘레·곡선 근사 선분 위도) → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음
@@ -188,6 +211,10 @@
 - 판정 공통: `isInsideRect`(회전 포함), `_axisBox`, `_rightAngle`, `findEdgeContext`, `_lineBoundaryGroups`, `_gosraDir`
   - 공통 도우미(새 코드는 이걸 쓰고 같은 계산을 다시 쓰지 않기): `_rectXf/_rectCorners`(회전 rect 꼭짓점), `_isAnnot`(주석 도형 제외),
     `_nearestEdge`(트림·호버 변 찾기), `_isCutRect`(타공부 사각형), `_drawRLeader`(R·C 지시선 글자), `_ymd`(20261021), `_TOOL_SUBS/_TOOL_FOCUS`(도구 보조 칸)
+- 미세 이동(2026-11-20 사용자 요청): 선택 끌기 중 Shift = 마우스 움직임 × `_FINE_K`(0.2), 스냅 안 한 마우스 기준·마그넷 없음(`_fineDrag`={a 누른 자리, b 그때 이동점}, `_lastDragPt`),
+  Shift를 떼면 dragStart를 옮겨 그 자리에서 이어감. 끄는 동안 `coord-lbl`에 Δx·Δy
+- 선택 도구 누르기·커서 공통 판정 `_selPick(ex,ey)`(2026-11-19 사용자 요청 "커서 모양과 달리 끌린다"): 스냅 안 한 실제 마우스 자리로 hits·선 조각 안쪽(`_lineGroupAt`, 필요할 때만)·치수(여러 개 선택 위 건너뛰기 포함) →
+  mousedown이 이걸로 고르고, mousemove 커서 `_selCursor` = 회전 손잡이 grab / 치수 화살표·글자 / 도형·선 조각 안 move / 빈 곳 crosshair. 선 잡는 범위 `hitTestAll` tol 8px(예전 6)
 - 선택: `hitTestAll`(조각 변의 밑면연마 -1·고스라/졸리컷 선 -0.5, ▲·★ 기호 위 = -2 맨 먼저, 싱크볼 둘레 표시는 제외), `_markAreaHit`(밑면연마 빗금 띠·고스라 ▲·졸리컷 ★ 위도 선택),
   `_markSym(s,k)` = 편집 화면 ▲(변 가운데 바깥)·★(변 가운데에서 안쪽으로 반지름만큼, 2026-11-03) 자리 → 그리기·`_markSymHit`(최소 9px) 공통, 올림·선택이면 둘레 빛 + 1.5배(선택 주황),
   마우스 올림 강조 `hoverShape` = `hitTestAll`의 첫 도형(클릭 결과와 같음): 고스라 진한 빨강 굵은 실선·큰 ▲, 밑면연마 빗금 칸 진하게+테두리, 졸리컷 진한 파랑, 도형 파란 테두리·채움
@@ -214,6 +241,7 @@
   - 객체 이름(2026-11-07 사용자 요청): `_boardPiece`가 타공부·타공 가운데에 `_objName(q)`(싱크볼·쿡탑·식기세척기·사각타공·타원타공·수전·콘센트·음식물, 원형 절단은 없음)을 칸에 맞게(9px 미만이면 생략),
     조각 이름·크기 글자가 객체 상자와 겹치면 조각 안 빈 곳(5% 격자, 가운데에 가까운 곳, 선 조각은 `_Minv`로 글자 상자가 조각 안인지 확인)으로 옮김.
     빈 곳이 없어 글자가 구멍 위에 남으면 객체 이름을 그 글자 상자(`_LB`) 위/아래(안 되면 옆)로 비켜 씀, 구멍 안에 자리가 없으면 이름 생략 — 이름은 글자 자리를 정한 뒤 그림.
+    돌려 놓은 조각(`p.rotated`)은 크기 글자를 `_swapWH`로 원판에 보이는 가로×세로(↻ 그대로), 객체 크기 `_objSize(q,turn)`도 객체 회전+배치 회전이 90° 홀수 배면(`_oddTurn`) 바꿔 씀(2026-11-19 사용자 요청)
     이름 아래 둘째 줄 `_objSize(q)` = "(가로×세로 R24)"(코너 `_rcInfo` R·C, 코너마다 다르면 R20/C10)·타원 "(장축×단축)"·원 "(Φ지름)"(글자 0.78배), 두 줄이 9px 미만이면 이름만
   - 원판보다 커서 못 놓은 조각(2026-11-02): `_packBoardItems`가 `unplaced`([{item,prod,bw,bh,ew,eh}])로 돌려줌 → `showBoardLayout`이 머리줄 아래 빨간 상자 `#board-modal-warn`에
     `_unfitReason`(조각 번호·이름·크기·제품 + 긴 변/짧은 변이 원판 유효 길이/폭(여백 10씩 뺌)보다 큰지) — 저장 배치 복원 때는 없음(못 놓은 조각이 있으면 복원 안 됨)
@@ -224,6 +252,10 @@
   - 원판 장수(2026-11-03 사용자 요청 — 머리줄 단추는 보기 싫다고 해서 오른쪽 클릭 메뉴로): 원판 빈 곳 오른쪽 클릭(oncontextmenu, 조각 위는 돌리기) → `_bsCtxShow(bi)` 메뉴 `#board-ctx`
     → `_bsAddBoard(bi)` = 그 장 바로 뒤에 같은 제품 빈 장 `keep`(그룹 count·뒤 그룹 startBi `_bsShiftGroups`), `_bsDelBoard(bi)` = 그 장 빼기(조각은 `_bs.parked`로, 제품마다 최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,
     저장 배치 `boardKeep`로 복원, `_updateBoardQty`가 수량에 셈(빈 장도)
+  - 선 조각 실제 모양 겹침(2026-11-20 사용자 요청 "ㄱ자 따낸 자리에 넣기"): `_bpPoly(p)` = 선 조각 외곽(`_expChain`, `_boardPiece` M과 같은 변환, 원판 유효 영역 mm), 사각형·원은 null →
+    `_bsOv(a,b,g)`(상자 → 다각형 안 점·변 거리 < 간격) — `_bsResolve`·돌리기 충돌 해소·`_bsAutoPlaceParked`, `_bsHitTest`도 다각형 안만, 끌기 마그넷에 꼭짓점 후보. 자동 배치(`_packBoardItems`)는 아직 상자 기준
+  - 360° 돌리기(2026-11-20 사용자 요청): `p.flip` = 180° 더(칸 안에서 a→FW−a, b→FH−b) — `_boardPiece` M/_Minv·`_3dWorldToBoard`·`_bpPoly`가 적용, 저장 배치 `flip`.
+    오른쪽 클릭 `_bsTurn(p,EW,EH)` = 0→90→180→270(rotated/flip), 안 들어가는 방향 건너뜀, 가운데 기준. 글자 ↻180°/↻270°
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
@@ -244,7 +276,7 @@
     이때 `_compactPageShapes`가 조각(+딸린 도형)을 옮긴 복사본으로 바꿈 — **원래 배치 유지**(2026-10-28 사용자 확정 "설치 위치를 알 수 있게 배치해 놓은 것"):
     가로·세로 축마다 조각 구간을 합쳐 조각이 없는 빈 띠만 150px 상당 mm로 줄임(더 좁은 틈·순서·줄 맞춤은 그대로, 도면 영역 `_DRW_AW×_DRW_AH` 배율로 4번 다시 계산). 줄 맞춰 새로 모으지 않음. 배치 안 된 조각은 따로 한 쪽.
     조각 번호는 `_autoPieceNums`를 `shapeNum`에 잠시 고정해 전체 기준 유지. 도면 쪽은 **항상 가로 A4**(`isPort=false`)
-  - (편집 화면) 밑면연마 깊이 글자 `_drawGrindDepthLabel(x,y,depth,band)`: band(띠 상자 px)를 주면 가로 띠 = 왼쪽 끝 바깥, 세로 띠 = 위쪽 끝 위(2026-11-03 사용자 요청), 짧은 띠(길이 ≤ 깊이×1.5, 150×150 원클릭) = `{pt,out}`으로 변 가운데에서 상판 바깥. 사선·라운드 띠는 가운데
+  - (편집 화면) 밑면연마 깊이 글자 `_drawGrindDepthLabel(x,y,depth,band,s)` — 깊이 50(`_GRIND_MM`)이면 안 그림(2026-11-19 사용자 요청) — s를 주면 dimLabels `field:'depth'`(주석 틀 → 치수 틀 좌표) → `showDimInput`이 깊이 고치기·✕ 삭제(`hideDims.dist`, 2026-11-19 사용자 요청): band(띠 상자 px)를 주면 가로 띠 = 왼쪽 끝 바깥, 세로 띠 = 위쪽 끝 위(2026-11-03 사용자 요청), 짧은 띠(길이 ≤ 깊이×1.5, 150×150 원클릭) = `{pt,out}`으로 변 가운데에서 상판 바깥. 사선·라운드 띠는 가운데
   - 밑면연마 띠는 50mm, 단 깊이가 더 큰 것(변의 300 띠, 150×150 원클릭)은 그 깊이로 · 방향 = 선 양쪽 중 재료(조각, 타공부 제외)가 있는 쪽,
     양쪽 다 재료면 저장된 `inward`(가로선 +y, 세로선 +x). 돌린 조각은 `inward`가 로컬 기준이라 그대로 쓰면 뒤집힘(2026-10-28 수정)
   - 끌어 옮기는 치수 글자 공통: `dimLabels` 항목에 `start()/drag(ex,ey,dx,dy,st)` (선택·선 절단 도구 mousedown → `dimDragInfo`, document mousemove가 호출).
@@ -355,7 +387,8 @@
 
 ## 도면 표기 규칙 (사용자 확정)
 - (도면화·원판 배치) 변은 모두 조각 색 실선, **밑면연마 = 변에서 재료 쪽 50mm 띠에 주황 45° 빗금**(`_expHatchBand`, `_GRIND_MM`),
-  **고스라 = 검정 ▲** (꼭지점이 방향), **졸리컷 = 빨간 ★·선** — 편집 화면은 예전 색 그대로(고스라 빨강, 졸리컷 파랑)
+  **고스라 = 검정 ▲** (꼭지점이 방향), **졸리컷 = 빨간 ★·선**(뒷면, 기본) / **앞면 졸리컷 = 속 빈 ☆**(jollymark `front:true`, 2026-11-20 사용자 요청:
+  졸리컷 도구 보조 칸 `#jollycut-sub` `setJollyFace`(`_jollyFront`) + 속성 칸 `setJollyFaceSel`(여러 개 선택도), `drawStar(...,hollow)`, DXF `star(...,hollow)` = 닫힌 폴리선, 범례는 앞면이 있을 때만 둘 다, 3D는 밑모서리에서 안쪽 위로 깎음) — 편집 화면은 예전 색 그대로(고스라 빨강, 졸리컷 파랑)
   - ★·▲ 크기 = 예전 크기 × `_MARK_K`(0.5, 2026-11-02 사용자 요청 — 1/4은 너무 작다고 해서 2배로) — 편집 화면·도면화·DXF 모두, 범례 견본만 예전 크기. ▲ 클릭 판정은 최소 7px
   - 사각/선 절단 조각 변: 바깥에서 조각 안쪽을 향함 / 싱크볼·쿡탑 변: 타공부 안쪽에서 선을 향함 (밑면연마 띠 방향도 같음, `_gosraDir`)
   - ▲ 자리는 `_gosraSym(m)`: 곧은 변 = `_gosraDir`, 라운드 코너·원 둘레(`_findCornerAttach`) = 호 가운데 점·재료 쪽 방향(2026-11-03) — 편집 화면·`_markSym`·도면화·DXF 공통
@@ -396,7 +429,7 @@
   - 표제란 채움(레이어 `SC-TITLE`): 도면명=제품명, 축척=A3 1/N, 납품일정=출고 예정일, 납품장소=현장 주소
   - 검증: ezdxf(`python -m pip install --user ezdxf matplotlib`)로 recover/audit + PNG 렌더 (앱에는 안 씀)
 - 치수(도면화와 같은 규칙): 조각 W/H, 선 절단 선 길이(`_lineOutwardSide`로 바깥쪽, 곡선 근사 선분은 R값만), 싱크볼·쿡탑 W/H + 가까운 좌/우·위/아래 조각 변까지 위치, R·C값 지시선,
-  수전 → 가장 가까운 싱크볼 변(같은 줄 여러 개는 이어서 간격), 콘센트 등 → 가까운 선, Φ값은 치수 없는 쪽 지시선
+  타공 → 가까운 상판 바깥 변 + 같은 조각 싱크볼이 있으면 가장 가까운 싱크볼 변까지도(같은 줄 여러 개는 이어서 간격, 2026-11-19), Φ값은 치수 없는 쪽 지시선
 - 레이어 색·선 종류(`_DXF_LAYERS` = [이름, ACI, 트루컬러 420(R2000+), 선 종류], 2026-10-30 사용자 지정): `SC-GRIND` #F2F051 · `SC-DIM` #EB3324 · `SC-GOSRA` #D62E21 ·
   졸리컷 ★만 엔티티 색 #000000(ACI 7, 엔티티 `tc` → 420), 졸리컷 선·나머지 레이어는 예전 ACI. `SC-HOLE`(원 타공 + 사각 타공 rect) = 점선 `SC-DASH`(`_dxfDashPat(H)`, LTYPE 표에 추가)
 - 해치 엔티티 `{t:'HATCH',pts,solid?,spacing,r12}`(92=3 폴리선 경로): 밑면연마 = ANSI31 45° 빗금(경계 = 띠 사각형), 졸리컷 ★(`star`)·고스라 ▲(`fillPoly`) = SOLID 채운 해치 한 개체.

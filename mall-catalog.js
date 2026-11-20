@@ -1,6 +1,6 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-11-08",
+"updated":"2026-11-19",
 "source":"https://www.younhyunmall.com",
 "items":[
 {
@@ -10,7 +10,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006504/image/list/1000006504_list_093.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006504/image/list/1000006504_list_093.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006504",
 "cate":"009003"
 },
@@ -21,7 +21,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1070080,
 "m2":209000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006502/image/list/1000006502_list_014.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006502/image/list/1000006502_list_014.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006502",
 "cate":"009003"
 },
@@ -32,7 +32,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006505/image/list/1000006505_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006505/image/list/1000006505_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006505",
 "cate":"009003"
 },
@@ -43,7 +43,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006507/image/list/1000006507_list_092.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006507/image/list/1000006507_list_092.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006507",
 "cate":"009003"
 },
@@ -54,7 +54,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":901100,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006509/image/list/1000006509_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006509/image/list/1000006509_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006509",
 "cate":"009003"
 },
@@ -65,7 +65,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":901100,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006500/image/list/1000006500_list_060.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006500/image/list/1000006500_list_060.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006500",
 "cate":"009003"
 },
@@ -76,7 +76,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":901100,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006501/image/list/1000006501_list_057.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006501/image/list/1000006501_list_057.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006501",
 "cate":"009003"
 },
@@ -87,7 +87,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006414/image/list/1000006414_list_015.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006414/image/list/1000006414_list_015.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006414",
 "cate":"009003"
 },
@@ -98,7 +98,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006416/image/list/1000006416_list_06.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006416/image/list/1000006416_list_06.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006416",
 "cate":"009003"
 },
@@ -109,7 +109,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006421/image/list/1000006421_list_070.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006421/image/list/1000006421_list_070.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006421",
 "cate":"009003"
 },
@@ -120,7 +120,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006420/image/list/1000006420_list_023.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006420/image/list/1000006420_list_023.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006420",
 "cate":"009003"
 },
@@ -131,7 +131,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006417/image/list/1000006417_list_038.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006417/image/list/1000006417_list_038.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006417",
 "cate":"009003"
 },
@@ -142,7 +142,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006415/image/list/1000006415_list_077.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006415/image/list/1000006415_list_077.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006415",
 "cate":"009003"
 },
@@ -153,7 +153,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006413/image/list/1000006413_list_065.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006413/image/list/1000006413_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006413",
 "cate":"009003"
 },
@@ -164,7 +164,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006419/image/list/1000006419_list_040.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006419/image/list/1000006419_list_040.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006419",
 "cate":"009003"
 },
@@ -175,7 +175,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006418/image/list/1000006418_list_065.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006418/image/list/1000006418_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006418",
 "cate":"009003"
 },
@@ -186,7 +186,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006423/image/list/1000006423_list_018.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006423/image/list/1000006423_list_018.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006423",
 "cate":"009003"
 },
@@ -197,7 +197,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":844800,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006589/image/list/1000006589_list_073.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006589/image/list/1000006589_list_073.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006589",
 "cate":"009003"
 },
@@ -208,7 +208,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1013700,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006562/image/list/1000006562_list_062.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006562/image/list/1000006562_list_062.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006562",
 "cate":"009003"
 },
@@ -219,7 +219,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1013700,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006561/image/list/1000006561_list_064.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006561/image/list/1000006561_list_064.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006561",
 "cate":"009003"
 },
@@ -230,7 +230,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006549/image/list/1000006549_list_02.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006549/image/list/1000006549_list_02.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006549",
 "cate":"009003"
 },
@@ -241,7 +241,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006547/image/list/1000006547_list_012.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006547/image/list/1000006547_list_012.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006547",
 "cate":"009003"
 },
@@ -252,7 +252,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":844800,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006460/image/list/1000006460_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006460/image/list/1000006460_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006460",
 "cate":"009003"
 },
@@ -263,7 +263,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1013700,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006199/image/list/1000006199_list_026.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006199/image/list/1000006199_list_026.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006199",
 "cate":"009003"
 },
@@ -274,7 +274,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006198/image/list/1000006198_list_027.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006198/image/list/1000006198_list_027.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006198",
 "cate":"009003"
 },
@@ -285,7 +285,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006197/image/list/1000006197_list_033.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006197/image/list/1000006197_list_033.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006197",
 "cate":"009003"
 },
@@ -296,7 +296,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":844800,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006196/image/list/1000006196_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006196/image/list/1000006196_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006196",
 "cate":"009003"
 },
@@ -307,7 +307,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1013700,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006195/image/list/1000006195_list_093.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006195/image/list/1000006195_list_093.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006195",
 "cate":"009003"
 },
@@ -318,7 +318,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":957400,
 "m2":187000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006105/image/list/1000006105_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006105/image/list/1000006105_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006105",
 "cate":"009003"
 },
@@ -329,7 +329,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006409/image/list/1000006409_list_055.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006409/image/list/1000006409_list_055.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006409",
 "cate":"009003"
 },
@@ -340,7 +340,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006408/image/list/1000006408_list_06.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006408/image/list/1000006408_list_06.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006408",
 "cate":"009003"
 },
@@ -351,7 +351,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":844800,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006103/image/list/1000006103_list_092.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006103/image/list/1000006103_list_092.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006103",
 "cate":"009003"
 },
@@ -362,7 +362,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006407/image/list/1000006407_list_068.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006407/image/list/1000006407_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006407",
 "cate":"009003"
 },
@@ -373,7 +373,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006406/image/list/1000006406_list_094.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006406/image/list/1000006406_list_094.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006406",
 "cate":"009003"
 },
@@ -384,7 +384,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006405/image/list/1000006405_list_033.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006405/image/list/1000006405_list_033.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006405",
 "cate":"009003"
 },
@@ -395,7 +395,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":732100,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006402/image/list/1000006402_list_032.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006402/image/list/1000006402_list_032.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006402",
 "cate":"009003"
 },
@@ -406,7 +406,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1126400,
 "m2":220000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006101/image/list/1000006101_list_09.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006101/image/list/1000006101_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006101",
 "cate":"009003"
 },
@@ -417,7 +417,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":844800,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006100/image/list/1000006100_list_027.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006100/image/list/1000006100_list_027.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006100",
 "cate":"009003"
 },
@@ -428,7 +428,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004867/image/list/1000004867_list_076.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004867/image/list/1000004867_list_076.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004867",
 "cate":"009003"
 },
@@ -439,7 +439,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2196400,
 "m2":429000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005126/image/list/1000005126_list_081.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005126/image/list/1000005126_list_081.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005126",
 "cate":"009003"
 },
@@ -450,7 +450,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":872900,
 "m2":170500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005672/image/list/1000005672_list_017.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005672/image/list/1000005672_list_017.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005672",
 "cate":"009003"
 },
@@ -461,7 +461,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005413/image/list/1000005413_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005413/image/list/1000005413_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005413",
 "cate":"009003"
 },
@@ -472,7 +472,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005412/image/list/1000005412_list_063.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005412/image/list/1000005412_list_063.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005412",
 "cate":"009003"
 },
@@ -483,7 +483,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005411/image/list/1000005411_list_089.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005411/image/list/1000005411_list_089.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005411",
 "cate":"009003"
 },
@@ -494,7 +494,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005410/image/list/1000005410_list_036.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005410/image/list/1000005410_list_036.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005410",
 "cate":"009003"
 },
@@ -505,7 +505,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005409/image/list/1000005409_list_087.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005409/image/list/1000005409_list_087.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005409",
 "cate":"009003"
 },
@@ -516,7 +516,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005408/image/list/1000005408_list_035.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005408/image/list/1000005408_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005408",
 "cate":"009003"
 },
@@ -527,7 +527,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005407/image/list/1000005407_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005407/image/list/1000005407_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005407",
 "cate":"009003"
 },
@@ -538,7 +538,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005406/image/list/1000005406_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005406/image/list/1000005406_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005406",
 "cate":"009003"
 },
@@ -549,7 +549,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005405/image/list/1000005405_list_070.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005405/image/list/1000005405_list_070.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005405",
 "cate":"009003"
 },
@@ -560,7 +560,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005404/image/list/1000005404_list_032.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005404/image/list/1000005404_list_032.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005404",
 "cate":"009003"
 },
@@ -571,7 +571,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005403/image/list/1000005403_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005403/image/list/1000005403_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005403",
 "cate":"009003"
 },
@@ -582,7 +582,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005402/image/list/1000005402_list_044.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005402/image/list/1000005402_list_044.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005402",
 "cate":"009003"
 },
@@ -593,7 +593,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005401/image/list/1000005401_list_02.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005401/image/list/1000005401_list_02.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005401",
 "cate":"009003"
 },
@@ -604,7 +604,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005400/image/list/1000005400_list_031.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005400/image/list/1000005400_list_031.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005400",
 "cate":"009003"
 },
@@ -615,7 +615,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005399/image/list/1000005399_list_071.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005399/image/list/1000005399_list_071.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005399",
 "cate":"009003"
 },
@@ -626,7 +626,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2027500,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005128/image/list/1000005128_list_050.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005128/image/list/1000005128_list_050.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005128",
 "cate":"009003"
 },
@@ -637,7 +637,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004987/image/list/1000004987_list_028.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004987/image/list/1000004987_list_028.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004987",
 "cate":"009003"
 },
@@ -648,7 +648,7 @@ window._MALL_CATALOG={
 "size":"1560×3200×12T",
 "price":1540000,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004808/image/list/1000004808_list_059.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004808/image/list/1000004808_list_059.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004808",
 "cate":"009003"
 },
@@ -659,7 +659,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2590720,
 "m2":506000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004951/image/list/1000004951_list_057.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004951/image/list/1000004951_list_057.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004951",
 "cate":"009003"
 },
@@ -670,7 +670,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004979/image/list/1000004979_list_043.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004979/image/list/1000004979_list_043.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004979",
 "cate":"009003"
 },
@@ -681,7 +681,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004980/image/list/1000004980_list_082.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004980/image/list/1000004980_list_082.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004980",
 "cate":"009003"
 },
@@ -692,7 +692,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1097200,
 "m2":209000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004981/image/list/1000004981_list_074.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004981/image/list/1000004981_list_074.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004981",
 "cate":"009003"
 },
@@ -703,7 +703,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004983/image/list/1000004983_list_044.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004983/image/list/1000004983_list_044.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004983",
 "cate":"009003"
 },
@@ -714,7 +714,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004984/image/list/1000004984_list_010.png",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004984/image/list/1000004984_list_010.png",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004984",
 "cate":"009003"
 },
@@ -725,7 +725,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004985/image/list/1000004985_list_038.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004985/image/list/1000004985_list_038.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004985",
 "cate":"009003"
 },
@@ -736,7 +736,7 @@ window._MALL_CATALOG={
 "size":"1560×3200×12T",
 "price":1540000,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005063/image/list/1000005063_list_026.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005063/image/list/1000005063_list_026.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005063",
 "cate":"009003"
 },
@@ -747,7 +747,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005255/image/list/1000005255_list_097.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005255/image/list/1000005255_list_097.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005255",
 "cate":"009003"
 },
@@ -758,7 +758,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005062/image/list/1000005062_list_064.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005062/image/list/1000005062_list_064.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005062",
 "cate":"009003"
 },
@@ -769,7 +769,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005061/image/list/1000005061_list_065.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005061/image/list/1000005061_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005061",
 "cate":"009003"
 },
@@ -780,7 +780,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005060/image/list/1000005060_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005060/image/list/1000005060_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005060",
 "cate":"009003"
 },
@@ -791,7 +791,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1510000,
 "m2":286000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005041/image/list/1000005041_list_013.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005041/image/list/1000005041_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005041",
 "cate":"009003"
 },
@@ -802,7 +802,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1510000,
 "m2":286000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005040/image/list/1000005040_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005040/image/list/1000005040_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005040",
 "cate":"009003"
 },
@@ -813,7 +813,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1510000,
 "m2":286000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005039/image/list/1000005039_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005039/image/list/1000005039_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005039",
 "cate":"009003"
 },
@@ -824,7 +824,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005037/image/list/1000005037_list_053.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005037/image/list/1000005037_list_053.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005037",
 "cate":"009003"
 },
@@ -835,7 +835,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1277700,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005258/image/list/1000005258_list_035.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005258/image/list/1000005258_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005258",
 "cate":"009003"
 },
@@ -846,7 +846,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1277700,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005257/image/list/1000005257_list_04.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005257/image/list/1000005257_list_04.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005257",
 "cate":"009003"
 },
@@ -857,7 +857,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1277700,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005256/image/list/1000005256_list_097.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005256/image/list/1000005256_list_097.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005256",
 "cate":"009003"
 },
@@ -868,7 +868,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1335800,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005034/image/list/1000005034_list_013.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005034/image/list/1000005034_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005034",
 "cate":"009003"
 },
@@ -879,7 +879,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1510000,
 "m2":286000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005033/image/list/1000005033_list_028.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005033/image/list/1000005033_list_028.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005033",
 "cate":"009003"
 },
@@ -890,7 +890,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005031/image/list/1000005031_list_034.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005031/image/list/1000005031_list_034.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005031",
 "cate":"009003"
 },
@@ -901,7 +901,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005030/image/list/1000005030_list_054.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005030/image/list/1000005030_list_054.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005030",
 "cate":"009003"
 },
@@ -912,7 +912,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005007/image/list/1000005007_list_061.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005007/image/list/1000005007_list_061.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005007",
 "cate":"009003"
 },
@@ -923,7 +923,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1097200,
 "m2":209000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005006/image/list/1000005006_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005006/image/list/1000005006_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005006",
 "cate":"009003"
 },
@@ -934,7 +934,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1328200,
 "m2":253000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004989/image/list/1000004989_list_068.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004989/image/list/1000004989_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004989",
 "cate":"009003"
 },
@@ -945,7 +945,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1097200,
 "m2":209000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004986/image/list/1000004986_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004986/image/list/1000004986_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004986",
 "cate":"009003"
 },
@@ -956,7 +956,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004988/image/list/1000004988_list_076.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004988/image/list/1000004988_list_076.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004988",
 "cate":"009003"
 },
@@ -967,7 +967,7 @@ window._MALL_CATALOG={
 "size":"1560×3200×12T",
 "price":1540000,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004807/image/list/1000004807_list_012.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004807/image/list/1000004807_list_012.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004807",
 "cate":"009003"
 },
@@ -978,7 +978,7 @@ window._MALL_CATALOG={
 "size":"1560×3200×12T",
 "price":1540000,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004806/image/list/1000004806_list_098.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004806/image/list/1000004806_list_098.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004806",
 "cate":"009003"
 },
@@ -989,7 +989,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004803/image/list/1000004803_list_085.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004803/image/list/1000004803_list_085.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004803",
 "cate":"009003"
 },
@@ -1000,7 +1000,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004802/image/list/1000004802_list_013.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004802/image/list/1000004802_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004802",
 "cate":"009003"
 },
@@ -1011,7 +1011,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004801/image/list/1000004801_list_031.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004801/image/list/1000004801_list_031.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004801",
 "cate":"009003"
 },
@@ -1022,7 +1022,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004800/image/list/1000004800_list_011.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004800/image/list/1000004800_list_011.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004800",
 "cate":"009003"
 },
@@ -1033,7 +1033,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004799/image/list/1000004799_list_039.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004799/image/list/1000004799_list_039.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004799",
 "cate":"009003"
 },
@@ -1044,7 +1044,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1270500,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004798/image/list/1000004798_list_046.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004798/image/list/1000004798_list_046.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004798",
 "cate":"009003"
 },
@@ -1055,7 +1055,7 @@ window._MALL_CATALOG={
 "size":"1620×3240×12T",
 "price":1097250,
 "m2":209000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004795/image/list/1000004795_list_012.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004795/image/list/1000004795_list_012.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004795",
 "cate":"009003"
 },
@@ -1066,7 +1066,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003030/image/list/1000003030_list_050.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003030/image/list/1000003030_list_050.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003030",
 "cate":"009003"
 },
@@ -1077,7 +1077,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1408000,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004301/image/list/1000004301_list_087.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004301/image/list/1000004301_list_087.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004301",
 "cate":"009003"
 },
@@ -1088,7 +1088,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1408000,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004302/image/list/1000004302_list_047.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004302/image/list/1000004302_list_047.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004302",
 "cate":"009003"
 },
@@ -1099,7 +1099,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2590700,
 "m2":506000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003671/image/list/1000003671_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003671/image/list/1000003671_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003671",
 "cate":"009003"
 },
@@ -1110,7 +1110,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004307/image/list/1000004307_list_075.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004307/image/list/1000004307_list_075.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004307",
 "cate":"009003"
 },
@@ -1121,7 +1121,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":330000,
 "m2":64460,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003887/image/list/1000003887_list_034.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003887/image/list/1000003887_list_034.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003887",
 "cate":"009003"
 },
@@ -1132,7 +1132,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2196400,
 "m2":429000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006033/image/list/1000006033_list_081.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006033/image/list/1000006033_list_081.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006033",
 "cate":"009003"
 },
@@ -1143,7 +1143,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2196400,
 "m2":429000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006032/image/list/1000006032_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006032/image/list/1000006032_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006032",
 "cate":"009003"
 },
@@ -1154,7 +1154,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2140100,
 "m2":418000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004470/image/list/1000004470_list_052.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004470/image/list/1000004470_list_052.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004470",
 "cate":"009003"
 },
@@ -1165,7 +1165,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":330000,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003888/image/list/1000003888_list_080.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003888/image/list/1000003888_list_080.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003888",
 "cate":"009003"
 },
@@ -1176,7 +1176,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003033/image/list/1000003033_list_057.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003033/image/list/1000003033_list_057.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003033",
 "cate":"009003"
 },
@@ -1187,7 +1187,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":901100,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004192/image/list/1000004192_list_099.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004192/image/list/1000004192_list_099.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004192",
 "cate":"009003"
 },
@@ -1198,7 +1198,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003018/image/list/1000003018_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003018/image/list/1000003018_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003018",
 "cate":"009003"
 },
@@ -1209,7 +1209,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":330000,
 "m2":64460,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003890/image/list/1000003890_list_060.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003890/image/list/1000003890_list_060.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003890",
 "cate":"009003"
 },
@@ -1220,7 +1220,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003019/image/list/1000003019_list_029.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003019/image/list/1000003019_list_029.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003019",
 "cate":"009003"
 },
@@ -1231,7 +1231,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002999/image/list/1000002999_list_068.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002999/image/list/1000002999_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002999",
 "cate":"009003"
 },
@@ -1242,7 +1242,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2027500,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004616/image/list/1000004616_list_049.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004616/image/list/1000004616_list_049.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004616",
 "cate":"009003"
 },
@@ -1253,7 +1253,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004468/image/list/1000004468_list_099.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004468/image/list/1000004468_list_099.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004468",
 "cate":"009003"
 },
@@ -1264,7 +1264,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":330000,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003891/image/list/1000003891_list_021.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003891/image/list/1000003891_list_021.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003891",
 "cate":"009003"
 },
@@ -1275,7 +1275,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×20T",
 "price":1689600,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004754/image/list/1000004754_list_081.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004754/image/list/1000004754_list_081.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004754",
 "cate":"009003"
 },
@@ -1286,7 +1286,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2027500,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004617/image/list/1000004617_list_094.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004617/image/list/1000004617_list_094.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004617",
 "cate":"009003"
 },
@@ -1297,7 +1297,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1408000,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006039/image/list/1000006039_list_052.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006039/image/list/1000006039_list_052.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006039",
 "cate":"009003"
 },
@@ -1308,7 +1308,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1408000,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006038/image/list/1000006038_list_062.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006038/image/list/1000006038_list_062.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006038",
 "cate":"009003"
 },
@@ -1319,7 +1319,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1408000,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006037/image/list/1000006037_list_047.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006037/image/list/1000006037_list_047.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006037",
 "cate":"009003"
 },
@@ -1330,7 +1330,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2196400,
 "m2":429000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006034/image/list/1000006034_list_026.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006034/image/list/1000006034_list_026.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006034",
 "cate":"009003"
 },
@@ -1341,7 +1341,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2027500,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004441/image/list/1000004441_list_0100.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004441/image/list/1000004441_list_0100.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004441",
 "cate":"009003"
 },
@@ -1352,7 +1352,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×20T",
 "price":1689600,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004753/image/list/1000004753_list_030.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004753/image/list/1000004753_list_030.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004753",
 "cate":"009003"
 },
@@ -1363,7 +1363,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004471/image/list/1000004471_list_011.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004471/image/list/1000004471_list_011.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004471",
 "cate":"009003"
 },
@@ -1374,7 +1374,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003672/image/list/1000003672_list_097.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003672/image/list/1000003672_list_097.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003672",
 "cate":"009003"
 },
@@ -1385,7 +1385,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":871200,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004681/image/list/1000004681_list_073.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004681/image/list/1000004681_list_073.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004681",
 "cate":"009003"
 },
@@ -1396,7 +1396,7 @@ window._MALL_CATALOG={
 "size":"1630×3240×12T",
 "price":1277700,
 "m2":242000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004723/image/list/1000004723_list_071.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004723/image/list/1000004723_list_071.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004723",
 "cate":"009003"
 },
@@ -1407,7 +1407,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2590700,
 "m2":506000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003670/image/list/1000003670_list_045.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003670/image/list/1000003670_list_045.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003670",
 "cate":"009003"
 },
@@ -1418,7 +1418,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003673/image/list/1000003673_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003673/image/list/1000003673_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003673",
 "cate":"009003"
 },
@@ -1429,7 +1429,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":1689600,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003031/image/list/1000003031_list_0100.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003031/image/list/1000003031_list_0100.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003031",
 "cate":"009003"
 },
@@ -1440,7 +1440,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":1689600,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002998/image/list/1000002998_list_027.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002998/image/list/1000002998_list_027.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002998",
 "cate":"009003"
 },
@@ -1451,7 +1451,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":1531200,
 "m2":319000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003005/image/list/1000003005_list_030.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003005/image/list/1000003005_list_030.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003005",
 "cate":"009003"
 },
@@ -1462,7 +1462,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003011/image/list/1000003011_list_09.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003011/image/list/1000003011_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003011",
 "cate":"009003"
 },
@@ -1473,7 +1473,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2027500,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004036/image/list/1000004036_list_053.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004036/image/list/1000004036_list_053.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004036",
 "cate":"009003"
 },
@@ -1484,7 +1484,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":1900800,
 "m2":396000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003026/image/list/1000003026_list_086.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003026/image/list/1000003026_list_086.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003026",
 "cate":"009003"
 },
@@ -1495,7 +1495,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":1689600,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003002/image/list/1000003002_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003002/image/list/1000003002_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003002",
 "cate":"009003"
 },
@@ -1506,7 +1506,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003583/image/list/1000003583_list_016.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003583/image/list/1000003583_list_016.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003583",
 "cate":"009003"
 },
@@ -1517,7 +1517,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003021/image/list/1000003021_list_09.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003021/image/list/1000003021_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003021",
 "cate":"009003"
 },
@@ -1528,7 +1528,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1576900,
 "m2":308000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003827/image/list/1000003827_list_072.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003827/image/list/1000003827_list_072.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003827",
 "cate":"009003"
 },
@@ -1539,7 +1539,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003022/image/list/1000003022_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003022/image/list/1000003022_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003022",
 "cate":"009003"
 },
@@ -1550,7 +1550,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003027/image/list/1000003027_list_043.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003027/image/list/1000003027_list_043.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003027",
 "cate":"009003"
 },
@@ -1561,7 +1561,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":1802200,
 "m2":352000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004037/image/list/1000004037_list_041.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004037/image/list/1000004037_list_041.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004037",
 "cate":"009003"
 },
@@ -1572,7 +1572,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":2140100,
 "m2":418000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003013/image/list/1000003013_list_03.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003013/image/list/1000003013_list_03.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003013",
 "cate":"009003"
 },
@@ -1583,7 +1583,7 @@ window._MALL_CATALOG={
 "size":"1540×3280×12T",
 "price":792000,
 "m2":165000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003020/image/list/1000003020_list_054.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003020/image/list/1000003020_list_054.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003020",
 "cate":"009003"
 },
@@ -1594,7 +1594,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003952/image/list/1000003952_list_023.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003952/image/list/1000003952_list_023.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003952",
 "cate":"009003"
 },
@@ -1605,7 +1605,7 @@ window._MALL_CATALOG={
 "size":"1600×3200×12T",
 "price":788400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004314/image/list/1000004314_list_036.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004314/image/list/1000004314_list_036.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004314",
 "cate":"009003"
 },
@@ -1616,7 +1616,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":440300,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000006153/image/list/1000006153_list_077.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000006153/image/list/1000006153_list_077.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000006153",
 "cate":"009001"
 },
@@ -1627,7 +1627,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005863/image/list/1000005863_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005863/image/list/1000005863_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005863",
 "cate":"009001"
 },
@@ -1638,7 +1638,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005862/image/list/1000005862_list_052.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005862/image/list/1000005862_list_052.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005862",
 "cate":"009001"
 },
@@ -1649,7 +1649,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":886000,
 "m2":196900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005861/image/list/1000005861_list_053.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005861/image/list/1000005861_list_053.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005861",
 "cate":"009001"
 },
@@ -1660,7 +1660,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005860/image/list/1000005860_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005860/image/list/1000005860_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005860",
 "cate":"009001"
 },
@@ -1671,7 +1671,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":1237500,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005859/image/list/1000005859_list_03.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005859/image/list/1000005859_list_03.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005859",
 "cate":"009001"
 },
@@ -1682,7 +1682,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":517400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005684/image/list/1000005684_list_063.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005684/image/list/1000005684_list_063.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005684",
 "cate":"009001"
 },
@@ -1693,7 +1693,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":517400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005683/image/list/1000005683_list_013.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005683/image/list/1000005683_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005683",
 "cate":"009001"
 },
@@ -1704,7 +1704,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":403600,
 "m2":121000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005433/image/list/1000005255_list_089.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005433/image/list/1000005255_list_089.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005433",
 "cate":"009001"
 },
@@ -1715,7 +1715,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":513700,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005431/image/list/1000005431_list_083.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005431/image/list/1000005431_list_083.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005431",
 "cate":"009001"
 },
@@ -1726,7 +1726,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005386/image/list/1000005386_list_028.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005386/image/list/1000005386_list_028.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005386",
 "cate":"009001"
 },
@@ -1737,7 +1737,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":609800,
 "m2":181500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005307/image/list/1000005307_list_024.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005307/image/list/1000005307_list_024.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005307",
 "cate":"009001"
 },
@@ -1748,7 +1748,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":609800,
 "m2":181500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005306/image/list/1000005306_list_017.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005306/image/list/1000005306_list_017.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005306",
 "cate":"009001"
 },
@@ -1759,7 +1759,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":609800,
 "m2":181500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005305/image/list/1000005305_list_038.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005305/image/list/1000005305_list_038.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005305",
 "cate":"009001"
 },
@@ -1770,7 +1770,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005181/image/list/1000005181_list_023.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005181/image/list/1000005181_list_023.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005181",
 "cate":"009001"
 },
@@ -1781,7 +1781,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005162/image/list/1000005162_list_022.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005162/image/list/1000005162_list_022.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005162",
 "cate":"009001"
 },
@@ -1792,7 +1792,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":366900,
 "m2":110000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005089/image/list/1000005089_list_085.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005089/image/list/1000005089_list_085.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005089",
 "cate":"009001"
 },
@@ -1803,7 +1803,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":366900,
 "m2":110000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000005088/image/list/1000005088_list_078.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000005088/image/list/1000005088_list_078.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000005088",
 "cate":"009001"
 },
@@ -1814,7 +1814,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":363200,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004845/image/list/1000004845_list_065.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004845/image/list/1000004845_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004845",
 "cate":"009001"
 },
@@ -1825,7 +1825,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":363200,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004844/image/list/1000004844_list_096.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004844/image/list/1000004844_list_096.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004844",
 "cate":"009001"
 },
@@ -1836,7 +1836,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":517400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004820/image/list/1000004820_list_011.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004820/image/list/1000004820_list_011.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004820",
 "cate":"009001"
 },
@@ -1847,7 +1847,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":517400,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004819/image/list/1000004819_list_06.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004819/image/list/1000004819_list_06.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004819",
 "cate":"009001"
 },
@@ -1858,7 +1858,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004814/image/list/1000004814_list_080.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004814/image/list/1000004814_list_080.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004814",
 "cate":"009001"
 },
@@ -1869,7 +1869,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004813/image/list/1000004813_list_090.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004813/image/list/1000004813_list_090.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004813",
 "cate":"009001"
 },
@@ -1880,7 +1880,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004812/image/list/1000004812_list_086.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004812/image/list/1000004812_list_086.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004812",
 "cate":"009001"
 },
@@ -1891,7 +1891,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004811/image/list/1000004811_list_0100.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004811/image/list/1000004811_list_0100.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004811",
 "cate":"009001"
 },
@@ -1902,7 +1902,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004810/image/list/1000004810_list_01.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004810/image/list/1000004810_list_01.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004810",
 "cate":"009001"
 },
@@ -1913,7 +1913,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":422500,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004809/image/list/1000004809_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004809/image/list/1000004809_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004809",
 "cate":"009001"
 },
@@ -1924,7 +1924,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":367400,
 "m2":110000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004796/image/list/1000004796_list_09.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004796/image/list/1000004796_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004796",
 "cate":"009001"
 },
@@ -1935,7 +1935,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004722/image/list/1000004722_list_095.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004722/image/list/1000004722_list_095.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004722",
 "cate":"009001"
 },
@@ -1946,7 +1946,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004721/image/list/1000004721_list_023.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004721/image/list/1000004721_list_023.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004721",
 "cate":"009001"
 },
@@ -1957,7 +1957,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":366900,
 "m2":110000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004720/image/list/1000004720_list_059.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004720/image/list/1000004720_list_059.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004720",
 "cate":"009001"
 },
@@ -1968,7 +1968,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":393400,
 "m2":115500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004687/image/list/1000004687_list_037.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004687/image/list/1000004687_list_037.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004687",
 "cate":"009001"
 },
@@ -1979,7 +1979,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":402900,
 "m2":121000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004683/image/list/1000004683_list_083.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004683/image/list/1000004683_list_083.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004683",
 "cate":"009001"
 },
@@ -1990,7 +1990,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":402900,
 "m2":121000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004682/image/list/1000004682_list_092.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004682/image/list/1000004682_list_092.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004682",
 "cate":"009001"
 },
@@ -2001,7 +2001,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":439500,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004672/image/list/1000004672_list_09.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004672/image/list/1000004672_list_09.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004672",
 "cate":"009001"
 },
@@ -2012,7 +2012,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":362600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004664/image/list/1000004664_list_062.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004664/image/list/1000004664_list_062.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004664",
 "cate":"009001"
 },
@@ -2023,7 +2023,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":362600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004663/image/list/1000004663_list_026.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004663/image/list/1000004663_list_026.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004663",
 "cate":"009001"
 },
@@ -2034,7 +2034,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004657/image/list/1000004657_list_054.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004657/image/list/1000004657_list_054.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004657",
 "cate":"009001"
 },
@@ -2045,7 +2045,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004656/image/list/1000004656_list_079.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004656/image/list/1000004656_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004656",
 "cate":"009001"
 },
@@ -2056,7 +2056,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004655/image/list/1000004655_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004655/image/list/1000004655_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004655",
 "cate":"009001"
 },
@@ -2067,7 +2067,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004654/image/list/1000004654_list_073.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004654/image/list/1000004654_list_073.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004654",
 "cate":"009001"
 },
@@ -2078,7 +2078,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004611/image/list/1000004611_list_088.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004611/image/list/1000004611_list_088.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004611",
 "cate":"009001"
 },
@@ -2089,7 +2089,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":425000,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004609/image/list/1000004609_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004609/image/list/1000004609_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004609",
 "cate":"009001"
 },
@@ -2100,7 +2100,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":388000,
 "m2":115500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004608/image/list/1000004608_list_085.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004608/image/list/1000004608_list_085.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004608",
 "cate":"009001"
 },
@@ -2111,7 +2111,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":514300,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004312/image/list/1000004312_list_087.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004312/image/list/1000004312_list_087.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004312",
 "cate":"009001"
 },
@@ -2122,7 +2122,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":514300,
 "m2":154000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004311/image/list/1000004311_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004311/image/list/1000004311_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004311",
 "cate":"009001"
 },
@@ -2133,7 +2133,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004310/image/list/1000004310_list_081.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004310/image/list/1000004310_list_081.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004310",
 "cate":"009001"
 },
@@ -2144,7 +2144,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004309/image/list/1000004309_list_010.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004309/image/list/1000004309_list_010.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004309",
 "cate":"009001"
 },
@@ -2155,7 +2155,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004308/image/list/1000004308_list_099.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004308/image/list/1000004308_list_099.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004308",
 "cate":"009001"
 },
@@ -2166,7 +2166,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004306/image/list/1000004306_list_01.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004306/image/list/1000004306_list_01.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004306",
 "cate":"009001"
 },
@@ -2177,7 +2177,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004305/image/list/1000004305_list_034.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004305/image/list/1000004305_list_034.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004305",
 "cate":"009001"
 },
@@ -2188,19 +2188,8 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":302900,
 "m2":93500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004194/image/list/1000004194_list_08.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004194/image/list/1000004194_list_08.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004194",
-"cate":"009001"
-},
-{
-"id":"1000004193",
-"name":"플레인 시멘트 크림 화이트",
-"en":"PLAIN CEMENT CREAM WHITE",
-"size":"1200×2700×6T",
-"price":267300,
-"m2":82500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004193/image/list/1000004193_list_096.jpg",
-"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004193",
 "cate":"009001"
 },
 {
@@ -2210,7 +2199,7 @@ window._MALL_CATALOG={
 "size":"400×2400×6.5T",
 "price":111900,
 "m2":116600,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004130/image/list/1000004130_list_02.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004130/image/list/1000004130_list_02.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004130",
 "cate":"009001"
 },
@@ -2221,7 +2210,7 @@ window._MALL_CATALOG={
 "size":"400×2400×6.5T",
 "price":111900,
 "m2":116600,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004129/image/list/1000004129_list_095.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004129/image/list/1000004129_list_095.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004129",
 "cate":"009001"
 },
@@ -2232,7 +2221,7 @@ window._MALL_CATALOG={
 "size":"400×2400×6.5T",
 "price":111900,
 "m2":116600,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004128/image/list/1000004128_list_088.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004128/image/list/1000004128_list_088.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004128",
 "cate":"009001"
 },
@@ -2243,7 +2232,7 @@ window._MALL_CATALOG={
 "size":"400×2400×6.5T",
 "price":111900,
 "m2":116600,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004127/image/list/1000004127_list_029.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004127/image/list/1000004127_list_029.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004127",
 "cate":"009001"
 },
@@ -2254,7 +2243,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":570200,
 "m2":176000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/24/07/28/1000004033/1000004033_list_035.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/24/07/28/1000004033/1000004033_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004033",
 "cate":"009001"
 },
@@ -2265,7 +2254,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004032/image/list/1000004032_list_051.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004032/image/list/1000004032_list_051.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004032",
 "cate":"009001"
 },
@@ -2276,7 +2265,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":570200,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004029/image/list/1000004029_list_069.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004029/image/list/1000004029_list_069.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004029",
 "cate":"009001"
 },
@@ -2287,7 +2276,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004026/image/list/1000004026_list_03.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004026/image/list/1000004026_list_03.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004026",
 "cate":"009001"
 },
@@ -2298,7 +2287,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000004008/image/list/1000004008_list_027.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000004008/image/list/1000004008_list_027.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000004008",
 "cate":"009001"
 },
@@ -2309,7 +2298,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003996/image/list/1000003996_list_094.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003996/image/list/1000003996_list_094.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003996",
 "cate":"009001"
 },
@@ -2320,7 +2309,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":267300,
 "m2":82500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003951/image/list/1000003951_list_067.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003951/image/list/1000003951_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003951",
 "cate":"009001"
 },
@@ -2331,7 +2320,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":302900,
 "m2":93500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003950/image/list/1000003950_list_016.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003950/image/list/1000003950_list_016.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003950",
 "cate":"009001"
 },
@@ -2342,7 +2331,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":302900,
 "m2":93500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003949/image/list/1000003949_list_017.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003949/image/list/1000003949_list_017.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003949",
 "cate":"009001"
 },
@@ -2353,7 +2342,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003872/image/list/1000003872_list_010.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003872/image/list/1000003872_list_010.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003872",
 "cate":"009001"
 },
@@ -2364,7 +2353,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":362600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003867/image/list/1000003867_list_074.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003867/image/list/1000003867_list_074.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003867",
 "cate":"009001"
 },
@@ -2375,7 +2364,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":362600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003866/image/list/1000003866_list_069.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003866/image/list/1000003866_list_069.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003866",
 "cate":"009001"
 },
@@ -2386,7 +2375,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":439500,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003865/image/list/1000003865_list_014.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003865/image/list/1000003865_list_014.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003865",
 "cate":"009001"
 },
@@ -2397,7 +2386,7 @@ window._MALL_CATALOG={
 "size":"1200×2400×6.5T",
 "price":380100,
 "m2":132000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003864/image/list/1000003864_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003864/image/list/1000003864_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003864",
 "cate":"009001"
 },
@@ -2408,7 +2397,7 @@ window._MALL_CATALOG={
 "size":"1200×2400×6.5T",
 "price":313600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003863/image/list/1000003863_list_069.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003863/image/list/1000003863_list_069.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003863",
 "cate":"009001"
 },
@@ -2419,7 +2408,7 @@ window._MALL_CATALOG={
 "size":"1200×2400×6.5T",
 "price":313600,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003860/image/list/1000003860_list_089.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003860/image/list/1000003860_list_089.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003860",
 "cate":"009001"
 },
@@ -2430,7 +2419,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":494500,
 "m2":148500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003856/image/list/1000003856_list_064.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003856/image/list/1000003856_list_064.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003856",
 "cate":"009001"
 },
@@ -2441,7 +2430,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":494500,
 "m2":148500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003855/image/list/1000003855_list_081.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003855/image/list/1000003855_list_081.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003855",
 "cate":"009001"
 },
@@ -2452,7 +2441,7 @@ window._MALL_CATALOG={
 "size":"1180×2580×6.5T",
 "price":167200,
 "m2":55000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003853/image/list/1000003853_list_01.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003853/image/list/1000003853_list_01.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003853",
 "cate":"009001"
 },
@@ -2463,7 +2452,7 @@ window._MALL_CATALOG={
 "size":"1180×2580×6.5T",
 "price":167200,
 "m2":55000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003852/image/list/1000003852_list_057.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003852/image/list/1000003852_list_057.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003852",
 "cate":"009001"
 },
@@ -2474,7 +2463,7 @@ window._MALL_CATALOG={
 "size":"1180×2580×6.5T",
 "price":331000,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003850/image/list/1000003850_list_039.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003850/image/list/1000003850_list_039.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003850",
 "cate":"009001"
 },
@@ -2485,7 +2474,7 @@ window._MALL_CATALOG={
 "size":"1180×2580×6.5T",
 "price":167200,
 "m2":55000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003849/image/list/1000003849_list_066.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003849/image/list/1000003849_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003849",
 "cate":"009001"
 },
@@ -2496,7 +2485,7 @@ window._MALL_CATALOG={
 "size":"1180×2580×6.5T",
 "price":317600,
 "m2":104500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003847/image/list/1000003847_list_057.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003847/image/list/1000003847_list_057.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003847",
 "cate":"009001"
 },
@@ -2507,7 +2496,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":363200,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003833/image/list/1000003833_list_044.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003833/image/list/1000003833_list_044.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003833",
 "cate":"009001"
 },
@@ -2518,7 +2507,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":363200,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003832/image/list/1000003832_list_051.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003832/image/list/1000003832_list_051.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003832",
 "cate":"009001"
 },
@@ -2529,7 +2518,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6T",
 "price":363200,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003831/image/list/1000003831_list_094.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003831/image/list/1000003831_list_094.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003831",
 "cate":"009001"
 },
@@ -2540,7 +2529,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":363700,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003829/image/list/1000003829_list_082.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003829/image/list/1000003829_list_082.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003829",
 "cate":"009001"
 },
@@ -2551,7 +2540,7 @@ window._MALL_CATALOG={
 "size":"1200×2780×6.5T",
 "price":363700,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003828/image/list/1000003828_list_076.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003828/image/list/1000003828_list_076.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003828",
 "cate":"009001"
 },
@@ -2562,7 +2551,7 @@ window._MALL_CATALOG={
 "size":"1200×2600×6.5T",
 "price":339700,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003824/image/list/1000003824_list_049.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003824/image/list/1000003824_list_049.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003824",
 "cate":"009001"
 },
@@ -2573,7 +2562,7 @@ window._MALL_CATALOG={
 "size":"1200×2600×6.5T",
 "price":339700,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003823/image/list/1000003823_list_055.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003823/image/list/1000003823_list_055.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003823",
 "cate":"009001"
 },
@@ -2584,7 +2573,7 @@ window._MALL_CATALOG={
 "size":"1200×2600×6.5T",
 "price":171600,
 "m2":55000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003822/image/list/1000003822_list_029.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003822/image/list/1000003822_list_029.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003822",
 "cate":"009001"
 },
@@ -2595,7 +2584,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":302900,
 "m2":93500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003819/image/list/1000003819_list_072.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003819/image/list/1000003819_list_072.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003819",
 "cate":"009001"
 },
@@ -2606,7 +2595,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":178200,
 "m2":55000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003818/image/list/1000003818_list_028.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003818/image/list/1000003818_list_028.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003818",
 "cate":"009001"
 },
@@ -2617,7 +2606,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":267300,
 "m2":82500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003804/image/list/1000003804_list_020.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003804/image/list/1000003804_list_020.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003804",
 "cate":"009001"
 },
@@ -2628,7 +2617,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6.5T",
 "price":425000,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003795/image/list/1000003795_list_095.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003795/image/list/1000003795_list_095.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003795",
 "cate":"009001"
 },
@@ -2639,7 +2628,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":425000,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003794/image/list/1000003794_list_078.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003794/image/list/1000003794_list_078.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003794",
 "cate":"009001"
 },
@@ -2650,7 +2639,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6.5T",
 "price":425000,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003793/image/list/1000003793_list_035.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003793/image/list/1000003793_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003793",
 "cate":"009001"
 },
@@ -2661,7 +2650,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6.5T",
 "price":425000,
 "m2":126500,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003792/image/list/1000003792_list_048.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003792/image/list/1000003792_list_048.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003792",
 "cate":"009001"
 },
@@ -2672,7 +2661,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":1237500,
 "m2":275000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003784/image/list/1000003784_list_060.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003784/image/list/1000003784_list_060.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003784",
 "cate":"009001"
 },
@@ -2683,7 +2672,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003779/image/list/1000003779_list_051.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003779/image/list/1000003779_list_051.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003779",
 "cate":"009001"
 },
@@ -2694,7 +2683,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003777/image/list/1000003777_list_068.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003777/image/list/1000003777_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003777",
 "cate":"009001"
 },
@@ -2705,7 +2694,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":365900,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003544/1000003544_list_053.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003544/1000003544_list_053.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003544",
 "cate":"009001"
 },
@@ -2716,7 +2705,7 @@ window._MALL_CATALOG={
 "size":"1200×2800×6T",
 "price":388000,
 "m2":115500,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003543/1000003543_list_022.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003543/1000003543_list_022.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003543",
 "cate":"009001"
 },
@@ -2727,7 +2716,7 @@ window._MALL_CATALOG={
 "size":"1200×2600×6.5T",
 "price":339700,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003539/1000003539_list_011.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003539/1000003539_list_011.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003539",
 "cate":"009001"
 },
@@ -2738,7 +2727,7 @@ window._MALL_CATALOG={
 "size":"1200×2600×6.5T",
 "price":339700,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003537/1000003537_list_012.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/12/52/1000003537/1000003537_list_012.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003537",
 "cate":"009001"
 },
@@ -2749,7 +2738,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/11/44/1000003438/1000003438_list_051.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/11/44/1000003438/1000003438_list_051.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003438",
 "cate":"009001"
 },
@@ -2760,7 +2749,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":570200,
 "m2":176000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000003271/image/list/1000003271_list_042.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000003271/image/list/1000003271_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003271",
 "cate":"009001"
 },
@@ -2771,7 +2760,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":352800,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/06/25/1000003097/1000003097_list_039.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/06/25/1000003097/1000003097_list_039.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003097",
 "cate":"009001"
 },
@@ -2782,7 +2771,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":463300,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/19/1000003043/1000003043_list_079.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/19/1000003043/1000003043_list_079.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003043",
 "cate":"009001"
 },
@@ -2793,7 +2782,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003042/1000003042_list_047.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003042/1000003042_list_047.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003042",
 "cate":"009001"
 },
@@ -2804,7 +2793,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003040/1000003040_list_055.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003040/1000003040_list_055.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003040",
 "cate":"009001"
 },
@@ -2815,7 +2804,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":352800,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003039/1000003039_list_03.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003039/1000003039_list_03.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003039",
 "cate":"009001"
 },
@@ -2826,7 +2815,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003038/1000003038_list_0100.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003038/1000003038_list_0100.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003038",
 "cate":"009001"
 },
@@ -2837,7 +2826,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003037/1000003037_list_045.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003037/1000003037_list_045.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003037",
 "cate":"009001"
 },
@@ -2848,7 +2837,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003036/1000003036_list_030.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/05/18/1000003036/1000003036_list_030.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000003036",
 "cate":"009001"
 },
@@ -2859,7 +2848,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002964/1000002963_list_016.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002964/1000002963_list_016.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002964",
 "cate":"009001"
 },
@@ -2870,7 +2859,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002963/1000002963_list_012.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002963/1000002963_list_012.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002963",
 "cate":"009001"
 },
@@ -2881,7 +2870,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002961/1000002961_list_015.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002961/1000002961_list_015.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002961",
 "cate":"009001"
 },
@@ -2892,7 +2881,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":427600,
 "m2":132000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002960/1000002960_list_035.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002960/1000002960_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002960",
 "cate":"009001"
 },
@@ -2903,7 +2892,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002959/1000002959_list_037.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/16/1000002959/1000002959_list_037.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002959",
 "cate":"009001"
 },
@@ -2914,7 +2903,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":1237500,
 "m2":275000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002948/1000002948_list_066.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002948/1000002948_list_066.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002948",
 "cate":"009001"
 },
@@ -2925,7 +2914,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":1237500,
 "m2":275000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002947/1000002947_list_061.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002947/1000002947_list_061.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002947",
 "cate":"009001"
 },
@@ -2936,7 +2925,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":1237500,
 "m2":275000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002946/1000002946_list_083.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002946/1000002946_list_083.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002946",
 "cate":"009001"
 },
@@ -2947,7 +2936,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":935500,
 "m2":207900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002942/1000002942_list_023.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/15/1000002942/1000002942_list_023.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002942",
 "cate":"009001"
 },
@@ -2958,7 +2947,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002905/1000002905_list_036.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002905/1000002905_list_036.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002905",
 "cate":"009001"
 },
@@ -2969,7 +2958,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":396000,
 "m2":132000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002904/1000002904_list_042.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002904/1000002904_list_042.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002904",
 "cate":"009001"
 },
@@ -2980,7 +2969,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002903/1000002903_list_093.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002903/1000002903_list_093.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002903",
 "cate":"009001"
 },
@@ -2991,7 +2980,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002902/1000002902_list_065.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002902/1000002902_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002902",
 "cate":"009001"
 },
@@ -3002,7 +2991,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002901/1000002901_list_083.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002901/1000002901_list_083.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002901",
 "cate":"009001"
 },
@@ -3013,7 +3002,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":396000,
 "m2":132000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002900/1000002900_list_020.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002900/1000002900_list_020.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002900",
 "cate":"009001"
 },
@@ -3024,7 +3013,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002899/1000002899_list_068.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002899/1000002899_list_068.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002899",
 "cate":"009001"
 },
@@ -3035,7 +3024,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":985000,
 "m2":218900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002898/1000002898_list_093.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002898/1000002898_list_093.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002898",
 "cate":"009001"
 },
@@ -3046,7 +3035,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002897/1000002897_list_084.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002897/1000002897_list_084.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002897",
 "cate":"009001"
 },
@@ -3057,7 +3046,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":570200,
 "m2":176000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002893/1000002893_list_032.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002893/1000002893_list_032.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002893",
 "cate":"009001"
 },
@@ -3068,7 +3057,7 @@ window._MALL_CATALOG={
 "size":"1200×2700×6T",
 "price":352800,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002892/1000002892_list_013.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002892/1000002892_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002892",
 "cate":"009001"
 },
@@ -3079,7 +3068,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002888/1000002888_list_027.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002888/1000002888_list_027.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002888",
 "cate":"009001"
 },
@@ -3090,7 +3079,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002885/1000002885_list_029.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002885/1000002885_list_029.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002885",
 "cate":"009001"
 },
@@ -3101,7 +3090,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002883/1000002883_list_094.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002883/1000002883_list_094.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002883",
 "cate":"009001"
 },
@@ -3112,7 +3101,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490050,
 "m2":108900,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002879/1000002879_list_067.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002879/1000002879_list_067.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002879",
 "cate":"009001"
 },
@@ -3123,7 +3112,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":561000,
 "m2":187000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002878/1000002878_list_092.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002878/1000002878_list_092.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002878",
 "cate":"009001"
 },
@@ -3134,7 +3123,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":561000,
 "m2":187000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002877/1000002857_list_065.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002877/1000002857_list_065.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002877",
 "cate":"009001"
 },
@@ -3145,7 +3134,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002876/image/list/1000002876_list_058.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002876/image/list/1000002876_list_058.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002876",
 "cate":"009001"
 },
@@ -3156,7 +3145,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002875/1000002875_list_026.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002875/1000002875_list_026.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002875",
 "cate":"009001"
 },
@@ -3167,7 +3156,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002874/1000002874_list_035.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002874/1000002874_list_035.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002874",
 "cate":"009001"
 },
@@ -3178,7 +3167,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002871/1000002871_list_089.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/04/14/1000002871/1000002871_list_089.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002871",
 "cate":"009001"
 },
@@ -3189,7 +3178,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002860/1000002860_list_036.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002860/1000002860_list_036.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002860",
 "cate":"009001"
 },
@@ -3200,7 +3189,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002859/1000002859_list_051.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002859/1000002859_list_051.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002859",
 "cate":"009001"
 },
@@ -3211,7 +3200,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002858/image/list/1000002858_list_085.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002858/image/list/1000002858_list_085.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002858",
 "cate":"009001"
 },
@@ -3222,7 +3211,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":891000,
 "m2":198000,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002855/image/list/1000002855_list_091.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002855/image/list/1000002855_list_091.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002855",
 "cate":"009001"
 },
@@ -3233,7 +3222,7 @@ window._MALL_CATALOG={
 "size":"1500×3000×6T",
 "price":490000,
 "m2":108900,
-"img":"https://godomall.speedycdn.net/88d5aefd6a68f2c9d7629fd244147052/goods/1000002854/image/list/1000002854_list_047.jpg",
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000002854/image/list/1000002854_list_047.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002854",
 "cate":"009001"
 },
@@ -3244,7 +3233,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":396000,
 "m2":132000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002853/1000002853_list_070.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002853/1000002853_list_070.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002853",
 "cate":"009001"
 },
@@ -3255,7 +3244,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002852/1000002852_list_070.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002852/1000002852_list_070.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002852",
 "cate":"009001"
 },
@@ -3266,7 +3255,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002851/1000002851_list_013.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002851/1000002851_list_013.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002851",
 "cate":"009001"
 },
@@ -3277,7 +3266,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002850/1000002850_list_052.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002850/1000002850_list_052.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002850",
 "cate":"009001"
 },
@@ -3288,7 +3277,7 @@ window._MALL_CATALOG={
 "size":"1000×3000×6T",
 "price":429000,
 "m2":143000,
-"img":"https://cdn-pro-web-250-115.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002845/1000002845_list_074.jpg",
+"img":"https://cdn-saas-web-116-217.cdn-nhncommerce.com/younhyun_godomall_com/data/goods/23/03/13/1000002845/1000002845_list_074.jpg",
 "url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000002845",
 "cate":"009001"
 }
