@@ -150,7 +150,9 @@
   (`_dimBuildLinear`: 두 점 위·아래면 가로, 옆이면 세로, Shift 비스듬히. 저장 x1..y2=기준선, offsetMm(음수=반대쪽), e1/e2=실제 점까지 보조선 연장),
   각도 = 선/사각형 변 두 개 클릭(`_dimSegAt`) → 마우스 쪽 사잇각(`_dimBuildAng`, x1,y1 꼭지점·x2,y2 호 위 점·a0·sweep),
   R/Φ(2026-11-20 사용자 요청) = `_dimRClick`: 곡선 `_dimCurves`(원·트림 호 arc·곡선 근사 선분 arcR) 변 클릭 = 그 방향으로 바로, 중심점 클릭(`_dimSt.rc`, 미리보기 점선) → 변 클릭 = 그 방향
-  (변이 아니면 같은 중심 곡선 중 반지름이 가까운 것) → `_dimRMake`(x1,y1 중심·x2,y2 곡선 위 점). mousedown의 예전 원 클릭·`_dimRCircle` 끌기 코드는 이제 안 탐
+  (변이 아니면 같은 중심 곡선 중 반지름이 가까운 것) → `_dimRMake`(x1,y1 중심·x2,y2 곡선 위 점). mousedown의 예전 원 클릭·`_dimRCircle` 끌기 코드는 이제 안 탐.
+  `_dimCurves`에 사각형 라운드 코너(`_expRectGeo`, 돌린 것 포함)·캡슐 반원도. 판정은 스냅 안 한 자리 `_dimRaw`, R·Φ 모드면 `_dimRHover`가 중심마다 + (잡힐 것 주황)·안내 글자
+- 코너 R·C 지시선 ✕ 삭제(2026-11-20): 균일 = `hideDims.cornerSize`, 코너별 = `hideDims.r_코너`(dimLabels `field:'cornerR'`+`key`, showDimInput이 값 고치기·삭제) → `_rcHidden(s,ck)`를 편집 화면·도면화 cornerLeaders·DXF rLeader가 봄, 속성 칸 R/R↘ 단추로 다시 켬
 - 스냅(2026-10-31 점검) `applySnap` 순서: 오브젝트 점(`snapPoints`) → 선 스냅 `_snapLinesAt`(마우스 가까이 지나는 선분만 `_snapSegs`: 선·사각형 변(회전 포함)·원,
   교차점 'x'(가장 가까운 것, 선-원 포함)·가상 교차점 'v'(`snapVirtInter`)·연장선 'ext'(`snapExtension`, 끝에서 3000 안), 보조선 `_snapGuide` → `drawSnapInd`가 점선) →
   도구별 변 붙이기(밑면연마·고스라 'edge', 타원 둘레·곡선 근사 선분 위도) → **그리드는 맨 나중**(예전엔 그리드가 먼저라 변 붙이기가 막혔음) → 직교. 끄는 중엔 자기 도형 제외(`excl`). "평행"은 아직 없음

@@ -2478,6 +2478,8 @@ function _uprightAng(rot,local){
 }
 function _DIM_AH(){return printRender?18:8;} // 조각 가로/세로 치수 화살촉 크기(px)
 // R·C 지시선 글자: 코너(cAx,cAy)에서 기본 끝점(lEx,lEy)까지 점선 + 끝에 글자. 편집 화면에선 끌어 옮긴 자리(lblOff[key]) 반영·끌기 등록
+// 코너 R·C 치수를 ✕로 지웠는지 (코너별 = hideDims.r_코너, 균일 = hideDims.cornerSize) — 편집 화면·도면화·DXF 공통
+function _rcHidden(s,ck){var hd=s.hideDims;if(!hd)return false;if(s.capsule)return !!hd.capD;var own=s.corners&&s.corners[ck]&&s.corners[ck].type&&s.corners[ck].type!=='none';return own?!!hd['r_'+ck]:!!hd.cornerSize;}
 function _drawRLeader(s,cAx,cAy,lEx,lEy,lbl,col,key,field){
   if(!printRender){var o=_lblOff(s,key);lEx+=o[0];lEy+=o[1];}
   var right=lEx>=cAx; // 글자는 지시선 끝에서 바깥쪽으로
@@ -2490,7 +2492,7 @@ function _drawRLeader(s,cAx,cAy,lEx,lEy,lbl,col,key,field){
   if(!printRender){ctx.fillStyle='rgba(9,18,31,0.92)';ctx.fillRect(right?lEx+3:lEx-tw-pad-2,lEy-bh/2,tw+pad,bh);}
   ctx.fillStyle=col;ctx.textAlign=right?'left':'right';ctx.textBaseline='middle';ctx.fillText(lbl,right?lEx+4:lEx-3,lEy);
   ctx.restore();
-  if(!printRender)dimLabels.push(Object.assign({shape:s,field:field,px:lEx+(right?1:-1)*(tw/2+4),py:lEy},_lblDrag(s,key)));
+  if(!printRender)dimLabels.push(Object.assign({shape:s,field:field,key:key,px:lEx+(right?1:-1)*(tw/2+4),py:lEy},_lblDrag(s,key)));
 }
 // 캡슐 타공 치수(편집 화면): 두 반원 중심 사이 거리(긴 축 위쪽/오른쪽, 중심에서 보조선) + Φ 대각선 지시선(오른쪽/아래 반원) — 누르면 고침(capL·capD)
 function _drawCapDims(s){
@@ -2629,7 +2631,7 @@ function drawDims(s,col){
   } // end H dim
   // R/C 치수 표시 (H dim과 독립) — ctx.restore() 후 절대좌표로 그림
   ctx.restore(); // drawDims outer restore
-  if(s.cornerType&&s.cornerType!=='none'&&s.cornerSize>0){
+  if(s.cornerType&&s.cornerType!=='none'&&s.cornerSize>0&&!(s.hideDims&&s.hideDims.cornerSize)){ // ✕ 삭제 = hideDims.cornerSize (2026-11-20)
     var cs_=Math.min(s.cornerSize,s.w/2,s.h/2);
     var cCol_=printRender?'#1F3F7A':(isSelected(s)?'#FFD740':'#EF9A9A');
     var lbl_rc=(s.cornerType==='chamfer'?'C ':'R ')+cs_.toFixed(1);
@@ -2663,6 +2665,7 @@ function drawDims(s,col){
     var _cW3_=ctx.canvas.width,_cH3_=ctx.canvas.height;
     Object.keys(s.corners).forEach(function(ck){
       var cv3=s.corners[ck];if(!cv3||cv3.type!=='fillet'||(cv3.r||0)<=0)return;
+      if(s.hideDims&&s.hideDims['r_'+ck])return; // ✕ 삭제 = hideDims.r_코너
       var cm3=_cmap3_[ck];if(!cm3)return;
       var cr3=Math.min(cv3.r,_cornerLim(s.corners,ck,Math.abs(s.w),Math.abs(s.h)));
       var lbl3='R '+cr3.toFixed(1),lLen3=printRender?55:36;
@@ -2971,7 +2974,7 @@ function _dimClick(mx,my,free){
     else{var v=_dimLineX(_dimSt.l1,g);if(!v)return true;_dimSt.l2=g;_dimSt.v=v;} // 평행한 선은 무시
     redraw();return true;
   }
-  if(dimLineType==='r'||dimLineType==='phi')return _dimRClick(mx,my);
+  if(dimLineType==='r'||dimLineType==='phi')return _dimRClick(_dimRaw?_dimRaw[0]:mx,_dimRaw?_dimRaw[1]:my);
   if(dimLineType!=='dist')return false;
   if(!_dimSt){_dimSt={stage:1,p1:[mx,my]};}
   else if(_dimSt.stage===1){if(Math.hypot(mx-_dimSt.p1[0],my-_dimSt.p1[1])<0.5)return true;_dimSt.p2=[mx,my];_dimSt.stage=2;}
@@ -2986,6 +2989,14 @@ function _dimCurves(){
     if(s.kind==='circle'||s.kind==='hole')out.push({cx:s.cx,cy:s.cy,r:s.r});
     else if(s.kind==='arc'){var an=_arcNorm(s);out.push({cx:s.cx,cy:s.cy,r:s.r,a0:an[0],a1:an[1]});}
     else if(s.kind==='line'&&s.arcR>0){var c=_arcCtrOf(s);if(c)out.push({cx:c[0],cy:c[1],r:s.arcR,seg:s});}
+    else if(s.kind==='rect'&&!s.capsule){ // 사각형 라운드 코너(균일·코너별, 돌린 사각형 포함) = 호 (2026-11-20 사용자 요청 "중심점이 안 잡힌다")
+      var g=_expRectGeo(s),w=g.w/2,h=g.h/2;
+      ['tl','tr','br','bl'].forEach(function(ck,i){var cc=g.c[ck];if(!cc||cc.type!=='fillet'||!(cc.r>0))return;
+        var lc=[[-w+cc.r,-h+cc.r],[w-cc.r,-h+cc.r],[w-cc.r,h-cc.r],[-w+cc.r,h-cc.r]][i],wc=g.W(lc[0],lc[1]),a0=[Math.PI,Math.PI*1.5,0,Math.PI/2][i]+(g.rot||0);
+        out.push({cx:wc[0],cy:wc[1],r:cc.r,a0:a0,a1:a0+Math.PI/2});});
+    }
+    else if(s.kind==='rect'&&s.capsule){var cp=_capDims(s),g2=_expRectGeo(s),hl=cp.L/2,rr=cp.D/2,ro=g2.rot||0; // 캡슐 = 양 끝 반원
+      [[-1,Math.PI/2],[1,-Math.PI/2]].forEach(function(k){var wc=cp.hor?g2.W(k[0]*hl,0):g2.W(0,k[0]*hl),a0=k[1]+ro+(cp.hor?0:Math.PI/2);out.push({cx:wc[0],cy:wc[1],r:rr,a0:a0,a1:a0+Math.PI});});}
   });
   return out;
 }
@@ -3015,10 +3026,27 @@ function _dimRClick(mx,my){
   if(eB&&eD<=tol){_dimRMake(eB.cx,eB.cy,eB.r,Math.atan2(my-eB.cy,mx-eB.cx));redraw();return true;}
   return true; // 곡선이 아닌 곳: 무시
 }
+var _dimRaw=null; // 치수선 도구: 스냅 안 한 마우스 자리(mm)
+// R·Φ 모드: 모든 원·호 중심에 작은 + 표시, 클릭하면 잡힐 중심(또는 변)은 주황으로
+function _dimRHover(){
+  var p=_dimRaw;if(!p)return;var tol=12/scale,cs=_dimCurves(),eB=null,eD=Infinity,cB=null,cD=Infinity;
+  cs.forEach(function(c){var d=_dimCurveEdgeD(c,p[0],p[1]);if(d<eD){eD=d;eB=c;}var dc=Math.hypot(p[0]-c.cx,p[1]-c.cy);if(dc<cD){cD=dc;cB=c;}});
+  var hitC=cB&&cD<=tol&&cD<=eD?cB:null,hitE=!hitC&&eB&&eD<=tol?eB:null,seen={};
+  ctx.save();ctx.lineWidth=1;
+  cs.forEach(function(c){var k=Math.round(c.cx)+','+Math.round(c.cy);if(seen[k])return;seen[k]=1;var q=toCanvas(c.cx,c.cy),on=hitC&&Math.hypot(c.cx-hitC.cx,c.cy-hitC.cy)<0.5;
+    ctx.strokeStyle=on?'#FF6D00':'rgba(239,154,154,0.75)';ctx.lineWidth=on?2:1;var z=on?7:4;ctx.beginPath();ctx.moveTo(q[0]-z,q[1]);ctx.lineTo(q[0]+z,q[1]);ctx.moveTo(q[0],q[1]-z);ctx.lineTo(q[0],q[1]+z);ctx.stroke();});
+  if(hitE){var a=Math.atan2(p[1]-hitE.cy,p[0]-hitE.cx),e1=toCanvas(hitE.cx,hitE.cy),e2=toCanvas(hitE.cx+Math.cos(a)*hitE.r,hitE.cy+Math.sin(a)*hitE.r);
+    ctx.strokeStyle='rgba(255,109,0,0.8)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(e1[0],e1[1]);ctx.lineTo(e2[0],e2[1]);ctx.stroke();ctx.setLineDash([]);}
+  var msg=hitC?'중심점 클릭 → 다음은 원·호 변':hitE?'클릭 → 이 방향으로 '+(dimLineType==='phi'?'Φ':'R'):'원·호 변 또는 중심점(+)을 클릭';
+  var m=toCanvas(p[0],p[1]);ctx.font='11px "Malgun Gothic"';var tw=ctx.measureText(msg).width;
+  ctx.fillStyle='rgba(9,18,31,0.9)';ctx.fillRect(m[0]+14,m[1]+14,tw+10,18);ctx.fillStyle='#FFD740';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(msg,m[0]+19,m[1]+23);
+  ctx.restore();
+}
 function _dimPreview(mx,my,free){
-  if(!_dimSt)return;
+  if(!_dimSt){if(dimLineType==='r'||dimLineType==='phi')_dimRHover();return;}
   ctx.save();ctx.globalAlpha=0.85;
   if(_dimSt.rc){
+    if(_dimRaw){mx=_dimRaw[0];my=_dimRaw[1];}
     var rc=toCanvas(_dimSt.rc[0],_dimSt.rc[1]),rm=toCanvas(mx,my);
     ctx.strokeStyle='rgba(255,80,80,0.8)';ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(rc[0],rc[1]);ctx.lineTo(rm[0],rm[1]);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle='#FF6D00';ctx.beginPath();ctx.arc(rc[0],rc[1],4,0,2*Math.PI);ctx.fill();
@@ -4347,7 +4375,7 @@ function _dxfCollect(H){
     if(s.kind!=='rect')return;
     var g0=_expRectGeo(s),w=g0.w/2,h=g0.h/2,done={};
     [['br',1,1],['tr',1,-1],['bl',-1,1],['tl',-1,-1]].forEach(function(k){
-      var ci=g0.c[k[0]];if(!ci||ci.type==='none'||!(ci.r>0))return;
+      var ci=g0.c[k[0]];if(!ci||ci.type==='none'||!(ci.r>0)||_rcHidden(s,k[0]))return;
       var cap=!!s.capsule,lbl=cap?'Φ'+_fmtDim(ci.r*2):(ci.type==='chamfer'?'C':'R')+_fmtDim(ci.r);if(done[lbl])return;done[lbl]=1;
       if(cap&&(s.hideDims||{}).capD)return;
       var dx=k[1]*Math.SQRT1_2,dy=k[2]*Math.SQRT1_2,kk=ci.type==='chamfer'?Math.SQRT1_2:1;
@@ -6309,6 +6337,7 @@ cv.addEventListener('mousedown',function(e){
     cv.focus();
     // 길이·각도 치수선: 클릭 단계로 (두 점/두 선 → 마우스로 위치 → 클릭)
     if(tool==='ellipse'){_ellClick(mx,my,e.shiftKey);drawStart=null;return;} // 타원 절단: 클릭 단계 (ELLIPSE)
+    if(tool==='dimline')_dimRaw=[(e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale]; // R·Φ는 스냅 안 한 자리로 중심·변 판정
     if(tool==='dimline'&&_dimClick(mx,my,e.shiftKey)){drawStart=null;if(_dimSt&&_dimSt.stage===1)_dimSt.down=[e.offsetX,e.offsetY];return;}
     // R/Φ 치수선: 원 클릭 감지
     if(tool==='dimline'&&(dimLineType==='r'||dimLineType==='phi')){
@@ -6490,7 +6519,7 @@ cv.addEventListener('mousemove',function(e){
   redraw();
   if(snapKind&&snapKind!=='grid')drawSnapInd(mx,my,snapKind);
   drawGuides(mx,my);
-  if(tool==='dimline'&&_dimSt)_dimPreview(mx,my,e.shiftKey);
+  if(tool==='dimline'){_dimRaw=[(e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale];if(_dimSt||dimLineType==='r'||dimLineType==='phi')_dimPreview(mx,my,e.shiftKey);}
   if(tool==='ellipse')_ellPreview(mx,my);
   if(tool==='cut'){_cutMove(mx,my,e.shiftKey);_cutPreview();}
 
@@ -6700,6 +6729,13 @@ function showDimInput(d){
   else if(fld==='dist')cur=Math.hypot(s.x2-s.x1,s.y2-s.y1)*dispF;
   else if(fld==='cornerSize')cur=s.cornerSize||0;
   else if(fld==='depth')cur=s.depth||30; // 밑면연마 깊이 (숨김 키는 dist)
+  else if(fld==='cornerR'){ // 코너별 라운드 R (d.key = 'r_코너')
+    var ckR=String(d.key||'').replace(/^r_/,''),cvR=s.corners&&s.corners[ckR];if(!cvR)return;
+    _dimInputPopup({px:d.px,py:d.py,initVal:cvR.r||0,
+      onHide:function(){saveHistory();s.hideDims=s.hideDims||{};s.hideDims['r_'+ckR]=true;updatePropsPanel();redraw();},
+      onCommit:function(v){if(isNaN(v)||v<0)return;saveHistory();_savedBoardLayout=null;_savedBoardImg=null;cvR.r=v;syncGroupShapes(s);updatePropsPanel();redraw();calcCost();}
+    });return;
+  }
   else if(fld==='capL'||fld==='capD'){ // 캡슐 타공: 중심 거리·Φ
     var c0=_capDims(s);
     _dimInputPopup({px:d.px,py:d.py,initVal:fld==='capL'?c0.L:c0.D,
@@ -7194,6 +7230,8 @@ function updatePropsPanel(){
     html+=_dimToggleBtn('right','→',hd['right']);
     html+=_dimToggleBtn('top','↑',hd['top']);
     html+=_dimToggleBtn('bottom','↓',hd['bottom']);
+    if(s.cornerType&&s.cornerType!=='none'&&s.cornerSize>0)html+=_dimToggleBtn('cornerSize',s.cornerType==='chamfer'?'C':'R',hd.cornerSize); // 코너 R·C 치수 (✕로 지운 것 다시 켜기)
+    if(s.corners)['tl','tr','br','bl'].forEach(function(ck){var c=s.corners[ck];if(c&&c.type==='fillet'&&c.r>0)html+=_dimToggleBtn('r_'+ck,'R'+{tl:'↖',tr:'↗',bl:'↙',br:'↘'}[ck],hd['r_'+ck]);});
     if(s.groupRole==='main')html+=_nbToggles(hd);
     html+='</div>';
     html+='<hr style="border:none;border-top:1px solid #1C2A47;margin:5px 0">';
@@ -9179,7 +9217,7 @@ function _drawCleanExport(){
     if(s.kind!=='rect')return;
     var g=_expRectGeo(s),w=g.w/2,h=g.h/2,co=Math.cos(g.rot),si=Math.sin(g.rot),groups={};
     ['tr','tl','br','bl'].forEach(function(ck){
-      var cc=g.c[ck];if(cc.type==='none'||cc.r<=0)return;
+      var cc=g.c[ck];if(cc.type==='none'||cc.r<=0||_rcHidden(s,ck))return;
       var i=['tl','tr','br','bl'].indexOf(ck),a0=[Math.PI,Math.PI*1.5,0,Math.PI/2][i];
       var cen=[[-w+cc.r,-h+cc.r],[w-cc.r,-h+cc.r],[w-cc.r,h-cc.r],[-w+cc.r,h-cc.r]][i];
       var am=a0+Math.PI/4,k=cc.type==='chamfer'?Math.SQRT1_2:1; // 모따기는 사선 가운데
