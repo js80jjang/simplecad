@@ -290,6 +290,13 @@ canvas{display:block;cursor:crosshair}
     <button id="grind-100-btn" onclick="toggleGrind100()" style="margin-top:2px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#80DEEA;border-radius:3px;cursor:pointer;font-size:11px">100mm+ 모드</button>
   </div>
   <button class="tool-btn" data-tool="jollycut"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#2A4F92" stroke-width="1.8" stroke-linecap="round"/><circle cx="7" cy="5.5" r="2.5" stroke="#2A4F92" stroke-width="1.2" fill="#0A1222"/></svg> 졸리컷</button>
+  <div class="fillet-sub" id="jollycut-sub" style="display:none">
+    <div style="font-size:11px;color:#A9B4C8;margin-bottom:3px">졸리컷 면 (도면 ★ 뒷면 · ☆ 앞면)</div>
+    <div style="display:flex;gap:4px">
+      <button id="jolly-back" onclick="setJollyFace(false)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">★ 뒷면</button>
+      <button id="jolly-front" onclick="setJollyFace(true)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">☆ 앞면</button>
+    </div>
+  </div>
   <button class="tool-btn" data-tool="gosra"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="3.5" x2="15" y2="3.5" stroke="#E53935" stroke-width="1.5"/><line x1="1" y1="7.5" x2="15" y2="7.5" stroke="#E53935" stroke-width="1.5"/></svg> 고스라</button>
   <div class="tgl">편집</div>
   <button class="tool-btn" data-tool="trim"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="5.5" x2="5" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="10" y1="5.5" x2="15" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="3" y1="0" x2="12" y2="11" stroke="#75839C" stroke-width="1.5"/><line x1="5" y1="4.5" x2="10" y2="6.5" stroke="#0A1222" stroke-width="3"/></svg> 트림</button>
@@ -1471,7 +1478,7 @@ function _ellMarkFor(kind,x0,y0,x1,y1){
     var matLeft=cut?!insideLeft:insideLeft,sym=(j-mid)%18===0,o={x1:a[0],y1:a[1],x2:b[0],y2:b[1],userGroupId:gid};
     if(s.label)o.label=s.label;
     if(kind==='grind'){o.inward=matLeft?1:-1;o.inwardOverride=true;o.depth=dep;if(!sym)o.hideDims={dist:true};out.push(makeShape('grindregion',o));}
-    else if(kind==='jollycut'){if(!sym)o.sym=false;out.push(makeShape('jollymark',o));}
+    else if(kind==='jollycut'){if(!sym)o.sym=false;if(_jollyFront)o.front=true;out.push(makeShape('jollymark',o));}
     else{o.outward=matLeft?-1:1;o.hideDims={dist:true};if(!sym)o.sym=false;out.push(makeShape('gosramark',o));}
   });
   return out.length?out:null;
@@ -1656,10 +1663,25 @@ function buildChamfer(x,y,w,h,c){c=Math.min(c,w/2,h/2);ctx.beginPath();ctx.moveT
 function arrowHead(tx,ty,angle,sz,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx-sz*Math.cos(angle-0.38),ty-sz*Math.sin(angle-0.38));ctx.lineTo(tx-sz*Math.cos(angle+0.38),ty-sz*Math.sin(angle+0.38));ctx.closePath();ctx.fill();}
 
 var _MARK_K=0.5; // 졸리컷 ★·고스라 ▲ 크기 배율 (편집 화면·도면화·DXF, 범례 견본은 그대로) — 2026-11-02 사용자 요청: 1/4로 줄였다가 "너무 작다, 2배로" → 0.5
-function drawStar(cx,cy,r,col){
+function drawStar(cx,cy,r,col,hollow){ // hollow = 앞면 졸리컷 ☆ (속 빈 별: 흰 속 + 색 테두리, 2026-11-20)
   ctx.beginPath();
   for(var i=0;i<10;i++){var a=(i*Math.PI/5)-Math.PI/2,rad=i%2===0?r:r*0.4;var x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=0.8;ctx.stroke();
+  ctx.closePath();
+  if(hollow){ctx.fillStyle=printRender?'#ffffff':'#0A1222';ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=Math.max(1.4,r*0.2);ctx.lineJoin='round';ctx.stroke();return;}
+  ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=0.8;ctx.stroke();
+}
+// 졸리컷 면: 기본 뒷면(★), 앞면(☆, 도형 front:true) — 졸리컷 도구 아래 칸(새로 그릴 것) + 속성 칸(선택한 것) (2026-11-20 사용자 요청)
+var _jollyFront=false;
+function _jollyFaceBtns(){
+  var a=document.getElementById('jolly-back'),b=document.getElementById('jolly-front');if(!a||!b)return;
+  a.style.background=_jollyFront?'#121D33':'#1F3F7A';a.style.borderColor=_jollyFront?'#56647E':'#2A4F92';
+  b.style.background=_jollyFront?'#1F3F7A':'#121D33';b.style.borderColor=_jollyFront?'#2A4F92':'#56647E';
+}
+function setJollyFace(front){_jollyFront=!!front;_jollyFaceBtns();}
+function setJollyFaceSel(front){ // 선택한 졸리컷(타원 둘레 묶음 포함)의 면 바꾸기
+  var js=selectedShapes.filter(function(s){return s.kind==='jollymark'&&!!s.front!==!!front;});if(!js.length)return;
+  saveHistory();js.forEach(function(s){if(front)s.front=true;else delete s.front;});
+  updatePropsPanel();redraw();
 }
 
 function drawTriangle(cx,cy,angle,sz,col){
@@ -1967,7 +1989,7 @@ function drawJollyMark(s,preview){
   if(s.sym!==false){ // 고스라 ▲(화면 11, 도면화 22)와 비슷한 크기, 도면화는 빨간색 (타원 둘레 조각은 몇 곳에만: sym)
     var _sp=!printRender&&!preview?_markSym(s,1):null,_sl=_sp&&(hov||isSelected(s)); // 편집 화면: 변 안쪽으로 비켜(같은 변 고스라 ▲와 안 겹치게), 올림·선택이면 크게·밝게
     if(_sl){ctx.beginPath();ctx.arc(_sp.x,_sp.y,_sp.r*1.7,0,2*Math.PI);ctx.fillStyle=hov?'rgba(41,121,255,0.28)':'rgba(255,109,0,0.25)';ctx.fill();}
-    drawStar(_sp?_sp.x:pc[0],_sp?_sp.y:pc[1],(printRender?24:13)*_MARK_K*(_sl?1.5:1),printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':(_sl?(hov?'#2979FF':'#FF6D00'):'#2A4F92')));
+    drawStar(_sp?_sp.x:pc[0],_sp?_sp.y:pc[1],(printRender?24:13)*_MARK_K*(_sl?1.5:1)*(s.front?1.15:1),printRender?'#E53935':(preview?'rgba(33,150,243,0.5)':(_sl?(hov?'#2979FF':'#FF6D00'):(s.front?'#64B5F6':'#2A4F92'))),!!s.front); // 앞면 졸리컷 = ☆
   }
   // 졸리컷은 길이 치수를 표기하지 않음 (편집 화면·도면화 모두) — 길이는 속성 칸에서만 확인
 }
@@ -4087,8 +4109,9 @@ function _dxfCollect(H){
   }
   // 채운 별(★, 졸리컷 표시): 가운데에서 꼭지점 쌍으로 삼각형
   //   R2000+ = 채운 해치 하나(한 개체, 2026-10-30 사용자 요청), R12 = 예전처럼 SOLID 삼각형 10개. 별은 검정
-  function star(L,cx,cy,R){
+  function star(L,cx,cy,R,hollow){
     var pts=[];for(var i=0;i<10;i++){var a=-Math.PI/2+i*Math.PI/5,rr=i%2?R*0.42:R;pts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);}
+    if(hollow){poly(L,pts,true,7);return;} // 앞면 졸리컷 ☆ = 테두리만 (닫힌 폴리선)
     var r12=[];for(var k=0;k<10;k++)r12.push({t:'SOLID',p:[Q(cx,cy),Q(pts[k][0],pts[k][1]),Q(pts[(k+1)%10][0],pts[(k+1)%10][1]),Q(pts[(k+1)%10][0],pts[(k+1)%10][1])]});
     ents.push({t:'HATCH',L:L,col:7,tc:0x000000,solid:true,pts:pts.map(function(p){return Q(p[0],p[1]);}),r12:r12});
   }
@@ -4194,7 +4217,7 @@ function _dxfCollect(H){
     }
     else if(s.kind==='jollymark'){
       // 변 위 색 선은 안 그림 (조각 선 위에 겹침 — ★로 표시, 2026-10-30 사용자 요청)
-      var jm=s.sym===false?null:_gosraDir(s);if(jm)star('SC-JOLLY',jm.mx+jm.dx*H*1.3*_MARK_K,jm.my+jm.dy*H*1.3*_MARK_K,H*1.1*_MARK_K); // 고스라 ▲(크기 H)와 비슷하게
+      var jm=s.sym===false?null:_gosraDir(s);if(jm)star('SC-JOLLY',jm.mx+jm.dx*H*1.3*_MARK_K,jm.my+jm.dy*H*1.3*_MARK_K,H*1.1*_MARK_K*(s.front?1.15:1),!!s.front); // 고스라 ▲(크기 H)와 비슷하게, 앞면 = ☆
     }
     else if(s.kind==='dimline'&&s.labelType==='ang'){ // 각도 치수: 호 + 보조선 + 값 (편집 좌표 a0→a0+sweep 시계 = DXF -(a0+sweep)→-a0)
       var ra=Math.hypot(s.x2-s.x1,s.y2-s.y1),A0=s.a0||0,SW=s.sweep||0;
@@ -5568,7 +5591,7 @@ function finalizeShape(fmx,fmy){
     saveHistory();_ellMk.forEach(function(m){shapes.push(m);});selectedShapes=_ellMk.slice();window._ellMk=null;s=null;calcCost();
   }
   else if(tool==='grind'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec=findEdgeContext(x0,y0,mx,my);var gd=parseFloat(document.getElementById('grind-depth').value)||30;var _gOpts={x1:x0,y1:y0,x2:mx,y2:my,inward:ec.inward,depth:gd};if(ec.groupId&&ec.edge!=='unknown'){_gOpts.groupId=ec.groupId;_gOpts.groupRole='grind-'+ec.edge;}s=makeShape('grindregion',_gOpts);}
-  else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});}
+  else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});if(_jollyFront)s.front=true;}
   else if(tool==='arrow'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('arrow',{x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,color:annColor});}
   else if(tool==='linkmark'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('linkmark',{x1:x0,y1:y0,x2:mx,y2:my,color:annColor});}
   else if(tool==='note'){
@@ -6395,7 +6418,7 @@ cv.addEventListener('mousemove',function(e){
       }
     }
     else if(tool==='grind'){var ctx2=findEdgeContext(x0,y0,mx,my);ps={kind:'grindregion',x1:x0,y1:y0,x2:mx,y2:my,inward:ctx2.inward,ops:[]};}
-    else if(tool==='jollycut'){ps={kind:'jollymark',x1:x0,y1:y0,x2:mx,y2:my,ops:[]};}
+    else if(tool==='jollycut'){ps={kind:'jollymark',x1:x0,y1:y0,x2:mx,y2:my,front:_jollyFront,ops:[]};}
     else if(tool==='arrow'){ps={kind:'arrow',x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,color:annColor,ops:[]};}
     else if(tool==='linkmark'){ps={kind:'linkmark',x1:x0,y1:y0,x2:mx,y2:my,color:annColor,ops:[]};}
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
@@ -6974,7 +6997,7 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;if(tool==='cut'&&_cutSt&&_cutSt.stage===2){_cutChord(_cutSt,false);_cutRedraw();}}});
 
 // ═══ 도구 버튼 ═══
-var _TOOL_SUBS={sinkbowl:'sinkbowl-sub',fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
+var _TOOL_SUBS={sinkbowl:'sinkbowl-sub',jollycut:'jollycut-sub',fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub'}; // 도구 → 보조 칸
 var _TOOL_FOCUS={fillet:'fillet-r',circle:'circle-phi',circlecut:'circlecut-phi',grind:'grind-depth'}; // 도구 → 먼저 입력할 칸
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
@@ -6986,6 +7009,7 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
     // 도구별 보조 칸: 고른 도구 것만 보이기
     Object.keys(_TOOL_SUBS).forEach(function(k){document.getElementById(_TOOL_SUBS[k]).style.display=(tool===k)?'block':'none';});
     if(tool==='sinkbowl')_sinkGosraBtns();
+    if(tool==='jollycut')_jollyFaceBtns();
     if(tool==='note'||tool==='arrow'||tool==='linkmark')_renderAnnCols();
     // 밑면연마 도구를 (다시) 고르면 깊이는 기본 50, 100·150 모드도 끔
     grind150mode=false;grind100mode=false;['grind-150-btn','grind-100-btn'].forEach(function(id){var gb=document.getElementById(id);if(gb)gb.style.background='#16233D';});
@@ -7038,7 +7062,9 @@ function updatePropsPanel(){
       pp.innerHTML=grpHtml;return;
     }
     var _mhH=selectedShapes.some(function(s){return s.hideDims&&Object.keys(s.hideDims).some(function(k){return s.hideDims[k];});});
-    pp.innerHTML='<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+(_mhH?'<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>':'')+'<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button></div>';return;
+    var _jAll=selectedShapes.some(function(s){return s.kind==='jollymark';}),_jF=selectedShapes.filter(function(s){return s.kind==='jollymark';}).every(function(s){return s.front;});
+    var _jRow=_jAll?'<div class="prop-row" style="margin-top:6px"><label>졸리컷 면:</label><div style="display:flex;gap:4px;flex:1">'+[[false,'★ 뒷면'],[true,'☆ 앞면']].map(function(o){var a=_jF===o[0];return '<button onclick="setJollyFaceSel('+o[0]+')" style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;cursor:pointer;color:#fff;border:1px solid '+(a?'#2A4F92':'#56647E')+';background:'+(a?'#1F3F7A':'#121D33')+'">'+o[1]+'</button>';}).join('')+'</div></div>':'';
+    pp.innerHTML='<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨</div>'+_jRow+'<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+(_mhH?'<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>':'')+'<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button></div>';return;
   }
   var s=selectedShapes[0],html='';
   if(s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark'){pp.innerHTML=_annPropsHtml(s);return;}
@@ -7107,7 +7133,9 @@ function updatePropsPanel(){
     html+=_DIM_HDR;
     html+='<div style="display:flex;gap:4px;margin-bottom:4px">'+_dimToggleBtn('dist','깊이',hd['dist'])+'</div>';
   } else if(s.kind==='jollymark'){
-    html+='<div style="color:#2A4F92;font-size:11px;padding:4px">졸리컷<br><small style="color:#56647E">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm (도면에는 치수 표기 안 함)</small></div>';
+    html+='<div style="color:#2A4F92;font-size:11px;padding:4px">졸리컷 ('+(s.front?'☆ 앞면':'★ 뒷면')+')<br><small style="color:#56647E">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm (도면에는 치수 표기 안 함)</small></div>';
+    var jb=function(v,t){var a=!!s.front===v;return '<button onclick="setJollyFaceSel('+v+')" style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;cursor:pointer;color:#fff;border:1px solid '+(a?'#2A4F92':'#56647E')+';background:'+(a?'#1F3F7A':'#121D33')+'">'+t+'</button>';};
+    html+='<div class="prop-row"><label>면:</label><div style="display:flex;gap:4px;flex:1">'+jb(false,'★ 뒷면')+jb(true,'☆ 앞면')+'</div></div>';
   } else if(s.kind==='gosramark'){
     html+='<div style="color:#F44336;font-size:11px;padding:4px">고스라<br><small style="color:#56647E">길이: '+Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)+' mm</small></div>';
     var hd=s.hideDims||{};
@@ -9058,7 +9086,9 @@ function _drawCleanExport(){
     ctx.beginPath();for(var hx=lx-28;hx<lx+120;hx+=10){ctx.moveTo(hx,ly+14);ctx.lineTo(hx+28,ly-14);}ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
     lx=lgText('밑면연마 ('+_GRIND_MM+'mm)',lx+136);
     drawTriangle(lx+16,ly,-Math.PI/2,22,'#222222');lx=lgText('고스라',lx+44);
-    drawStar(lx+16,ly,24,'#E53935');lgText('졸리컷',lx+46);
+    var _hasJF=shapes.some(function(s){return s.kind==='jollymark'&&s.front;}); // 앞면 졸리컷이 있으면 범례에 ☆도 (2026-11-20)
+    drawStar(lx+16,ly,24,'#E53935');lx=lgText(_hasJF?'뒷면 졸리컷':'졸리컷',lx+46);
+    if(_hasJF){drawStar(lx+16,ly,26,'#E53935',true);lgText('앞면 졸리컷',lx+48);}
   }
 }
 // 선 조각의 선들을 이어 닫힌 다각형(world 점 목록)으로. 실패하면 null
@@ -10487,7 +10517,7 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
   // 졸리컷(45° 맞물림)·고스라(45° 모서리 깎기) 표시: 도면 변 a→b 위에 그 표시가 있는지 (변 가운데가 표시 선 위 + 평행)
   var jMarks=shapes.filter(function(m){return m.kind==='jollymark';}),gMarks=shapes.filter(function(m){return m.kind==='gosramark'&&!m.groupId;});
   function onMark(list,a,b){var mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);if(L<1)return false;
-    return list.some(function(m){var mdx=m.x2-m.x1,mdy=m.y2-m.y1,ml=Math.hypot(mdx,mdy);return ml>=1&&Math.abs(dx*mdy-dy*mdx)/(L*ml)<0.05&&ptLD(mx,my,m.x1,m.y1,m.x2,m.y2)<5;});}
+    return list.find(function(m){var mdx=m.x2-m.x1,mdy=m.y2-m.y1,ml=Math.hypot(mdx,mdy);return ml>=1&&Math.abs(dx*mdy-dy*mdx)/(L*ml)<0.05&&ptLD(mx,my,m.x1,m.y1,m.x2,m.y2)<5;})||false;} // 찾은 표시(졸리컷 앞면 front 확인용)
   var _GOS_C=3; // 고스라 모서리 깎기 크기(mm)
   var backs=[],allEdges=[],topY=_3D_H,midDraw=[],midInfo=[]; // backs: 상판 뒷변(앞면이 아닌 변) — 미드웨이 자동 자리, allEdges: 손으로 고를 수 있는 모든 상판 변
   function v(a,x,y,z,nx,ny,nz,u,w){a.push(x,y,z,nx,ny,nz,u,w);}
@@ -10540,7 +10570,8 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         var da=pc.loops.outer[i],db=pc.loops.outer[(i+1)%L.length],jl=onMark(jMarks,da,db),gs=!jl&&onMark(gMarks,da,db),r2=Math.SQRT1_2;
         function face(P,Q,ya,yb,Pb,Qb,n){v(side,P[0],ya,P[1],n[0],n[1],n[2],0,0);v(side,Q[0],ya,Q[1],n[0],n[1],n[2],0,0);v(side,Qb[0],yb,Qb[1],n[0],n[1],n[2],0,0);
           v(side,P[0],ya,P[1],n[0],n[1],n[2],0,0);v(side,Qb[0],yb,Qb[1],n[0],n[1],n[2],0,0);v(side,Pb[0],yb,Pb[1],n[0],n[1],n[2],0,0);}
-        if(jl)face(p,q,y1,y0,[p[0]-nx*th,p[1]-nz*th],[q[0]-nx*th,q[1]-nz*th],[nx*r2,-r2,nz*r2]); // 윗모서리에서 안쪽 아래로
+        if(jl&&jl.front)face(p,q,y0,y1,[p[0]-nx*th,p[1]-nz*th],[q[0]-nx*th,q[1]-nz*th],[nx*r2,r2,nz*r2]); // 앞면 졸리컷: 밑모서리에서 안쪽 위로
+        else if(jl)face(p,q,y1,y0,[p[0]-nx*th,p[1]-nz*th],[q[0]-nx*th,q[1]-nz*th],[nx*r2,-r2,nz*r2]); // 윗모서리에서 안쪽 아래로
         else if(gs){var c=Math.min(_GOS_C,th/3);face(p,q,y0,y1-c,p,q,[nx,0,nz]);face(p,q,y1-c,y1,[p[0]-nx*c,p[1]-nz*c],[q[0]-nx*c,q[1]-nz*c],[nx*r2,r2,nz*r2]);}
         else face(p,q,y0,y1,p,q,[nx,0,nz]);
       }
