@@ -194,6 +194,8 @@
   - 원판 장수(2026-11-03 사용자 요청 — 머리줄 단추는 보기 싫다고 해서 오른쪽 클릭 메뉴로): 원판 빈 곳 오른쪽 클릭(oncontextmenu, 조각 위는 돌리기) → `_bsCtxShow(bi)` 메뉴 `#board-ctx`
     → `_bsAddBoard(bi)` = 그 장 바로 뒤에 같은 제품 빈 장 `keep`(그룹 count·뒤 그룹 startBi `_bsShiftGroups`), `_bsDelBoard(bi)` = 그 장 빼기(조각은 `_bs.parked`로, 제품마다 최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,
     저장 배치 `boardKeep`로 복원, `_updateBoardQty`가 수량에 셈(빈 장도)
+  - 선 조각 실제 모양 겹침(2026-11-20 사용자 요청 "ㄱ자 따낸 자리에 넣기"): `_bpPoly(p)` = 선 조각 외곽(`_expChain`, `_boardPiece` M과 같은 변환, 원판 유효 영역 mm), 사각형·원은 null →
+    `_bsOv(a,b,g)`(상자 → 다각형 안 점·변 거리 < 간격) — `_bsResolve`·돌리기 충돌 해소·`_bsAutoPlaceParked`, `_bsHitTest`도 다각형 안만, 끌기 마그넷에 꼭짓점 후보. 자동 배치(`_packBoardItems`)는 아직 상자 기준
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
