@@ -1215,6 +1215,7 @@ var _rotState=null;   // 회전 드래그 상태 {startAngle, cx_px, cy_px, cx_m
 var _rotHandlePx=null; // 회전 핸들 위치 {x,y} (canvas px)
 var _endDrag=null; // 화살표·연결 표시 끝점 끌기 {s, w:1|2}
 var drawStart=null,dragStart=null,dragOriginals={},panOrigin=null,panOrig=null;
+var _fineDrag=null,_lastDragPt=null,_FINE_K=0.2; // Shift 끌기 = 미세 이동 (마우스 움직임의 1/5)
 var _clipboard=[]; // 복사된 도형 목록
 var dimDragInfo=null,dimDragStartX=0,dimDragStartY=0,dimDragOrigW=15,dimDragOrigH=15,dimDragL0=null,dimDragSnap=null;
 var _savedBoardLayout=null; // 마지막 원판 배치 저장
@@ -6226,7 +6227,7 @@ cv.addEventListener('mousedown',function(e){
       if(selectedShapes.indexOf(hit)<0)selectedShapes=_selUnit(hit);
       else if(_ugRep(hit)){var _gu=_selUnit(hit);if(_gu.some(function(g){return selectedShapes.indexOf(g)<0;}))selectedShapes=_gu;} // 그룹 안 하나만 선택돼 있어도(올림 선택 등) 그룹 전체를 끔
       _hoverSelected=false;
-      dragStart=[mx,my];
+      dragStart=[mx,my];_fineDrag=null;_lastDragPt=[mx,my];
       dragOriginals={};
       selectedShapes.forEach(function(s){
         if(s.kind==='rect'||s.kind==='note')dragOriginals[s.id]={x:s.x,y:s.y};
@@ -6424,7 +6425,14 @@ cv.addEventListener('mousemove',function(e){
     if(dimDragInfo)return;
 
     if(dragStart&&selectedShapes.length){
-      var ddx=mx-dragStart[0],ddy=my-dragStart[1];
+      // Shift를 누른 동안 = 미세 이동 (2026-11-20 사용자 요청): 누른 자리부터 마우스 움직임의 _FINE_K배만, 스냅·마그넷 없이. 떼면 그 자리에서 이어서
+      var _rwm=[(e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale],_fpx=mx,_fpy=my;
+      if(e.shiftKey){
+        if(!_fineDrag)_fineDrag={a:_rwm,b:_lastDragPt||[mx,my]};
+        _fpx=_fineDrag.b[0]+(_rwm[0]-_fineDrag.a[0])*_FINE_K;_fpy=_fineDrag.b[1]+(_rwm[1]-_fineDrag.a[1])*_FINE_K;
+      } else if(_fineDrag){var _lp=_lastDragPt||[mx,my];dragStart=[dragStart[0]+(mx-_lp[0]),dragStart[1]+(my-_lp[1])];_fineDrag=null;}
+      _lastDragPt=[_fpx,_fpy];
+      var ddx=_fpx-dragStart[0],ddy=_fpy-dragStart[1];
       selectedShapes.forEach(function(s){
         var orig=dragOriginals[s.id];if(!orig)return;
         if(s.kind==='rect'){s.x=orig.x+ddx;s.y=orig.y+ddy;syncGroupShapes(s);}
@@ -6437,7 +6445,8 @@ cv.addEventListener('mousemove',function(e){
         else if(s.x1!==undefined){s.x1=orig.x1+ddx;s.y1=orig.y1+ddy;s.x2=orig.x2+ddx;s.y2=orig.y2+ddy;}
       });
       var nonDim=selectedShapes.filter(function(s){return s.kind!=='dimline'&&s.kind!=='note'&&s.kind!=='arrow'&&s.kind!=='linkmark';});
-      if(nonDim.length)doMagnet(nonDim);
+      if(nonDim.length&&!_fineDrag)doMagnet(nonDim);else if(_fineDrag){magnetLineX=null;magnetLineY=null;}
+      document.getElementById('coord-lbl').textContent=(_fineDrag?'미세 이동 (Shift) ':'이동 ')+'Δx '+ddx.toFixed(1)+' · Δy '+ddy.toFixed(1)+' mm';
       updatePropsPanel();redraw();return;
     }
     var _rwx=(e.offsetX-offsetX)/scale,_rwy=(e.offsetY-offsetY)/scale; // 스냅 안 한 실제 자리 (누르기 판정과 같게)
@@ -6606,7 +6615,7 @@ document.addEventListener('mouseup',function(e){
       selBox=null;updatePropsPanel();redraw();
     } else {
       if(dragStart)saveHistory();
-      dragStart=null;dragOriginals={};
+      dragStart=null;dragOriginals={};_fineDrag=null;_lastDragPt=null;
       setTimeout(function(){magnetLineX=null;magnetLineY=null;redraw();},400);
       calcCost();
     }
