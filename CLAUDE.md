@@ -84,7 +84,7 @@
 - 도형 kind: `rect`(x,y,w,h,rotation,cornerType/cornerSize,corners,groupId/groupRole/applianceType,pieceName,shapeNum,hideDims),
   `line`(x1..y2, DXF 곡선 근사면 arcR/arcMid), `circle`(cx,cy,r,holeType: faucet|outlet|cut), `arc`, `ellipse`,
   `grindregion`(밑면연마, inward, depth), `gosramark`(고스라, outward), `dimline`, `jollymark`,
-  `note`(도면 글자: x,y,text,fs=도면화 px,color), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
+  `note`(도면 글자: x,y(가운데),text,fs=도면화 px,color — 편집 화면은 fs×0.34px 가운데 맞춤, 도면화는 줄마다 편집 화면에서 보이는 왼쪽 끝(`_noteLineLefts`, _annRef 기준 mm)에서 왼쪽 맞춤(2026-11-20 사용자 요청 "넣은 위치에 고정"), `getBBoxAny`는 편집 화면 글자 상자), `arrow`(화살표: x1..y2=촉, bend 휨, color — 그린 뒤 양 끝 점 끌기/길이 입력으로 크기 수정), `linkmark`(연결 표시: x1..y2 따라 물결 2줄, color) — 주석이라 조각/가공비/원판 배치에서 제외
 - 싱크볼/쿡탑 = `groupRole:'main'` rect (라운드=싱크볼, 직각=쿡탑) + 싱크볼은 둘레 고스라 4개
   - 둘레 고스라 넣기/빼기(2026-11-20 사용자 요청 "인셋형은 고스라 없음"): 싱크볼 도구 보조 칸 `#sinkbowl-sub`(`setSinkGosra`, `_sinkGosra`·localStorage `scd_sink_gosra`) = 새 싱크볼 기본값 + 선택한 싱크볼에 적용,
     속성 칸 `_sinkGosraRow` → `setSinkGosraSel(on)`(`_sinkAddGosra` = groupRole top/bottom/left/right 4개 + `syncGroupShapes`, `_sinkDelGosra`). 고스라 없는 싱크볼은 선택하면 본체 하나

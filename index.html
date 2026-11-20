@@ -1493,7 +1493,12 @@ function getBBoxAny(s){
   if(s.kind==='line')return{l:Math.min(s.x1,s.x2),t:Math.min(s.y1,s.y2),r:Math.max(s.x1,s.x2),b:Math.max(s.y1,s.y2)};
   // 도면 주석: 화살표는 휜 곡선까지, 글자는 기준점 (글자 크기는 배율마다 달라서 도면화 여백으로 수용)
   if(s.kind==='arrow'){var c=_arrowCtrl(s),mx=(s.x1+2*c[0]+s.x2)/4,my=(s.y1+2*c[1]+s.y2)/4;return{l:Math.min(s.x1,s.x2,mx),t:Math.min(s.y1,s.y2,my),r:Math.max(s.x1,s.x2,mx),b:Math.max(s.y1,s.y2,my)};}
-  if(s.kind==='note')return{l:s.x,t:s.y,r:s.x,b:s.y};
+  if(s.kind==='note'){ // 글자 상자(편집 화면 mm 크기) — 도면화가 글자를 잘라 먹지 않게 (2026-11-20)
+    if(!(_annRef>0))return{l:s.x,t:s.y,r:s.x,b:s.y};
+    var ed=Math.max(9,Math.round((s.fs||32)*0.34)),ls=String(s.text||'').split('\n');ctx.save();ctx.font='bold '+ed+'px '+_EXP_FONT;
+    var tw=Math.max.apply(null,ls.map(function(t){return ctx.measureText(t).width;}));ctx.restore();
+    var hw=tw/2/_annRef,hh=ls.length*ed*1.25/2/_annRef;return{l:s.x-hw,t:s.y-hh,r:s.x+hw,b:s.y+hh};
+  }
   if(s.kind==='linkmark'){var wp=[].concat.apply([],_linkWaves(s,16)),xs=wp.map(function(p){return p[0];}),ys=wp.map(function(p){return p[1];});return{l:Math.min.apply(null,xs),t:Math.min.apply(null,ys),r:Math.max.apply(null,xs),b:Math.max.apply(null,ys)};}
   return getBBox(s);
 }
@@ -2073,20 +2078,29 @@ function drawLinkMark(s,preview){
   ctx.restore();
 }
 function _noteFs(s){return printRender?(s.fs||32):Math.max(9,Math.round((s.fs||32)*0.34));}
+// 도면화 글자 줄마다 시작점(왼쪽 끝 mm) = 편집 화면에서 보이는 그 줄의 왼쪽 끝 (2026-11-20 사용자 요청 "넣은 위치에 고정"):
+//   도면화 글자는 편집 화면보다 커서 가운데 기준이면 양옆으로 퍼져 줄 시작이 어긋났음 → 시작점을 고정하고 오른쪽으로 늘어나게. 편집 화면은 예전대로 가운데
+function _noteLineLefts(s){
+  if(!(_annRef>0))return null;
+  var ed=Math.max(9,Math.round((s.fs||32)*0.34)),ls=String(s.text||'').split('\n');
+  ctx.save();ctx.font='bold '+ed+'px '+_EXP_FONT;var o=ls.map(function(t){return s.x-ctx.measureText(t).width/2/_annRef;});ctx.restore();return o;
+}
 // 글자 상자(px) [l,t,r,b] — 현재 화면/도면화 배율 기준
 function _noteBoxPx(s){
-  var p=toCanvas(s.x,s.y),fs=_noteFs(s),lines=String(s.text||'').split('\n');
-  ctx.save();ctx.font='bold '+fs+'px '+_EXP_FONT;var w=Math.max.apply(null,lines.map(function(t){return ctx.measureText(t).width;}));ctx.restore();
-  var h=lines.length*fs*1.25;return[p[0]-w/2-4,p[1]-h/2-2,p[0]+w/2+4,p[1]+h/2+2];
+  var p=toCanvas(s.x,s.y),fs=_noteFs(s),lines=String(s.text||'').split('\n'),LL=printRender?_noteLineLefts(s):null;
+  ctx.save();ctx.font='bold '+fs+'px '+_EXP_FONT;var ws=lines.map(function(t){return ctx.measureText(t).width;}),w=Math.max.apply(null,ws);ctx.restore();
+  var h=lines.length*fs*1.25;
+  if(LL){var l=Infinity,r=-Infinity;LL.forEach(function(x,i){var px=toCanvas(x,0)[0];l=Math.min(l,px);r=Math.max(r,px+ws[i]);});return[l-4,p[1]-h/2-2,r+4,p[1]+h/2+2];} // 도면화: 줄 시작 고정
+  return[p[0]-w/2-4,p[1]-h/2-2,p[0]+w/2+4,p[1]+h/2+2];
 }
 function drawNote(s,preview){
   var p=toCanvas(s.x,s.y),fs=_noteFs(s),lines=String(s.text||'').split('\n'),lh=fs*1.25,y0=p[1]-(lines.length-1)*lh/2;
-  var sel=!printRender&&!preview&&isSelected(s);
-  ctx.save();ctx.font='bold '+fs+'px '+_EXP_FONT;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  var sel=!printRender&&!preview&&isSelected(s),LL=printRender?_noteLineLefts(s):null; // 도면화 = 줄마다 편집 화면의 시작점에서 왼쪽 맞춤
+  ctx.save();ctx.font='bold '+fs+'px '+_EXP_FONT;ctx.textAlign=LL?'left':'center';ctx.textBaseline='middle';ctx.lineJoin='round';
   lines.forEach(function(t,i){
-    var y=y0+i*lh;
-    ctx.lineWidth=Math.max(3,fs*0.2);ctx.strokeStyle=sel?'#FF6D00':'rgba(255,255,255,0.9)';ctx.strokeText(t,p[0],y);
-    ctx.fillStyle=s.color||'#1F3F7A';ctx.fillText(t,p[0],y);
+    var y=y0+i*lh,x=LL?toCanvas(LL[i],0)[0]:p[0];
+    ctx.lineWidth=Math.max(3,fs*0.2);ctx.strokeStyle=sel?'#FF6D00':'rgba(255,255,255,0.9)';ctx.strokeText(t,x,y);
+    ctx.fillStyle=s.color||'#1F3F7A';ctx.fillText(t,x,y);
   });
   ctx.restore();
 }
