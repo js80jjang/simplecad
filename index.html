@@ -318,9 +318,9 @@ canvas{display:block;cursor:crosshair}
     <div style="font-size:10px;color:#A9B4C8">이어지는 방향으로 드래그 (길이만큼 물결 2줄)</div>
     <div id="ann-cols-link" style="display:flex;gap:3px;margin-top:4px"></div>
   </div>
-  <button class="tool-btn" data-tool="veinmark"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M1.5,9 L14.5,9 M1.5,9 L4.5,6.5 M1.5,9 L4.5,11.5 M14.5,9 L11.5,6.5 M14.5,9 L11.5,11.5" stroke="#E3B861" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M2,3.5 C5,1 8,5.5 14,2.5" stroke="#E3B861" stroke-width="1" fill="none"/></svg> 결 방향</button>
+  <button class="tool-btn" data-tool="veinmark"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><path d="M1,6 C3,1 5,1 6.5,6 C8,11 10,11 12,6 L14.5,6" stroke="#E3B861" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M12,3.5 L15,6 L12,8.5" stroke="#E3B861" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> 결 방향</button>
   <div class="fillet-sub" id="vein-sub" style="display:none">
-    <div style="font-size:10px;color:#A9B4C8">무늬(결)가 흐르는 방향으로 드래그 → 양쪽 화살표 + "결 방향"</div>
+    <div style="font-size:10px;color:#A9B4C8">무늬(결)가 흐르는 방향으로 드래그 → 큰 물결 + 끝쪽 화살표 + "결 방향" (방향은 속성 칸 ⇄로 바꿈)</div>
     <div id="ann-cols-vein" style="display:flex;gap:3px;margin-top:4px"></div>
   </div>
   <button class="tool-btn" data-tool="note"><svg width="14" height="12" viewBox="0 0 14 12" style="vertical-align:middle;margin-right:4px"><text x="7" y="10.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#E3B861" font-family="Malgun Gothic,sans-serif">가</text></svg> 글자 삽입</button>
@@ -2100,11 +2100,12 @@ function setAnnColor(c){annColor=c;_renderAnnCols();}
 function setArrowBend(b){arrowBend=b;[0,0.3,-0.3].forEach(function(v,i){var el=document.getElementById('ab-'+i);if(el){el.style.background=v===b?'#1F3F7A':'#16233D';el.style.borderColor=v===b?'#2A4F92':'#56647E';}});}
 // 연결 표시: 물결 2줄의 점들(world mm). 한 주기 사인(왼쪽 가운데→위→아래→오른쪽 가운데), 진폭·간격은 길이에 비례
 function _linkWaves(s,n){
-  if(s.vein){ // 결 방향(2026-11-20 사용자 요청): 연결 표시와 같은 도형(linkmark, vein:true) — 곧은 선 + 양 끝 화살촉 (선택·끌기·DXF는 이 선들로)
-    var vx=s.x2-s.x1,vy=s.y2-s.y1,VL=Math.hypot(vx,vy)||1,ax=vx/VL,ay=vy/VL,hs=Math.min(VL*0.16,90),hw=hs*0.55;
-    return[[[s.x1,s.y1],[s.x2,s.y2]],
-      [[s.x1+ax*hs-ay*hw,s.y1+ay*hs+ax*hw],[s.x1,s.y1],[s.x1+ax*hs+ay*hw,s.y1+ay*hs-ax*hw]],
-      [[s.x2-ax*hs-ay*hw,s.y2-ay*hs+ax*hw],[s.x2,s.y2],[s.x2-ax*hs+ay*hw,s.y2-ay*hs-ax*hw]]];
+  if(s.vein){ // 결 방향(2026-11-20 사용자 요청): 연결 표시와 같은 도형(linkmark, vein:true) — 큰 물결 한 줄 + 끝점(x2,y2)에만 화살촉, 방향 바꾸기 = 두 끝점 맞바꿈(flipVein)
+    var vx=s.x2-s.x1,vy=s.y2-s.y1,VL=Math.hypot(vx,vy)||1,ax=vx/VL,ay=vy/VL,nx2=ay,ny2=-ax,A=_veinAmp(s),w=[],N=Math.max(n,24)*2;
+    for(var i=0;i<=N;i++){var t=i/N,hh=A*Math.sin(3*Math.PI*t)*Math.sin(Math.PI*t)/*양 끝은 평평하게(화살촉이 곧게 붙음)*/;w.push([s.x1+vx*t+nx2*hh,s.y1+vy*t+ny2*hh]);}
+    var p=w[N],tx=ax,ty=ay; // 화살촉은 결 방향(두 끝점 잇는 방향) 그대로
+    var hs=Math.min(VL*0.12,80),hw=hs*0.5;
+    return[w,[[p[0]-tx*hs-ty*hw,p[1]-ty*hs+tx*hw],p,[p[0]-tx*hs+ty*hw,p[1]-ty*hs-tx*hw]]];
   }
   var dx=s.x2-s.x1,dy=s.y2-s.y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=uy,ny=-ux,A=L*0.09,G=L*0.16,out=[];
   [-G/2,G/2].forEach(function(off){var w=[];for(var i=0;i<=n;i++){var t=i/n,h=A*Math.sin(2*Math.PI*t)-off;w.push([s.x1+ux*L*t+nx*h,s.y1+uy*L*t+ny*h]);}out.push(w);});
@@ -2121,14 +2122,19 @@ function drawLinkMark(s,preview){
   });
   if(s.vein){ // "결 방향" 글자: 선 가운데 위(선 방향으로, 거꾸로 서지 않게)
     var a=toCanvas(s.x1,s.y1),b=toCanvas(s.x2,s.y2),ang=Math.atan2(b[1]-a[1],b[0]-a[0]);if(Math.cos(ang)<-0.01)ang+=Math.PI;
-    var fs=printRender?26:11;ctx.translate((a[0]+b[0])/2,(a[1]+b[1])/2);ctx.rotate(ang);
+    var fs=printRender?26:11,oy=-(mm2px(_veinAmp(s))+fs*0.4);ctx.translate((a[0]+b[0])/2,(a[1]+b[1])/2);ctx.rotate(ang); // 물결 위로 비켜서
     ctx.font='bold '+fs+'px "Malgun Gothic",sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
-    if(sel){ctx.fillStyle='rgba(255,109,0,0.25)';var tw=ctx.measureText(_VEIN_TXT).width;ctx.fillRect(-tw/2-3,-fs*0.35-fs-2,tw+6,fs+4);}
-    ctx.fillStyle=col;ctx.fillText(_VEIN_TXT,0,-fs*0.35);
+    if(sel){ctx.fillStyle='rgba(255,109,0,0.25)';var tw=ctx.measureText(_VEIN_TXT).width;ctx.fillRect(-tw/2-3,oy-fs-2,tw+6,fs+4);}
+    ctx.fillStyle=col;ctx.fillText(_VEIN_TXT,0,oy);
   }
   ctx.restore();
 }
 var _VEIN_TXT='결 방향';
+function _veinAmp(s){return Math.hypot(s.x2-s.x1,s.y2-s.y1)*0.07;} // 결 방향 물결 진폭(mm) = 길이의 7%
+function flipVein(){ // 결 방향 화살표 방향 바꾸기 (두 끝점 맞바꿈)
+  var ss=selectedShapes.filter(function(s){return s.vein;});if(!ss.length)return;saveHistory();
+  ss.forEach(function(s){var x=s.x1,y=s.y1;s.x1=s.x2;s.y1=s.y2;s.x2=x;s.y2=y;});updatePropsPanel();redraw();
+}
 function _noteFs(s){return printRender?(s.fs||32):Math.max(9,Math.round((s.fs||32)*0.34));}
 // 도면화 글자 줄마다 시작점(왼쪽 끝 mm) = 편집 화면에서 보이는 그 줄의 왼쪽 끝 (2026-11-20 사용자 요청 "넣은 위치에 고정"):
 //   도면화 글자는 편집 화면보다 커서 가운데 기준이면 양옆으로 퍼져 줄 시작이 어긋났음 → 시작점을 고정하고 오른쪽으로 늘어나게. 편집 화면은 예전대로 가운데
@@ -4375,7 +4381,7 @@ function _dxfCollect(H){
     }
     else if(s.kind==='linkmark'){var lc=COLS[s.color]||5;_linkWaves(s,32).forEach(function(w){poly('SC-NOTE',w,false,lc);});
       if(s.vein){var vL=Math.hypot(s.x2-s.x1,s.y2-s.y1)||1,vnx=(s.y2-s.y1)/vL,vny=-(s.x2-s.x1)/vL;if(vny>0||(vny===0&&vnx<0)){vnx=-vnx;vny=-vny;}
-        text('SC-NOTE',(s.x1+s.x2)/2+vnx*H*1.2,(s.y1+s.y2)/2+vny*H*1.2,H,_VEIN_TXT,0);}} // 결 방향 글자 (선 위쪽)
+        var vo=_veinAmp(s)+H*1.2;text('SC-NOTE',(s.x1+s.x2)/2+vnx*vo,(s.y1+s.y2)/2+vny*vo,H,_VEIN_TXT,0);}} // 결 방향 글자 (선 위쪽)
   });
   // ── 선 각도 (편집 화면·도면화와 같은 자리): 사잇각 호 + 값, 혼자 있는 사선은 수평 기준선
   //    편집 좌표(아래가 +)의 a0→a0+sweep(시계)은 DXF에서 -(a0+sweep)→-a0(반시계)
@@ -7366,6 +7372,7 @@ function _annPropsHtml(s){
     var len=Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1));
     h+='<div class="prop-row"><label>길이(mm):</label><input type="number" value="'+len+'" min="1" step="10" onfocus="saveHistory()" onchange="setAnnLength(this.value)"></div>';
     h+='<div style="font-size:10px;color:#56647E;padding:0 4px 2px">양 끝 주황 점을 끌면 길이·방향이 바뀝니다</div>';
+    if(s.vein)h+='<button onclick="flipVein()" style="width:100%;margin:4px 0;padding:5px 0;font-size:11px;border-radius:3px;cursor:pointer;color:#fff;background:#16233D;border:1px solid #56647E">⇄ 화살표 방향 바꾸기</button>';
   }
   if(s.kind==='arrow'){
     var b=s.bend||0;
