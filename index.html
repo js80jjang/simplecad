@@ -54,7 +54,7 @@ body{background:#060B16;color:#D9DFEA;font-family:'NanumSquare','나눔스퀘어
 /* 원판 배치 모달 */
 #board-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;align-items:center;justify-content:center}
 #board-modal.show{display:flex}
-#board-modal-inner{background:#050912;border:1px solid #2A4F92;border-radius:6px;padding:0;width:88vw;max-width:1100px;height:88vh;display:flex;flex-direction:column}
+#board-modal-inner{background:#050912;border:1px solid #2A4F92;border-radius:6px;padding:0;width:94vw;max-width:1260px;height:88vh;display:flex;flex-direction:column}
 #board-modal-header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #1A2843}
 #board-modal-header h3{margin:0;color:#E3B861;font-size:14px;font-weight:600}
 #board-modal-info{color:#75839C;font-size:11px;flex:1}
@@ -6148,10 +6148,11 @@ function hitTestAll(mx,my){
     // 조각 변의 밑면연마·고스라·졸리컷은 그 아래 조각보다 먼저 (싱크볼 둘레 표시는 싱크볼과 같이 다루므로 그대로)
     if((s.kind==='grindregion'||s.kind==='gosramark'||s.kind==='jollymark')&&!s.groupId)pri=s.kind==='grindregion'?-1:-0.5; // 같은 변에 겹치면 선·띠는 밑면연마 먼저, 고스라·졸리컷은 ▲·★ 기호로 고름
     if(_markSymHit(s,mx,my))pri=-2; // ▲·★ 기호를 누르면 그 표시가 맨 먼저 (겹친 밑면연마·다른 표시보다)
-    res.push({s:s,pri:pri,zi:i});
+    res.push({s:s,pri:pri,zi:i,ar:pri===1?Math.abs(s.w*s.h):0});
   }
   // 우선순위 낮은 것(rect 내부) 뒤로, 같은 우선순위는 z-order(뒤에 그린 것=위) 순
-  res.sort(function(a,b){return a.pri-b.pri||b.zi-a.zi;});
+  //   사각형 안쪽끼리는 작은 것(안에 든 싱크볼·타공 등)이 먼저 — 바깥 상판을 나중에 그렸어도 (2026-11-20 사용자 요청 "내부 객체 선택이 어렵다"), 같은 자리를 또 누르면 바깥으로
+  res.sort(function(a,b){return a.pri-b.pri||(a.pri===1?a.ar-b.ar:0)||b.zi-a.zi;});
   return res.map(function(r){return r.s;});
 }
 var _cycleHitMx=null,_cycleHitMy=null,_cycleIdx=0;
@@ -7755,7 +7756,7 @@ function _restoreSavedBoards(saved,items){
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
     if(saved.boardKeep&&saved.boardKeep[i])b.keep=true; // 손으로 더한 원판
-    b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(sp&&sp.flip)p.flip=true;}); // 180°·270° 돌림
+    b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(sp&&sp.flip&&!_bsSym(p.item))p.flip=true;}); // 180°·270° 돌림 (180° 돌려도 같은 모양이면 버림)
     var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 원판 크기
   });
   return boards;
@@ -7917,9 +7918,22 @@ function _bsOv(a,b,g){
 }
 // 원판 배치 조각 90°씩 돌리기: 0° → 90° → 180° → 270° (p.rotated = 90° 홀수, p.flip = 180° 더) — 원판에 안 들어가는 방향은 건너뜀
 //   (2026-11-20 사용자 요청 "180° 돌리면 쏙 들어가는데 90°가 원판 폭을 넘어서 못 돌린다 → 360° 돌리게"). 바꿨으면 true
+// 180° 돌려도 모양이 똑같은 조각(구멍·싱크볼 없는 사각형, 코너 모두 같음, 원) — 이런 조각은 0°↔90°만 (2026-11-20 사용자 요청 "안 돌린 조각이 ↻180°로 보여 헷갈린다":
+//   예전처럼 두 번 눌러 되돌리면 180°가 됐음)
+function _bsSym(it){
+  var s=it&&it.shape;if(!s||it.lineIds||it.rot)return false;
+  if(s.kind==='circle')return true;
+  if(s.kind!=='rect'||s.rotation)return false;
+  if(s.corners){var ks=['tl','tr','br','bl'].map(function(k){var c=s.corners[k];return c&&c.type&&c.type!=='none'?c.type+(+c.r||0):'';});
+    if(ks.some(function(v){return v!==ks[0];}))return false;}
+  var l=s.x,t=s.y,r=s.x+s.w,b=s.y+s.h;
+  return !shapes.some(function(q){if(q===s||_isAnnot(q))return false;
+    if(!(q.kind==='circle'||q.kind==='ellipse'||(q.kind==='rect'&&q.groupRole==='main')))return false;
+    var qb=getBBox(q);if(!qb)return false;var mx=(qb.l+qb.r)/2,my=(qb.t+qb.b)/2;return mx>l&&mx<r&&my>t&&my<b;});
+}
 function _bsTurn(p,EW,EH){
-  var st=(p.rotated?1:0)+(p.flip?2:0);
-  for(var k=1;k<=3;k++){var ns=(st+k)%4,nr=ns%2===1,d=_placeDims(p.item,nr,EW,EH);
+  var st=(p.rotated?1:0)+(p.flip?2:0),sym=_bsSym(p.item);if(sym&&p.flip){delete p.flip;st-=2;}
+  for(var k=1;k<=3;k++){var ns=(st+k)%4;if(sym)ns%=2;var nr=ns%2===1,d=_placeDims(p.item,nr,EW,EH);
     if(d.pw<=EW+0.01&&d.ph<=EH+0.01){var cx=p.x+p.pw/2,cy=p.y+p.ph/2;p.pw=d.pw;p.ph=d.ph;p.rotated=nr;if(ns>=2)p.flip=true;else delete p.flip;
       if(p.x!=null){p.x=cx-p.pw/2;p.y=cy-p.ph/2;} // 가운데 기준으로 돌림
       return true;}}
@@ -8254,12 +8268,13 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     var showCount_=endBi_-startBi_;
     var PKW=_bs?_bsParkW(bcv.width):0,areaW=bcv.width-PKW; // 오른쪽 미배치 칸 자리는 빼고
     if(_bs)_bs.parkX=areaW;
-    sc=Math.min((areaW-2*pad)/bw,
+    var padX_=pad+((!targetCanvas&&totalPages>1)?_BS_NAVW:0); // 좌우 쪽 넘김 화살표 자리 (화살표가 원판을 가리지 않게)
+    sc=Math.min((areaW-2*padX_)/bw,
       (bcv.height-2*pad-TH-gap2*Math.max(showCount_-1,0))/Math.max(showCount_,1)/bh);
     if(sc<=0)sc=0.01;
     boardPxW=bw*sc;boardPxH=bh*sc;
     var totalPxH_=showCount_*boardPxH+(showCount_-1)*gap2;
-    var sX_=pad+(areaW-2*pad-boardPxW)/2;
+    var sX_=padX_+(areaW-2*padX_-boardPxW)/2;
     var sY_=pad+TH+Math.max(0,(bcv.height-pad-TH-totalPxH_)/2);
     for(var bi=0;bi<n;bi++){
       if(bi>=startBi_&&bi<endBi_){
@@ -8359,6 +8374,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
 
 // ─── 미배치 칸 (2026-11-02): 원판 오른쪽에 조각을 잠시 빼 두었다가 원하는 자리로 다시 끌어 놓기 ───
 // _bs.parked = 뺀 조각(배치 항목 그대로: item,pw,ph,rotated), _bs.parkRects = 그린 자리(누르기 판정), _bs.parkDrag = 미배치 칸에서 끄는 중
+var _BS_NAVW=72; // 원판 배치 창 좌우 화살표(left/right 14 + 폭 46) + 틈
 function _bsParkW(W){return Math.round(Math.max(150,Math.min(260,W*0.2)));}
 function _bsDrawPark(g,cv,sc,ref,k){
   var W=cv.width,H=cv.height,x0=_bs.parkX,pw=W-x0,par=_bs.parked||(_bs.parked=[]),hot=_bs.overPark||(_bs.parkDrag&&_bs.parkDrag.home);

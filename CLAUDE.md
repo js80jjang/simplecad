@@ -217,7 +217,7 @@
   Shift를 떼면 dragStart를 옮겨 그 자리에서 이어감. 끄는 동안 `coord-lbl`에 Δx·Δy
 - 선택 도구 누르기·커서 공통 판정 `_selPick(ex,ey)`(2026-11-19 사용자 요청 "커서 모양과 달리 끌린다"): 스냅 안 한 실제 마우스 자리로 hits·선 조각 안쪽(`_lineGroupAt`, 필요할 때만)·치수(여러 개 선택 위 건너뛰기 포함) →
   mousedown이 이걸로 고르고, mousemove 커서 `_selCursor` = 회전 손잡이 grab / 치수 화살표·글자 / 도형·선 조각 안 move / 빈 곳 crosshair. 선 잡는 범위 `hitTestAll` tol 8px(예전 6)
-- 선택: `hitTestAll`(조각 변의 밑면연마 -1·고스라/졸리컷 선 -0.5, ▲·★ 기호 위 = -2 맨 먼저, 싱크볼 둘레 표시는 제외), `_markAreaHit`(밑면연마 빗금 띠·고스라 ▲·졸리컷 ★ 위도 선택),
+- 선택: `hitTestAll`(사각형 안쪽(pri 1)끼리는 넓이 작은 것 먼저 — 안의 싱크볼·타공이 바깥 상판보다, 2026-11-20 사용자 요청; 같은 자리 다시 누르면 `_cycleIdx`로 다음), 조각 변의 밑면연마 -1·고스라/졸리컷 선 -0.5, ▲·★ 기호 위 = -2 맨 먼저, 싱크볼 둘레 표시는 제외), `_markAreaHit`(밑면연마 빗금 띠·고스라 ▲·졸리컷 ★ 위도 선택),
   `_markSym(s,k)` = 편집 화면 ▲(변 가운데 바깥)·★(변 가운데에서 안쪽으로 반지름만큼, 2026-11-03) 자리 → 그리기·`_markSymHit`(최소 9px) 공통, 올림·선택이면 둘레 빛 + 1.5배(선택 주황),
   마우스 올림 강조 `hoverShape` = `hitTestAll`의 첫 도형(클릭 결과와 같음): 고스라 진한 빨강 굵은 실선·큰 ▲, 밑면연마 빗금 칸 진하게+테두리, 졸리컷 진한 파랑, 도형 파란 테두리·채움
   (아무것도 선택 안 했을 때 올리기만으로 잡힌 선택(`_hoverSelected`)보다 강조색이 먼저)
@@ -257,7 +257,8 @@
   - 선 조각 실제 모양 겹침(2026-11-20 사용자 요청 "ㄱ자 따낸 자리에 넣기"): `_bpPoly(p)` = 선 조각 외곽(`_expChain`, `_boardPiece` M과 같은 변환, 원판 유효 영역 mm), 사각형·원은 null →
     `_bsOv(a,b,g)`(상자 → 다각형 안 점·변 거리 < 간격) — `_bsResolve`·돌리기 충돌 해소·`_bsAutoPlaceParked`, `_bsHitTest`도 다각형 안만, 끌기 마그넷에 꼭짓점 후보. 자동 배치(`_packBoardItems`)는 아직 상자 기준
   - 360° 돌리기(2026-11-20 사용자 요청): `p.flip` = 180° 더(칸 안에서 a→FW−a, b→FH−b) — `_boardPiece` M/_Minv·`_3dWorldToBoard`·`_bpPoly`가 적용, 저장 배치 `flip`.
-    오른쪽 클릭 `_bsTurn(p,EW,EH)` = 0→90→180→270(rotated/flip), 안 들어가는 방향 건너뜀, 가운데 기준. 글자 ↻180°/↻270°
+    오른쪽 클릭 `_bsTurn(p,EW,EH)` = 0→90→180→270(rotated/flip), 안 들어가는 방향 건너뜀, 가운데 기준. 글자 ↻180°/↻270°.
+    180° 돌려도 같은 모양(`_bsSym`: 안에 타공·싱크볼 없고 코너 모두 같은 사각형, 원)은 0↔90만, 저장 배치 복원 때도 flip 버림(2026-11-20 사용자 요청 "안 돌린 조각이 ↻180°로 보여 헷갈린다")
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
@@ -265,7 +266,7 @@
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
   - 선 조각이 그대로 원판에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
   - 유광 원판 표시 `_boardSheen`(배치 창·도면화 원판 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
-  - 원판 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
+  - 원판 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 쪽이 2개 이상이면 원판을 좌우 `_BS_NAVW`(72px) 안쪽에 그려 화살표가 안 가림(2026-11-20 사용자 요청 "캡처 때 걸림"), 창 폭 94vw·최대 1260px. 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
 - 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`, 예전 값 'one'은 'area'로):
   `exportDrawingA4('area')`(2026-10-28 사용자 확정) = 1쪽 전체 도면 **모양만**(`_expShapeOnly` → `_drawCleanExport`가 밑면연마·고스라·치수·사용자 치수선·졸리컷·각도·R/Φ·범례를 건너뜀, 외곽·싱크볼/쿡탑·타공·이름·번호·도면 글자만)
   + 구역별 상세 `_areaPages(items)`: 같은 제품이고 상자 사이 `_AREA_TOUCH`(300mm) 이하인 조각끼리 union-find → 제품 순·위→아래·왼→오른쪽, 같은 제품 다음 구역과 합쳐도 배율이 25% 넘게 안 줄면 한 쪽에(작은 판 쪽이 따로 안 생기게).
