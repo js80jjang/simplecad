@@ -1417,8 +1417,13 @@ function getEdges(s){
 function shiftS(s,dx,dy){if(s.kind==='rect'||s.kind==='note'){s.x+=dx;s.y+=dy;}else if(s.kind==='circle'||s.kind==='hole'||s.kind==='ellipse'||s.kind==='arc'){s.cx+=dx;s.cy+=dy;}else if(s.x1!==undefined){s.x1+=dx;s.y1+=dy;s.x2+=dx;s.y2+=dy;}}
 // 끌어 옮기는 중 스냅·마그넷·줄맞춤 보조선 대상 = 옮기는 것을 처음 감싸는 바깥 사각형(가장 작은 것) 하나만 (2026-11-19 사용자 요청
 //   "최초 외부 사각에 대해서만 스냅, 그 밖의 객체까지 잡혀서 이동점 잡기 어렵다"). 감싸는 사각형이 없으면(선으로 그린 상판) 그 바깥 선들. 끄는 중이 아니면 null
+var _dssC=null; // 끌기 한 번 동안 스냅 범위는 처음 자리 기준으로 고정 (마우스 움직일 때마다 다시 계산하지 않음)
 function _dragSnapScope(){
   if(!dragStart||!selectedShapes.length)return null;
+  if(_dssC&&_dssC.ds===dragStart&&_dssC.n===selectedShapes.length)return _dssC.v;
+  var v=_dragSnapScope0();_dssC={ds:dragStart,n:selectedShapes.length,v:v};return v;
+}
+function _dragSnapScope0(){
   var bb=null;
   selectedShapes.forEach(function(s){if(_isAnnot(s))return;var b=getBBoxAny(s);if(!b)return;if(!bb)bb={l:b.l,t:b.t,r:b.r,b:b.b};else{bb.l=Math.min(bb.l,b.l);bb.t=Math.min(bb.t,b.t);bb.r=Math.max(bb.r,b.r);bb.b=Math.max(bb.b,b.b);}});
   if(!bb)return null;
@@ -1428,8 +1433,12 @@ function _dragSnapScope(){
     var q=_axisBox(s),a=Math.abs(q.w*q.h);
     if(bb.l>=q.x-0.5&&bb.r<=q.x+Math.abs(q.w)+0.5&&bb.t>=q.y-0.5&&bb.b<=q.y+Math.abs(q.h)+0.5&&a<ba){ba=a;best=s;}
   });
-  var out=best?[best]:shapes.filter(function(s){return s.kind==='line'&&!s.groupId&&selectedShapes.indexOf(s)<0;});
-  return out.length?out.concat(selectedShapes):null;
+  if(best)return[best].concat(selectedShapes);
+  // 사각형 안이 아니면: 닫힌 선 조각(ㄱ자 등) 안이면 그 선들만, 어디에도 안 든 조각 자체를 끌 때는 모든 도형에 스냅
+  //   (2026-11-20 사용자 요청 "조각끼리 꼭짓점 붙이는 스냅이 안 된다" — 예전엔 선만 남아 옆 사각 조각에 안 붙었음)
+  var lg=_lineGroupAt((bb.l+bb.r)/2,(bb.t+bb.b)/2);
+  if(lg&&!lg.some(function(l){return selectedShapes.indexOf(l)>=0;}))return lg.concat(selectedShapes);
+  return null;
 }
 function _inSnapScope(fn){var sc=_dragSnapScope();if(!sc)return fn();var keep=shapes;shapes=sc;try{return fn();}finally{shapes=keep;}}
 // 끄는 도형(여러 개·그룹이면 전체 상자 + 각 도형 기준)을 다른 도형 기준 x·y에 맞춤 → 선택한 것 모두 같이 옮김 + 분홍 보조선.
