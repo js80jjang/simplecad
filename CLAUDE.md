@@ -47,6 +47,12 @@
   수전 = 가까운 싱크볼에 붙음(`o.on`, `attach/sinkOf`): 숫자판 싱크 센터→수전·싱크 뒷변→수전·⊕ 센터 맞춤, 끌면 센터 스냅(14px), 싱크볼 옮기기·크기 바꾸기에 따라감 /
   가공 범위 = 변 값 `true` 또는 `[시작,끝]`(변 시작점에서 mm, `rangeOf/spans`), 가공 도구에서 끝점 ○ 끌기(`hitHandle`, `drag.h`) /
   조각 이동 = 조각 안 누르기 → `sel={p,w:true}` → 끌기(`dragStart` carry: 안의 객체·붙은 수전·원형 커팅·표기, 다른 조각 꼭짓점 스냅)
+- 2026-11-20 사용자 요청 "왼쪽 탭에 본앱처럼 모든 기능 + 객체 회전": `GROUPS` = 커팅 가공(rect·hole·circ·`ell`·draw) / 객체 삽입 / 추가 가공 / 편집(`trim`·`split`·a:dim·a:link·a:vein·a:text·a:arrow·a:circle).
+  그림 위 보조 단추 `chipsFor(mode)`: 타공 종류(수전·원형·사각·캡슐 `cap` = rect 객체 w=Φ+중심거리, r=Φ/2 → 내보내기 capsule:true) / 싱크볼 둘레 고스라(`o.ng` = 없음) / 졸리컷 면(`jf` = 앞면 ☆ → jollymark front) / 라운드·모따기(`p.rc[k]` → corners chamfer, 선 조각은 선).
+  타원 = 원형 조각 + `ell:true`, `d`=가로·`h`=세로(`crx/cry`) → ellipse. 트림 = 변 지우기(`trimTap`: 닫힌 조각 → 열린 선, 열린 선 → 둘, 열린 선도 line으로 내보냄).
+  분할 `splitTap/splitCalc/doSplit`: 변 시작점 ○에서 거리·각도 → 맞은편 변까지(`rayHit`) → `mkPiece`(꼭짓점→조각, 사각이면 rect 유지)로 두 조각, 가공 범위는 `subF`로 나눔, 오른쪽/아래 조각 100 띄움(`carryOf`).
+  치수선 ann `{t:'dim',x1..y2,off}`(`dimGeo`, off = 본앱 offsetMm 방향) → dimline, 결 방향 ann vein → linkmark vein:true.
+  회전: `o.rot`(도, 시계 방향, 객체·타원) `rotateItem`(싱크볼이면 붙은 수전도), 숫자판 `rotBtns`(↻ 90°·∠ 각도 `angKeys`), 떠 있는 `#fab-rot`(`rotSel`, 조각 = `rotatePiece` 안의 것 같이), 내보내기 rect rotation(라디안)·싱크볼 고스라 끝점도 돌림, 사각 코너 이름은 실제 자리로
 - 2026-11-17 (4) 파일 줄 `#filebar`(사용자 요청): 새로 만들기 `newFile` / 열기 `openFiles`(`#files` 창: 마지막 작업 이어서 = 'doc2', 받은 .ceramic, 저장 목록) / 저장 `saveFile` / 다른 이름 저장 `saveFileAs` / 보내기.
   저장 = IndexedDB kv 'files'(목록 [{id,name,saved,n}]) + 'f:'+id(내용), 지금 파일 `cur`('cur2'). 저장 안 한 변경 `dirty()`(= `sig()` ≠ `savedSig`) → 저장 단추 주황 점, `guard()` 확인, beforeunload.
   **새로고침 = 빈 첫 화면**(자동 복원 안 함, 'doc2'는 빈 화면이면 안 덮어씀 → 열기에서 이어서)
