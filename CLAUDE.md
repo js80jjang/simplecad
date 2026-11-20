@@ -197,6 +197,8 @@
     저장 배치 `boardKeep`로 복원, `_updateBoardQty`가 수량에 셈(빈 장도)
   - 선 조각 실제 모양 겹침(2026-11-20 사용자 요청 "ㄱ자 따낸 자리에 넣기"): `_bpPoly(p)` = 선 조각 외곽(`_expChain`, `_boardPiece` M과 같은 변환, 원판 유효 영역 mm), 사각형·원은 null →
     `_bsOv(a,b,g)`(상자 → 다각형 안 점·변 거리 < 간격) — `_bsResolve`·돌리기 충돌 해소·`_bsAutoPlaceParked`, `_bsHitTest`도 다각형 안만, 끌기 마그넷에 꼭짓점 후보. 자동 배치(`_packBoardItems`)는 아직 상자 기준
+  - 360° 돌리기(2026-11-20 사용자 요청): `p.flip` = 180° 더(칸 안에서 a→FW−a, b→FH−b) — `_boardPiece` M/_Minv·`_3dWorldToBoard`·`_bpPoly`가 적용, 저장 배치 `flip`.
+    오른쪽 클릭 `_bsTurn(p,EW,EH)` = 0→90→180→270(rotated/flip), 안 들어가는 방향 건너뜀, 가운데 기준. 글자 ↻180°/↻270°
   - 원판 배치 창: 오른쪽 클릭 = 90° 돌리기(`p.rotated`), Shift+오른쪽 클릭 = 선 조각만 각도 입력(그린 방향 0°, 반시계 +) → `item.rot`,
     저장 배치에 `rot` 기록(`_rotBox`로 상자 다시 계산해 복원)
   - 조각이 작아 안에 크기 글자가 안 들어가면 빈 곳에 글자 + 조각을 가리키는 화살표(`_boardPiece`, `tex.board`/`tex._used`):
