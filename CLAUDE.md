@@ -217,7 +217,7 @@
     번호 칸도 안 들어가는 조각은 바깥 글자 앞에 번호 칸(`_pn`)을 붙임
   - 선 조각이 그대로 원판에 안 들어가면 변 하나를 가로로 눕힌 각도 중 들어가는(면적 최소) 것으로 돌림(`item.rot/rx0/ry0`, `_boardPiece`의 `M`이 적용)
   - 유광 원판 표시 `_boardSheen`(배치 창·도면화 원판 배치 쪽, 조각까지 그린 뒤): `_prodGloss(장 제품)`>0이면 비스듬한 흰 반사 띠 2줄 + 오른쪽 위 "✦ 유광"/"✧ 반광" 표
-  - 원판 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
+  - 원판 배치 창(`renderBoardLayout`)은 제품 수와 상관없이 한 쪽에 2장씩(`goBoardPage` — 배치 그림(`#board-canvas-wrap`) 안쪽 좌우 가운데 큰 화살표 `.board-side-btn` #board-prev-btn/#board-next-btn, ← → 키, 머리줄엔 쪽 번호만). 쪽이 2개 이상이면 원판을 좌우 `_BS_NAVW`(72px) 안쪽에 그려 화살표가 안 가림(2026-11-20 사용자 요청 "캡처 때 걸림"), 창 폭 94vw·최대 1260px. 제품별 행 배치는 그림으로 내보낼 때(targetCanvas)만
 - 도면화 버튼 = `drawingMenu`(방식 고르기, localStorage `scd_drw_mode`, 예전 값 'one'은 'area'로):
   `exportDrawingA4('area')`(2026-10-28 사용자 확정) = 1쪽 전체 도면 **모양만**(`_expShapeOnly` → `_drawCleanExport`가 밑면연마·고스라·치수·사용자 치수선·졸리컷·각도·R/Φ·범례를 건너뜀, 외곽·싱크볼/쿡탑·타공·이름·번호·도면 글자만)
   + 구역별 상세 `_areaPages(items)`: 같은 제품이고 상자 사이 `_AREA_TOUCH`(300mm) 이하인 조각끼리 union-find → 제품 순·위→아래·왼→오른쪽, 같은 제품 다음 구역과 합쳐도 배율이 25% 넘게 안 줄면 한 쪽에(작은 판 쪽이 따로 안 생기게).

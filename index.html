@@ -54,7 +54,7 @@ body{background:#060B16;color:#D9DFEA;font-family:'NanumSquare','나눔스퀘어
 /* 원판 배치 모달 */
 #board-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;align-items:center;justify-content:center}
 #board-modal.show{display:flex}
-#board-modal-inner{background:#050912;border:1px solid #2A4F92;border-radius:6px;padding:0;width:88vw;max-width:1100px;height:88vh;display:flex;flex-direction:column}
+#board-modal-inner{background:#050912;border:1px solid #2A4F92;border-radius:6px;padding:0;width:94vw;max-width:1260px;height:88vh;display:flex;flex-direction:column}
 #board-modal-header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #1A2843}
 #board-modal-header h3{margin:0;color:#E3B861;font-size:14px;font-weight:600}
 #board-modal-info{color:#75839C;font-size:11px;flex:1}
@@ -8245,12 +8245,13 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     var showCount_=endBi_-startBi_;
     var PKW=_bs?_bsParkW(bcv.width):0,areaW=bcv.width-PKW; // 오른쪽 미배치 칸 자리는 빼고
     if(_bs)_bs.parkX=areaW;
-    sc=Math.min((areaW-2*pad)/bw,
+    var padX_=pad+((!targetCanvas&&totalPages>1)?_BS_NAVW:0); // 좌우 쪽 넘김 화살표 자리 (화살표가 원판을 가리지 않게)
+    sc=Math.min((areaW-2*padX_)/bw,
       (bcv.height-2*pad-TH-gap2*Math.max(showCount_-1,0))/Math.max(showCount_,1)/bh);
     if(sc<=0)sc=0.01;
     boardPxW=bw*sc;boardPxH=bh*sc;
     var totalPxH_=showCount_*boardPxH+(showCount_-1)*gap2;
-    var sX_=pad+(areaW-2*pad-boardPxW)/2;
+    var sX_=padX_+(areaW-2*padX_-boardPxW)/2;
     var sY_=pad+TH+Math.max(0,(bcv.height-pad-TH-totalPxH_)/2);
     for(var bi=0;bi<n;bi++){
       if(bi>=startBi_&&bi<endBi_){
@@ -8350,6 +8351,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
 
 // ─── 미배치 칸 (2026-11-02): 원판 오른쪽에 조각을 잠시 빼 두었다가 원하는 자리로 다시 끌어 놓기 ───
 // _bs.parked = 뺀 조각(배치 항목 그대로: item,pw,ph,rotated), _bs.parkRects = 그린 자리(누르기 판정), _bs.parkDrag = 미배치 칸에서 끄는 중
+var _BS_NAVW=72; // 원판 배치 창 좌우 화살표(left/right 14 + 폭 46) + 틈
 function _bsParkW(W){return Math.round(Math.max(150,Math.min(260,W*0.2)));}
 function _bsDrawPark(g,cv,sc,ref,k){
   var W=cv.width,H=cv.height,x0=_bs.parkX,pw=W-x0,par=_bs.parked||(_bs.parked=[]),hot=_bs.overPark||(_bs.parkDrag&&_bs.parkDrag.home);
