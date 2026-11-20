@@ -110,6 +110,10 @@
 - 사각 타공(2026-10-29) = 타공 도구의 "사각"(`pendingHoleType='rect'`, W×H 칸 `#hole-rect-w/h` 기본 200×50, `_rectHoleWH`) → 누른 자리 가운데에
   `groupRole:'main'`·`applianceType:'hole'` rect(고스라 없음). 가공비 `cnt.holeo`(콘센트 타공 금액), 편집 색 청록, 도면화 이름 "사각타공", 3D는 그냥 구멍(볼·유리 없음, 도어 나누기에 안 씀)
 - 타원 타공(2026-10-30) = 타공 도구 "타원"(`pendingHoleType='ell'`, 같은 W×H 칸) → 누른 자리 가운데 `ellipse{hole:true}`. 가공비 `cnt.holeo`(타원 절단의 둘레 단가 아님), 편집 색 청록, DXF `SC-HOLE`(점선)
+- 캡슐 타공(2026-11-20 사용자 요청, 타공 도구의 "타원" 단추를 대신함 — 예전 타원 타공 도형은 그대로 읽고 그림) = "캡슐(콘센트)"(`pendingHoleType='cap'`, 칸 `#hole-cap-d`(Φ 60)·`#hole-cap-l`(중심 거리 71), `_capHoleDL`)
+  → 사각 타공 rect + `capsule:true`(cornerType fillet, cornerSize = 짧은 변/2를 `redraw` 처음 `_capSync`가 늘 맞춤). `_capDims(s)`={D,L,hor}, `_capSet(s,D,L)` = 가운데 기준 크기.
+  편집 화면 `_drawCapDims`(drawDims 대신: 중심 사이 치수 `capL` + 오른쪽 아래 반원 Φ 지시선 `capD`, 누르면 showDimInput, Tab 전환, ✕ = hideDims.capL/capD), 속성 칸 Φ·중심 거리(`liveCap`).
+  도면화 = 자기 치수 대신 중심 사이 치수 + cornerLeaders가 R 대신 Φ, 이름 "캡슐타공" / DXF = 중심 사이 dim + rLeader가 'dia' 지시선(바깥) / `_objSize` "(Φ60 · 71)". 타공 단추 이름: 수전 / 원형(콘센트) / 사각(콘센트) / 캡슐(콘센트)
 - 타공은 모두 점선: 편집 화면(`drawShape`의 `_holeDash` — 사각·타원 타공, 원 타공은 예전부터) · 도면화(`_drawCleanExport` ② `HD` — 원 타공·사각 타공·타원 타공) · DXF(`SC-HOLE` 선 종류). 싱크볼·쿡탑은 실선
 - 사용자 그룹 `userGroupId`(`groupSelected`, 새 id는 쓰는 중인 것과 안 겹치게): 싱크볼·쿡탑 그룹(groupId)은 그대로 두고 그 전체도 사용자 그룹에 넣음.
   `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) + 그룹 사각 조각 안에 든 다른 도형(다른 사용자 그룹 아닌 것, 2026-11-19) → 그룹째 끌면 같이 이동.
