@@ -3,7 +3,7 @@
   "short_name": "심플 실측",
   "description": "현장에서 상판 치수를 재서 심플 캐드 파일로 보내기",
   "id": "./",
-  "start_url": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
