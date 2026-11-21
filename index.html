@@ -10793,14 +10793,16 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
     // 3D에서 옮기거나 돌린 자리(pos3d: dx, dz mm, rot = 90°×n, 조각 가운데 기준, dy = 900에서 위아래 mm) — 도면(2D)은 그대로
     var bb=pc.bb,key=_3dKey(pc.shape),ps=key.pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cxp=(bb.l+bb.r)/2,czp=(bb.t+bb.b)/2;
     // 상판 윗면 = 900 (하부장을 꺼도 그 높이 — 전면판·측판·미드웨이가 그대로 보이게), 주방 상판이 아닌 조각은 Shift+끌기로 위아래(ps.dy)
-    var th=pc.th,top=[],side=[],line=[],dyF=ps.dy||0,dyp=dyF,y0=_3D_H-th+dyp,y1=y0+th;
+    // 하부장 높이 = 상판마다 (key.h3d, 2026-11-21 사용자 요청 "상판 모듈별로") — 없으면 머리줄 "높이"(_3D_H). 오브제는 안 씀(위아래는 dy)
+    var HH=(!isObj&&key.h3d>=200&&key.h3d<=1500)?key.h3d:_3D_H;
+    var th=pc.th,top=[],side=[],line=[],dyF=ps.dy||0,dyp=dyF,y0=HH-th+dyp,y1=y0+th;
     var AP=_3dAnimPh(),pdx=(ps.dx||0)*AP.s,pdz=(ps.dz||0)*AP.s; // 첫 화면: 도면 자리(바닥) → 3D 자리
     if(AP.s<1){var ra=(rot===3?-1:rot)*Math.PI/2*AP.s;co=Math.cos(ra);si=Math.sin(ra);}
-    if(AP.r<1){dyp=(th-_3D_H)+(dyF-(th-_3D_H))*AP.r;y0=_3D_H-th+dyp;y1=y0+th;}
+    if(AP.r<1){dyp=(th-HH)+(dyF-(th-HH))*AP.r;y0=HH-th+dyp;y1=y0+th;}
     function X(p){var x=p[0]-cxp,z=p[1]-czp;return[cxp+x*co-z*si+pdx,czp+x*si+z*co+pdz];}
     var loops={outer:pc.loops.outer.map(X),holes:pc.loops.holes.map(function(h){return h.map(X);}),kinds:pc.loops.kinds};
     var front=_3dFront(key,pc.loops.outer,marks); // 앞면(도어) 변 — 손으로 정했으면(front3d) 그것, 아니면 자동
-    var tpE={key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0],obj:isObj,hang:0,front:front};tops.push(tpE); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준), hang = 매달린 판 높이(오브제)
+    var tpE={key:key,loops:loops,y:y1,th:th,pos:[ps.dx||0,ps.dz||0],obj:isObj,hang:0,front:front,hh:HH};tops.push(tpE); // pos = 이 모양을 만들 때의 옮긴 거리 (끌기 맞춤 기준), hang = 매달린 판 높이(오브제)
     loops.outer.forEach(function(a,i){ // 상판 변(200 이상) = 미드웨이를 세울 수 있는 자리, 안쪽(상판 쪽) 법선과 함께. 뒷변 = 앞면이 아닌 300 이상 변
       var b=loops.outer[(i+1)%loops.outer.length],dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz);if(L<200)return;
       var nx=dz/L,nz=-dx/L;if(!_3dInside(loops,(a[0]+b[0])/2+nx,(a[1]+b[1])/2+nz)){nx=-nx;nz=-nz;}
@@ -11293,8 +11295,11 @@ function _3dPBox(){
   var nm='<span style="color:#E3B861;font-weight:bold">'+idx+'번</span> <span style="color:#75839C">'+Math.round(pc.bb.r-pc.bb.l)+'×'+Math.round(pc.bb.b-pc.bb.t)+'</span>',h='';
   var top=st.r.tops.filter(function(t){return t.key===key;})[0];
   if(top){
+    var dyNow=(key.pos3d||{}).dy||0;
     h=nm+' <span style="color:#A9B4C8">'+(top.obj?'오브제':'상판')+'</span>'
-      +'<label style="'+lb+'">윗면 높이<input id="v3d-pb-ty" type="number" step="1" value="'+Math.round(top.y)+'" style="'+inp+'"></label>'
+      +(top.obj||dyNow?'<label style="'+lb+'">윗면 높이<input id="v3d-pb-ty" type="number" step="1" value="'+Math.round(top.y)+'" style="'+inp+'"></label>'
+        :'<label style="'+lb+'" title="이 상판만: 바닥 ~ 상판 윗면 (mm). 머리줄 높이와 같으면 따로 안 정함">하부장 높이<input id="v3d-pb-hh" type="number" step="10" value="'+Math.round(top.hh)+'" style="'+inp+'"></label>'
+          +(key.h3d?'<button data-pb="hhreset" style="'+bs+'" title="머리줄 높이('+_3D_H+')로">↺ 기본 높이</button>':''))
       +'<button data-pb="rot" style="'+bs+'" title="오른쪽 클릭·R">↻ 90° 돌리기</button>'
       +'<span style="color:#56647E">끌기 = 옮기기 · ←→↑↓ = 10mm (Shift 1mm)</span>';
   }else{
@@ -11320,7 +11325,9 @@ function _3dPBox(){
   box.querySelectorAll('input').forEach(function(i){i.onkeydown=function(ev){ev.stopPropagation();if(ev.key==='Enter')i.blur();};});
   var q=function(s){return box.querySelector(s);};
   if(top){
-    q('#v3d-pb-ty').onchange=function(){var v=+this.value;if(!isFinite(v))return _3dPBox();saveHistory();var p=key.pos3d||{};key.pos3d={dx:p.dx||0,dz:p.dz||0,rot:p.rot||0,dy:Math.round((p.dy||0)+v-top.y)};_3dRegeom();_3dPiecePanel(st.scene);};
+    var hi=q('#v3d-pb-hh');if(hi)hi.onchange=function(){var v=Math.round(+this.value);if(!isFinite(v)||v<200||v>1500)return _3dPBox();saveHistory();if(v===_3D_H)delete key.h3d;else key.h3d=v;_3dRegeom();};
+    var hr=q('[data-pb="hhreset"]');if(hr)hr.onclick=function(){saveHistory();delete key.h3d;_3dRegeom();};
+    var ti=q('#v3d-pb-ty');if(ti)ti.onchange=function(){var v=+this.value;if(!isFinite(v))return _3dPBox();saveHistory();var p=key.pos3d||{};key.pos3d={dx:p.dx||0,dz:p.dz||0,rot:p.rot||0,dy:Math.round((p.dy||0)+v-top.y)};_3dRegeom();_3dPiecePanel(st.scene);};
     q('[data-pb="rot"]').onclick=function(){_3dRotateSel();};
     return;
   }
@@ -11922,7 +11929,7 @@ function show3D(){
       var N2=[ray.d[0],ray.d[2]],nl2=Math.hypot(N2[0],N2[1]),O=pk.top.loops.outer;
       if(nl2>1e-6){
         var C2=O.reduce(function(s,p){return[s[0]+p[0]/O.length,s[1]+p[1]/O.length];},[0,0]),p0=pk.key.pos3d||{};
-        drag.vertTop={key:pk.key,N:[N2[0]/nl2,N2[1]/nl2],C:[C2[0],pk.top.y,C2[1]],dy0:p0.dy||0,th:pk.top.th||12,hang:pk.top.hang||0,h0:null};drag.vertTop.h0=_3dVertH(drag.vertTop,ray);
+        drag.vertTop={key:pk.key,N:[N2[0]/nl2,N2[1]/nl2],C:[C2[0],pk.top.y,C2[1]],dy0:p0.dy||0,th:pk.top.th||12,hang:pk.top.hang||0,hh:pk.top.hh||_3D_H,h0:null};drag.vertTop.h0=_3dVertH(drag.vertTop,ray);
         _3d.sel=pk.key;cv.style.cursor='ns-resize';_3dRender();e.preventDefault();return;
       }
     }
@@ -11954,12 +11961,12 @@ function show3D(){
     }
     if(drag.vertTop){ // 상판 위아래: 900(주방 높이)·바닥에 가까우면 딱 맞춤, 바닥 밑으로는 안 감
       var VT=drag.vertTop,h2=_3dVertH(VT,_3dRay(e.clientX,e.clientY));if(h2==null||VT.h0==null)return;
-      var dy=VT.dy0+h2-VT.h0,tol2=Math.max(20,_3d.cam.d/80),floorDy=VT.th+VT.hang-_3D_H,me=null,hit=null,bd=tol2;
+      var dy=VT.dy0+h2-VT.h0,tol2=Math.max(20,_3d.cam.d/80),floorDy=VT.th+VT.hang-VT.hh,me=null,hit=null,bd=tol2;
       // 900·바닥·다른 상판 윗면 높이에 가까우면 딱 맞춤 + 그 높이에 기준선
-      var cands=[{dy:0},{dy:floorDy}];_3d.r.tops.forEach(function(tp){if(tp.key===VT.key)me=tp;else cands.push({dy:tp.y-_3D_H,tp:tp});});
+      var cands=[{dy:0},{dy:floorDy}];_3d.r.tops.forEach(function(tp){if(tp.key===VT.key)me=tp;else cands.push({dy:tp.y-VT.hh,tp:tp});});
       cands.forEach(function(c){var e=Math.abs(dy-c.dy);if(e<bd){bd=e;hit=c;}});
       if(hit)dy=hit.dy;dy=Math.max(floorDy,dy);
-      _3d.guide=(hit&&me)?_3dHGuide(me,_3D_H+dy+1,hit.tp):null;
+      _3d.guide=(hit&&me)?_3dHGuide(me,VT.hh+dy+1,hit.tp):null;
       var pp=VT.key.pos3d||{};VT.key.pos3d={dx:pp.dx||0,dz:pp.dz||0,rot:pp.rot||0,dy:Math.round(dy)};regeomSoon();return;
     }
     if(drag.vert){ // 미드웨이 위아래: 바닥(0)·상판 윗면 가까이면 딱 맞춤
