@@ -966,7 +966,7 @@ function makeShape(k,p){var base={id:nextId++,kind:k,ops:[]};if(k==='gosramark')
 // 싱크볼 둘레 고스라 넣기/빼기 (2026-11-20 사용자 요청 "인셋형 싱크볼은 고스라가 없어도 된다")
 //   _sinkGosra = 새로 넣는 싱크볼에 둘레 고스라 4개를 붙일지 (왼쪽 싱크볼 도구 아래 넣기/빼기, localStorage scd_sink_gosra)
 //   선택한 싱크볼이 있으면 그 싱크볼에도 바로 적용. 속성 칸에서도 싱크볼마다 바꿀 수 있음
-var _sinkGosra=true;try{_sinkGosra=localStorage.getItem('scd_sink_gosra')!=='0';}catch(e){}
+var _sinkGosra=true; // 한 번 넣으면 다시 "넣기"로 (_toolOptsReset, 기억 안 함)
 function _sinkHasGosra(m){return shapes.some(function(g){return g.kind==='gosramark'&&g.groupId===m.groupId&&g!==m;});}
 function _sinkAddGosra(m){
   if(!m.groupId)m.groupId='grp'+(nextId++);
@@ -984,15 +984,15 @@ function _sinkGosraBtns(){
 }
 // 음식물투입구 모양(2026-11-21 사용자 요청): 'c' = 원형 Φ160(circle holeType food), 'r' = 사각 202×264(사각 타공 rect + food:true — 가공비·이름은 음식물투입구)
 var _FOOD_RW=202,_FOOD_RH=264;
-var _foodShape='c';try{_foodShape=localStorage.getItem('scd_food_shape')==='r'?'r':'c';}catch(e){}
+var _foodShape='c'; // 한 번 넣으면 다시 원형으로 (_toolOptsReset, 기억 안 함)
 function _foodShapeBtns(){
   [['c','food-shape-c'],['r','food-shape-r']].forEach(function(p){var b=document.getElementById(p[1]);if(!b)return;var on=_foodShape===p[0];
     b.style.background=on?'#1F3F7A':'#121D33';b.style.borderColor=on?'#2A4F92':'#56647E';});
 }
-function setFoodShape(v){_foodShape=v==='r'?'r':'c';try{localStorage.setItem('scd_food_shape',_foodShape);}catch(e){}_foodShapeBtns();if(typeof redraw==='function')redraw();}
+function setFoodShape(v){_foodShape=v==='r'?'r':'c';_foodShapeBtns();if(typeof redraw==='function')redraw();}
 setTimeout(_foodShapeBtns,0);
 function setSinkGosra(on){ // 왼쪽 도구 칸: 새 싱크볼 기본값 + 선택한 싱크볼
-  _sinkGosra=!!on;try{localStorage.setItem('scd_sink_gosra',on?'1':'0');}catch(e){}
+  _sinkGosra=!!on;
   _sinkGosraBtns();if(_selSinks().length)setSinkGosraSel(on);
 }
 function setSinkGosraSel(on){ // 선택한 싱크볼들에 둘레 고스라 넣기/빼기
@@ -5721,14 +5721,14 @@ function finalizeShape(fmx,fmy){
   else if(tool==='circle'&&pendingHoleType==='rect'){ // 사각 타공: 누른 자리가 가운데
     var _hw=_rectHoleWH(),hgid='grp'+(nextId);
     var hs=makeShape('rect',{x:x0-_hw[0]/2,y:y0-_hw[1]/2,w:_hw[0],h:_hw[1],cornerType:'none',cornerSize:0,groupId:hgid,groupRole:'main',applianceType:'hole'});
-    saveHistory();shapes.push(hs);selectedShapes=[hs];_savedBoardLayout=null;_savedBoardImg=null;s=null;_holeInputsReset();
+    saveHistory();shapes.push(hs);selectedShapes=[hs];_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
   }
   else if(tool==='circle'&&pendingHoleType==='cap'){ // 캡슐 타공: 누른 자리가 가운데, 가로로 (Φ + 중심 거리) × Φ
     var _cd=_capHoleDL(),cgid='grp'+(nextId),_cw=_cd[0]+_cd[1];
     var cs=makeShape('rect',{x:x0-_cw/2,y:y0-_cd[0]/2,w:_cw,h:_cd[0],cornerType:'fillet',cornerSize:_cd[0]/2,groupId:cgid,groupRole:'main',applianceType:'hole',capsule:true});
-    saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;_holeInputsReset();
+    saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
   }
-  else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});_holeInputsReset();} // 타공을 넣고 나면 크기 칸은 처음 값으로 (2026-11-20 사용자 요청)
+  else if(tool==='circle'){var dragR=Math.hypot(mx-x0,my-y0);var phiEl=document.getElementById('circle-phi');var phiVal=phiEl?parseFloat(phiEl.value):0;var r=dragR<2&&phiVal>0?phiVal/2:dragR;if(r<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r,holeType:pendingHoleType});_toolOptsReset();} // 타공을 넣고 나면 크기 칸은 처음 값으로 (2026-11-20 사용자 요청)
   else if(tool==='circlecut'){var dragR2=Math.hypot(mx-x0,my-y0);var phiEl2=document.getElementById('circlecut-phi');var phiVal2=phiEl2?parseFloat(phiEl2.value):0;var r2=dragR2<2&&phiVal2>0?phiVal2/2:dragR2;if(r2<0.5){drawStart=null;return;}s=makeShape('circle',{cx:x0,cy:y0,r:r2,holeType:'cut'});}
   else if(tool==='line'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('line',{x1:x0,y1:y0,x2:mx,y2:my});}
   else if(tool==='dimline'){
@@ -5744,10 +5744,10 @@ function finalizeShape(fmx,fmy){
     }
   }
   else if((tool==='grind'||tool==='jollycut'||tool==='gosra')&&(window._ellMk=_ellMarkFor(tool,x0,y0,mx,my))){ // 타원 둘레: 끈 구간(짧은 쪽) 또는 누르면 한 바퀴
-    saveHistory();_ellMk.forEach(function(m){shapes.push(m);});selectedShapes=_ellMk.slice();window._ellMk=null;s=null;calcCost();
+    saveHistory();_ellMk.forEach(function(m){shapes.push(m);});selectedShapes=_ellMk.slice();window._ellMk=null;s=null;if(tool==='jollycut')_toolOptsReset();calcCost();
   }
   else if(tool==='grind'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}var ec=findEdgeContext(x0,y0,mx,my);var gd=parseFloat(document.getElementById('grind-depth').value)||30;var _gOpts={x1:x0,y1:y0,x2:mx,y2:my,inward:ec.inward,depth:gd};if(ec.groupId&&ec.edge!=='unknown'){_gOpts.groupId=ec.groupId;_gOpts.groupRole='grind-'+ec.edge;}s=makeShape('grindregion',_gOpts);}
-  else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});if(_jollyFront)s.front=true;}
+  else if(tool==='jollycut'){if(Math.hypot(mx-x0,my-y0)<1){drawStart=null;return;}s=makeShape('jollymark',{x1:x0,y1:y0,x2:mx,y2:my});if(_jollyFront)s.front=true;_toolOptsReset();}
   else if(tool==='arrow'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('arrow',{x1:x0,y1:y0,x2:mx,y2:my,bend:arrowBend,color:annColor});}
   else if(tool==='linkmark'||tool==='veinmark'){if(Math.hypot(mx-x0,my-y0)*scale<8){drawStart=null;return;}s=makeShape('linkmark',{x1:x0,y1:y0,x2:mx,y2:my,color:annColor});if(tool==='veinmark')s.vein=true;}
   else if(tool==='note'){
@@ -5763,7 +5763,7 @@ function finalizeShape(fmx,fmy){
     var rs=makeShape('rect',{x:rx,y:ry,w:828,h:432,cornerType:'fillet',cornerSize:24,groupId:sgid,groupRole:'main',applianceType:'sink'});
     saveHistory();shapes.push(rs);
     if(_sinkGosra)_sinkAddGosra(rs); // 둘레 고스라 — 왼쪽 싱크볼 칸 "빼기"면 안 넣음(인셋형, 2026-11-20 사용자 요청)
-    selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;_savedBoardImg=null;s=null;
+    selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
   }
   else if(tool==='cooktop'){
     var rx2=x0-280,ry2=y0-240;
@@ -5778,9 +5778,9 @@ function finalizeShape(fmx,fmy){
   else if(tool==='foodhole'&&_foodShape==='r'){ // 사각 음식물투입구 202×264: 누른 자리가 가운데 (사각 타공과 같은 타공부 + food)
     var fgid='grp'+(nextId);
     var fs=makeShape('rect',{x:x0-_FOOD_RW/2,y:y0-_FOOD_RH/2,w:_FOOD_RW,h:_FOOD_RH,cornerType:'none',cornerSize:0,groupId:fgid,groupRole:'main',applianceType:'hole',food:true});
-    saveHistory();shapes.push(fs);selectedShapes=[fs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
+    saveHistory();shapes.push(fs);selectedShapes=[fs];_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
   }
-  else if(tool==='foodhole'){s=makeShape('circle',{cx:x0,cy:y0,r:80,holeType:'food'});} // 음식물투입구 Φ160, 고스라 없음
+  else if(tool==='foodhole'){s=makeShape('circle',{cx:x0,cy:y0,r:80,holeType:'food'});_toolOptsReset();} // 음식물투입구 Φ160, 고스라 없음
   if(s){saveHistory();shapes.push(s);selectedShapes=(tool==='rect')?[]:[s];if(tool!=='note'&&tool!=='arrow'&&tool!=='linkmark'&&tool!=='veinmark'){_savedBoardLayout=null;_savedBoardImg=null;}} // 주석은 원판 배치와 무관
   else{}
   drawStart=null;lastMx=null;lastMy=null;
@@ -7472,6 +7472,13 @@ function liveCap(fld,val){
 // 사각 타공(2026-10-29 사용자 요청): 조각 안 작은 직각 구멍 = 싱크볼·쿡탑과 같은 타공부 사각형(groupRole main, applianceType 'hole'), 고스라 없음, 가공비 = 콘센트 타공(holeo)
 // 타공 도구 크기 칸(Φ·사각 W×H·캡슐 Φ/중심 거리)을 처음 값(HTML value)으로 — 크기를 바꿔 넣은 뒤 다음 타공은 기본 크기로
 function _holeInputsReset(){['circle-phi','hole-rect-w','hole-rect-h','hole-cap-d','hole-cap-l'].forEach(function(id){var el=document.getElementById(id);if(el&&el.value!==el.defaultValue)el.value=el.defaultValue;});}
+// 도구 보조 칸의 고르기(타공 종류·크기, 음식물투입구 모양, 싱크볼 둘레 고스라, 졸리컷 면)는 한 번 넣고 나면 처음 상태로 (2026-11-21 사용자 요청)
+function _toolOptsReset(){
+  _holeInputsReset();if(pendingHoleType!=='faucet')setPendingHoleType('faucet');
+  _foodShape='c';_foodShapeBtns();
+  _sinkGosra=true;_sinkGosraBtns();
+  _jollyFront=false;_jollyFaceBtns();
+}
 function _rectHoleWH(){var w=parseFloat((document.getElementById('hole-rect-w')||{}).value)||200,h=parseFloat((document.getElementById('hole-rect-h')||{}).value)||50;return[w,h];}
 function setHoleType(t){
   selectedShapes.forEach(function(s){if(s.kind==='circle'||s.kind==='hole')s.holeType=t;});

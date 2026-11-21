@@ -116,6 +116,7 @@
   편집 화면 `_drawCapDims`(drawDims 대신: 중심 사이 치수 `capL` + 오른쪽 아래 반원 Φ 지시선 `capD`, 누르면 showDimInput, Tab 전환, ✕ = hideDims.capL/capD), 속성 칸 Φ·중심 거리(`liveCap`).
   도면화 = 자기 치수 대신 중심 사이 치수 + cornerLeaders가 R 대신 Φ, 이름 "캡슐타공" / DXF = 중심 사이 dim + rLeader가 'dia' 지시선(바깥) / `_objSize` "(Φ60 · 71)". 타공 단추 이름: 수전 / 원형(콘센트) / 사각(콘센트) / 캡슐(콘센트)
 - 타공을 하나 넣으면 크기 칸(`circle-phi`·`hole-rect-w/h`·`hole-cap-d/l`)은 `_holeInputsReset`으로 HTML 처음 값(35·200×50·60/71)으로 (2026-11-20 사용자 요청)
+  — 도구 보조 칸 고르기는 모두 넣은 뒤 처음 상태로 `_toolOptsReset`(2026-11-21 사용자 요청): 타공 종류 수전·크기, 음식물 원형, 싱크볼 고스라 넣기, 졸리컷 뒷면. 이 고르기들은 localStorage에 기억 안 함. 새 고르기 칸을 만들면 여기에 넣기
 - 타공은 모두 점선: 편집 화면(`drawShape`의 `_holeDash` — 사각·타원 타공, 원 타공은 예전부터) · 도면화(`_drawCleanExport` ② `HD` — 원 타공·사각 타공·타원 타공) · DXF(`SC-HOLE` 선 종류). 싱크볼·쿡탑은 실선
 - 사용자 그룹 `userGroupId`(`groupSelected`, 새 id는 쓰는 중인 것과 안 겹치게): 싱크볼·쿡탑 그룹(groupId)은 그대로 두고 그 전체도 사용자 그룹에 넣음.
   `getGroupShapes`는 사용자 그룹 + 멤버의 groupId 전체 + 그룹 사각 조각 안의 싱크볼·쿡탑(예전 파일) + 그룹 사각 조각 안에 든 다른 도형(다른 사용자 그룹 아닌 것, 2026-11-19) → 그룹째 끌면 같이 이동.
