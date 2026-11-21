@@ -57,6 +57,9 @@
   펜 획 ann `{t:'pen',pen,w,pts:[[x,y]…]}` — 한 손가락 끌기 = 바로 그림(`penLive`, 2.5px마다 점), 두 번째 손가락이 닿으면 버리고 확대·이동, 놓으면 `D.ann`(되돌리기 한 번).
   `penSvg`(점 사이 Q 곡선, 형광펜 3배 굵기·반투명)·`penHit`, 지우개 `eraseAt`(문지른 획 지움). 색 `TH.pen_*`(기본 펜 = 화면 흰색·그림 검정). 선택·끌기(`moveBy` pts)·조각 회전/이동에 따라감.
   본앱에 맞는 도형이 없어 내보내기 shapes에는 안 넣음 — 그림(PNG)·measure.doc에만. 밑면연마 색 = 노랑(화면 #FFD740, 그림 #E0B000, 사용자 요청)
+  가공 펜(2026-11-21 사용자 요청 "자유모드에서도 고스라·밑면연마 스냅, R도 선 따라"): `pen:g|s|j` — 누른 자리에서 가장 가까운 조각 외곽(`outlineSmp` = 곧은 변 + R 호/모따기 촘촘한 점, 호 앞 절반은 앞 변 t=L·뒤 절반은 다음 변 t=0)에 붙어
+  끄는 동안 `nearSmp`로 따라감(`drag.mk`, 닫힌 조각은 펼친 번호 u로 한 바퀴 넘어가도), 미리보기 `mkLive`. 떼면 `mkApply` = 변마다 지나간 [lo,hi] → 진짜 변 가공 g/s/j 범위(R 접점·끝 14px 안이면 꼭짓점까지, 10mm, 있던 범위와 합침). 누르기만 = `flagTap`(변 전체).
+  `cornerFlags` = R·모따기 꼭짓점 양쪽 변이 같은 가공으로 꼭짓점까지 이어지면 그 호에도 표시(밑면연마는 재료 쪽 50 띠, `arcPts`). 내보내기는 곧은 변 부분만(본앱에 호 위 표시 형식은 아직 안 보냄)
   모양 펜(2026-11-21 사용자 요청 "끌어서 사각형이나 선"): 보조 단추 `penShape` free/line/rect/circ → 획에 `sh`, 끄는 동안 `penShapePts`(직선 가로·세로·45° 6° 안 붙음, 원 = 끈 상자 안 타원 48점)로 다시 만듦, 길이·크기 `penInfo`를 안내 줄에. `penSvg`는 sh면 곧은 선(닫힌 모양 Z)
 - 2026-11-17 (4) 파일 줄 `#filebar`(사용자 요청): 새로 만들기 `newFile` / 열기 `openFiles`(`#files` 창: 마지막 작업 이어서 = 'doc2', 받은 .ceramic, 저장 목록) / 저장 `saveFile` / 다른 이름 저장 `saveFileAs` / 보내기.
   저장 = IndexedDB kv 'files'(목록 [{id,name,saved,n}]) + 'f:'+id(내용), 지금 파일 `cur`('cur2'). 저장 안 한 변경 `dirty()`(= `sig()` ≠ `savedSig`) → 저장 단추 주황 점, `guard()` 확인, beforeunload.

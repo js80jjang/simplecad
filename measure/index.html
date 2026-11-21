@@ -165,7 +165,7 @@ header .site b{color:var(--gold)}
 <script src="../mall-catalog.js"></script>
 <script>
 'use strict';
-var VER='2026.11.21 (2)';
+var VER='2026.11.21 (3)';
 document.getElementById('ver').textContent=VER;
 var OBJ={sink:{nm:'싱크볼',i:'🚰',w:828,h:432,r:24},cook:{nm:'쿡탑',i:'🔥',w:560,h:480,r:0},dish:{nm:'식기세척기',i:'🍽',w:470,h:460,r:0},food:{nm:'음식물투입구',i:'♻️',d:160},
   faucet:{nm:'수전',i:'💧',d:35},outlet:{nm:'콘센트',i:'🔌',d:70},hole:{nm:'사각타공',i:'▭',w:200,h:50,r:0},cap:{nm:'캡슐타공',i:'⬭',w:131,h:60,r:30}};
@@ -193,9 +193,11 @@ var GROUPS=[
   {nm:'객체 삽입',i:'🚰',t:[['place:sink','🚰','싱크볼'],['place:cook','🔥','쿡탑'],['place:dish','🍽','식기세척기'],['place:food','♻️','음식물투입구']]},
   {nm:'추가 가공',i:'🛠',t:[['round','╭','모서리 라운드'],['flag:g','▨','밑면연마'],['flag:j','★','졸리컷'],['flag:s','▲','고스라']]},
   {nm:'편집',i:'📐',t:[['trim','✂','트림 (변 지우기)'],['split','⫶','분할'],['a:dim','↔','치수선'],['a:link','〰','연결 표시'],['a:vein','➰','결 방향'],['a:text','가','글자 삽입'],['a:arrow','↗','지시선'],['a:circle','⭕','특이사항 표시']]},
-  {nm:'자유 모드',i:'🖊',t:[['pen:ink','✒️','기본 펜 (검정)'],['pen:red','🖍','빨간 펜'],['pen:blue','🖊','파란 펜'],['pen:hl','🖌','형광펜'],['pen:erase','🧽','지우개']]}];
+  {nm:'자유 모드',i:'🖊',t:[['pen:ink','✒️','기본 펜 (검정)'],['pen:red','🖍','빨간 펜'],['pen:blue','🖊','파란 펜'],['pen:hl','🖌','형광펜'],
+    ['pen:g','▨','밑면연마 (변 따라)'],['pen:s','▲','고스라 (변 따라)'],['pen:j','★','졸리컷 (변 따라)'],['pen:erase','🧽','지우개']]}];
+// 가공 펜(pen:g|s|j): 조각 외곽을 따라 끌면 손가락이 외곽(곧은 변·R 모서리)에 붙고, 지나간 구간이 그 변들의 진짜 가공 표시(g/s/j 범위)가 됨
 // 자유 모드 = 손가락으로 그리는 펜 획 ann {t:'pen', pen:ink|red|blue|hl, w:굵기 1~3.5, pts:[[x,y]…]} — 실측 그림·measure.doc에만 (본앱에 맞는 도형 없음)
-var PEN_NM={ink:'기본 펜',red:'빨간 펜',blue:'파란 펜',hl:'형광펜'},penW=2,penLive=null,
+var PEN_NM={ink:'기본 펜',red:'빨간 펜',blue:'파란 펜',hl:'형광펜'},penW=2,penLive=null,mkLive=null,
   penShape='free'; // 펜 모양: free 손그림 / line 직선 / rect 사각 / circ 원(끌어 만든 상자 안 타원) — 모양 획은 sh 칸, 점은 곧게 이음
 var HOLES=['faucet','outlet','hole','cap'],HOLE_NM={faucet:'💧 수전',outlet:'🔌 원형(콘센트)',hole:'▭ 사각(콘센트)',cap:'⬭ 캡슐(콘센트)'};
 var D=blank(),hist=[],mode='sel',view={s:0.12,ox:40,oy:120},draw=null,sel=null,K=null,openG=null,holeSub='faucet',pend=null,lastR=50,lastC=10,
@@ -276,10 +278,15 @@ function paint(V,th,f){
     S.forEach(function(s,x){SP[x].forEach(function(m){if(m.k!=='g')return;var n=outN(p,s),a=V(m.A[0],m.A[1]),b=V(m.B[0],m.B[1]); // 밑면연마 = 재료 쪽 띠
       var pts=[a,b,[b[0]-n[0]*w50,b[1]-n[1]*w50],[a[0]-n[0]*w50,a[1]-n[1]*w50]].map(function(q){return q.join(',');}).join(' ');
       h+='<polygon points="'+pts+'" fill="'+th.grindBg+'"/><polygon points="'+pts+'" fill="url(#hg)"/>';});});
+    var CF=cornerFlags(p,RI,S); // R 모서리를 지나는 가공 = 호를 따라 (앞 변이 끝까지 + 다음 변이 처음부터)
+    CF.forEach(function(c){if(c.k!=='g'||c.r.ch)return;var inn=inPoly(P,c.r.C[0],c.r.C[1]),wm=w50/u,A=arcPts(c.r,Math.max(2,c.r.R/12)),
+      B=A.map(function(q){var dx=c.r.C[0]-q[0],dy=c.r.C[1]-q[1],l=Math.hypot(dx,dy)||1,g=inn?Math.min(wm,c.r.R):-wm;return[q[0]+dx/l*g,q[1]+dy/l*g];}).reverse(),
+      pts=A.concat(B).map(function(q){return V(q[0],q[1]).join(',');}).join(' ');h+='<polygon points="'+pts+'" fill="'+th.grindBg+'"/><polygon points="'+pts+'" fill="url(#hg)"/>';});
     S.forEach(function(s){var a=V(s.a2[0],s.a2[1]),b=V(s.b2[0],s.b2[1]),on=psel&&sel.e===s.i;
       h+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+(on?th.selc:th.line)+'" stroke-width="'+(on?f*0.26:f*0.15)+'" stroke-linecap="round"/>';});
     S.forEach(function(s,x){SP[x].forEach(function(m){var a=V(m.A[0],m.A[1]),b=V(m.B[0],m.B[1]);
       h+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+th[MK[m.k]]+'" stroke-width="'+f*0.28+'"/>';});});
+    CF.forEach(function(c){var A=arcPts(c.r,Math.max(2,c.r.R/12));h+='<polyline points="'+A.map(function(q){return V(q[0],q[1]).join(',');}).join(' ')+'" fill="none" stroke="'+th[MK[c.k]]+'" stroke-width="'+f*0.28+'"/>';});
     Object.keys(RI).forEach(function(k){var r=RI[k],vs=psel&&sel.v===+k,a=V(r.P1[0],r.P1[1]),b=V(r.P2[0],r.P2[1]),vv=V(r.v[0],r.v[1]),
         c=r.ch?[(a[0]+b[0])/2,(a[1]+b[1])/2]:V(r.C[0],r.C[1]); // 글자 방향 = 꼭짓점 바깥
       h+='<path d="M'+a.join(',')+(r.ch?' L':' A'+r.R*u+' '+r.R*u+' 0 0 '+r.sw)+' '+b.join(',')+'" fill="none" stroke="'+(vs?th.selc:th.line)+'" stroke-width="'+(vs?f*0.26:f*0.15)+'"/>';
@@ -358,6 +365,32 @@ function penShapePts(sh,a,b){var R=function(q){return[Math.round(q[0]*10)/10,Mat
   var cx=(a[0]+b[0])/2,cy=(a[1]+b[1])/2,rx=Math.abs(b[0]-a[0])/2,ry=Math.abs(b[1]-a[1])/2,o=[];for(var k=0;k<48;k++){var t=k/48*Math.PI*2;o.push(R([cx+rx*Math.cos(t),cy+ry*Math.sin(t)]));}return o;}
 function penInfo(a){if(!a||!a.sh)return '';var p=a.pts,xs=p.map(function(q){return q[0];}),ys=p.map(function(q){return q[1];}),w=Math.max.apply(null,xs)-Math.min.apply(null,xs),h=Math.max.apply(null,ys)-Math.min.apply(null,ys);
   return a.sh==='line'?'직선 '+Math.round(Math.hypot(p[1][0]-p[0][0],p[1][1]-p[0][1])):(a.sh==='rect'?'사각 ':'원 ')+Math.round(w)+'×'+Math.round(h);}
+// R·모따기 모서리 양쪽 변이 같은 가공으로 그 꼭짓점까지 이어지면 → 그 모서리 호(선)에도 가공 표시
+function cornerFlags(p,RI,S){var out=[],n=S.length;if(!p.closed||n!==polyOf(p).length)return out;
+  Object.keys(RI).forEach(function(v){v=+v;var pr=S[(v-1+n)%n],nx=S[v];['g','s','j'].forEach(function(k){var a=rangeOf(pr.f[k],pr.L),b=rangeOf(nx.f[k],nx.L);
+    if(a&&b&&a[1]>=pr.L-0.5&&b[0]<=0.5)out.push({r:RI[v],k:k});});});return out;}
+// ── 가공 펜: 조각 외곽을 촘촘한 점으로 (곧은 변 + R 모서리 호/모따기) — 점마다 {p, k = segsR 번호, t = 그 변 시작에서 mm}
+//   R 모서리 앞 절반은 앞 변 끝(t=L), 뒤 절반은 다음 변 처음(t=0)으로 셈 → 모서리를 지나가면 양쪽 변 가공이 꼭짓점까지 이어짐
+function arcPts(r,step){var o=[];if(r.ch){var m=Math.max(2,Math.ceil(Math.hypot(r.P2[0]-r.P1[0],r.P2[1]-r.P1[1])/step));for(var j=0;j<=m;j++)o.push([r.P1[0]+(r.P2[0]-r.P1[0])*j/m,r.P1[1]+(r.P2[1]-r.P1[1])*j/m]);return o;}
+  var a1=Math.atan2(r.P1[1]-r.C[1],r.P1[0]-r.C[0]),a2=Math.atan2(r.P2[1]-r.C[1],r.P2[0]-r.C[0]),d=a2-a1;while(d>Math.PI)d-=2*Math.PI;while(d<=-Math.PI)d+=2*Math.PI;
+  var m=Math.max(3,Math.ceil(r.R*Math.abs(d)/step));for(var j=0;j<=m;j++){var a=a1+d*j/m;o.push([r.C[0]+r.R*Math.cos(a),r.C[1]+r.R*Math.sin(a)]);}return o;}
+function outlineSmp(p){var RI=roundInfo(p),S=segsR(p,RI),n=S.length,ok=p.closed&&n===polyOf(p).length,out=[],
+    tot=S.reduce(function(a,s){return a+s.L;},0),step=Math.max(3,tot/1500);
+  S.forEach(function(s,k){var u=unit(s.a,s.b),t0=Math.hypot(s.a2[0]-s.a[0],s.a2[1]-s.a[1]),t1=s.L-Math.hypot(s.b[0]-s.b2[0],s.b[1]-s.b2[1]),m=Math.max(1,Math.ceil((t1-t0)/step));
+    for(var j=0;j<=m;j++){var t=t0+(t1-t0)*j/m;out.push({p:[s.a[0]+u[0]*t,s.a[1]+u[1]*t],k:k,t:t});}
+    var r=ok&&RI[(k+1)%n];if(r){var A=arcPts(r,step);A.forEach(function(q,j){var h=j<A.length/2;out.push({p:q,k:h?k:(k+1)%n,t:h?s.L:0});});}});
+  return{p:p,S:S,smp:out,loop:p.closed};}
+// 손가락 자리에서 가장 가까운 외곽 점 (화면 tol px 안)
+function nearSmp(O,sx,sy,tol){var bi=-1,bd=tol;O.smp.forEach(function(q,i){var c=W2S(q.p[0],q.p[1]),d=Math.hypot(c[0]-sx,c[1]-sy);if(d<bd){bd=d;bi=i;}});return bi;}
+// 지나간 점 번호들 (닫힌 조각은 한 바퀴 넘어가도 이어서: u = 펼친 번호)
+function mkIdx(M){var N=M.O.smp.length,a=Math.min(M.u0,M.u),b=Math.max(M.u0,M.u),o=[];for(var u=a;u<=b&&o.length<=N;u++)o.push(M.O.loop?((u%N)+N)%N:u);return o;}
+function mkPath(M,V){var I=mkIdx(M);return I.map(function(i,j){return(j?'L':'M')+V(M.O.smp[i].p[0],M.O.smp[i].p[1]).join(',');}).join(' ');}
+// 손을 떼면: 변마다 지나간 범위 → 그 변 가공 [lo,hi] (끝 14px 안·R 접점이면 꼭짓점까지, 10mm 단위), 이미 있으면 합침
+function mkApply(M){var O=M.O,p=O.p,k=M.k,cov={};mkIdx(M).forEach(function(i){var q=O.smp[i],c=cov[q.k]||(cov[q.k]={lo:Infinity,hi:-Infinity});c.lo=Math.min(c.lo,q.t);c.hi=Math.max(c.hi,q.t);});
+  var did=0;Object.keys(cov).forEach(function(kk){var s=O.S[+kk],c=cov[kk],t0=Math.hypot(s.a2[0]-s.a[0],s.a2[1]-s.a[1]),t1=Math.hypot(s.b[0]-s.b2[0],s.b[1]-s.b2[1]),L=s.L,
+      lo=c.lo,hi=c.hi;if(lo<=t0+1||lo*view.s<14)lo=0;else lo=Math.round(lo/10)*10;if(hi>=L-t1-1||(L-hi)*view.s<14)hi=L;else hi=Math.round(hi/10)*10;if(hi-lo<5)return;
+    var o=F(p,s.i),old=rangeOf(o[k],L);if(old){lo=Math.min(lo,old[0]);hi=Math.max(hi,old[1]);}
+    o[k]=(lo<=0.5&&hi>=L-0.5)?true:[Math.round(lo),Math.round(hi)];if(k==='j'){if(jollyFront)o.jf=true;else delete o.jf;}did++;});return did;}
 function penHit(a,sx,sy,tol){if(a.sh&&a.sh!=='line'&&a.pts.length>2&&a.pts[0]!==a.pts[a.pts.length-1]){var b=a.pts.concat([a.pts[0]]);return penHit({pts:b},sx,sy,tol);}for(var i=0;i<a.pts.length;i++){var p=W2S(a.pts[i][0],a.pts[i][1]),q=a.pts[i+1]?W2S(a.pts[i+1][0],a.pts[i+1][1]):p;if(segD(sx,sy,p,q)<tol)return true;}return false;}
 // 치수선 표기: 잰 두 점(x1..y2) + 띄움 off(mm, 본앱 dimline offsetMm과 같은 쪽 = (dy,-dx) 방향)
 function dimGeo(a){var dx=a.x2-a.x1,dy=a.y2-a.y1,L=Math.hypot(dx,dy)||1,n0=[dy/L,-dx/L],o=+a.off||0,sg=o>=0?1:-1;
@@ -388,6 +421,8 @@ function render(){
     if(draw.rub){var q=W2S(draw.rub[0],draw.rub[1]);h+='<line x1="'+l[0]+'" y1="'+l[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke="#E3B861" stroke-width="2" stroke-dasharray="6 4"/><text x="'+q[0]+'" y="'+(q[1]-16)+'" font-size="15" fill="#E3B861" text-anchor="middle" font-weight="bold">'+draw.rubL+'</text>';}}
   if(pend){var q=W2S(pend.p[0],pend.p[1]);h+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="7" fill="#FF8A80"/>';}
   if(penLive)h+=penSvg(penLive,W2S,TH,14,false); // 그리는 중인 획
+  if(mkLive){var mI=mkIdx(mkLive),s0=mkLive.O.smp[mI[0]].p,s1=mkLive.O.smp[mkLive.last].p,a0=W2S(s0[0],s0[1]),a1=W2S(s1[0],s1[1]);
+    h+='<path d="'+mkPath(mkLive,W2S)+'" fill="none" stroke="'+TH[MK[mkLive.k]]+'" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/><circle cx="'+a0[0]+'" cy="'+a0[1]+'" r="6" fill="#fff"/><circle cx="'+a1[0]+'" cy="'+a1[1]+'" r="8" fill="none" stroke="#fff" stroke-width="3"/>';}
   if(splitPrev){var sc=splitCalc(splitPrev),s0=W2S(splitPrev.s.a[0],splitPrev.s.a[1]); // 분할 미리보기: 변 시작점 ○ + 가르는 선
     h+='<circle cx="'+s0[0]+'" cy="'+s0[1]+'" r="9" fill="none" stroke="#FF6D00" stroke-width="3"/>';
     if(sc){var q1=W2S(sc.Q[0],sc.Q[1]),q2=W2S(sc.R[0],sc.R[1]);h+='<line x1="'+q1[0]+'" y1="'+q1[1]+'" x2="'+q2[0]+'" y2="'+q2[1]+'" stroke="#FF6D00" stroke-width="3" stroke-dasharray="8 5"/><circle cx="'+q1[0]+'" cy="'+q1[1]+'" r="5" fill="#FF6D00"/>'+
@@ -410,6 +445,7 @@ function hintText(){
   if(mode==='trim')return '지울 변을 누르세요 (닫힌 조각은 그 변이 열림)';
   if(mode==='pen:erase')return '지울 펜 그림 위를 문지르세요 · 두 손가락 = 이동·확대';
   if(penLive&&penLive.sh)return penInfo(penLive);
+  if(/^pen:[gsj]$/.test(mode))return FLAG[mode.slice(4)]+' — 변 따라 끌기 (R 모서리도) · 누르기 = 변 전체';
   if(mode.indexOf('pen:')===0)return PEN_NM[mode.slice(4)]+' — '+(penShape==='free'?'손가락으로 그리기':'끌어서 '+{line:'직선',rect:'사각',circ:'원'}[penShape]+' 만들기')+' · 두 손가락 = 이동·확대';
   if(mode==='split')return splitPrev?'숫자판으로 자리·각도 → 확인 = 두 조각':'자를 자리 가까이 변을 누르세요';
   if(mode==='a:dim')return pend?'두 번째 점을 누르세요 (꼭짓점에 붙음)':'잴 첫 점을 누르세요 (꼭짓점에 붙음)';
@@ -444,6 +480,8 @@ function chipsFor(m){
   if(m==='hole')return HOLES.map(function(k){return{label:HOLE_NM[k],on:holeSub===k,fn:function(){holeSub=k;}};});
   if(m==='place:sink')return[{label:'둘레 고스라 넣기',on:sinkGos,fn:function(){sinkGos=true;}},{label:'고스라 빼기 (인셋형)',on:!sinkGos,fn:function(){sinkGos=false;}}];
   if(m==='flag:j')return[{label:'★ 뒷면',on:!jollyFront,fn:function(){jollyFront=false;}},{label:'☆ 앞면',on:jollyFront,fn:function(){jollyFront=true;}}];
+  if(m==='pen:j')return[{label:'★ 뒷면',on:!jollyFront,fn:function(){jollyFront=false;}},{label:'☆ 앞면',on:jollyFront,fn:function(){jollyFront=true;}}];
+  if(m==='pen:g'||m==='pen:s')return null;
   if(m.indexOf('pen:')===0&&m!=='pen:erase')return[['free','✍ 손그림'],['line','╱ 직선'],['rect','▭ 사각'],['circ','⚪ 원']].map(function(x){return{label:x[1],on:penShape===x[0],fn:function(){penShape=x[0];}};})
     .concat([[1,'가늘게'],[2,'보통'],[3.5,'굵게']].map(function(x){return{label:x[1],on:penW===x[0],fn:function(){penW=x[0];}};}));
   if(m==='round')return[{label:'╭ 라운드 R',on:!roundC,fn:function(){roundC=false;}},{label:'◣ 모따기 C',on:roundC,fn:function(){roundC=true;}}];
@@ -710,9 +748,12 @@ function placeFab(){var fb=$('fab'),q=mode==='sel'&&sel&&(!sel.p||sel.w)?selPt()
 var P={},pinch=null,drag=null;
 function pt(e){var r=svg.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
 svg.addEventListener('pointerdown',function(e){if(openG!=null){openG=null;renderRail();}try{svg.setPointerCapture(e.pointerId);}catch(x){}var c=pt(e);P[e.pointerId]={x:c[0],y:c[1],x0:c[0],y0:c[1],px:c[0],py:c[1]};
-  var ids=Object.keys(P);if(ids.length===2){var a=P[ids[0]],b=P[ids[1]];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:view.s,ox:view.ox,oy:view.oy};drag=null;penLive=null;return;} // 두 번째 손가락 = 펜 획 버리고 화면 이동·확대
+  var ids=Object.keys(P);if(ids.length===2){var a=P[ids[0]],b=P[ids[1]];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:view.s,ox:view.ox,oy:view.oy};drag=null;penLive=null;mkLive=null;return;} // 두 번째 손가락 = 펜 획 버리고 화면 이동·확대
   drag={moved:false};
   if(mode==='pen:erase'){drag.erase=true;eraseAt(c[0],c[1]);return;}
+  if(/^pen:[gsj]$/.test(mode)){var best=null;D.pieces.forEach(function(pc){if(pc.circ||!pc.e.length)return;var O=outlineSmp(pc),i=nearSmp(O,c[0],c[1],best?best.d:30);
+      if(i>=0){var q=W2S(O.smp[i].p[0],O.smp[i].p[1]);best={O:O,i:i,d:Math.hypot(q[0]-c[0],q[1]-c[1])};}});
+    drag.mk=best?{O:best.O,k:mode.slice(4),u0:best.i,u:best.i,last:best.i}:{none:true};mkLive=drag.mk.O?drag.mk:null;render();return;}
   if(mode.indexOf('pen:')===0){var w0=S2W(c[0],c[1]);penLive={t:'pen',pen:mode.slice(4),w:penW,pts:[[Math.round(w0[0]*10)/10,Math.round(w0[1]*10)/10]]};
     if(penShape!=='free'){penLive.sh=penShape;drag.p0=w0;}drag.pen=true;render();return;}
   if(mode.indexOf('flag:')===0){var hh=hitHandle(c[0],c[1],mode.slice(5));if(hh)drag.h=hh;}
@@ -733,6 +774,8 @@ svg.addEventListener('pointermove',function(e){var q=P[e.pointerId];if(!q)return
     view.s=Math.max(0.01,Math.min(3,pinch.s*d/pinch.d));view.ox=cx-(pinch.cx-pinch.ox)*view.s/pinch.s;view.oy=cy-(pinch.cy-pinch.oy)*view.s/pinch.s;render();return;}
   if(!drag)return;
   if(drag.erase){eraseAt(q.x,q.y);return;}
+  if(drag.mk){var M=drag.mk;if(!M.O)return;if(Math.hypot(q.x-q.x0,q.y-q.y0)>8)drag.moved=true;var i=nearSmp(M.O,q.x,q.y,80);if(i<0)return; // 가공 펜: 외곽에 붙어서 따라감
+    var N=M.O.smp.length,d=i-M.last;if(M.O.loop){if(d>N/2)d-=N;else if(d<-N/2)d+=N;}M.u+=d;M.last=i;render();return;}
   if(drag.pen&&penLive&&penLive.sh){penLive.pts=penShapePts(penLive.sh,drag.p0,S2W(q.x,q.y));drag.moved=Math.hypot(q.x-q.x0,q.y-q.y0)>8;render();return;} // 모양 펜: 끄는 동안 다시 만듦
   if(drag.pen&&penLive){var L=penLive.pts[penLive.pts.length-1],l=W2S(L[0],L[1]);if(Math.hypot(l[0]-q.x,l[1]-q.y)>=2.5){var w=S2W(q.x,q.y);penLive.pts.push([Math.round(w[0]*10)/10,Math.round(w[1]*10)/10]);render();}return;} // 펜: 바로 따라 그림
   if(!drag.moved&&Math.hypot(q.x-q.x0,q.y-q.y0)>8){drag.moved=true;q.px=q.x;q.py=q.y;}if(!drag.moved)return;
@@ -752,12 +795,15 @@ svg.addEventListener('pointermove',function(e){var q=P[e.pointerId];if(!q)return
   view.ox+=q.x-q.px;view.oy+=q.y-q.py;q.px=q.x;q.py=q.y;render();});
 function up(e){var q=P[e.pointerId];delete P[e.pointerId];if(pinch){if(Object.keys(P).length<2)pinch=null;drag=null;penLive=null;return;}if(!q||!drag)return;var d=drag;drag=null;
   if(d.erase){if(d.erased)save();return;}
+  if(d.mk){mkLive=null;var M=d.mk;if(!M.O){toast('조각 외곽(변) 위에서 시작하세요');render();return;}
+    if(!d.moved||Math.abs(M.u-M.u0)<2){var kk=M.k;render();flagTap(kk,q.x,q.y);return;} // 누르기만 = 그 변 전체 넣기/빼기
+    snap();if(mkApply(M)){save();toast(FLAG[M.k]+' 넣음 · 끝점은 추가 가공 도구에서 ○로 조정',1600);}else hist.pop();render();return;}
   if(d.pen){var s=penLive;penLive=null;if(s&&s.sh&&!d.moved)s=null; // 모양은 조금이라도 끌어야
     if(s&&s.pts.length>=2){snap();s.id=nid();D.ann.push(s);save();}render();return;} // 펜 획 하나 = 되돌리기 한 번
   if(mode==='draw'&&(!d.moved||(draw&&draw.rub))){if(draw)draw.rub=null;drawTap(q.x,q.y);return;}
   if(d.h&&d.moved){save();render();return;}
   if(d.moved){if(d.g){if(d.g.k==='o')attach(d.g.r);save();if(d.g.k==='p')render();else openFor(d.g);}return;}tap(q.x,q.y);}
-svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',function(e){delete P[e.pointerId];pinch=null;drag=null;penLive=null;if(draw)draw.rub=null;render();});
+svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',function(e){delete P[e.pointerId];pinch=null;drag=null;penLive=null;mkLive=null;if(draw)draw.rub=null;render();});
 svg.addEventListener('wheel',function(e){e.preventDefault();var c=pt(e),k=e.deltaY<0?1.15:1/1.15,w=S2W(c[0],c[1]);view.s=Math.max(0.01,Math.min(3,view.s*k));view.ox=c[0]-w[0]*view.s;view.oy=c[1]-w[1]*view.s;render();},{passive:false});
 function segD(px,py,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/l2));return Math.hypot(a[0]+dx*t-px,a[1]+dy*t-py);}
 function hitObj(sx,sy){var w=S2W(sx,sy),best=null,pad=6/view.s;D.objs.forEach(function(o){var T=OBJ[o.t],l=rotPt(w[0],w[1],o.x,o.y,-rotOf(o)); // 돌린 객체는 객체 기준으로 되돌려 봄
