@@ -93,7 +93,8 @@
     — 묶음이 선택돼 있으면(여러 개 선택 `_onSel` = 도형 끌기 우선) 원래 치수 클릭을 건너뛰지만, 본체의 w/h 글자는 예외로 치수 편집(2026-11-04)
 - 왼쪽 도구 묶음(2026-11-07 사용자 확정): 커팅 가공(사각·타공·원형·타원형·직선 커팅) / 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구) / 추가 가공(모서리 라운드·밑면연마·졸리컷·고스라) / 편집(트림·분할(`cut`)·치수선·연결 표시·글자 삽입(`note`)·지시선(`arrow`))
   - 식기세척기(상부개폐형) `dishwasher` 도구 = 누른 자리 가운데 470×460 `groupRole:'main'`·`applianceType:'dish'` rect(고스라 없음, 쿡탑처럼 재료가 바깥) → 가공비 `cnt.dish` × 쿡탑 단가(`gta('cook')`), 편집 색 보라, 도면화 이름 "식기세척기"
-  - 음식물투입구 `foodhole` 도구 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)
+  - 음식물투입구 `foodhole` 도구 = 보조 칸 `#foodhole-sub` 모양(`setFoodShape`, `_foodShape` 'c'|'r', localStorage `scd_food_shape`, 2026-11-21 사용자 요청):
+    사각 = 사각 타공 rect(`applianceType:'hole'`) + `food:true` 202×264(`_FOOD_RW/_FOOD_RH`, 가공비 `cnt.food`, 이름 음식물투입구, 갈색) / 원형 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)
 - 위치(관계) 치수 `drawNestDims`(2026-11-07 사용자 요청): 객체 삽입(싱크볼·쿡탑·식기세척기·음식물투입구)과 타공(수전·콘센트 원, 사각 타공, 타원 타공) = 상판 상자 네 변 모두
   (사각·타원 = 상자 변에서, 원 = 중심에서 `drawCircleGapDim(...,mid)` 글자는 선 가운데). 원형 커팅(holeType cut)·타원형 커팅(hole 아님)은 위치 치수 없음.
   원 타공(수전·콘센트·음식물)은 같은 상판 상자 안 가장 가까운 싱크볼(`_nearSinkBox`)의 가까운 세로·가로 변까지도(2026-11-19 사용자 요청, 숨김 키 `sinkH/sinkV` = drawCircleGapDim 10번째 인자·dimLabels `hk`, 싱크볼 안이면 없음).
