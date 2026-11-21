@@ -10896,12 +10896,39 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
     var s1=(b.a[0]-a.a[0])*a.ux+(b.a[1]-a.a[1])*a.uz,s2=s1+b.len*(b.ux*a.ux+b.uz*a.uz);
     if(Math.min(a.len,Math.max(s1,s2))-Math.max(0,Math.min(s1,s2))>50)a.joint=true;
   });});
+  // 하부판 나눠 붙이기 (2026-11-21 사용자 요청 "아일랜드 하부판을 여러 개로 나눠 붙이기"): 자리를 손으로 안 정한 하부판 중
+  //   도면에서 상판 변 바깥에 붙은 판 = 뿌리, 그 판에 (위·아래·옆으로) 맞붙은 판 = 같은 변·같은 면에 도면 자리 그대로 (상판 변에서 멀어진 거리 = 상판 밑면에서 아래로)
+  //   → pChain: 판 → {e 상판 변, s0·s1 변 따라, d0·d1 상판 밑면에서 아래로, along}. 변 범위를 절반 넘게 벗어나면(모서리 너머 옆면 등) 잇지 않음
+  var pChain=new Map();
+  (function(){
+    var list=scene.pieces.filter(function(pc){return _3dIsPanel(pc.type)&&(_3dKey(pc.shape).mid3d||{}).edge==null;}),done=[];
+    function put(pc,ce){var o=ce.o,b=pc.bb,cs=[[b.l,b.t],[b.r,b.t],[b.r,b.b],[b.l,b.b]];
+      var ss=cs.map(function(p){return (p[0]-o.a[0])*o.ux+(p[1]-o.a[1])*o.uz;}),dd=cs.map(function(p){return -((p[0]-o.a[0])*o.nx+(p[1]-o.a[1])*o.nz);});
+      var c={e:ce,s0:Math.min.apply(null,ss),s1:Math.max.apply(null,ss),d0:Math.max(0,Math.min.apply(null,dd)),d1:Math.max.apply(null,dd),along:Math.abs(o.ux)>=Math.abs(o.uz)?'x':'z',pc:pc};
+      if(c.d1-c.d0<1||Math.min(c.s1,o.len)-Math.max(c.s0,0)<(c.s1-c.s0)*0.5)return false;
+      pChain.set(pc,c);done.push(c);ce.usedP=true;return true;}
+    list.forEach(function(pc){var ct=_3dMidContact(pc,allEdges);if(ct)put(pc,ct.e);});
+    for(var r=0;r<list.length;r++){var add=false;
+      list.forEach(function(pc){if(pChain.has(pc))return;var b=pc.bb,best=null,bo=50;
+        done.forEach(function(c){var q=c.pc.bb,ox=Math.min(b.r,q.r)-Math.max(b.l,q.l),oz=Math.min(b.b,q.b)-Math.max(b.t,q.t),ov=0;
+          if(ox>0&&(Math.abs(b.t-q.b)<3||Math.abs(b.b-q.t)<3))ov=ox;else if(oz>0&&(Math.abs(b.l-q.r)<3||Math.abs(b.r-q.l)<3))ov=oz;
+          if(ov>bo){bo=ov;best=c;}});
+        if(best&&put(pc,best.e))add=true;});
+      if(!add)break;}
+  })();
   if(scene.pieces.some(function(pc){return _3dIsPanel(pc.type)||(pc.type==='mid'&&mode!=='top');})){
     _3dPanelOrder(scene.pieces.filter(function(pc){return _3dIsPanel(pc.type)||(pc.type==='mid'&&mode!=='top');}).sort(function(p,q){return Math.max(q.bb.r-q.bb.l,q.bb.b-q.bb.t)-Math.max(p.bb.r-p.bb.l,p.bb.b-p.bb.t);})).forEach(function(pc){
       // 손으로 정한 자리(mid3d: edge=상판 변 id, off=변 시작에서 mm, swap=가로/세로 바꿈)가 있으면 그대로, 없으면 자동
       // 자동 = 도면에서 상판 변에 붙어 있으면 그 변·그 위치에 (붙은 변 따라 = 벽 따라, 다른 쪽 = 높이, 높이가 _3D_TALL 넘으면 바닥부터 세운 키 큰 판)
       var isP=_3dIsPanel(pc.type),cfg=_3dKey(pc.shape).mid3d||{},bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,man=cfg.edge!=null,ct=man?null:_3dMidContact(pc,allEdges);
-      var e=null,s0;
+      var e=null,s0,defA=bw>=bh?'x':'z',tm=pc.th,ch=isP&&!man?pChain.get(pc):null,along,land,Lm,Hm,floor,onObj,inAnim,myObj,myHb,sw,eid;
+      if(ch){ // 도면에서 상판 변에 붙은 하부판 + 그 판에 이어 붙인 하부판들 (2026-11-21): 도면 자리 그대로 같은 면에 — 상판 쪽 = 위, 멀어질수록 아래 (바닥 밑은 자름)
+        var ce=ch.e,yRef=ce.y0;onObj=!!ce.obj;inAnim=!!(_3d&&_3d.anim)&&!onObj;
+        if(yRef==null||(yRef<(onObj?1:50)&&!inAnim))return;if(inAnim)yRef=Math.max(yRef,_3D_H-tm);
+        along=ch.along;land=along==='x';s0=ch.s0;Lm=ch.s1-ch.s0;var yb=yRef-ch.d1;Hm=ch.d1-ch.d0;if(yb<0){Hm+=yb;yb=0;}if(Hm<1||Lm<1)return;
+        floor=true;sw=along!==defA;eid=ce.id;myObj=onObj?ce.obj:null;myHb=onObj?yRef-yb:0;if(onObj)ce.obj.hang=Math.max(ce.obj.hang,yRef-yb);
+        e=Object.assign(_3dPanelEdge(ce),{y:yb});
+      }else{
       if(man)allEdges.forEach(function(x){if(x.id===cfg.edge)e=x;});
       if(isP&&!e&&!ct){ // 하부판(예전 전면판·측판): 판 길이(높이 = 상판 밑면에 가까운 치수, 나머지 = 길이)와 가장 비슷한 변, 같으면 앞면 변 먼저 (아직 판이 없는 변부터)
         var cands=allEdges.filter(function(x){return !x.pan&&!x.usedP&&!x.wall&&!x.joint;});
@@ -10909,31 +10936,32 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         cands.sort(function(p,q){return score(p)-score(q);});
         e=cands[0]||allEdges.filter(function(x){return !x.pan&&!x.usedP;})[0]||null;if(e)e.usedP=true;
       }
-      var defA=bw>=bh?'x':'z',autoA=ct?ct.along:defA;
+      var autoA=ct?ct.along:defA;
       if(isP&&!ct&&e){var yu=e.y0||0;autoA=Math.abs(bh-yu)<Math.abs(bw-yu)?'x':'z';} // 판: 상판 밑면 높이에 가까운 쪽 = 높이
-      var along=man?(cfg.swap?(defA==='x'?'z':'x'):defA):autoA,land=along==='x';
-      var Lm=land?bw:bh,Hm=land?bh:bw,tm=pc.th,floor=isP||(man?!!cfg.floor:(!!ct&&Hm>_3D_TALL));
+      along=man?(cfg.swap?(defA==='x'?'z':'x'):defA):autoA;land=along==='x';
+      Lm=land?bw:bh;Hm=land?bh:bw;floor=isP||(man?!!cfg.floor:(!!ct&&Hm>_3D_TALL));
       if(isP&&e&&!man&&!ct)s0=Math.max(0,(e.len-Lm)/2);
       else if(e){var ov=Math.min(20,e.len/2,Lm/2);s0=Math.max(ov-Lm,Math.min(cfg.off||0,e.len-ov));} // 손으로 놓은 자리: 변보다 길거나 변 끝을 넘어도 됨 (끝 조금은 걸쳐 있게)
       else if(ct){e=ct.e;s0=ct.s0;if(!floor)e.used=Math.max(e.used,s0+Lm);}
-      var onObj=isP&&e&&e.obj; // 오브제에 붙인 판 = 상판 밑면에 매달림 (오브제를 옮기거나 위아래로 움직이면 같이)
-      var inAnim=!!(_3d&&_3d.anim)&&!onObj; // 첫 화면: 상판이 아직 바닥 가까이 있어도 판은 다 놓였을 때 높이로 (눕힌 데서 세움)
+      onObj=isP&&e&&e.obj; // 오브제에 붙인 판 = 상판 밑면에 매달림 (오브제를 옮기거나 위아래로 움직이면 같이)
+      inAnim=!!(_3d&&_3d.anim)&&!onObj; // 첫 화면: 상판이 아직 바닥 가까이 있어도 판은 다 놓였을 때 높이로 (눕힌 데서 세움)
       if(isP&&e&&e.y0!=null){if(e.y0<(onObj?1:50)&&!inAnim)return;Hm=Math.min(Hm,inAnim?Math.max(e.y0,_3D_H-tm):e.y0);} // 판 높이 ≤ 상판 밑면, 하부장을 끄면(상판이 바닥에) 판 없음
       if(e&&e.bot){if(e.y<1)return;Hm=Math.min(Hm,e.y);} // 다른 판 밑에 매단 판: 바닥 밑으로는 안 감
-      var myObj=onObj?e.obj:(e&&e.bot?e.bobj:null),myHb=onObj?Hm:(e&&e.bot?e.hb+Hm:0); // 이 판 밑에 또 매달 때: 오브제(있으면)와 오브제 밑면에서 이 판 아랫변까지
+      myObj=onObj?e.obj:(e&&e.bot?e.bobj:null);myHb=onObj?Hm:(e&&e.bot?e.hb+Hm:0); // 이 판 밑에 또 매달 때: 오브제(있으면)와 오브제 밑면에서 이 판 아랫변까지
       if(!e){
         backs.forEach(function(b){if(!e&&b.len-b.used>=Lm-5)e=b;});
         if(!e)backs.forEach(function(b){if(!e||b.len-b.used>e.len-e.used)e=b;});
         if(!e)e={a:[pc.bb.l,pc.bb.t],ux:land?1:0,uz:land?0:1,len:Lm,nx:land?0:-1,nz:land?1:0,used:0,y:topY}; // 상판이 없으면 그 자리에 세움
         s0=Math.max(0,Math.min(e.used,e.len-Lm));e.used=s0+Lm;
       }
-      var sw=along!==defA,eid=e.id||null;
+      sw=along!==defA;eid=e.id||null;
       if(onObj){e=Object.assign({},e,{y:e.y0-Hm});e.obj.hang=Math.max(e.obj.hang,Hm);}
       else if(e.bot){e=Object.assign({},e,{y:e.y-Hm});if(e.bobj)e.bobj.hang=Math.max(e.bobj.hang,e.hb+Hm);} // 다른 판 밑변에 매닮: 같은 면으로 그 판 아래 (오브제에 매달린 판이면 오브제 따라)
       else{
         if(e.pan){} // 다른 판의 면에 붙임: 그 판 아랫변 높이부터, 그 판 바깥쪽으로
         else if(isP)e=_3dPanelEdge(e);else if(floor)e=_3dFloorEdge(e);
         if(man&&cfg.y0!=null)e=Object.assign({},e,{y:Math.max(0,cfg.y0)}); // 위아래로 옮긴 높이(y0 = 바닥에서 아랫변까지 mm)
+      }
       }
       pc.mid={edge:eid,off:s0,swap:sw,floor:floor,panel:isP,y0:e.y,manual:man&&!!eid}; // 목록 조절 버튼이 지금 자리에서 시작하도록 (swap = 기본(긴 변이 벽 따라)과 다름)
       var bx=_3dMidBox(e,s0,Lm,Hm,tm),W0=bx.W0,W1=bx.W1,F0=bx.F0,F1=bx.F1,yA=bx.yA,yB=bx.yB,front=[],rest=[],ln=[];
@@ -11405,8 +11433,8 @@ function _3dFlipFace(key){
   _3d.msg.textContent=_3D_FACES[f]+' (미드웨이 더블클릭으로 바꿈)';
 }
 // 3D 보기 설정(하부장·상부장 켜기, 상판만/상판+미드웨이): 창을 닫았다 열어도 그대로, 도면 파일에도 저장(view3dOpts)
-var _3dOpts={furn:true,upper:true,mode:'mid',notes:true};
-function _3dOptsLoad(o){_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid',notes:!o||o.notes!==false};}
+var _3dOpts={furn:true,upper:true,mode:'mid',notes:true,h:900}; // h = 하부장 높이(바닥 ~ 상판 윗면 mm, _3D_H)
+function _3dOptsLoad(o){var h=o&&+o.h;_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid',notes:!o||o.notes!==false,h:(h>=200&&h<=1500)?h:900};_3D_H=_3dOpts.h;}
 function _3dSetMode(md){
   if(!_3d)return;_3d.mode=md;_3dOpts.mode=md;
   _3d.m.querySelectorAll('[data-mode]').forEach(function(b){var on=b.dataset.mode===md;b.style.background=on?'#00695C':'#121D33';b.style.borderColor=on?'#26A69A':'#56647E';});
@@ -11619,7 +11647,8 @@ function show3D(){
     +'<b style="color:#E3B861;font-size:14px">🧊 3D 보기</b><span style="color:#A9B4C8;font-size:12px">'+escHtml(nm)+'</span>'
     +'<span id="v3d-msg" style="color:#FFD740;font-size:11px"></span><span style="flex:1"></span>'
     +'<button style="'+bs+'" data-mode="top">상판만</button><button style="'+bs+'" data-mode="mid">상판+미드웨이</button><span style="width:6px"></span>'
-    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn"'+(_3dOpts.furn?' checked':'')+'> 하부장 (높이 900)</label>'
+    +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn"'+(_3dOpts.furn?' checked':'')+'> 하부장</label>'
+    +'<label style="color:#A9B4C8;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:8px" title="바닥에서 상판 윗면까지 (mm) — 하부장·하부판 높이가 이만큼, 숫자를 고치고 Enter"><span>높이</span><input type="number" id="v3d-h" min="200" max="1500" step="10" value="'+_3D_H+'" style="width:58px;background:#121D33;color:#E3B861;border:1px solid #1C2A47;border-radius:4px;padding:2px 4px;font-size:12px"></label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper"'+(_3dOpts.upper?' checked':'')+'> 상부장</label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="도면 글자(글자 도구)를 그 글자가 있는 조각 윗면에"><input type="checkbox" id="v3d-notes"'+(_3dOpts.notes?' checked':'')+'> 도면 글자</label>'
     +'<button style="'+bs+'" id="v3d-undo" title="되돌리기 (Ctrl+Z)">↶ 되돌리기</button>'
@@ -11643,6 +11672,9 @@ function show3D(){
   m.querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){_3dSetMode(b.dataset.mode);};});
   m.querySelector('[data-mode="'+_3d.mode+'"]').style.background='#00695C';m.querySelector('[data-mode="'+_3d.mode+'"]').style.borderColor='#26A69A';
   document.getElementById('v3d-furn').onchange=function(e){if(!_3d)return;_3d.furn=_3dOpts.furn=e.target.checked;_3d.cam=null;_3dRebuild(0);}; // 하부장 켜기/끄기
+  document.getElementById('v3d-h').onchange=function(e){if(!_3d)return;var h=Math.round(+e.target.value); // 하부장 높이 = 바닥 ~ 상판 윗면 (2026-11-21 사용자 요청 "숫자로")
+    if(!isFinite(h)||h<200||h>1500){e.target.value=_3D_H;return;}_3dOpts.h=_3D_H=h;_3d.cam=null;_3dRebuild(0);};
+  document.getElementById('v3d-h').onkeydown=function(e){e.stopPropagation();if(e.key==='Enter')e.target.blur();};
   document.getElementById('v3d-upper').onchange=function(e){if(!_3d)return;_3d.upper=_3dOpts.upper=e.target.checked;_3dRegeom();}; // 상부장 켜기/끄기 (시점 그대로)
   document.getElementById('v3d-notes').onchange=function(e){if(!_3d)return;_3dOpts.notes=e.target.checked;_3dRebuild(0);}; // 도면 글자 켜기/끄기 (무늬 캔버스 다시)
   m.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){_3dSetView(b.dataset.v);};});
