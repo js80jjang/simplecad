@@ -11433,8 +11433,8 @@ function _3dFlipFace(key){
   _3d.msg.textContent=_3D_FACES[f]+' (미드웨이 더블클릭으로 바꿈)';
 }
 // 3D 보기 설정(하부장·상부장 켜기, 상판만/상판+미드웨이): 창을 닫았다 열어도 그대로, 도면 파일에도 저장(view3dOpts)
-var _3dOpts={furn:true,upper:true,mode:'mid',notes:true,h:900}; // h = 하부장 높이(바닥 ~ 상판 윗면 mm, _3D_H)
-function _3dOptsLoad(o){var h=o&&+o.h;_3dOpts={furn:!o||o.furn!==false,upper:!o||o.upper!==false,mode:(o&&o.mode==='top')?'top':'mid',notes:!o||o.notes!==false,h:(h>=200&&h<=1500)?h:900};_3D_H=_3dOpts.h;}
+var _3dOpts={furn:true,upper:false,mode:'mid',notes:true,h:900}; // h = 하부장 높이(바닥 ~ 상판 윗면 mm, _3D_H), 상부장은 처음엔 끔(2026-11-21 사용자 요청)
+function _3dOptsLoad(o){var h=o&&+o.h;_3dOpts={furn:!o||o.furn!==false,upper:!!(o&&o.upper===true),mode:(o&&o.mode==='top')?'top':'mid',notes:!o||o.notes!==false,h:(h>=200&&h<=1500)?h:900};_3D_H=_3dOpts.h;}
 function _3dSetMode(md){
   if(!_3d)return;_3d.mode=md;_3dOpts.mode=md;
   _3d.m.querySelectorAll('[data-mode]').forEach(function(b){var on=b.dataset.mode===md;b.style.background=on?'#00695C':'#121D33';b.style.borderColor=on?'#26A69A':'#56647E';});
