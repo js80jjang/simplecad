@@ -165,7 +165,7 @@ header .site b{color:var(--gold)}
 <script src="../mall-catalog.js"></script>
 <script>
 'use strict';
-var VER='2026.11.21 (3)';
+var VER='2026.11.21 (4)';
 document.getElementById('ver').textContent=VER;
 var OBJ={sink:{nm:'싱크볼',i:'🚰',w:828,h:432,r:24},cook:{nm:'쿡탑',i:'🔥',w:560,h:480,r:0},dish:{nm:'식기세척기',i:'🍽',w:470,h:460,r:0},food:{nm:'음식물투입구',i:'♻️',d:160},
   faucet:{nm:'수전',i:'💧',d:35},outlet:{nm:'콘센트',i:'🔌',d:70},hole:{nm:'사각타공',i:'▭',w:200,h:50,r:0},cap:{nm:'캡슐타공',i:'⬭',w:131,h:60,r:30}};
@@ -380,6 +380,12 @@ function outlineSmp(p){var RI=roundInfo(p),S=segsR(p,RI),n=S.length,ok=p.closed&
     for(var j=0;j<=m;j++){var t=t0+(t1-t0)*j/m;out.push({p:[s.a[0]+u[0]*t,s.a[1]+u[1]*t],k:k,t:t});}
     var r=ok&&RI[(k+1)%n];if(r){var A=arcPts(r,step);A.forEach(function(q,j){var h=j<A.length/2;out.push({p:q,k:h?k:(k+1)%n,t:h?s.L:0});});}});
   return{p:p,S:S,smp:out,loop:p.closed};}
+var MK_TOL=44; // 가공 펜이 변을 잡는 거리 (화면 px)
+// 손가락에서 사각 객체(돌린 것도) 테두리까지 화면 거리 px
+function objEdgeD(o,sx,sy){var w=S2W(sx,sy),l=rotPt(w[0],w[1],o.x,o.y,-rotOf(o)),dx=Math.abs(l[0]-o.x)-o.w/2,dy=Math.abs(l[1]-o.y)-o.h/2;
+  return(dx>0||dy>0?Math.hypot(Math.max(dx,0),Math.max(dy,0)):Math.min(-dx,-dy))*view.s;}
+// 조각 변을 못 잡았을 때 무엇을 눌렀는지: 객체(싱크볼 등) 둘레 / 원형·타원 둘레
+function mkWhy(sx,sy){var o=hitObj(sx,sy);if(o&&!OBJ[o.t].d)return{o:o};var c=hitCirc(sx,sy);if(c)return{c:c};return null;}
 // 손가락 자리에서 가장 가까운 외곽 점 (화면 tol px 안)
 function nearSmp(O,sx,sy,tol){var bi=-1,bd=tol;O.smp.forEach(function(q,i){var c=W2S(q.p[0],q.p[1]),d=Math.hypot(c[0]-sx,c[1]-sy);if(d<bd){bd=d;bi=i;}});return bi;}
 // 지나간 점 번호들 (닫힌 조각은 한 바퀴 넘어가도 이어서: u = 펼친 번호)
@@ -420,6 +426,9 @@ function render(){
     h+='<circle cx="'+l[0]+'" cy="'+l[1]+'" r="5" fill="#E3B861"/>';
     if(draw.rub){var q=W2S(draw.rub[0],draw.rub[1]);h+='<line x1="'+l[0]+'" y1="'+l[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke="#E3B861" stroke-width="2" stroke-dasharray="6 4"/><text x="'+q[0]+'" y="'+(q[1]-16)+'" font-size="15" fill="#E3B861" text-anchor="middle" font-weight="bold">'+draw.rubL+'</text>';}}
   if(pend){var q=W2S(pend.p[0],pend.p[1]);h+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="7" fill="#FF8A80"/>';}
+  if(/^pen:[gsj]$/.test(mode))D.pieces.forEach(function(pc){if(pc.circ||!pc.e.length)return; // 가공 펜: 잡을 수 있는 변을 밝게
+    var d=outlineSmp(pc).smp.map(function(q,i){return(i?'L':'M')+W2S(q.p[0],q.p[1]).join(',');}).join(' ')+(pc.closed?' Z':'');
+    h+='<path d="'+d+'" fill="none" stroke="'+TH[MK[mode.slice(4)]]+'" stroke-width="7" stroke-linejoin="round" opacity=".28"/>';});
   if(penLive)h+=penSvg(penLive,W2S,TH,14,false); // 그리는 중인 획
   if(mkLive){var mI=mkIdx(mkLive),s0=mkLive.O.smp[mI[0]].p,s1=mkLive.O.smp[mkLive.last].p,a0=W2S(s0[0],s0[1]),a1=W2S(s1[0],s1[1]);
     h+='<path d="'+mkPath(mkLive,W2S)+'" fill="none" stroke="'+TH[MK[mkLive.k]]+'" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/><circle cx="'+a0[0]+'" cy="'+a0[1]+'" r="6" fill="#fff"/><circle cx="'+a1[0]+'" cy="'+a1[1]+'" r="8" fill="none" stroke="#fff" stroke-width="3"/>';}
@@ -611,7 +620,8 @@ function roundKeys(p,k){sel={p:p,v:k};var ch=!!(p.rc&&p.rc[k]);
     ok:function(v){ap(v);if(v.R>0){if(ch)lastC=v.R;else lastR=v.R;}sel=null;}});}
 
 // 가공 표시 도구: 변을 누를 때마다 켜고 끔(변 전체), 켜진 구간 양 끝 ○를 끌면 범위
-function flagTap(k,sx,sy){var h=hitEdge(sx,sy);if(!h){toast('변을 누르세요');return;}snap();var o=F(h.p,h.i);
+function flagTap(k,sx,sy){var h=hitEdge(sx,sy);if(!h){toast('변을 누르세요');return;}flagToggle(k,h.p,h.i);}
+function flagToggle(k,p,i){snap();var o=F(p,i);
   if(o[k]){delete o[k];if(k==='j')delete o.jf;}else{o[k]=true;if(k==='j'){if(jollyFront)o.jf=true;else delete o.jf;}}
   render();save();toast((k==='j'&&o.jf?'앞면 ':'')+FLAG[k]+(o[k]?' 넣음 · 끝점 ○를 끌어 범위 조정':' 뺌'),1600);}
 function hitHandle(sx,sy,k){var best=null,bd=22;D.pieces.forEach(function(p){if(p.circ)return;segsR(p,roundInfo(p)).forEach(function(s){spans(s).forEach(function(m){if(m.k!==k)return;
@@ -751,9 +761,11 @@ svg.addEventListener('pointerdown',function(e){if(openG!=null){openG=null;render
   var ids=Object.keys(P);if(ids.length===2){var a=P[ids[0]],b=P[ids[1]];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:view.s,ox:view.ox,oy:view.oy};drag=null;penLive=null;mkLive=null;return;} // 두 번째 손가락 = 펜 획 버리고 화면 이동·확대
   drag={moved:false};
   if(mode==='pen:erase'){drag.erase=true;eraseAt(c[0],c[1]);return;}
-  if(/^pen:[gsj]$/.test(mode)){var best=null;D.pieces.forEach(function(pc){if(pc.circ||!pc.e.length)return;var O=outlineSmp(pc),i=nearSmp(O,c[0],c[1],best?best.d:30);
+  if(/^pen:[gsj]$/.test(mode)){var best=null;D.pieces.forEach(function(pc){if(pc.circ||!pc.e.length)return;var O=outlineSmp(pc),i=nearSmp(O,c[0],c[1],best?best.d:MK_TOL); // 손가락은 마우스보다 덜 정확 → 넓게
       if(i>=0){var q=W2S(O.smp[i].p[0],O.smp[i].p[1]);best={O:O,i:i,d:Math.hypot(q[0]-c[0],q[1]-c[1])};}});
-    drag.mk=best?{O:best.O,k:mode.slice(4),u0:best.i,u:best.i,last:best.i}:{none:true};mkLive=drag.mk.O?drag.mk:null;render();return;}
+    var ob=null,od=best?best.d:MK_TOL;D.objs.forEach(function(o){if(OBJ[o.t].d)return;var d=objEdgeD(o,c[0],c[1]);if(d<od){od=d;ob=o;}}); // 싱크볼 등 객체 둘레가 더 가까우면 그쪽
+    if(ob)best=null;
+    drag.mk=best?{O:best.O,k:mode.slice(4),u0:best.i,u:best.i,last:best.i}:{none:true,why:ob?{o:ob}:mkWhy(c[0],c[1])};mkLive=drag.mk.O?drag.mk:null;render();return;}
   if(mode.indexOf('pen:')===0){var w0=S2W(c[0],c[1]);penLive={t:'pen',pen:mode.slice(4),w:penW,pts:[[Math.round(w0[0]*10)/10,Math.round(w0[1]*10)/10]]};
     if(penShape!=='free'){penLive.sh=penShape;drag.p0=w0;}drag.pen=true;render();return;}
   if(mode.indexOf('flag:')===0){var hh=hitHandle(c[0],c[1],mode.slice(5));if(hh)drag.h=hh;}
@@ -795,8 +807,11 @@ svg.addEventListener('pointermove',function(e){var q=P[e.pointerId];if(!q)return
   view.ox+=q.x-q.px;view.oy+=q.y-q.py;q.px=q.x;q.py=q.y;render();});
 function up(e){var q=P[e.pointerId];delete P[e.pointerId];if(pinch){if(Object.keys(P).length<2)pinch=null;drag=null;penLive=null;return;}if(!q||!drag)return;var d=drag;drag=null;
   if(d.erase){if(d.erased)save();return;}
-  if(d.mk){mkLive=null;var M=d.mk;if(!M.O){toast('조각 외곽(변) 위에서 시작하세요');render();return;}
-    if(!d.moved||Math.abs(M.u-M.u0)<2){var kk=M.k;render();flagTap(kk,q.x,q.y);return;} // 누르기만 = 그 변 전체 넣기/빼기
+  if(d.mk){mkLive=null;var M=d.mk;if(!M.O){var W=M.why;
+      if(W&&W.o&&W.o.t==='sink'&&mode==='pen:s'){snap();if(W.o.ng)delete W.o.ng;else W.o.ng=true;save();toast('싱크볼 둘레 고스라 '+(W.o.ng?'뺌':'넣음'),1600);} // 싱크볼 둘레 = 고스라 넣기/빼기
+      else toast(W&&W.o?OBJ[W.o.t].nm+' 둘레에는 '+(W.o.t==='sink'?'고스라만 (▲ 고스라 펜으로 누르기)':'가공 표시를 넣지 않습니다'):W&&W.c?'원형·타원 둘레에는 아직 넣을 수 없어요':'밝게 보이는 조각 변 위에서 시작하세요',2400);
+      render();return;}
+    if(!d.moved||Math.abs(M.u-M.u0)<2){var sm=M.O.smp[M.u0];flagToggle(M.k,M.O.p,M.O.S[sm.k].i);return;} // 누르기만 = 잡은 변 전체 넣기/빼기
     snap();if(mkApply(M)){save();toast(FLAG[M.k]+' 넣음 · 끝점은 추가 가공 도구에서 ○로 조정',1600);}else hist.pop();render();return;}
   if(d.pen){var s=penLive;penLive=null;if(s&&s.sh&&!d.moved)s=null; // 모양은 조금이라도 끌어야
     if(s&&s.pts.length>=2){snap();s.id=nid();D.ann.push(s);save();}render();return;} // 펜 획 하나 = 되돌리기 한 번
