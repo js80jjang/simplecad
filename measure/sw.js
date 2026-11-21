@@ -1,7 +1,7 @@
 // 심플 실측 서비스 워커 — "앱 설치"(PWA)와 오프라인(현장에서 인터넷이 안 될 때) 실행용
 // 네트워크 먼저: 인터넷이 되면 항상 최신(GitHub Pages)을 쓰고 받은 것을 저장, 안 되면 저장본으로 실행
 // 캐시 이름은 'simplemeasure-'로 시작 — 심플 캐드(sw.js, 'simplecad-')와 서로 지우지 않게
-var CACHE = 'simplemeasure-v11';
+var CACHE = 'simplemeasure-v12';
 var CORE = ['./', 'index.html', 'manifest.webmanifest', '../mall-catalog.js',
   '../icons/icon-192.png?v=2', '../icons/icon-512.png?v=2', '../icons/apple-touch-icon.png?v=2'];
 
