@@ -53,6 +53,10 @@
   분할 `splitTap/splitCalc/doSplit`: 변 시작점 ○에서 거리·각도 → 맞은편 변까지(`rayHit`) → `mkPiece`(꼭짓점→조각, 사각이면 rect 유지)로 두 조각, 가공 범위는 `subF`로 나눔, 오른쪽/아래 조각 100 띄움(`carryOf`).
   치수선 ann `{t:'dim',x1..y2,off}`(`dimGeo`, off = 본앱 offsetMm 방향) → dimline, 결 방향 ann vein → linkmark vein:true.
   회전: `o.rot`(도, 시계 방향, 객체·타원) `rotateItem`(싱크볼이면 붙은 수전도), 숫자판 `rotBtns`(↻ 90°·∠ 각도 `angKeys`), 떠 있는 `#fab-rot`(`rotSel`, 조각 = `rotatePiece` 안의 것 같이), 내보내기 rect rotation(라디안)·싱크볼 고스라 끝점도 돌림, 사각 코너 이름은 실제 자리로
+- 2026-11-21 사용자 요청 "그리기 어려운 건 자유모드, 펜 여러 개": 탭 맨 아래 `GROUPS` "자유 모드" = `pen:ink|red|blue|hl|erase`, 굵기 보조 단추(`penW` 1/2/3.5).
+  펜 획 ann `{t:'pen',pen,w,pts:[[x,y]…]}` — 한 손가락 끌기 = 바로 그림(`penLive`, 2.5px마다 점), 두 번째 손가락이 닿으면 버리고 확대·이동, 놓으면 `D.ann`(되돌리기 한 번).
+  `penSvg`(점 사이 Q 곡선, 형광펜 3배 굵기·반투명)·`penHit`, 지우개 `eraseAt`(문지른 획 지움). 색 `TH.pen_*`(기본 펜 = 화면 흰색·그림 검정). 선택·끌기(`moveBy` pts)·조각 회전/이동에 따라감.
+  본앱에 맞는 도형이 없어 내보내기 shapes에는 안 넣음 — 그림(PNG)·measure.doc에만. 밑면연마 색 = 노랑(화면 #FFD740, 그림 #E0B000, 사용자 요청)
 - 2026-11-17 (4) 파일 줄 `#filebar`(사용자 요청): 새로 만들기 `newFile` / 열기 `openFiles`(`#files` 창: 마지막 작업 이어서 = 'doc2', 받은 .ceramic, 저장 목록) / 저장 `saveFile` / 다른 이름 저장 `saveFileAs` / 보내기.
   저장 = IndexedDB kv 'files'(목록 [{id,name,saved,n}]) + 'f:'+id(내용), 지금 파일 `cur`('cur2'). 저장 안 한 변경 `dirty()`(= `sig()` ≠ `savedSig`) → 저장 단추 주황 점, `guard()` 확인, beforeunload.
   **새로고침 = 빈 첫 화면**(자동 복원 안 함, 'doc2'는 빈 화면이면 안 덮어씀 → 열기에서 이어서)
