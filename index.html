@@ -7051,7 +7051,7 @@ function loadAllTierPrices(){
 }
 function calcCost(){
   _fullVer++; // 원판 그대로 판정 다시
-  var lenMm={rect:0,line:0,chamfer:0,grind:0,grindMid:0,grind100:0,jolly:0,gosra:0,circlecut:0};
+  var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
   var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0,r100:0,r150:0,r200:0,r250:0,doma1:0,doma2:0,doma3:0};
   var _domaG={};shapes.forEach(function(s){if(s.kind==='rect'&&s.applianceType==='doma'&&s.groupId)_domaG[s.groupId]=1;}); // 도마 묶음의 고스라·밑면연마는 도마 금액에 포함
   shapes.forEach(function(s){
@@ -7088,7 +7088,6 @@ function calcCost(){
       var _g150=s.depth===150&&Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1))===150;
       var _g100=!_g150&&s.depth>=100;
       if(_g150)cnt.grind150++;else if(_g100)lenMm.grind100+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
-      else if(s.depth>_GRIND_MM)lenMm.grindMid+=Math.hypot(s.x2-s.x1,s.y2-s.y1); // 50 넘고 100 미만 = 보통 밑면연마 단가, 내역만 따로
       else lenMm.grind+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='jollymark'){
       lenMm.jolly+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
@@ -7120,8 +7119,8 @@ function calcCost(){
   var mCirclecut=lenMm.circlecut/1000,subCirclecut=mCirclecut*pLine*qty;
   var pChamfer=gta('chamfer'),subChamfer=cnt.chamfer*pChamfer*qty;
   var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
-  var mGrindMid=lenMm.grindMid/1000,subGrindMid=mGrindMid*pGrind*qty;
-  upd('pl-grindmid','ps-grindmid',mGrindMid>0.001?mGrindMid.toFixed(3)+'m':'-',subGrindMid);
+  // 밑면연마 내역(2026-11-23 사용자 요청): "└ 100mm 미만"(50mm 포함, 보통 단가) / "└ 150×150" / "└ 100mm+" — 맨 위 "밑면연마" 줄은 셋을 합친 표시만
+  upd('pl-grindmid','ps-grindmid',mGrind>0.001?mGrind.toFixed(3)+'m':'-',subGrind);
   var pGrind150=gta('grind150'),subGrind150=cnt.grind150*pGrind150*qty;
   var pGrind100=gta('grind100'),mGrind100=lenMm.grind100/1000,subGrind100=mGrind100*pGrind100*qty;
   var pJolly=gta('jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
@@ -7140,13 +7139,14 @@ function calcCost(){
   upd('pl-line','ps-line',mLine>0.001?mLine.toFixed(3)+'m':'-',subLine);
   upd('pl-circlecut','ps-circlecut',mCirclecut>0.001?mCirclecut.toFixed(3)+'m':'-',subCirclecut);
   upd('pl-chamfer','ps-chamfer',cnt.chamfer>0?cnt.chamfer+'회':'-',subChamfer);
-  upd('pl-grind','ps-grind',mGrind>0.001?mGrind.toFixed(3)+'m':'-',subGrind);
+  var _gAllM=mGrind+mGrind100,_gAllTxt=(_gAllM>0.001?_gAllM.toFixed(3)+'m':'')+(cnt.grind150>0?(_gAllM>0.001?' · ':'')+cnt.grind150+'회':'');
+  upd('pl-grind','ps-grind',_gAllTxt||'-',subGrind+subGrind150+subGrind100);
   upd('pl-grind150','ps-grind150',cnt.grind150>0?cnt.grind150+'회':'-',subGrind150);
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
   var totalCut=subRect+subSink+subCook+subDish+subFood+subDoma+subHolef+subHoleo+subLine+subCirclecut;
-  var totalAdd=subChamfer+subRR+subGrind+subGrindMid+subGrind150+subGrind100+subJolly+subGosra;
+  var totalAdd=subChamfer+subRR+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
   var grand=totalCut+totalAdd+totalOther;
