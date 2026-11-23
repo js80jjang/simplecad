@@ -195,6 +195,9 @@
   원 `_findCornerAttach` matOutward = 원형 절단이 다른 조각 안(`_inAnyPiece`)일 때만(단독 원 조각은 안쪽 재료). 원형 절단이 조각 밖이면 `drawNestDims` 관계 치수 없음.
   도면화 밑면연마: 호에 붙은 것 = `_expHatchArc`(부채꼴 띠, 재료 쪽 `_matAt`), 곧은 띠는 `_gBands`로 모아 끝이 맞닿은 띠(같은 깊이·같은 쪽)는 `_expHatchBand`의 j1/j2로 꺾어 이음(타원 둘레)
   선 `lp`(조각 표지) = 맞댄 두 선 조각이 끝점으로 안 묶이게 — `_cutLpOk`를 `_collectBoardItems`(겹친 선 하나만·이어짐)·`_lineBoundaryGroups`가 씀. 둘째 조각 가르는 선 `cutTwin` = 편집 화면 길이 치수 하나만. 미리보기·안내 `_cutPreview`
+- 결합 도구(`join`, 분할 아래, 2026-11-23 사용자 요청): `_joinSt` 단계 — 기준 조각 클릭(`_joinFind` = `_cutFind` 변 근처 또는 안쪽 가장 작은 사각형·원·타원·닫힌 선 조각) → 붙일 조각 클릭
+  (`st.mv` = 조각 + `_joinRiders`(안에 든 것·둘레 가공 표시·같은 groupId, 기준 조각 제외), `st.h0` = 옮기기 전 기록) → 마우스 따라 실제로 옮김(`_joinSetD`), 붙일 조각 점(`_joinPts`: 사각형 꼭짓점·변 가운데·라운드 끝, 선 조각 꺾이는 점, 원·타원 사분점·중심)이
+  기준 조각 점 14px 안이면 맞춤(Alt = 안 함) → 클릭 = 놓기(`_hist`에 h0 한 번). Esc·오른쪽 클릭 `_joinCancel` = `_joinRestore`(mv0으로) 한 단계 뒤로. 미리보기 `_joinPreview`는 redraw 끝에서. 합쳐서 한 조각으로 만들지는 않음(자리만)
 - 트림 `doTrim`: rect는 `_trimRectGeo`(90° 단위 회전 = 보이는 대로 회전 없는 rect·코너 키 돌림, 그 밖 각도 = 꼭짓점 `_pts`) +
   `_trimRectEdges`(위→오른쪽→아래→왼쪽, 클릭 판정·교점·분해가 같은 방향)로. 잘린 구간에 겹친 같은 직선 위 선은 `_trimOverlaps`로 같이 지움
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`

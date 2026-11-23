@@ -316,6 +316,7 @@ canvas{display:block;cursor:crosshair}
   <div class="tgl">편집</div>
   <button class="tool-btn" data-tool="trim"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="5.5" x2="5" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="10" y1="5.5" x2="15" y2="5.5" stroke="#E53935" stroke-width="1.8"/><line x1="3" y1="0" x2="12" y2="11" stroke="#75839C" stroke-width="1.5"/><line x1="5" y1="4.5" x2="10" y2="6.5" stroke="#0A1222" stroke-width="3"/></svg> 트림</button>
   <button class="tool-btn" data-tool="cut" title="분할: 변의 시작점 클릭 → 변 따라 거리(숫자+Enter) → 맞은편 변까지 수직(Shift = 각도)으로 두 조각"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><rect x="0.8" y="2" width="13.4" height="7" fill="none" stroke="#75839C" stroke-width="1.3"/><line x1="6" y1="0" x2="6" y2="11" stroke="#E53935" stroke-width="1.6" stroke-dasharray="2 1.5"/></svg> 분할</button>
+  <button class="tool-btn" data-tool="join" title="결합: 기준 조각 클릭 → 붙일 조각 클릭 → 마우스로 옮기면 꼭짓점끼리 딱 붙음 → 클릭 = 놓기 (Alt = 맞춤 없이, Esc = 뒤로)"><svg width="15" height="11" viewBox="0 0 15 11" style="vertical-align:middle;margin-right:5px"><rect x="0.8" y="2" width="6.2" height="7" fill="none" stroke="#75839C" stroke-width="1.3"/><rect x="8" y="2" width="6.2" height="7" fill="none" stroke="#E3B861" stroke-width="1.3"/><circle cx="7.5" cy="2" r="1.4" fill="#00E676"/></svg> 결합</button>
   <button class="tool-btn" data-tool="dimline"><svg width="16" height="10" viewBox="0 0 16 10" style="vertical-align:middle;margin-right:4px"><line x1="2.5" y1="5" x2="13.5" y2="5" stroke="#E53935" stroke-width="1.5"/><line x1="2.5" y1="2" x2="2.5" y2="8" stroke="#E53935" stroke-width="1.5"/><line x1="13.5" y1="2" x2="13.5" y2="8" stroke="#E53935" stroke-width="1.5"/><polygon points="5,4 2.5,5 5,6" fill="#E53935"/><polygon points="11,4 13.5,5 11,6" fill="#E53935"/></svg> 치수선</button>
   <div class="fillet-sub" id="dimline-sub" style="display:none">
     <div style="font-size:10px;color:#A9B4C8;margin-bottom:3px">라벨 형식</div>
@@ -5448,6 +5449,97 @@ function _cutPreview(){
   ctx.font='11px "Malgun Gothic",sans-serif';ctx.fillStyle='#A9B4C8';ctx.fillText(hint,x+7,y+21);
   ctx.restore();
 }
+// ═══ 결합(join, 2026-11-23 사용자 요청 "분할 밑에 결합 — 기준 객체 선택 → 붙일 객체 선택 → 옮기면 꼭짓점 스냅으로 붙음") ═══
+//   1) 기준 조각 클릭 2) 붙일 조각 클릭 → 마우스 따라 이동(조각 안 싱크볼·타공·가공 표시·글자 같이), 붙일 조각 꼭짓점이 기준 조각 꼭짓점(·변 가운데) 14px 안이면 딱 맞춤
+//   3) 클릭 = 그 자리에 놓기(되돌리기 한 번), Esc = 한 단계 뒤로. 조각은 사각형·선 조각·원·타원(_cutLoop/_cutLineLoop 둘레)
+var _joinSt=null,_joinHover=null;
+function _joinFind(mx,my){
+  var f=_cutFind(mx,my);if(f&&!f.tgt.line)return f;
+  var best=null,ba=Infinity;
+  function test(L,tgt){if(!L||!L.m||L.open||!_cutIn(L,mx,my))return;var x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;L.pts.forEach(function(p){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);});
+    var a=(x1-x0)*(y1-y0);if(a<ba){ba=a;best={loop:L,tgt:tgt};}}
+  shapes.forEach(function(s){
+    if(s.kind==='rect'&&!s.groupId&&s.w>0&&s.h>0)test(_cutLoop(s),{s:s});
+    else if((s.kind==='circle'&&s.holeType!=='faucet'&&s.holeType!=='outlet'&&!s.groupId)||(s.kind==='ellipse'&&!s.hole&&!s.groupId))test(_cutLoop(s),{s:s});
+  });
+  _lineBoundaryGroups().forEach(function(g){var L=g.map(function(it){return it.s;}),lp=_cutLineLoop(L);if(lp)test(lp,{lines:L});});
+  return best;
+}
+function _joinOlds(f){return f.tgt.s?[f.tgt.s]:f.tgt.lines.map(_realOf).filter(function(l,i,a){return a.indexOf(l)===i;});}
+// 맞출 점: 사각형 = 진짜 꼭짓점 + 변 가운데 + 라운드·모따기 끝 / 선 조각 = 꺾이는 점(곡선 근사 안쪽 점 뺌) / 원·타원 = 사분점·축 끝 + 중심
+function _joinPts(f){
+  var s=f.tgt.s,L=f.loop,P=[];
+  if(s&&s.kind==='rect'){var c=_rectCorners(s);c.forEach(function(q,i){var r=c[(i+1)%4];P.push([q.x,q.y],[(q.x+r.x)/2,(q.y+r.y)/2]);});
+    var n=L.pts.length;L.pts.forEach(function(p,i){var a=L.src[(i-1+n)%n],b=L.src[i];if(!(a&&b&&a.arcR!==undefined&&b.arcR!==undefined))P.push(p);});}
+  else if(s&&s.kind==='circle')P.push([s.cx+s.r,s.cy],[s.cx-s.r,s.cy],[s.cx,s.cy+s.r],[s.cx,s.cy-s.r],[s.cx,s.cy]);
+  else if(s&&s.kind==='ellipse'){_ellPts(s,4).forEach(function(q){P.push(q);});P.push([s.cx,s.cy]);}
+  else{var m=L.pts.length;L.pts.forEach(function(p,i){var a=L.src[(i-1+m)%m],b=L.src[i];
+    if(a&&b&&((a.arcR!==undefined&&b.arcR!==undefined)||(a.ellArc!==undefined&&b.ellArc!==undefined)))return;P.push(p);});}
+  return P;
+}
+// 같이 옮길 것: 조각 안에 든 도형(가운데 점) + 둘레 위 가공 표시 + 같은 그룹(싱크볼 둘레 등)
+function _joinRiders(L,olds,st0){
+  var r=shapes.filter(function(o){
+    if(olds.indexOf(o)>=0)return false;
+    var p=o.kind==='rect'?[o.x+o.w/2,o.y+o.h/2]:o.cx!==undefined?[o.cx,o.cy]:o.kind==='note'?[o.x,o.y]:o.x1!==undefined?[(o.x1+o.x2)/2,(o.y1+o.y2)/2]:null;if(!p)return false;
+    if(['gosramark','jollymark','grindregion'].indexOf(o.kind)>=0){var pr=_cutProj(L,p[0],p[1]);if(pr&&pr.d<2)return true;
+      var ca=_findCornerAttach(o.x1,o.y1,o.x2,o.y2);if(ca){var am=(ca.arc.a0+ca.arc.a1)/2,pr2=_cutProj(L,ca.arc.x+ca.arc.r*Math.cos(am),ca.arc.y+ca.arc.r*Math.sin(am));if(pr2&&pr2.d<3)return true;}}
+    if(o.kind==='line'||o.kind==='arc')return false; // 다른 선 조각의 선은 안 끌고 감
+    if(st0&&st0.indexOf(o)>=0)return false; // 기준 조각은 안 끌고 감
+    return _cutIn(L,p[0],p[1]);
+  }),g={};
+  r.forEach(function(o){if(o.groupId)g[o.groupId]=1;});
+  shapes.forEach(function(o){if(o.groupId&&g[o.groupId]&&r.indexOf(o)<0&&olds.indexOf(o)<0)r.push(o);});
+  return r;
+}
+function _joinRestore(st){st.mv.forEach(function(o,i){Object.assign(o,JSON.parse(JSON.stringify(st.mv0[i])));});st.d=[0,0];} // 제자리 (되돌려 옮기면 소수 오차)
+function _joinSetD(st,dx,dy){var ex=dx-st.d[0],ey=dy-st.d[1];if(!ex&&!ey)return;st.mv.forEach(function(o){shiftS(o,ex,ey);});st.d=[dx,dy];}
+function _joinMove(mx,my,free){
+  var st=_joinSt;
+  if(!st||st.stage===1){var f=_joinFind(mx,my);_joinHover=f&&!(st&&_joinOlds(f).some(function(o){return st.baseOlds.indexOf(o)>=0;}))?f:null;return;}
+  var dx=mx-st.g[0],dy=my-st.g[1],tol=14/scale,best=null;st.snap=null;
+  if(!free)st.mp.forEach(function(p){st.bp.forEach(function(q){var ddx=q[0]-(p[0]+dx),ddy=q[1]-(p[1]+dy),d=Math.hypot(ddx,ddy);if(d<=tol&&(!best||d<best.d))best={d:d,x:ddx,y:ddy,q:q};});});
+  if(best){dx+=best.x;dy+=best.y;st.snap=best.q;}
+  _joinSetD(st,dx,dy);
+}
+function _joinDown(mx,my){
+  var st=_joinSt;
+  if(!st){var f=_joinFind(mx,my);if(!f)return;_joinSt={stage:1,base:f,baseOlds:_joinOlds(f),bp:_joinPts(f)};_joinHover=null;redraw();return;}
+  if(st.stage===1){var f2=_joinFind(mx,my);if(!f2)return;var olds=_joinOlds(f2);if(olds.some(function(o){return st.baseOlds.indexOf(o)>=0;}))return;
+    st.h0=JSON.stringify(shapes.map(function(s){return Object.assign({},s);})); // 되돌리기 = 옮기기 전
+    st.movF=f2;st.mp=_joinPts(f2);st.mv=olds.concat(_joinRiders(f2.loop,olds,st.baseOlds));st.mv0=st.mv.map(function(o){return JSON.parse(JSON.stringify(o));});
+    st.g=[mx,my];st.d=[0,0];st.stage=2;_joinHover=null;_joinMove(mx,my);redraw();return;}
+  if(st.stage===2){
+    if(st.d[0]||st.d[1]){_hist.push(st.h0);if(_hist.length>50)_hist.shift();_savedBoardLayout=null;_savedBoardImg=null;}
+    _joinSt=null;selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();
+  }
+}
+function _joinCancel(){var st=_joinSt;if(!st)return false;
+  if(st.stage===2){_joinRestore(st);st.stage=1;st.snap=null;}else _joinSt=null;
+  redraw();return true;}
+function _joinLoopPath(L){var n=L.pts.length;ctx.beginPath();L.pts.forEach(function(p,i){var c=toCanvas(p[0],p[1]);if(i)ctx.lineTo(c[0],c[1]);else ctx.moveTo(c[0],c[1]);});ctx.closePath();}
+// 미리보기: 기준 조각(금색) · 붙일 조각/올린 조각(하늘색) · 맞춘 꼭짓점(초록 점) + 마우스 옆 안내
+function _joinPreview(){
+  if(tool!=='join')return;
+  var st=_joinSt;ctx.save();ctx.setLineDash([]);
+  if(st&&st.base){ctx.strokeStyle='#FFD740';ctx.lineWidth=2.5;ctx.shadowColor='rgba(255,215,64,0.55)';ctx.shadowBlur=8;_joinLoopPath(st.base.loop);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,215,64,0.9)';st.bp.forEach(function(p){var c=toCanvas(p[0],p[1]);ctx.fillRect(c[0]-2.5,c[1]-2.5,5,5);});}
+  var H=st&&st.stage===2?null:_joinHover;
+  if(H){ctx.strokeStyle='rgba(0,229,255,0.85)';ctx.lineWidth=3;ctx.shadowColor='rgba(0,229,255,0.5)';ctx.shadowBlur=8;_joinLoopPath(H.loop);ctx.stroke();ctx.shadowBlur=0;}
+  if(st&&st.stage===2){var L=st.movF.loop;ctx.strokeStyle='rgba(0,229,255,0.9)';ctx.lineWidth=2.5;ctx.save();ctx.translate(st.d[0]*scale,st.d[1]*scale);_joinLoopPath(L);ctx.stroke();ctx.restore();
+    if(st.snap){var sc=toCanvas(st.snap[0],st.snap[1]);ctx.strokeStyle='#00E676';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(sc[0],sc[1],8,0,2*Math.PI);ctx.stroke();ctx.fillStyle='#00E676';ctx.beginPath();ctx.arc(sc[0],sc[1],3.5,0,2*Math.PI);ctx.fill();}}
+  var l1,hint;
+  if(!st){l1='기준 조각 클릭';hint='붙여 둘 쪽(움직이지 않는 조각)을 고름';}
+  else if(st.stage===1){l1='붙일 조각 클릭';hint='누른 조각이 마우스를 따라감 · Esc = 기준 다시 고르기';}
+  else{l1=st.snap?'꼭짓점에 맞춤 — 클릭 = 붙이기':'꼭짓점 가까이 가져가면 딱 붙음';hint='클릭 = 이 자리에 놓기 · Alt = 맞춤 없이 · Esc = 뒤로';}
+  var px=toCanvas(lastMx||0,lastMy||0);
+  ctx.font='bold 13px "Malgun Gothic",sans-serif';var w1=ctx.measureText(l1).width;ctx.font='11px "Malgun Gothic",sans-serif';var w=Math.max(w1,ctx.measureText(hint).width)+14,x=px[0]+18,y=px[1]+18;
+  if(x+w>cv.width-4)x=px[0]-18-w;if(y+38>cv.height-4)y=px[1]-18-38;
+  ctx.fillStyle='rgba(10,18,34,0.94)';ctx.fillRect(x,y,w,38);ctx.strokeStyle='#2A4F92';ctx.lineWidth=1;ctx.strokeRect(x,y,w,38);
+  ctx.textBaseline='top';ctx.textAlign='left';ctx.font='bold 13px "Malgun Gothic",sans-serif';ctx.fillStyle=st&&st.snap?'#00E676':'#E3B861';ctx.fillText(l1,x+7,y+4);
+  ctx.font='11px "Malgun Gothic",sans-serif';ctx.fillStyle='#A9B4C8';ctx.fillText(hint,x+7,y+21);
+  ctx.restore();
+}
 function doTrim(mx,my){
   var ne=_nearestEdge(mx,my,10/scale),nc=_nearestCurve(mx,my,10/scale);
   if(nc&&(!ne||nc.d<ne.d))return _trimCurve(nc); // 원·호·타원을 눌렀으면 곡선 트림
@@ -6170,6 +6262,7 @@ function redraw(){
     ctx.beginPath();ctx.moveTo(hep1_[0],hep1_[1]);ctx.lineTo(hep2_[0],hep2_[1]);ctx.stroke();
     ctx.restore();
   }
+  if(tool==='join'&&!printRender)_joinPreview(); // 결합: 기준·붙일 조각·맞춘 꼭짓점 (다시 그릴 때마다)
 }
 function _redrawBody(_fxNow){
   dimLabels=[];_dimDraw(autoAdjustDims); // 치수 자리 맞춤도 치수 틀에서
@@ -6485,6 +6578,9 @@ cv.addEventListener('mousedown',function(e){
   } else if(tool==='cut'){
     cv.focus();_cutDown(mx,my,e);
 
+  } else if(tool==='join'){
+    cv.focus();_joinDown((e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale);
+
   } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&(_h.lineDim||_h.drag);})()){
     // 선 절단 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
     var _hd=hitDim(e.offsetX,e.offsetY);
@@ -6684,6 +6780,7 @@ cv.addEventListener('mousemove',function(e){
   }
 
   redraw();
+  if(tool==='join'){var _jx=(e.offsetX-offsetX)/scale,_jy=(e.offsetY-offsetY)/scale;lastMx=_jx;lastMy=_jy;_joinMove(_jx,_jy,e.altKey);redraw();return;}
   if(snapKind&&snapKind!=='grid')drawSnapInd(mx,my,snapKind);
   drawGuides(mx,my);
   if(tool==='dimline'){_dimRaw=[(e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale];if(_dimSt||dimLineType==='r'||dimLineType==='phi')_dimPreview(mx,my,e.shiftKey);}
@@ -6833,7 +6930,7 @@ cv.addEventListener('wheel',function(e){
 },{passive:false});
 
 cv.setAttribute('tabindex','0');
-cv.addEventListener('contextmenu',function(e){e.preventDefault();if(tool==='line'&&lineChain)_lineEnd();}); // 선 절단 중 오른쪽 클릭 = 끝내기
+cv.addEventListener('contextmenu',function(e){e.preventDefault();if(tool==='line'&&lineChain)_lineEnd();if(tool==='join')_joinCancel();}); // 선 절단 중 오른쪽 클릭 = 끝내기
 function fmtMoney(el){
   var raw=el.value.replace(/[^0-9]/g,'');
   el.value=raw?parseInt(raw).toLocaleString():'';
@@ -7258,6 +7355,7 @@ document.addEventListener('keydown',function(e){
     if(_cutKey(e)){e.preventDefault();e.stopPropagation();return;}
     if(e.key==='Shift'&&_cutSt.stage===2){_cutChord(_cutSt,true);_cutRedraw();}
   }
+  if(tool==='join'&&_joinSt&&e.key==='Escape'&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){_joinCancel();e.preventDefault();e.stopPropagation();return;}
   // 글자 입력칸(현장·제품명·단가 등)에서는 Ctrl+C·V·X·Z·A·Y를 브라우저 기본(글자 복사·붙여넣기·되돌리기)으로 — 도형 복사/붙여넣기·되돌리기로 가로채지 않음 (2026-10-29)
   var _ae=document.activeElement||{};
   if((e.ctrlKey||e.metaKey)&&!e.altKey&&(/^Key[CVXZAY]$/.test(e.code||'')||/^(c|v|x|z|a|y)$/i.test(e.key||''))&&(/INPUT|TEXTAREA|SELECT/.test(_ae.tagName||'')||_ae.isContentEditable)&&!(_ae.type==='checkbox'||_ae.type==='radio'||_ae.type==='button'))return;
@@ -7326,6 +7424,8 @@ document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
     if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 절단 이어 그리기 끝
+    if(_joinSt&&_joinSt.stage===2)_joinRestore(_joinSt); // 결합 중 다른 도구 = 옮기던 조각 제자리
+    _joinSt=null;_joinHover=null;
     tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;_ellSt=null;_cutSt=null;_cutHover=null;
     document.querySelectorAll('.tool-btn').forEach(function(x){x.classList.remove('active','active-edit');});
     b.classList.add(EDITTOOLS.indexOf(tool)>=0?'active-edit':'active');
