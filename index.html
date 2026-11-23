@@ -8666,6 +8666,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     _boardFrame(bctx,ox,oy,_biLbl,placed,_bd.bw,_bd.bh,sc,k,_img);
 
     // 피스 배치
+    _bpDefer=[];
     for(var i=0;i<placed.length;i++){
       var p=placed[i];
       var px=ox+mg+p.x*sc,py=oy+mg+p.y*sc;
@@ -8683,6 +8684,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       // 스냅 인접 피스 테두리
       if(isSnapNb&&!isSnap){bctx.strokeStyle='#FFB300';bctx.lineWidth=2;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
     }
+    _bpFlush(); // 고스라 ▲ (모든 조각 위에)
     _bsMarkPairs(bctx,placed,(gap+15)*sc,k); // 옆 조각과 맞붙은 가공 변 표시
     _boardSheen(bctx,ox,oy,_bd.bw*sc,_bd.bh*sc,_prodGloss(_boardLabel(placed)),k); // 유광이면 반사 띠 + 표
 
@@ -9748,7 +9750,7 @@ function _renderCleanBoards(cvs,boards,bw,bh,margin,bi0){ // bi0: 첫 장의 전
     var bx=PAD+col*best.cw+(best.cw-bw*sc)/2,by=PAD+row*best.ch+70+(best.ch-110-bh*sc)/2,d=_boardDims(board);
     var img=_slabImgFor(_boardLabel(board)),tex={img:img,bx:bx,by:by,w:d.bw*sc,h:d.bh*sc,board:board};
     _boardFrame(g,bx,by,_boardTitle(board,bi0+bi),board,d.bw,d.bh,sc,1,img);
-    board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});
+    _bpDefer=[];board.forEach(function(p,pi){_boardPiece(g,p,pi,bx+(margin+p.x)*sc,by+(margin+p.y)*sc,sc,ref,1,tex);});_bpFlush();
     _boardSheen(g,bx,by,d.bw*sc,d.bh*sc,_prodGloss(_boardLabel(board)),1); // 유광이면 반사 띠 + 표
   });
 }
@@ -9816,6 +9818,8 @@ function _objSize(q,turn){ // 원판 배치 객체 이름 아래 "(가로×세�
 // 원판 배치에 가공 표시(2026-11-23 사용자 요청): 조각에 딸린 밑면연마(재료 쪽 띠 주황 빗금)·고스라(검정 ▲, 재료 쪽을 향함)·졸리컷(빨간 선 + ★, 앞면 ☆)
 //   그린 변은 p._mk = [{k:'grind'|'gosra'|'jolly', a,b(px), n(재료 쪽 단위, px), f(앞면)}]로 남겨 _bsMarkPairs가 옆 조각과 맞붙은 가공 변을 찾음
 var _MK_NAME={grind:'밑면연마',gosra:'고스라',jolly:'졸리컷'};
+var _bpDefer=null; // 원판 한 장을 그리는 동안 나중에 그릴 고스라 ▲ (옆 조각 위에 보이게)
+function _bpFlush(){var d=_bpDefer;_bpDefer=null;if(d)d.forEach(function(f){f();});}
 function _bpMarks(g,p,pc,M,sc,k){
   p._mk=[];if(!pc)return;
   function inCut(x,y){return pc.cutouts.some(function(q){return _expPieceContains({s:q},x,y);})||pc.holes.some(function(q){return Math.hypot(x-q.cx,y-q.cy)<q.r;});}
@@ -9839,7 +9843,10 @@ function _bpMarks(g,p,pc,M,sc,k){
     else if(kd==='gosra'){if(s.sym!==false){ // 도면과 같은 ▲: 꼭지점이 변 위, 조각 변은 바깥에서·싱크볼 등 타공부 변은 구멍 안에서 변을 향함 (_gosraSym, 2026-11-23 사용자 요청 "온장 배치 고스라가 이상")
       var gs=_gosraSym(s),z=Math.max(5,9*k);
       if(gs){var ap=M(gs.mx,gs.my),q2=M(gs.mx+gs.dx*10,gs.my+gs.dy*10),dl=Math.hypot(q2[0]-ap[0],q2[1]-ap[1])||1,dv=[(q2[0]-ap[0])/dl,(q2[1]-ap[1])/dl],bc=[ap[0]-dv[0]*z*1.5,ap[1]-dv[1]*z*1.5];
-        g.beginPath();g.moveTo(ap[0],ap[1]);g.lineTo(bc[0]-dv[1]*z*0.8,bc[1]+dv[0]*z*0.8);g.lineTo(bc[0]+dv[1]*z*0.8,bc[1]-dv[0]*z*0.8);g.closePath();g.fillStyle='#111';g.fill();}}}
+        // ▲는 조각 바깥(옆 조각 자리)에 놓이므로 모든 조각을 그린 뒤에 그림(_bpDefer) + 흰 테두리 — 옆 조각에 가려 안 보이던 것 (2026-11-23 사용자 요청)
+        var tri=function(){g.save();g.setLineDash([]);g.beginPath();g.moveTo(ap[0],ap[1]);g.lineTo(bc[0]-dv[1]*z*0.8,bc[1]+dv[0]*z*0.8);g.lineTo(bc[0]+dv[1]*z*0.8,bc[1]-dv[0]*z*0.8);g.closePath();
+          g.strokeStyle='#fff';g.lineWidth=Math.max(1.5,2*k);g.lineJoin='round';g.stroke();g.fillStyle='#111';g.fill();g.restore();};
+        if(_bpDefer)_bpDefer.push(tri);else tri();}}}
     else{g.strokeStyle='rgba(229,57,53,0.85)';g.lineWidth=3*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
       if(s.sym!==false){var R=Math.max(5,8*k),sc2=[mid[0]+np[0]*R*1.7,mid[1]+np[1]*R*1.7];g.beginPath();for(var i=0;i<10;i++){var an=-Math.PI/2+i*Math.PI/5,rr=i%2?R*0.42:R;g.lineTo(sc2[0]+Math.cos(an)*rr,sc2[1]+Math.sin(an)*rr);}g.closePath();
         if(s.front){g.strokeStyle='#E53935';g.lineWidth=1.5*k;g.stroke();}else{g.fillStyle='#E53935';g.fill();}}}
