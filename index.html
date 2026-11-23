@@ -8053,7 +8053,7 @@ function _restoreSavedBoards(saved,items){
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
     if(saved.boardKeep&&saved.boardKeep[i])b.keep=true; // 손으로 더한 원판
-    b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(sp&&sp.flip&&!_bsSym(p.item))p.flip=true;}); // 180°·270° 돌림 (180° 돌려도 같은 모양이면 버림)
+    b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(sp&&sp.flip)p.flip=true;}); // 180°·270° 돌림 (2026-11-23: 모든 조각 네 방향 — 각도를 늘 표시하니 대칭 조각도 그대로)
     var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 원판 크기
   });
   return boards;
@@ -8229,8 +8229,8 @@ function _bsSym(it){
     var qb=getBBox(q);if(!qb)return false;var mx=(qb.l+qb.r)/2,my=(qb.t+qb.b)/2;return mx>l&&mx<r&&my>t&&my<b;});
 }
 function _bsTurn(p,EW,EH){
-  var st=(p.rotated?1:0)+(p.flip?2:0),sym=_bsSym(p.item);if(sym&&p.flip){delete p.flip;st-=2;}
-  for(var k=1;k<=3;k++){var ns=(st+k)%4;if(sym)ns%=2;var nr=ns%2===1,d=_placeDims(p.item,nr,EW,EH);
+  var st=(p.rotated?1:0)+(p.flip?2:0); // 2026-11-23 사용자 요청 "모든 각도로 안 돈다" → 대칭 조각도 0→90→180→270 (예전 _bsSym 0↔90만은 없앰)
+  for(var k=1;k<=3;k++){var ns=(st+k)%4,nr=ns%2===1,d=_placeDims(p.item,nr,EW,EH);
     if(d.pw<=EW+0.01&&d.ph<=EH+0.01){var cx=p.x+p.pw/2,cy=p.y+p.ph/2;p.pw=d.pw;p.ph=d.ph;p.rotated=nr;if(ns>=2)p.flip=true;else delete p.flip;
       if(p.x!=null){p.x=cx-p.pw/2;p.y=cy-p.ph/2;} // 가운데 기준으로 돌림
       return true;}}
@@ -9980,8 +9980,7 @@ function _bsMarkPairs(g,placed,tolPx,k,sc,hits){
   var nm=pc?_expPieceName(pc.s):'',sz=p.item.label?_pLabel(p):(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
   if(p.rotated)sz=_swapWH(sz); // 90° 돌려 놓았으면 크기 글자도 원판에 보이는 가로×세로로 (↻ 표시는 그대로, 2026-11-19 사용자 요청)
   if(rot){var _dg=-rot*180/Math.PI+(p.rotated?90:0)+(p.flip?180:0);_dg=Math.round(((_dg%360)+360)%360*10)/10;sz+=' ↻'+_dg+'°';}
-  else if(p.flip)sz+=' ↻'+(p.rotated?270:180)+'°'; // 180°·270° 돌림
-  else if(p.rotated)sz+=' ↻';
+  else sz+=' ↻'+((p.rotated?90:0)+(p.flip?180:0))+'°'; // 돌림 각도 늘 표시: ↻0° ↻90° ↻180° ↻270° (2026-11-23 사용자 요청)
   var lines=nm?[nm,sz]:[sz],minF=12*k;
   var fs=Math.min(38*k,ph*0.28,pw*0.85/Math.max.apply(null,lines.map(function(t){return t.length;}))*1.6);
   var vertical=false;
