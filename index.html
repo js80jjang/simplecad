@@ -487,7 +487,9 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
     <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
     <div class="proc-row2"><span class="pr-name">음식물투입구</span><span class="pr-qty" id="pl-food">-</span><span class="pr-sub" id="ps-food">-</span></div>
-    <div class="proc-row2"><span class="pr-name">도마</span><span class="pr-qty" id="pl-doma">-</span><span class="pr-sub" id="ps-doma">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 200×300</span><span class="pr-qty" id="pl-doma1">-</span><span class="pr-sub" id="ps-doma1">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 300×400</span><span class="pr-qty" id="pl-doma2">-</span><span class="pr-sub" id="ps-doma2">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 400×600</span><span class="pr-qty" id="pl-doma3">-</span><span class="pr-sub" id="ps-doma3">-</span></div>
     <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
     <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
@@ -497,7 +499,10 @@ canvas{display:block;cursor:crosshair}
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">라운드</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
-    <div class="proc-row2"><span class="pr-name">└ 모서리 R</span><span class="pr-qty" id="pl-rr">-</span><span class="pr-sub" id="ps-rr">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R50~100</span><span class="pr-qty" id="pl-r100">-</span><span class="pr-sub" id="ps-r100">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R100~150</span><span class="pr-qty" id="pl-r150">-</span><span class="pr-sub" id="ps-r150">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R150~200</span><span class="pr-qty" id="pl-r200">-</span><span class="pr-sub" id="ps-r200">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R200~250</span><span class="pr-qty" id="pl-r250">-</span><span class="pr-sub" id="ps-r250">-</span></div>
     <div class="proc-row2"><span class="pr-name">밑면연마</span><span class="pr-qty" id="pl-grind">-</span><span class="pr-sub" id="ps-grind">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 150×150</span><span class="pr-qty" id="pl-grind150">-</span><span class="pr-sub" id="ps-grind150">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 100mm+</span><span class="pr-qty" id="pl-grind100">-</span><span class="pr-sub" id="ps-grind100">-</span></div>
@@ -7117,8 +7122,8 @@ function calcCost(){
   var pGosra=gta('gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
   var nRR=cnt.r100+cnt.r150+cnt.r200+cnt.r250,subRR=(cnt.r100*gta('r100')+cnt.r150*gta('r150')+cnt.r200*gta('r200')+cnt.r250*gta('r250'))*qty;
   var nDoma=cnt.doma1+cnt.doma2+cnt.doma3,subDoma=(cnt.doma1*gta('doma1')+cnt.doma2*gta('doma2')+cnt.doma3*gta('doma3'))*qty;
-  upd('pl-rr','ps-rr',nRR>0?nRR+'개':'-',subRR);
-  upd('pl-doma','ps-doma',nDoma>0?nDoma+'회':'-',subDoma);
+  ['r100','r150','r200','r250'].forEach(function(k){upd('pl-'+k,'ps-'+k,cnt[k]>0?cnt[k]+'개':'-',cnt[k]*gta(k)*qty);}); // 구간마다 따로 (2026-11-23 사용자 요청)
+  ['doma1','doma2','doma3'].forEach(function(k){upd('pl-'+k,'ps-'+k,cnt[k]>0?cnt[k]+'개':'-',cnt[k]*gta(k)*qty);});
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
