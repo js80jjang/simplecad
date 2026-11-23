@@ -136,7 +136,8 @@
     drawDims·drawDimsLine·drawDimsCircle·drawDimsEllipse·drawDimLine(치수선 도구)·drawNestDims·_drawAngleMarks·autoAdjustDims. 새 치수 그리기도 _dimDraw 안에서.
     `dimLabels` 자리는 치수 틀 좌표(화면 ÷ `_annDimCur`) — `hitDim`·치수 끌기(document mousemove, `_annRun`)·`_dimInputPopup`이 변환. 그리기 미리보기 도형도 `_annDraw`. 도면화(printRender)는 k=1. 휠 = ×1.1 / ÷1.1
   - 크기 손잡이(2026-10-30 개발판에서 만들어 합침): 선택 도형 하나(싱크볼·쿡탑 묶음이면 본체) `_rszTarget` → `drawHandles`가 손잡이(`_rszHandles`, 위치 `_rszHs`) —
-    사각형 꼭짓점 4·변 가운데 4(반대쪽 고정, 돌린 사각형은 그 축 `_rszFrame`) / 원 둘레 4(지름) / 타원 두 축 끝 / 선 양 끝. 누르면 `_rszStart`(saveHistory) → 끌기 `_rszApply`(자기 점엔 스냅 안 함) → 놓으면 `_rszEnd`
+    사각형 꼭짓점 4·변 가운데 4(반대쪽 고정, 돌린 사각형은 그 축 `_rszFrame`) / 원 둘레 4(지름) / 타원 두 축 끝 / 선 양 끝 /
+    밑면연마·고스라·졸리컷 양 끝(`_isMarkRsz`: groupId 없고 sym:false 아닌 것, 2026-11-23 사용자 요청 — 스냅 잡은 점을 원래 선에 내려 그 선 위로만, 최소 1mm). 누르면 `_rszStart`(saveHistory) → 끌기 `_rszApply`(자기 점엔 스냅 안 함) → 놓으면 `_rszEnd`
     (싱크볼 `syncGroupShapes`, 바뀌었으면 저장 배치 초기화). 끄는 중 숫자+Enter = `_rszTyped`(사각 꼭짓점 "가로,세로"·빈 쪽은 그대로, 변 = 그 치수, 원 = 지름, 타원 = 그 축 길이, 선 = 길이), Esc = 처음 크기, 마우스 옆 `_rszOverlay`
     사각 꼭짓점·타원 축 손잡이(`_rszCorner`, 싱크볼·쿡탑 포함, 타원은 잡은 축 칸부터·돌렸으면 "축1/축2")는 가로·세로 두 칸, 치수 글자 칸도 Tab = w↔h·rx↔ry — Tab(또는 , 스페이스 x)으로 `_rsz.fi` 전환, 겹쳐 보기 "가로 700 × 세로 ▏"(2026-11-03 사용자 요청)
   - 움직임 효과: `_fxScan`(redraw마다 지난번 도형 Set과 비교) → 새 도형 `_fxIn` 0.22초 나타나기, 지운 도형 `_fxOut` 0.18초 사라지기(`_fxDraw`), 대부분 새 객체(불러오기)면 효과 없음.
