@@ -9817,7 +9817,7 @@ function _objSize(q,turn){ // 원판 배치 객체 이름 아래 "(가로×세�
 }
 // 원판 배치에 가공 표시(2026-11-23 사용자 요청): 조각에 딸린 밑면연마(재료 쪽 띠 주황 빗금)·고스라(검정 ▲, 재료 쪽을 향함)·졸리컷(빨간 선 + ★, 앞면 ☆)
 //   그린 변은 p._mk = [{k:'grind'|'gosra'|'jolly', a,b(px), n(재료 쪽 단위, px), f(앞면)}]로 남겨 _bsMarkPairs가 옆 조각과 맞붙은 가공 변을 찾음
-var _MK_NAME={grind:'밑면연마',gosra:'고스라',jolly:'졸리컷'};
+var _MK_NAME={grind:'밑면연마',gosra:'고스라',jolly:'졸리컷',none:'가공 없음'};
 var _bpDefer=null; // 원판 한 장을 그리는 동안 나중에 그릴 고스라 ▲ (옆 조각 위에 보이게)
 function _bpFlush(){var d=_bpDefer;_bpDefer=null;if(d)d.forEach(function(f){f();});}
 function _bpMarks(g,p,pc,M,sc,k){
@@ -9857,19 +9857,27 @@ function _bpMarks(g,p,pc,M,sc,k){
 //   그 겹친 구간을 빨간 띠로 + "졸리컷 ↔ 졸리컷" 글자
 function _bsMarkPairs(g,placed,tolPx,k){
   var out={};
+  // m1·m2가 마주 보고 붙었으면 겹친 구간 {s0,s1,dist,u}
+  function face(m1,m2){
+    var L1=Math.hypot(m1.b[0]-m1.a[0],m1.b[1]-m1.a[1]);if(L1<1)return null;var u=[(m1.b[0]-m1.a[0])/L1,(m1.b[1]-m1.a[1])/L1];
+    if(m1.n[0]*m2.n[0]+m1.n[1]*m2.n[1]>-0.98)return null; // 서로 마주 봄(재료 쪽이 반대)
+    var dist=(m2.a[0]-m1.a[0])*m1.n[0]+(m2.a[1]-m1.a[1])*m1.n[1];if(dist>0.5||dist<-tolPx)return null; // m2가 m1 바깥쪽 tol 안
+    var t1=(m2.a[0]-m1.a[0])*u[0]+(m2.a[1]-m1.a[1])*u[1],t2=(m2.b[0]-m1.a[0])*u[0]+(m2.b[1]-m1.a[1])*u[1],s0=Math.max(0,Math.min(t1,t2)),s1=Math.min(L1,Math.max(t1,t2));
+    return s1-s0<4?null:{s0:s0,s1:s1,dist:dist,u:u};}
+  function add(m1,m2,f){var u=f.u,key=Math.round((m1.a[0]+u[0]*(f.s0+f.s1)/2)/6)+','+Math.round((m1.a[1]+u[1]*(f.s0+f.s1)/2)/6);
+    var o=out[key]||(out[key]={a:[m1.a[0]+u[0]*f.s0,m1.a[1]+u[1]*f.s0],b:[m1.a[0]+u[0]*f.s1,m1.a[1]+u[1]*f.s1],n:m1.n,d:f.dist,k1:{},k2:{}});
+    o.k1[m1.k+(m1.k==='jolly'&&m1.f?'f':'')]=1;o.k2[m2.k+(m2.k==='jolly'&&m2.f?'f':'')]=1;}
   for(var i=0;i<placed.length;i++)for(var j=i+1;j<placed.length;j++){
     var A=placed[i]._mk||[],B=placed[j]._mk||[];
-    A.forEach(function(m1){B.forEach(function(m2){
-      var L1=Math.hypot(m1.b[0]-m1.a[0],m1.b[1]-m1.a[1]);if(L1<1)return;var u=[(m1.b[0]-m1.a[0])/L1,(m1.b[1]-m1.a[1])/L1];
-      if(m1.n[0]*m2.n[0]+m1.n[1]*m2.n[1]>-0.98)return; // 서로 마주 봄(재료 쪽이 반대)
-      var dist=(m2.a[0]-m1.a[0])*m1.n[0]+(m2.a[1]-m1.a[1])*m1.n[1];if(dist>0.5||dist<-tolPx)return; // m2가 m1 바깥쪽 tol 안
-      var t1=(m2.a[0]-m1.a[0])*u[0]+(m2.a[1]-m1.a[1])*u[1],t2=(m2.b[0]-m1.a[0])*u[0]+(m2.b[1]-m1.a[1])*u[1],s0=Math.max(0,Math.min(t1,t2)),s1=Math.min(L1,Math.max(t1,t2));
-      if(s1-s0<4)return;
-      var key=Math.round((m1.a[0]+u[0]*(s0+s1)/2)/6)+','+Math.round((m1.a[1]+u[1]*(s0+s1)/2)/6);
-      var o=out[key]||(out[key]={a:[m1.a[0]+u[0]*s0,m1.a[1]+u[1]*s0],b:[m1.a[0]+u[0]*s1,m1.a[1]+u[1]*s1],n:m1.n,d:dist,k1:{},k2:{}});
-      o.k1[m1.k+(m1.k==='jolly'&&m1.f?'f':'')]=1;o.k2[m2.k+(m2.k==='jolly'&&m2.f?'f':'')]=1;});});}
+    A.forEach(function(m1){B.forEach(function(m2){var f=face(m1,m2);if(f)add(m1,m2,f);});});
+    // 한쪽만 가공 변: 옆 조각의 가공 없는 외곽 변과 맞붙음 → "고스라 ↔ 가공 없음" (옆 조각에 가공 변이 마주 보고 있으면 위에서 이미 표시)
+    [[A,B,placed[j]._ed||[]],[B,A,placed[i]._ed||[]]].forEach(function(r){
+      r[0].forEach(function(m1){if(r[1].some(function(m2){return face(m1,m2);}))return;
+        r[2].forEach(function(e){var f=face(m1,e);if(f)add(m1,e,f);});});});
+  }
   var avoid=[];placed.forEach(function(p){if(p._lbox)avoid.push(p._lbox); // 조각 이름·크기 글자, ★·▲ 기호, 앞서 놓은 가공 변 글자
-    (p._mk||[]).forEach(function(m){if(m.k==='grind')return;var R=Math.max(5,9*k),mx=(m.a[0]+m.b[0])/2+m.n[0]*R*1.7,my=(m.a[1]+m.b[1])/2+m.n[1]*R*1.7;avoid.push([mx-R*1.3,my-R*1.3,mx+R*1.3,my+R*1.3]);});});
+    (p._mk||[]).forEach(function(m){if(m.k==='grind')return;var R=Math.max(5,9*k),mx=(m.a[0]+m.b[0])/2+m.n[0]*R*1.7,my=(m.a[1]+m.b[1])/2+m.n[1]*R*1.7;avoid.push([mx-R*1.3,my-R*1.3,mx+R*1.3,my+R*1.3]);
+      if(m.k==='gosra'){var gx=(m.a[0]+m.b[0])/2-m.n[0]*R*0.75,gy=(m.a[1]+m.b[1])/2-m.n[1]*R*0.75;avoid.push([gx-R*1.1,gy-R*1.1,gx+R*1.1,gy+R*1.1]);}});}); // ▲ (변 바깥)
   Object.keys(out).forEach(function(key){var o=out[key],w=Math.max(6*k,-o.d+4*k);
     var q=[[o.a[0]+o.n[0]*2,o.a[1]+o.n[1]*2],[o.b[0]+o.n[0]*2,o.b[1]+o.n[1]*2],[o.b[0]-o.n[0]*(w-2),o.b[1]-o.n[1]*(w-2)],[o.a[0]-o.n[0]*(w-2),o.a[1]-o.n[1]*(w-2)]];
     var both=o.k1.jolly&&o.k2.jolly||o.k1.jollyf&&o.k2.jollyf;
@@ -9922,6 +9930,14 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
     // 객체 이름 (싱크볼·쿡탑·식기세척기·타공…) — 구멍 가운데, 칸에 맞게 줄이고 너무 작으면 생략 (2026-11-07 사용자 요청)
   }
   _bpMarks(g,p,pc,M,sc,k); // 밑면연마·고스라·졸리컷 (2026-11-23 사용자 요청)
+  // 조각 외곽 변(px, n = 재료 쪽) — 가공 변이 가공 없는 옆 조각 변과 맞붙은 것도 표시하려고 (_bsMarkPairs, 2026-11-23 사용자 요청 "고스라 자리가 헷갈림")
+  p._ed=[];if(sh.kind!=='circle'&&sh.kind!=='ellipse'){
+    var _P=_bpPoly(p)||[[p.x,p.y],[p.x+(p.pw||p.item.w),p.y],[p.x+(p.pw||p.item.w),p.y+(p.ph||p.item.h)],[p.x,p.y+(p.ph||p.item.h)]],_ar=0;
+    _P=_P.map(function(q){return[ox0+(q[0]-p.x)*sc,oy0+(q[1]-p.y)*sc];});
+    for(var _i=0;_i<_P.length;_i++){var _a=_P[_i],_b=_P[(_i+1)%_P.length];_ar+=_a[0]*_b[1]-_b[0]*_a[1];}
+    for(var _j=0;_j<_P.length;_j++){var a_=_P[_j],b_=_P[(_j+1)%_P.length],l_=Math.hypot(b_[0]-a_[0],b_[1]-a_[1]);if(l_<2)continue;
+      var nx_=-(b_[1]-a_[1])/l_,ny_=(b_[0]-a_[0])/l_;if(_ar<0){nx_=-nx_;ny_=-ny_;} // 화면 좌표(y 아래)에서 넓이 + = 시계 방향 → 왼쪽 법선이 안쪽
+      p._ed.push({k:'none',a:a_,b:b_,n:[nx_,ny_]});}}
   // 이름 + 크기 (회전 배치는 ↻)
   var nm=pc?_expPieceName(pc.s):'',sz=p.item.label?_pLabel(p):(_fmtDim(p.item.w)+'×'+_fmtDim(p.item.h));
   if(p.rotated)sz=_swapWH(sz); // 90° 돌려 놓았으면 크기 글자도 원판에 보이는 가로×세로로 (↻ 표시는 그대로, 2026-11-19 사용자 요청)
