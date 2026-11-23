@@ -285,6 +285,15 @@ canvas{display:block;cursor:crosshair}
       <button id="food-shape-r" onclick="setFoodShape('r')" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">사각 202×264</button>
     </div>
   </div>
+  <button class="tool-btn" data-tool="doma" title="도마 타공 (R10, 고스라 없음): 200×300 / 300×400 / 400×600"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" rx="2.5" stroke="#8D6E63" stroke-width="1.5" fill="rgba(141,110,99,0.25)"/><line x1="4" y1="4" x2="12" y2="4" stroke="#8D6E63" stroke-width="1"/><line x1="4" y1="7.5" x2="12" y2="7.5" stroke="#8D6E63" stroke-width="1"/></svg> 도마</button>
+  <div class="fillet-sub" id="doma-sub" style="display:none">
+    <div style="font-size:11px;color:#A9B4C8;margin-bottom:3px">크기 (R10)</div>
+    <div style="display:flex;gap:3px">
+      <button id="doma-size-0" onclick="setDomaSize(0)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:10px;color:#fff">200×300</button>
+      <button id="doma-size-1" onclick="setDomaSize(1)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:10px;color:#fff">300×400</button>
+      <button id="doma-size-2" onclick="setDomaSize(2)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:10px;color:#fff">400×600</button>
+    </div>
+  </div>
   <div class="tgl">추가 가공</div>
   <button class="tool-btn" data-tool="fillet"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><path d="M5,1 L13,1 L13,10 L1,10 L1,5 Q1,1 5,1 Z" stroke="#FFD740" stroke-width="1.5" fill="none"/></svg> 모서리 라운드</button>
   <div class="fillet-sub" id="fillet-sub">
@@ -294,9 +303,7 @@ canvas{display:block;cursor:crosshair}
   <button class="tool-btn" data-tool="grind"><svg width="16" height="11" viewBox="0 0 16 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="9.5" x2="15" y2="9.5" stroke="#FFD740" stroke-width="1.5"/><line x1="3" y1="2" x2="5" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="2" x2="9" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="2" x2="13" y2="9.5" stroke="#FFD740" stroke-width="1.2" stroke-linecap="round"/></svg> 밑면연마</button>
   <div class="fillet-sub" id="grind-sub" style="display:none">
     <label>깊이(mm):<input type="number" id="grind-depth" value="50" min="1" step="1" style="width:50px;margin-left:4px"></label>
-    <button id="grind-150-btn" onclick="toggleGrind150()" style="margin-top:4px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#FFD740;border-radius:3px;cursor:pointer;font-size:11px">150×150 원클릭</button>
-    <button id="grind-100-btn" onclick="toggleGrind100()" style="margin-top:2px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#80DEEA;border-radius:3px;cursor:pointer;font-size:11px">100mm+ 모드</button>
-  </div>
+    <button id="grind-150-btn" onclick="toggleGrind150()" style="margin-top:4px;width:100%;padding:3px 0;background:#16233D;border:1px solid #56647E;color:#FFD740;border-radius:3px;cursor:pointer;font-size:11px">150×150 원클릭</button>  </div>
   <button class="tool-btn" data-tool="jollycut"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="10" x2="13" y2="1" stroke="#2A4F92" stroke-width="1.8" stroke-linecap="round"/><circle cx="7" cy="5.5" r="2.5" stroke="#2A4F92" stroke-width="1.2" fill="#0A1222"/></svg> 졸리컷</button>
   <div class="fillet-sub" id="jollycut-sub" style="display:none">
     <div style="font-size:11px;color:#A9B4C8;margin-bottom:3px">졸리컷 면 (도면 ★ 뒷면 · ☆ 앞면)</div>
@@ -480,6 +487,7 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
     <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
     <div class="proc-row2"><span class="pr-name">음식물투입구</span><span class="pr-qty" id="pl-food">-</span><span class="pr-sub" id="ps-food">-</span></div>
+    <div class="proc-row2"><span class="pr-name">도마</span><span class="pr-qty" id="pl-doma">-</span><span class="pr-sub" id="ps-doma">-</span></div>
     <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
     <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
     <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
@@ -489,6 +497,7 @@ canvas{display:block;cursor:crosshair}
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">라운드</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
+    <div class="proc-row2"><span class="pr-name">└ 모서리 R</span><span class="pr-qty" id="pl-rr">-</span><span class="pr-sub" id="ps-rr">-</span></div>
     <div class="proc-row2"><span class="pr-name">밑면연마</span><span class="pr-qty" id="pl-grind">-</span><span class="pr-sub" id="ps-grind">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 150×150</span><span class="pr-qty" id="pl-grind150">-</span><span class="pr-sub" id="ps-grind150">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 100mm+</span><span class="pr-qty" id="pl-grind100">-</span><span class="pr-sub" id="ps-grind100">-</span></div>
@@ -630,7 +639,35 @@ var shapes=[],nextId=1;
 var products=[{name:'',size:'',qty:1}];
 var _tier='consumer'; // 'cost'|'dealer'|'consumer'|'custom'
 var TIER_PREFIX={cost:'su-',dealer:'du-',consumer:'ru-',custom:'cu-',retail:'xt-'};
-var TIER_KEYS=['rect','sink','cook','food','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra'];
+var TIER_KEYS=['rect','sink','cook','food','holef','holeo','line','chamfer','grind','grind150','grind100','jolly','gosra','r100','r150','r200','r250','doma1','doma2','doma3'];
+// 모서리 R 구간 단가(2026-11-23 사용자 요청: 사각 조각 라운드 코너 하나마다, R50~100 1만 / ~150 1.5만 / ~200 2만 / ~250 2.5만 원가)
+// 도마 단가(2026-11-23 사용자 요청: 200×300 4만 / 300×400 6만 / 400×600 8만 원가, 업체·소비자는 둘 다 5만·7만·9만 — syncAllTierPrices가 ×1.2·×1.3 안 함)
+// 칸 = [키, 이름, 단위, 원가, 업체, 소비자, 취급점, 뒤에 붙일 칸 키]
+var _EXTRA_PRICE_ROWS=[
+  ['doma1','도마 200×300','원/회',40000,50000,50000,50000,'food'],
+  ['doma2','도마 300×400','원/회',60000,70000,70000,70000,'doma1'],
+  ['doma3','도마 400×600','원/회',80000,90000,90000,90000,'doma2'],
+  ['r100','└ R50~100','원/개',10000,12000,13000,10000,'chamfer'],
+  ['r150','└ R100~150','원/개',15000,18000,19500,15000,'r100'],
+  ['r200','└ R150~200','원/개',20000,24000,26000,20000,'r150'],
+  ['r250','└ R200~250','원/개',25000,30000,32500,25000,'r200']];
+var _FIXED_TIER_KEYS={doma1:1,doma2:1,doma3:1}; // 원가를 바꿔도 업체·소비자 값을 따라 바꾸지 않음
+(function(){
+  var cols={'su-':3,'du-':4,'ru-':5,'xt-':6,'cu-':-1};
+  _EXTRA_PRICE_ROWS.forEach(function(r){
+    Object.keys(cols).forEach(function(pf){
+      var after=document.getElementById(pf+r[7]);if(!after||document.getElementById(pf+r[0]))return;
+      var row=document.createElement('div');row.className='su-row';
+      var lb=document.createElement('label');lb.textContent=r[1];lb.style.fontSize='10px';
+      var inp=document.createElement('input');inp.id=pf+r[0];inp.type='text';inp.setAttribute('inputmode','numeric');inp.style.imeMode='disabled';
+      var ci=cols[pf];if(ci<0)inp.placeholder='0';else inp.value=r[ci].toLocaleString();
+      inp.setAttribute('oninput',pf==='su-'?'fmtMoney(this);syncAllTierPrices()':'fmtMoney(this);calcCost()');
+      var un=document.createElement('span');un.className='su-unit';un.textContent=r[2];
+      row.appendChild(lb);row.appendChild(inp);row.appendChild(un);
+      after.parentNode.parentNode.insertBefore(row,after.parentNode.nextSibling);
+    });
+  });
+})();
 
 function setTier(t){
   _tier=t;
@@ -991,6 +1028,14 @@ function _foodShapeBtns(){
 }
 function setFoodShape(v){_foodShape=v==='r'?'r':'c';_foodShapeBtns();if(typeof redraw==='function')redraw();}
 setTimeout(_foodShapeBtns,0);
+// 도마(2026-11-23 사용자 요청): 객체 삽입, 누른 자리 가운데 W×H R10 타공부(groupRole main, applianceType 'doma', 고스라 없음) — 가공비는 크기별 단가(doma1~3)
+var _DOMA_SIZES=[[200,300],[300,400],[400,600]],_domaSize=0;
+function _domaSizeBtns(){_DOMA_SIZES.forEach(function(z,i){var b=document.getElementById('doma-size-'+i);if(!b)return;var on=_domaSize===i;b.style.background=on?'#1F3F7A':'#121D33';b.style.borderColor=on?'#2A4F92':'#56647E';});}
+function setDomaSize(i){_domaSize=i;_domaSizeBtns();if(typeof redraw==='function')redraw();}
+setTimeout(_domaSizeBtns,0);
+// 도마 단가 칸: 짧은 변·긴 변이 가장 가까운 기본 크기 (크기를 고쳐도 가까운 쪽 단가)
+function _domaKey(s){var a=Math.min(Math.abs(s.w),Math.abs(s.h)),b=Math.max(Math.abs(s.w),Math.abs(s.h)),best=0,bd=1e18;
+  _DOMA_SIZES.forEach(function(z,i){var d=Math.abs(z[0]-a)+Math.abs(z[1]-b);if(d<bd){bd=d;best=i;}});return 'doma'+(best+1);}
 function setSinkGosra(on){ // 왼쪽 도구 칸: 새 싱크볼 기본값 + 선택한 싱크볼
   _sinkGosra=!!on;
   _sinkGosraBtns();if(_selSinks().length)setSinkGosraSel(on);
@@ -1136,7 +1181,7 @@ function _findCornerAttach(x1,y1,x2,y2){
         if(!info||info.type!=='fillet'||info.r<=0)continue;
         var pin=_rcPIn(s,ck),pout=_rcPOut(s,ck);
         // 싱크볼/쿡탑은 이 rect가 "구멍"이라 재료가 코너 바깥쪽에 있음 (일반 사각 절단은 반대로 안쪽)
-        var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook'||_atCk==='dish');
+        var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook'||_atCk==='dish'||_atCk==='doma');
         if(Math.hypot(x1-pin.x,y1-pin.y)<=tol&&Math.hypot(x2-pout.x,y2-pout.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
         if(Math.hypot(x1-pout.x,y1-pout.y)<=tol&&Math.hypot(x2-pin.x,y2-pin.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
       }
@@ -1277,6 +1322,7 @@ renderProductList();
 // ═══ 스냅 ═══
 function syncAllTierPrices(){
   TIER_KEYS.forEach(function(k){
+    if(_FIXED_TIER_KEYS[k])return; // 도마 = 업체·소비자 값 따로
     var el=document.getElementById('su-'+k);if(!el)return;
     var v=parseFloat((el.value||'0').replace(/,/g,''))||0;
     var du=document.getElementById('du-'+k);
@@ -1424,7 +1470,7 @@ function applySnap(cx,cy,excl){
   if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
   // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)
-  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'));
+  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'&&tool!=='doma'));
   if(applyOrtho){var dx=Math.abs(mx-drawStart[0]),dy=Math.abs(my-drawStart[1]);if(dx>=dy)my=drawStart[1];else mx=drawStart[0];}
   return[mx,my];
 }
@@ -1633,7 +1679,7 @@ function findEdgeContext(x1,y1,x2,y2){
       // 따라서 일반 사각 절단(재료=rect 안쪽)과 반대로 inward/outward를 뒤집어, 밑면연마/고스라 등이
       // 도형 바깥쪽(둘러싼 상판 재료 쪽)으로 적용되도록 함.
       var _at=_applianceType(s);
-      if(_at==='sink'||_at==='cook'||_at==='dish'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
+      if(_at==='sink'||_at==='cook'||_at==='dish'||_at==='doma'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
     }
     if(found&&area<bestArea){bestArea=area;best=Object.assign({shape:s,groupId:s.groupId||null},found);}
   }
@@ -1675,6 +1721,7 @@ function _baseColor(s){
   if(_at==='sink')return '#2A4F92';
   if(_at==='cook')return '#FFA726';
   if(_at==='dish')return '#AB47BC';
+  if(_at==='doma')return '#8D6E63';
   if(s.holeType==='food'||s.food)return '#A1887F';
   if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return '#26A69A'; // 사각·타원 타공
   return SCOL[s.kind]||'#1F3F7A';
@@ -1684,6 +1731,7 @@ function _baseFill(s){
   if(_at==='sink')return 'rgba(66,165,245,0.10)';
   if(_at==='cook')return 'rgba(255,167,38,0.10)';
   if(_at==='dish')return 'rgba(171,71,188,0.10)';
+  if(_at==='doma')return 'rgba(141,110,99,0.14)';
   if(s.food)return 'rgba(161,136,127,0.12)';
   if(_at==='hole'||(s.kind==='ellipse'&&s.hole))return 'rgba(38,166,154,0.12)';
   return SFILL[s.kind]||'';
@@ -1881,7 +1929,7 @@ function drawGrindRegion(s,preview){
     var _lx,_ly,_lw,_lh;
     var _isLH=Math.abs(_ly2-_ly1)<1;
     // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
-    var _matOutRot=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})();
+    var _matOutRot=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish'||_at==='doma';})();
     if(_isLH){
       var _lxa=Math.min(_lx1,_lx2),_lxb=Math.max(_lx1,_lx2);
       if(_ly1<0){_lx=_lxa;_ly=_matOutRot?(-_lrh/2-_dpx):(-_lrh/2);_lw=_lxb-_lxa;_lh=_dpx;}
@@ -1924,7 +1972,7 @@ function drawGrindRegion(s,preview){
 
   if(parentShape&&parentShape.kind==='rect'&&edge_!=='unknown'){
     // 싱크볼/쿡탑처럼 이 rect가 "구멍"인 경우, 재료는 rect 바깥쪽에 있으므로 연마 스트립도 바깥쪽으로 그려야 함
-    var _matOutEdge=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})();
+    var _matOutEdge=(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish'||_at==='doma';})();
     // 부모 rect의 실제 엣지 좌표 기준 — 대각선으로 그려도 올바른 직사각형 보장
     if(edge_==='top'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y-depth):parentShape.y;rh=depth;}
     else if(edge_==='bottom'){rx=xmin;rw=xmax-xmin;ry=_matOutEdge?(parentShape.y+parentShape.h):(parentShape.y+parentShape.h-depth);rh=depth;}
@@ -1940,7 +1988,7 @@ function drawGrindRegion(s,preview){
   var px=c1[0],py=c1[1],pw=c2[0]-c1[0],ph=c2[1]-c1[1];
   // 싱크볼/쿡탑처럼 재료가 rect 바깥쪽에 있는 경우, 안쪽 라운드 경계로 추가 클리핑하면 바깥쪽 스트립이
   // 통째로 지워지므로(겹치는 영역이 거의 없음) 이 경우엔 라운드 경계 클리핑을 적용하지 않음
-  var _matOutForClip=!!(parentShape&&(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish';})());
+  var _matOutForClip=!!(parentShape&&(function(){var _at=_applianceType(parentShape);return _at==='sink'||_at==='cook'||_at==='dish'||_at==='doma';})());
   // Yellow hatch fill — 부모 도형이 라운드/챔퍼(개별 코너 s.corners 또는 균일 cornerType)이면 그 경계에 맞춰 클리핑
   ctx.save();
   // 먼저 항상 스트립 영역(px,py,pw,ph) 자체로 클리핑을 제한한다 — 해칭 선은 스트립보다 훨씬 넓은 범위로
@@ -5771,6 +5819,11 @@ function finalizeShape(fmx,fmy){
     var cs=makeShape('rect',{x:rx2,y:ry2,w:560,h:480,cornerType:'none',cornerSize:0,groupId:cgid,groupRole:'main',applianceType:'cook'});
     saveHistory();shapes.push(cs);selectedShapes=[cs];_savedBoardLayout=null;_savedBoardImg=null;s=null;
   }
+  else if(tool==='doma'){ // 도마: 누른 자리 가운데, 고른 크기 R10
+    var _dz=_DOMA_SIZES[_domaSize]||_DOMA_SIZES[0];
+    var dms=makeShape('rect',{x:x0-_dz[0]/2,y:y0-_dz[1]/2,w:_dz[0],h:_dz[1],cornerType:'fillet',cornerSize:10,groupId:'grp'+nextId,groupRole:'main',applianceType:'doma'});
+    saveHistory();shapes.push(dms);selectedShapes=[dms];_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
+  }
   else if(tool==='dishwasher'){ // 식기세척기(상부개폐형) 타공 470×460, 고스라 없음 (2026-11-07)
     var dws=makeShape('rect',{x:x0-235,y:y0-230,w:470,h:460,cornerType:'none',cornerSize:0,groupId:'grp'+nextId,groupRole:'main',applianceType:'dish'});
     saveHistory();shapes.push(dws);selectedShapes=[dws];_savedBoardLayout=null;_savedBoardImg=null;s=null;
@@ -6596,6 +6649,7 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
     else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
+    else if(tool==='doma'){var _dz2=_DOMA_SIZES[_domaSize]||_DOMA_SIZES[0];ps={kind:'rect',x:x0-_dz2[0]/2,y:y0-_dz2[1]/2,w:_dz2[0],h:_dz2[1],cornerType:'fillet',cornerSize:10,applianceType:'doma',ops:[]};}
     else if(tool==='dishwasher'){ps={kind:'rect',x:x0-235,y:y0-230,w:470,h:460,cornerType:'none',cornerSize:0,applianceType:'dish',ops:[]};}
     else if(tool==='foodhole'&&_foodShape==='r'){ps={kind:'rect',x:x0-_FOOD_RW/2,y:y0-_FOOD_RH/2,w:_FOOD_RW,h:_FOOD_RH,cornerType:'none',cornerSize:0,applianceType:'hole',food:true,ops:[]};}
     else if(tool==='foodhole'){ps={kind:'circle',cx:x0,cy:y0,r:80,holeType:'food',ops:[]};}
@@ -6969,12 +7023,13 @@ function loadAllTierPrices(){
 function calcCost(){
   _fullVer++; // 원판 그대로 판정 다시
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
-  var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0};
+  var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0,r100:0,r150:0,r200:0,r250:0,doma1:0,doma2:0,doma3:0};
   shapes.forEach(function(s){
     if(s.kind==='rect'){
       if(s.groupId&&s.groupRole==='main'){
         if(s.applianceType==='hole'){if(s.food)cnt.food++;else cnt.holeo++;} // 사각 타공 = 콘센트 타공 금액, 사각 음식물투입구 = 음식물투입구 금액
         else if(s.applianceType==='dish')cnt.dish++; // 식기세척기 = 쿡탑 단가
+        else if(s.applianceType==='doma')cnt[_domaKey(s)]++; // 도마 = 크기별 단가
         else if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
@@ -6984,6 +7039,11 @@ function calcCost(){
         if(_ff.w)_rl-=2*_vh;if(_ff.h)_rl-=2*_vw;
         lenMm.rect+=Math.max(0,_rl);
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
+        // 모서리 R 구간 금액: 라운드 코너 하나마다 R값 구간으로 (R50 미만은 없음, R250 넘으면 R200~250 단가)
+        var _rs=[];
+        if(s.corners)['tl','tr','br','bl'].forEach(function(k){var c=s.corners[k];if(c&&c.type==='fillet'&&c.r>0)_rs.push(+c.r);});
+        else if(s.cornerType==='fillet'&&s.cornerSize>0)_rs=[s.cornerSize,s.cornerSize,s.cornerSize,s.cornerSize];
+        _rs.forEach(function(r){r=Math.round(r*10)/10;if(r<50)return;cnt[r<=100?'r100':r<=150?'r150':r<=200?'r200':'r250']++;});
       }
     } else if(s.kind==='ellipse'){
       if(s.hole)cnt.holeo++; // 타원 타공 = 콘센트 타공 금액
@@ -7031,6 +7091,10 @@ function calcCost(){
   var pGrind100=gta('grind100'),mGrind100=lenMm.grind100/1000,subGrind100=mGrind100*pGrind100*qty;
   var pJolly=gta('jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
   var pGosra=gta('gosra'),mGosra=lenMm.gosra/1000,subGosra=mGosra*pGosra*qty;
+  var nRR=cnt.r100+cnt.r150+cnt.r200+cnt.r250,subRR=(cnt.r100*gta('r100')+cnt.r150*gta('r150')+cnt.r200*gta('r200')+cnt.r250*gta('r250'))*qty;
+  var nDoma=cnt.doma1+cnt.doma2+cnt.doma3,subDoma=(cnt.doma1*gta('doma1')+cnt.doma2*gta('doma2')+cnt.doma3*gta('doma3'))*qty;
+  upd('pl-rr','ps-rr',nRR>0?nRR+'개':'-',subRR);
+  upd('pl-doma','ps-doma',nDoma>0?nDoma+'회':'-',subDoma);
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
@@ -7046,8 +7110,8 @@ function calcCost(){
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subSink+subCook+subDish+subFood+subHolef+subHoleo+subLine+subCirclecut;
-  var totalAdd=subChamfer+subGrind+subGrind150+subGrind100+subJolly+subGosra;
+  var totalCut=subRect+subSink+subCook+subDish+subFood+subDoma+subHolef+subHoleo+subLine+subCirclecut;
+  var totalAdd=subChamfer+subRR+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
   var grand=totalCut+totalAdd+totalOther;
@@ -7186,7 +7250,7 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('keyup',function(e){if(e.key==='Shift'){shiftDown=false;ortho=orthoMode;if(tool==='cut'&&_cutSt&&_cutSt.stage===2){_cutChord(_cutSt,false);_cutRedraw();}}});
 
 // ═══ 도구 버튼 ═══
-var _TOOL_SUBS={sinkbowl:'sinkbowl-sub',foodhole:'foodhole-sub',jollycut:'jollycut-sub',fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub',veinmark:'vein-sub'}; // 도구 → 보조 칸
+var _TOOL_SUBS={sinkbowl:'sinkbowl-sub',foodhole:'foodhole-sub',doma:'doma-sub',jollycut:'jollycut-sub',fillet:'fillet-sub',circle:'circle-sub',circlecut:'circlecut-sub',ellipse:'ellipse-sub',grind:'grind-sub',dimline:'dimline-sub',note:'note-sub',arrow:'arrow-sub',linkmark:'link-sub',veinmark:'vein-sub'}; // 도구 → 보조 칸
 var _TOOL_FOCUS={fillet:'fillet-r',circle:'circle-phi',circlecut:'circlecut-phi',grind:'grind-depth'}; // 도구 → 먼저 입력할 칸
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
@@ -7476,6 +7540,7 @@ function _holeInputsReset(){['circle-phi','hole-rect-w','hole-rect-h','hole-cap-
 function _toolOptsReset(){
   _holeInputsReset();if(pendingHoleType!=='faucet')setPendingHoleType('faucet');
   _foodShape='c';_foodShapeBtns();
+  _domaSize=0;_domaSizeBtns();
   _sinkGosra=true;_sinkGosraBtns();
   _jollyFront=false;_jollyFaceBtns();
 }
@@ -9117,7 +9182,7 @@ function _drawCleanExport(){
   pieces.forEach(function(p){
     p.cutouts.forEach(function(q){
       if(q.kind!=='rect')return;
-      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='dish'?'식기세척기':(at==='hole'?(q.food?'음식물투입구':q.capsule?'캡슐타공':'사각타공'):'타공')));
+      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='dish'?'식기세척기':at==='doma'?'도마':(at==='hole'?(q.food?'음식물투입구':q.capsule?'캡슐타공':'사각타공'):'타공')));
       var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
       var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
       _expText(nm,cen[0],cen[1],p.col[0],fs,'bold',[0,Math.max(8,fs*0.5)],14); // R값은 맨 마지막에 지시선으로
@@ -9421,7 +9486,7 @@ function _boardSheen(g,bx,by,w,h,gloss,k){
 // tex: {img,bx,by,w,h} 제품 원판 사진과 원판 상자(px) — 있으면 조각을 무늬로 채움
 // 조각 안 객체(타공부·타공) 이름 — 원판 배치 글자용
 function _objName(q){
-  if(q.kind==='rect'){var at=_applianceType(q);return at==='sink'?'싱크볼':at==='cook'?'쿡탑':at==='dish'?'식기세척기':at==='hole'?(q.food?'음식물':q.capsule?'캡슐타공':'사각타공'):'타공';}
+  if(q.kind==='rect'){var at=_applianceType(q);return at==='sink'?'싱크볼':at==='cook'?'쿡탑':at==='dish'?'식기세척기':at==='doma'?'도마':at==='hole'?(q.food?'음식물':q.capsule?'캡슐타공':'사각타공'):'타공';}
   if(q.kind==='ellipse')return q.hole?'타원타공':'타원';
   if(q.kind==='circle'||q.kind==='hole'){var t=q.holeType;return t==='faucet'?'수전':t==='food'?'음식물':t==='cut'?'':'콘센트';}
   return '';
