@@ -3739,6 +3739,7 @@ function clearAll(){
 function newProject(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
   if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
+  _pairOv={};
   if(lineChain)_lineEnd();
   saveHistory();
   shapes=[];selectedShapes=[];nextId=1;hoverShape=null;filletSel=[];_dimSt=null;drawStart=null;
@@ -3783,6 +3784,7 @@ function _makeProjectData(){
     offsetY:offsetY,
     scale:scale,
     boardLayout:_savedBoardLayout,
+    boardPairOv:Object.keys(_pairOv).length?_pairOv:undefined, // 원판 배치 인접면 표시 옮김·지움
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
     view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
@@ -5010,7 +5012,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
         document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
         // 저장해 둔 원판 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
-        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;
+        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};
         // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
         //   비교는 계산에 쓸 등급(파일의 등급, 없으면 지금 등급)만, 쉼표·띄어쓰기 무시하고 숫자로, 한쪽이라도 빈 칸이면 비교 안 함
         var useTier=(data.tier&&TIER_PREFIX[data.tier])?data.tier:_tier,fp=data.prices&&data.prices[useTier],cp=_currentAllPrices()[useTier]||{};
@@ -8270,6 +8272,12 @@ function _bsInitEvents(){
         _bs.pickedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}
       return;
     }
+    // 인접면 표시 글자(2026-11-23 사용자 요청 "움직이거나 지울 수 있게"): ✕ = 지우기, 글자 누르고 끌기 = 옮기기 (조각보다 먼저)
+    var _ph=_bsPairAt(ex,ey);
+    if(_ph){if(_ph.xHit){_bsPairHide(_ph.id);return;}
+      _bs.pairSel=_ph.id;_bs.pairDrag={id:_ph.id,ex0:ex,ey0:ey,off:_ph.off,sc:_ph.sc,moved:false};_bs.selectedPiece=null;_bs.pickedPiece=null;_bs.multi=[];
+      bcv.style.cursor='grabbing';renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
+    if(_bs.pairSel){_bs.pairSel=null;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}
     var hit=_bsHitTest(ex,ey);
     _bs.dragStartX=ex;_bs.dragStartY=ey;_bs.dragMoved=false;
     // 여러 조각 같이 옮기기(2026-11-23 사용자 요청): Ctrl+클릭 = 고르기에 넣고 빼기, 고른 조각 중 하나를 끌면 전부 같이
@@ -8382,6 +8390,10 @@ function _bsInitEvents(){
     if(!_bs)return;
     var r=bcv.getBoundingClientRect();
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
+    if(_bs.pairDrag){var pd=_bs.pairDrag,ov=_pairOv[pd.id]||(_pairOv[pd.id]={});pd.moved=true;
+      ov.dx=Math.round((pd.off[0]+(ex-pd.ex0)/pd.sc)*10)/10;ov.dy=Math.round((pd.off[1]+(ey-pd.ey0)/pd.sc)*10)/10;
+      renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
+    if(!_bs.parkDrag&&!_bs.gdrag&&!_bs.rband&&!_bs.panDrag&&!_bs.selectedPiece&&_bsPairAt(ex,ey)){var _pa=_bsPairAt(ex,ey);bcv.style.cursor=_pa.xHit?'pointer':'move';return;}
     if(_bs.parkDrag){ // 미배치 조각 끌기: 커서를 따라 그림, 놓을 수 없는 원판 위면 빨간 테두리
       var d=_bs.parkDrag;d.ex=ex;d.ey=ey;d.home=ex>=_bs.parkX;var tb=d.home?-1:_bsBoardAt(ex,ey);
       d.bad=tb>=0&&(_boardLabel(_bs.boards[tb])!==_itemProd(d.p.item.shape)||!_bsFitDims(d.p,tb,!!d.p.rotated));
@@ -8484,6 +8496,7 @@ function _bsInitEvents(){
   };
   bcv.onmouseup=function(){
     if(!_bs)return;
+    if(_bs.pairDrag){_bs.pairDrag=null;bcv.style.cursor='move';return;} // 인접면 표시 글자 옮기기 끝
     if(_bs.parkDrag){ // 미배치 조각 놓기: 원판 위면 그 자리에, 아니면 그대로 미배치
       var d=_bs.parkDrag;_bs.parkDrag=null;bcv.style.cursor='default';
       var tb=d.home?-1:_bsBoardAt(d.ex,d.ey);
@@ -8540,7 +8553,9 @@ function _bsInitEvents(){
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}
   };
   bcv.ondblclick=function(e){
-    if(!_bs)return;var r=bcv.getBoundingClientRect();if(_bsHitTest(e.clientX-r.left,e.clientY-r.top))return;
+    if(!_bs)return;var r=bcv.getBoundingClientRect();
+    var _pd=_bsPairAt(e.clientX-r.left,e.clientY-r.top);if(_pd){var _o=_pairOv[_pd.id];if(_o){delete _o.dx;delete _o.dy;}renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;} // 인접면 글자 더블클릭 = 처음 자리로
+    if(_bsHitTest(e.clientX-r.left,e.clientY-r.top))return;
     _bs.zoom=1;_bs.panX=0;_bs.panY=0;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
   };
   bcv.onauxclick=function(e){if(e.button===1)e.preventDefault();};
@@ -8549,6 +8564,7 @@ function _bsInitEvents(){
 function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
   var gap=3; // 피스 간격 mm (잔석 계산 기준)
   var bcv=targetCanvas||document.getElementById('board-cv');
+  if(!targetCanvas&&_bs)_bs.pairHits=[]; // 인접면 표시 글자 누르기 자리 (_bsMarkPairs가 채움)
   var wrap=targetCanvas?null:document.getElementById('board-canvas-wrap');
   bcv.width=cw||(wrap?wrap.clientWidth:800)||800;
   bcv.height=ch||(wrap?wrap.clientHeight:500)||500;
@@ -8685,7 +8701,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
       if(isSnapNb&&!isSnap){bctx.strokeStyle='#FFB300';bctx.lineWidth=2;bctx.setLineDash([]);bctx.strokeRect(px-1,py-1,pw+2,ph+2);}
     }
     _bpFlush(); // 고스라 ▲ (모든 조각 위에)
-    _bsMarkPairs(bctx,placed,(gap+15)*sc,k); // 옆 조각과 맞붙은 가공 변 표시
+    _bsMarkPairs(bctx,placed,(gap+15)*sc,k,sc,targetCanvas||!_bs?null:(_bs.pairHits=_bs.pairHits||[])); // 옆 조각과 맞붙은 가공 변 표시 (창에서는 누르기 자리 기록)
     _boardSheen(bctx,ox,oy,_bd.bw*sc,_bd.bh*sc,_prodGloss(_boardLabel(placed)),k); // 유광이면 반사 띠 + 표
 
     // ── 스냅 터치 경계선 ──
@@ -8825,6 +8841,13 @@ function _bsDelBoard(bi){
   _bs.pickedPiece=null;_bs.selectedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
 }
 function _bsCtxHide(){var m=document.getElementById('board-ctx');if(m)m.style.display='none';}
+// 원판 배치 창의 인접면 표시 글자 누르기: {id, off, sc, xHit(✕)} 또는 null (나중에 그린 것 먼저)
+function _bsPairAt(ex,ey){var H=(_bs&&_bs.pairHits)||[];
+  for(var i=H.length-1;i>=0;i--){var h=H[i];if(h.x&&Math.hypot(ex-h.x[0],ey-h.x[1])<=h.x[2]+2)return Object.assign({xHit:true},h);}
+  for(var j=H.length-1;j>=0;j--){var b=H[j].box;if(ex>=b[0]-2&&ex<=b[2]+2&&ey>=b[1]-2&&ey<=b[3]+2)return H[j];}
+  return null;}
+function _bsPairHide(id){var o=_pairOv[id]||(_pairOv[id]={});o.hide=true;if(_bs){_bs.pairSel=null;_bs.pairDrag=null;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}}
+function _bsPairShowAll(){Object.keys(_pairOv).forEach(function(k){delete _pairOv[k].hide;if(!Object.keys(_pairOv[k]).length)delete _pairOv[k];});if(_bs)renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}
 function _bsCtxShow(bi,cx,cy){
   var m=document.getElementById('board-ctx');
   if(!m){m=document.createElement('div');m.id='board-ctx';document.body.appendChild(m);
@@ -8833,9 +8856,10 @@ function _bsCtxShow(bi,cx,cy){
     document.addEventListener('keydown',function(e){if(e.key==='Escape')_bsCtxHide();},true);}
   var b=_bs.boards[bi],nm=_boardLabel(b),I='display:block;width:100%;text-align:left;background:none;border:0;color:#D9DFEA;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px';
   m.innerHTML='<div style="color:#E3B861;padding:4px 10px 6px;border-bottom:1px solid #1C2A47;margin-bottom:3px;font-weight:bold">원판 '+(bi+1)+(nm?' · '+escHtml(nm):'')+'</div>'
-    +'<button data-a="add" style="'+I+'">＋ 원판 한 장 더하기</button><button data-a="del" style="'+I+'">－ 이 원판 빼기'+(b.length?' <span style="color:#75839C">(조각은 미배치로)</span>':'')+'</button>';
+    +'<button data-a="add" style="'+I+'">＋ 원판 한 장 더하기</button><button data-a="del" style="'+I+'">－ 이 원판 빼기'+(b.length?' <span style="color:#75839C">(조각은 미배치로)</span>':'')+'</button>'
+    +(Object.keys(_pairOv).some(function(k){return _pairOv[k].hide;})?'<button data-a="pairs" style="'+I+'">↺ 지운 인접면 표시 다시 보이기</button>':'');
   m.querySelectorAll('button').forEach(function(x){x.onmouseenter=function(){x.style.background='#121D33';};x.onmouseleave=function(){x.style.background='none';};
-    x.onclick=function(){_bsCtxHide();if(x.dataset.a==='add')_bsAddBoard(bi);else _bsDelBoard(bi);};});
+    x.onclick=function(){_bsCtxHide();if(x.dataset.a==='add')_bsAddBoard(bi);else if(x.dataset.a==='pairs')_bsPairShowAll();else _bsDelBoard(bi);};});
   m.style.display='block';var w=m.offsetWidth,h=m.offsetHeight;m.style.left=Math.min(cx,innerWidth-w-4)+'px';m.style.top=Math.min(cy,innerHeight-h-4)+'px';
 }
 // 빈 장 정리 — 제품(그룹)마다 최소 1장, 빈 장은 그 제품 이름을 남김, 손으로 더한 빈 원판(keep)은 그대로
@@ -8942,6 +8966,7 @@ function goBoardPage(dir){
 // 원판 배치 창이 열려 있으면 ← → = 쪽 넘기기
 document.addEventListener('keydown',function(e){
   var md=document.getElementById('board-modal');if(!md||!md.classList.contains('show')||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||''))return;
+  if((e.key==='Delete'||e.key==='Backspace')&&_bs&&_bs.pairSel){_bsPairHide(_bs.pairSel);e.preventDefault();e.stopPropagation();return;} // 고른 인접면 표시 지우기
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){var b=document.getElementById(e.key==='ArrowLeft'?'board-prev-btn':'board-next-btn');if(b&&b.style.display!=='none'&&!b.disabled){goBoardPage(e.key==='ArrowLeft'?-1:1);e.preventDefault();e.stopPropagation();}}
 },true);
 function closeBoardModal(){
@@ -9817,6 +9842,7 @@ function _objSize(q,turn){ // 원판 배치 객체 이름 아래 "(가로×세�
 }
 // 원판 배치에 가공 표시(2026-11-23 사용자 요청): 조각에 딸린 밑면연마(재료 쪽 띠 주황 빗금)·고스라(검정 ▲, 재료 쪽을 향함)·졸리컷(빨간 선 + ★, 앞면 ☆)
 //   그린 변은 p._mk = [{k:'grind'|'gosra'|'jolly', a,b(px), n(재료 쪽 단위, px), f(앞면)}]로 남겨 _bsMarkPairs가 옆 조각과 맞붙은 가공 변을 찾음
+var _pairOv={}; // 원판 배치 인접면 표시: 키(두 조각 id + 변 방향) → {dx,dy (글자 자리 mm), hide} — 파일 boardPairOv
 var _MK_NAME={grind:'밑면연마',gosra:'고스라',jolly:'졸리컷',none:'가공 없음'};
 var _bpDefer=null; // 원판 한 장을 그리는 동안 나중에 그릴 고스라 ▲ (옆 조각 위에 보이게)
 function _bpFlush(){var d=_bpDefer;_bpDefer=null;if(d)d.forEach(function(f){f();});}
@@ -9855,7 +9881,7 @@ function _bpMarks(g,p,pc,M,sc,k){
 }
 // 옆 조각과 맞붙은 가공 변(2026-11-23 사용자 요청 "붙은 변이 둘 다 졸리컷인지 확인"): 다른 조각의 가공 변이 나란하고 간격이 tolPx 안이며 서로 반대쪽을 보면
 //   그 겹친 구간을 빨간 띠로 + "졸리컷 ↔ 졸리컷" 글자
-function _bsMarkPairs(g,placed,tolPx,k){
+function _bsMarkPairs(g,placed,tolPx,k,sc,hits){
   var out={};
   // m1·m2가 마주 보고 붙었으면 겹친 구간 {s0,s1,dist,u}
   function face(m1,m2){
@@ -9864,38 +9890,50 @@ function _bsMarkPairs(g,placed,tolPx,k){
     var dist=(m2.a[0]-m1.a[0])*m1.n[0]+(m2.a[1]-m1.a[1])*m1.n[1];if(dist>0.5||dist<-tolPx)return null; // m2가 m1 바깥쪽 tol 안
     var t1=(m2.a[0]-m1.a[0])*u[0]+(m2.a[1]-m1.a[1])*u[1],t2=(m2.b[0]-m1.a[0])*u[0]+(m2.b[1]-m1.a[1])*u[1],s0=Math.max(0,Math.min(t1,t2)),s1=Math.min(L1,Math.max(t1,t2));
     return s1-s0<4?null:{s0:s0,s1:s1,dist:dist,u:u};}
-  function add(m1,m2,f){var u=f.u,key=Math.round((m1.a[0]+u[0]*(f.s0+f.s1)/2)/6)+','+Math.round((m1.a[1]+u[1]*(f.s0+f.s1)/2)/6);
-    var o=out[key]||(out[key]={a:[m1.a[0]+u[0]*f.s0,m1.a[1]+u[1]*f.s0],b:[m1.a[0]+u[0]*f.s1,m1.a[1]+u[1]*f.s1],n:m1.n,d:f.dist,k1:{},k2:{}});
+  function pid(p){var sh=p.item&&p.item.shape;return sh?(sh.id!=null?String(sh.id):sh.lines&&sh.lines[0]?'L'+sh.lines[0].id:'?'):'?';}
+  function add(m1,m2,f,pa,pb){var u=f.u,key=Math.round((m1.a[0]+u[0]*(f.s0+f.s1)/2)/6)+','+Math.round((m1.a[1]+u[1]*(f.s0+f.s1)/2)/6);
+    var o=out[key]||(out[key]={a:[m1.a[0]+u[0]*f.s0,m1.a[1]+u[1]*f.s0],b:[m1.a[0]+u[0]*f.s1,m1.a[1]+u[1]*f.s1],n:m1.n,d:f.dist,k1:{},k2:{},
+      id:[pid(pa),pid(pb)].sort().join('~')+'|'+(Math.abs(m1.n[0])>Math.abs(m1.n[1])?'v':'h')+Math.round(Math.abs(m1.n[0]*100))}); // 옮김·지움 기억 키 = 두 조각 + 변 방향 (자리가 바뀌어도 같음)
     o.k1[m1.k+(m1.k==='jolly'&&m1.f?'f':'')]=1;o.k2[m2.k+(m2.k==='jolly'&&m2.f?'f':'')]=1;}
   for(var i=0;i<placed.length;i++)for(var j=i+1;j<placed.length;j++){
-    var A=placed[i]._mk||[],B=placed[j]._mk||[];
-    A.forEach(function(m1){B.forEach(function(m2){var f=face(m1,m2);if(f)add(m1,m2,f);});});
+    var A=placed[i]._mk||[],B=placed[j]._mk||[],Pi=placed[i],Pj=placed[j];
+    A.forEach(function(m1){B.forEach(function(m2){var f=face(m1,m2);if(f)add(m1,m2,f,Pi,Pj);});});
     // 한쪽만 가공 변: 옆 조각의 가공 없는 외곽 변과 맞붙음 → "고스라 ↔ 가공 없음" (옆 조각에 가공 변이 마주 보고 있으면 위에서 이미 표시)
-    [[A,B,placed[j]._ed||[]],[B,A,placed[i]._ed||[]]].forEach(function(r){
+    [[A,B,Pj._ed||[],Pi,Pj],[B,A,Pi._ed||[],Pj,Pi]].forEach(function(r){
       r[0].forEach(function(m1){if(r[1].some(function(m2){return face(m1,m2);}))return;
-        r[2].forEach(function(e){var f=face(m1,e);if(f)add(m1,e,f);});});});
+        r[2].forEach(function(e){var f=face(m1,e);if(f)add(m1,e,f,r[3],r[4]);});});});
   }
   var avoid=[];placed.forEach(function(p){if(p._lbox)avoid.push(p._lbox); // 조각 이름·크기 글자, ★·▲ 기호, 앞서 놓은 가공 변 글자
     (p._mk||[]).forEach(function(m){if(m.k==='grind')return;var R=Math.max(5,9*k),mx=(m.a[0]+m.b[0])/2+m.n[0]*R*1.7,my=(m.a[1]+m.b[1])/2+m.n[1]*R*1.7;avoid.push([mx-R*1.3,my-R*1.3,mx+R*1.3,my+R*1.3]);
       if(m.k==='gosra'){var gx=(m.a[0]+m.b[0])/2-m.n[0]*R*0.75,gy=(m.a[1]+m.b[1])/2-m.n[1]*R*0.75;avoid.push([gx-R*1.1,gy-R*1.1,gx+R*1.1,gy+R*1.1]);}});}); // ▲ (변 바깥)
-  Object.keys(out).forEach(function(key){var o=out[key],w=Math.max(6*k,-o.d+4*k);
+  Object.keys(out).forEach(function(key){var o=out[key],w=Math.max(6*k,-o.d+4*k),ov=_pairOv[o.id]||{};
+    if(ov.hide)return; // 지운 인접면 표시 (2026-11-23 사용자 요청 "움직이거나 지울 수 있게")
     var q=[[o.a[0]+o.n[0]*2,o.a[1]+o.n[1]*2],[o.b[0]+o.n[0]*2,o.b[1]+o.n[1]*2],[o.b[0]-o.n[0]*(w-2),o.b[1]-o.n[1]*(w-2)],[o.a[0]-o.n[0]*(w-2),o.a[1]-o.n[1]*(w-2)]];
-    var both=o.k1.jolly&&o.k2.jolly||o.k1.jollyf&&o.k2.jollyf;
+    var both=o.k1.jolly&&o.k2.jolly||o.k1.jollyf&&o.k2.jollyf,col=both?'#C62828':'#E65100',sel=hits&&_bs&&_bs.pairSel===o.id;
     g.save();g.setLineDash([]);g.beginPath();q.forEach(function(v,i){if(i)g.lineTo(v[0],v[1]);else g.moveTo(v[0],v[1]);});g.closePath();
-    g.fillStyle=both?'rgba(229,57,53,0.55)':'rgba(255,109,0,0.4)';g.fill();g.strokeStyle=both?'#C62828':'#E65100';g.lineWidth=1.5*k;g.stroke();
+    g.fillStyle=both?'rgba(229,57,53,0.55)':'rgba(255,109,0,0.4)';g.fill();g.strokeStyle=sel?'#1E88E5':col;g.lineWidth=(sel?2.5:1.5)*k;g.stroke();
     function nm(ks){return Object.keys(ks).map(function(x){return x==='jollyf'?'앞졸리컷':_MK_NAME[x];}).join('+');}
     var t=nm(o.k1)+' ↔ '+nm(o.k2),fs=Math.max(9,10*k);
     g.font='bold '+fs+'px '+_EXP_FONT;var tw=g.measureText(t).width;g.textAlign='center';g.textBaseline='middle';
-    // 글자 자리: 맞붙은 구간을 따라 가운데부터 훑어 조각 글자·다른 가공 변 글자와 안 겹치는 곳 (없으면 글자 없이 띠만)
-    var hw=tw/2+4,hh=fs*0.75,cx=null,cy=null,ts=[0.5,0.35,0.65,0.2,0.8,0.08,0.92];
-    for(var ti=0;ti<ts.length&&cx===null;ti++){var x=o.a[0]+(o.b[0]-o.a[0])*ts[ti]-o.n[0]*w/2,y=o.a[1]+(o.b[1]-o.a[1])*ts[ti]-o.n[1]*w/2;
-      if(!avoid.some(function(b){return x+hw>b[0]&&x-hw<b[2]&&y+hh>b[1]&&y-hh<b[3];})){cx=x;cy=y;}}
-    if(cx===null){g.restore();return;}
+    var hw=tw/2+4,hh=fs*0.75,cx=null,cy=null,mid=[(o.a[0]+o.b[0])/2-o.n[0]*w/2,(o.a[1]+o.b[1])/2-o.n[1]*w/2];
+    if(ov.dx!=null){cx=mid[0]+ov.dx*sc;cy=mid[1]+ov.dy*sc;} // 손으로 옮긴 자리 (mm → 지금 배율)
+    else{ // 글자 자리: 맞붙은 구간을 따라 가운데부터 훑어 조각 글자·다른 가공 변 글자와 안 겹치는 곳 (없으면 가운데)
+      var ts=[0.5,0.35,0.65,0.2,0.8,0.08,0.92];
+      for(var ti=0;ti<ts.length&&cx===null;ti++){var x=o.a[0]+(o.b[0]-o.a[0])*ts[ti]-o.n[0]*w/2,y=o.a[1]+(o.b[1]-o.a[1])*ts[ti]-o.n[1]*w/2;
+        if(!avoid.some(function(b){return x+hw>b[0]&&x-hw<b[2]&&y+hh>b[1]&&y-hh<b[3];})){cx=x;cy=y;}}
+      if(cx===null){if(!hits){g.restore();return;}cx=mid[0];cy=mid[1];} // 원판 배치 창에서는 겹쳐도 보여서 옮길 수 있게
+    }
     avoid.push([cx-hw,cy-hh,cx+hw,cy+hh]);
-    g.fillStyle='rgba(255,255,255,0.92)';g.fillRect(cx-tw/2-3,cy-fs*0.7,tw+6,fs*1.4);g.strokeStyle=both?'#C62828':'#E65100';g.lineWidth=1;g.strokeRect(cx-tw/2-3,cy-fs*0.7,tw+6,fs*1.4);
-    g.fillStyle=both?'#C62828':'#BF360C';g.fillText(t,cx,cy);g.restore();});
-}
-function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
+    if(Math.hypot(cx-mid[0],cy-mid[1])>hh+w){g.strokeStyle=col;g.lineWidth=1.2*k;g.setLineDash([4*k,3*k]);g.beginPath();g.moveTo(mid[0],mid[1]);g.lineTo(cx,cy);g.stroke();g.setLineDash([]); // 옮긴 글자 → 띠
+      g.fillStyle=col;g.beginPath();g.arc(mid[0],mid[1],2.5*k,0,2*Math.PI);g.fill();}
+    var bx0=cx-tw/2-3,by0=cy-fs*0.7,bw=tw+6,bh=fs*1.4;
+    g.fillStyle='rgba(255,255,255,0.95)';g.fillRect(bx0,by0,bw,bh);g.strokeStyle=sel?'#1E88E5':col;g.lineWidth=sel?2:1;g.strokeRect(bx0,by0,bw,bh);
+    g.fillStyle=both?'#C62828':'#BF360C';g.fillText(t,cx,cy);
+    var xb=null;if(sel){var xr=7;xb=[bx0+bw-xr+2,by0-xr+2,xr]; // 고른 글자: 오른쪽 위 ✕ = 지우기
+      g.fillStyle='#E53935';g.beginPath();g.arc(xb[0],xb[1],xr,0,2*Math.PI);g.fill();g.strokeStyle='#fff';g.lineWidth=1.6;g.beginPath();g.moveTo(xb[0]-3,xb[1]-3);g.lineTo(xb[0]+3,xb[1]+3);g.moveTo(xb[0]+3,xb[1]-3);g.lineTo(xb[0]-3,xb[1]+3);g.stroke();}
+    if(hits)hits.push({id:o.id,box:[bx0,by0,bx0+bw,by0+bh],band:q,x:xb,sc:sc,off:[(cx-mid[0])/sc,(cy-mid[1])/sc]});
+    g.restore();});
+}function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   var FONT=_EXP_FONT,sh=p.item&&p.item.shape;if(!sh)return;
   var keyOf=ref.keyOf,auto=ref.auto,pc=ref.info.get(keyOf(sh)),cc=pc?pc.col:_EXP_COLS[pi%_EXP_COLS.length];
   var ox0=ox,oy0=oy;
