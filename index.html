@@ -9719,14 +9719,22 @@ function _bsMarkPairs(g,placed,tolPx,k){
       var key=Math.round((m1.a[0]+u[0]*(s0+s1)/2)/6)+','+Math.round((m1.a[1]+u[1]*(s0+s1)/2)/6);
       var o=out[key]||(out[key]={a:[m1.a[0]+u[0]*s0,m1.a[1]+u[1]*s0],b:[m1.a[0]+u[0]*s1,m1.a[1]+u[1]*s1],n:m1.n,d:dist,k1:{},k2:{}});
       o.k1[m1.k+(m1.k==='jolly'&&m1.f?'f':'')]=1;o.k2[m2.k+(m2.k==='jolly'&&m2.f?'f':'')]=1;});});}
+  var avoid=[];placed.forEach(function(p){if(p._lbox)avoid.push(p._lbox); // 조각 이름·크기 글자, ★·▲ 기호, 앞서 놓은 가공 변 글자
+    (p._mk||[]).forEach(function(m){if(m.k==='grind')return;var R=Math.max(5,9*k),mx=(m.a[0]+m.b[0])/2+m.n[0]*R*1.7,my=(m.a[1]+m.b[1])/2+m.n[1]*R*1.7;avoid.push([mx-R*1.3,my-R*1.3,mx+R*1.3,my+R*1.3]);});});
   Object.keys(out).forEach(function(key){var o=out[key],w=Math.max(6*k,-o.d+4*k);
     var q=[[o.a[0]+o.n[0]*2,o.a[1]+o.n[1]*2],[o.b[0]+o.n[0]*2,o.b[1]+o.n[1]*2],[o.b[0]-o.n[0]*(w-2),o.b[1]-o.n[1]*(w-2)],[o.a[0]-o.n[0]*(w-2),o.a[1]-o.n[1]*(w-2)]];
     var both=o.k1.jolly&&o.k2.jolly||o.k1.jollyf&&o.k2.jollyf;
     g.save();g.setLineDash([]);g.beginPath();q.forEach(function(v,i){if(i)g.lineTo(v[0],v[1]);else g.moveTo(v[0],v[1]);});g.closePath();
     g.fillStyle=both?'rgba(229,57,53,0.55)':'rgba(255,109,0,0.4)';g.fill();g.strokeStyle=both?'#C62828':'#E65100';g.lineWidth=1.5*k;g.stroke();
     function nm(ks){return Object.keys(ks).map(function(x){return x==='jollyf'?'앞졸리컷':_MK_NAME[x];}).join('+');}
-    var t=nm(o.k1)+' ↔ '+nm(o.k2),cx=(o.a[0]+o.b[0])/2-o.n[0]*w/2,cy=(o.a[1]+o.b[1])/2-o.n[1]*w/2,fs=Math.max(9,11*k);
+    var t=nm(o.k1)+' ↔ '+nm(o.k2),fs=Math.max(9,10*k);
     g.font='bold '+fs+'px '+_EXP_FONT;var tw=g.measureText(t).width;g.textAlign='center';g.textBaseline='middle';
+    // 글자 자리: 맞붙은 구간을 따라 가운데부터 훑어 조각 글자·다른 가공 변 글자와 안 겹치는 곳 (없으면 글자 없이 띠만)
+    var hw=tw/2+4,hh=fs*0.75,cx=null,cy=null,ts=[0.5,0.35,0.65,0.2,0.8,0.08,0.92];
+    for(var ti=0;ti<ts.length&&cx===null;ti++){var x=o.a[0]+(o.b[0]-o.a[0])*ts[ti]-o.n[0]*w/2,y=o.a[1]+(o.b[1]-o.a[1])*ts[ti]-o.n[1]*w/2;
+      if(!avoid.some(function(b){return x+hw>b[0]&&x-hw<b[2]&&y+hh>b[1]&&y-hh<b[3];})){cx=x;cy=y;}}
+    if(cx===null){g.restore();return;}
+    avoid.push([cx-hw,cy-hh,cx+hw,cy+hh]);
     g.fillStyle='rgba(255,255,255,0.92)';g.fillRect(cx-tw/2-3,cy-fs*0.7,tw+6,fs*1.4);g.strokeStyle=both?'#C62828':'#E65100';g.lineWidth=1;g.strokeRect(cx-tw/2-3,cy-fs*0.7,tw+6,fs*1.4);
     g.fillStyle=both?'#C62828':'#BF360C';g.fillText(t,cx,cy);g.restore();});
 }
@@ -9829,7 +9837,10 @@ function _boardPiece(g,p,pi,ox,oy,sc,ref,k,tex){
   // 조각 번호 (번호 표시가 켜져 있을 때)
   var _pn=null;
   if(auto){_pn=keyOf(sh).shapeNum||auto[shapes.indexOf(keyOf(sh))];if(sh.kind==='linegroup')for(var _li=0;_li<sh.lines.length&&!_pn;_li++)_pn=auto[shapes.indexOf(sh.lines[_li])];}
+  p._lbox=null;
   if(fs>=minF){
+    g.save();var _lw2=0;lines.forEach(function(t,li){var isName=nm&&li===0,f=isName?fs:Math.max(minF,fs*0.72);g.font=(isName?'bold ':'')+Math.round(f)+'px '+FONT;_lw2=Math.max(_lw2,g.measureText(t).width);});g.restore();
+    var _ha=_lw2/2+4*k,_hb=lines.length*fs*0.75+3*k;if(vertical){var _tt=_ha;_ha=_hb;_hb=_tt;}p._lbox=[lx-_ha,ly-_hb,lx+_ha,ly+_hb]; // 조각 이름·크기 글자 자리 (맞붙은 가공 변 글자가 피함)
     g.save();g.translate(lx,ly);if(vertical)g.rotate(-Math.PI/2);
     g.textAlign='center';g.textBaseline='middle';
     lines.forEach(function(t,li){
