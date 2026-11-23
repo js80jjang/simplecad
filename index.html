@@ -5502,6 +5502,45 @@ function _joinMove(mx,my,free){
   if(best){dx+=best.x;dy+=best.y;st.snap=best.q;}
   _joinSetD(st,dx,dy);
 }
+// 놓은 뒤 두 조각이 변으로 맞닿으면 한 조각(선 조각)으로 합침 — 맞닿은 구간은 절단선이 아니므로 없앰 (2026-11-23 사용자 요청 "붙는 부위는 커팅하면 안 되니 그 선이 없게")
+//   두 둘레를 같은 방향(반시계)으로 → 서로의 꼭짓점에서 변을 나눔 → 반대 방향으로 겹친 구간을 둘 다 뺌 → 남은 변을 한 고리로 이음(넓이가 두 조각 합과 같을 때만, 겹치거나 구멍이 생기면 안 합침)
+//   → 같은 직선 위 이어진 곧은 변은 하나로. 맞닿은 구간 위의 고스라·졸리컷·밑면연마는 지움. 조각 안 도형은 그대로. 반환 = 새 선들(안 합쳤으면 null)
+function _joinMerge(st){
+  var E=0.5;function eq(p,q){return Math.hypot(p[0]-q[0],p[1]-q[1])<E;}
+  function segsOf(L,d){var n=L.pts.length,S=[];for(var i=0;i<n;i++){var a=L.pts[i],b=L.pts[(i+1)%n];if(Math.hypot(b[0]-a[0],b[1]-a[1])<0.05)continue;S.push({a:[a[0]+d[0],a[1]+d[1]],b:[b[0]+d[0],b[1]+d[1]],src:L.src[i]});}return S;}
+  function area(S){var s=0;S.forEach(function(g){s+=g.a[0]*g.b[1]-g.b[0]*g.a[1];});return s/2;}
+  function orient(S){return area(S)<0?S.reverse().map(function(g){return{a:g.b,b:g.a,src:g.src};}):S;}
+  var A=orient(segsOf(st.base.loop,[0,0])),B=orient(segsOf(st.movF.loop,st.d)),aA=Math.abs(area(A)),aB=Math.abs(area(B));
+  function split(S,O){var out=[];S.forEach(function(g){var dx=g.b[0]-g.a[0],dy=g.b[1]-g.a[1],l2=dx*dx+dy*dy,ts=[];
+      O.forEach(function(o){var p=o.a,t=((p[0]-g.a[0])*dx+(p[1]-g.a[1])*dy)/l2;if(t<=1e-6||t>=1-1e-6)return;if(Math.abs((p[0]-g.a[0])*dy-(p[1]-g.a[1])*dx)/Math.sqrt(l2)<E)ts.push(t);});
+      ts.sort(function(a,b){return a-b;});var prev=g.a;ts.forEach(function(t){var q=[g.a[0]+dx*t,g.a[1]+dy*t];if(!eq(q,prev)){out.push({a:prev,b:q,src:g.src});prev=q;}});
+      if(!eq(prev,g.b)||prev===g.a)out.push({a:prev,b:g.b,src:g.src});});return out;}
+  var A2=split(A,B),B2=split(B,A),shared=[];
+  A2.forEach(function(g){var h=B2.filter(function(k){return !k.del&&eq(g.a,k.b)&&eq(g.b,k.a);})[0];if(h){g.del=h.del=true;shared.push(g);}});
+  var sl=0;shared.forEach(function(g){sl+=Math.hypot(g.b[0]-g.a[0],g.b[1]-g.a[1]);});if(sl<1)return null;
+  var rest=A2.concat(B2).filter(function(g){return !g.del;});if(rest.length<3)return null;
+  var loop=[rest.shift()];while(rest.length){var e=loop[loop.length-1].b,k=-1;for(var i=0;i<rest.length;i++)if(eq(rest[i].a,e)){k=i;break;}if(k<0)break;loop.push(rest.splice(k,1)[0]);}
+  if(rest.length||!eq(loop[loop.length-1].b,loop[0].a))return null; // 구멍·떨어진 고리 → 안 합침
+  if(Math.abs(Math.abs(area(loop))-(aA+aB))>Math.max(1,(aA+aB)*0.005))return null; // 겹쳐 놓음 → 안 합침
+  function plain(g){return !g.src||(g.src.arcR===undefined&&g.src.ellArc===undefined);}
+  function coll(g1,g2){var ux=g1.b[0]-g1.a[0],uy=g1.b[1]-g1.a[1],vx=g2.b[0]-g2.a[0],vy=g2.b[1]-g2.a[1],l=Math.hypot(ux,uy)*Math.hypot(vx,vy);
+    return plain(g1)&&plain(g2)&&l>0&&Math.abs(ux*vy-uy*vx)/l<1e-4&&ux*vx+uy*vy>0;}
+  for(var ch=true;ch&&loop.length>3;){ch=false;
+    for(var j=0;j<loop.length;j++){var j2=(j+1)%loop.length;if(coll(loop[j],loop[j2])){loop[j]={a:loop[j].a,b:loop[j2].b,src:loop[j].src};loop.splice(j2,1);ch=true;break;}}}
+  // 맞닿은 구간 위 가공 표시: 구간 끝에서 나눈 뒤 그 위에 놓인 것 지움
+  shared.forEach(function(g){_cutMarksAt(g.a[0],g.a[1]);_cutMarksAt(g.b[0],g.b[1]);});
+  shapes=shapes.filter(function(m){
+    if(['gosramark','jollymark','grindregion'].indexOf(m.kind)<0||m.groupId)return true;
+    var mx=(m.x1+m.x2)/2,my=(m.y1+m.y2)/2,md=[m.x2-m.x1,m.y2-m.y1],ml=Math.hypot(md[0],md[1]);
+    return !shared.some(function(g){var dx=g.b[0]-g.a[0],dy=g.b[1]-g.a[1],l=Math.hypot(dx,dy),t=((mx-g.a[0])*dx+(my-g.a[1])*dy)/(l*l);
+      return t>=-0.01&&t<=1.01&&Math.abs((mx-g.a[0])*dy-(my-g.a[1])*dx)/l<2&&(ml<0.5||Math.abs(md[0]*dy-md[1]*dx)/(ml*l)<0.05);});
+  });
+  var olds=st.baseOlds.concat(_joinOlds(st.movF)),lab=st.baseOlds[0].label,at=Math.min.apply(null,olds.map(function(o){return shapes.indexOf(o);}).filter(function(i){return i>=0;}));
+  var lines=_cutLines(loop);lines.forEach(function(o){if(lab)o.label=lab;else delete o.label;});
+  shapes=shapes.filter(function(o){return olds.indexOf(o)<0;});shapes.splice.apply(shapes,[Math.min(at,shapes.length),0].concat(lines));
+  _fxPrev=new Set(shapes); // 나타나기·사라지기 효과 없이
+  return lines;
+}
 function _joinDown(mx,my){
   var st=_joinSt;
   if(!st){var f=_joinFind(mx,my);if(!f)return;_joinSt={stage:1,base:f,baseOlds:_joinOlds(f),bp:_joinPts(f)};_joinHover=null;redraw();return;}
@@ -5510,8 +5549,9 @@ function _joinDown(mx,my){
     st.movF=f2;st.mp=_joinPts(f2);st.mv=olds.concat(_joinRiders(f2.loop,olds,st.baseOlds));st.mv0=st.mv.map(function(o){return JSON.parse(JSON.stringify(o));});
     st.g=[mx,my];st.d=[0,0];st.stage=2;_joinHover=null;_joinMove(mx,my);redraw();return;}
   if(st.stage===2){
-    if(st.d[0]||st.d[1]){_hist.push(st.h0);if(_hist.length>50)_hist.shift();_savedBoardLayout=null;_savedBoardImg=null;}
-    _joinSt=null;selectedShapes=[];hoverShape=null;updatePropsPanel();redraw();calcCost();
+    var merged=_joinMerge(st);
+    if(merged||st.d[0]||st.d[1]){_hist.push(st.h0);if(_hist.length>50)_hist.shift();_savedBoardLayout=null;_savedBoardImg=null;}
+    _joinSt=null;selectedShapes=merged||[];hoverShape=null;updatePropsPanel();redraw();calcCost();
   }
 }
 function _joinCancel(){var st=_joinSt;if(!st)return false;
