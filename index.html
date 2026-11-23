@@ -504,6 +504,7 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R150~200</span><span class="pr-qty" id="pl-r200">-</span><span class="pr-sub" id="ps-r200">-</span></div>
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ R200~250</span><span class="pr-qty" id="pl-r250">-</span><span class="pr-sub" id="ps-r250">-</span></div>
     <div class="proc-row2"><span class="pr-name">밑면연마</span><span class="pr-qty" id="pl-grind">-</span><span class="pr-sub" id="ps-grind">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">└ 100mm 미만</span><span class="pr-qty" id="pl-grindmid">-</span><span class="pr-sub" id="ps-grindmid">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 150×150</span><span class="pr-qty" id="pl-grind150">-</span><span class="pr-sub" id="ps-grind150">-</span></div>
     <div class="proc-row2"><span class="pr-name">└ 100mm+</span><span class="pr-qty" id="pl-grind100">-</span><span class="pr-sub" id="ps-grind100">-</span></div>
     <div class="proc-row2"><span class="pr-name">졸리컷</span><span class="pr-qty" id="pl-jolly">-</span><span class="pr-sub" id="ps-jolly">-</span></div>
@@ -1039,7 +1040,8 @@ function _domaSizeBtns(){_DOMA_SIZES.forEach(function(z,i){var b=document.getEle
 function setDomaSize(i){_domaSize=i;_domaSizeBtns();if(typeof redraw==='function')redraw();}
 setTimeout(_domaSizeBtns,0);
 // 도마 단가 칸: 짧은 변·긴 변이 가장 가까운 기본 크기 (크기를 고쳐도 가까운 쪽 단가)
-function _domaKey(s){var a=Math.min(Math.abs(s.w),Math.abs(s.h)),b=Math.max(Math.abs(s.w),Math.abs(s.h)),best=0,bd=1e18;
+function _domaKey(s){if(s.domaKey)return s.domaKey; // 넣을 때 고른 크기의 단가 — 크기를 바꿔도 금액 그대로 (2026-11-23 사용자 요청)
+  var a=Math.min(Math.abs(s.w),Math.abs(s.h)),b=Math.max(Math.abs(s.w),Math.abs(s.h)),best=0,bd=1e18;
   _DOMA_SIZES.forEach(function(z,i){var d=Math.abs(z[0]-a)+Math.abs(z[1]-b);if(d<bd){bd=d;best=i;}});return 'doma'+(best+1);}
 function setSinkGosra(on){ // 왼쪽 도구 칸: 새 싱크볼 기본값 + 선택한 싱크볼
   _sinkGosra=!!on;
@@ -5845,7 +5847,7 @@ function finalizeShape(fmx,fmy){
   }
   else if(tool==='doma'){ // 도마: 누른 자리 가운데, 고른 크기 R10
     var _dz=_DOMA_SIZES[_domaSize]||_DOMA_SIZES[0];
-    var dms=makeShape('rect',{x:x0-_dz[0]/2,y:y0-_dz[1]/2,w:_dz[0],h:_dz[1],cornerType:'fillet',cornerSize:10,groupId:'grp'+nextId,groupRole:'main',applianceType:'doma'});
+    var dms=makeShape('rect',{x:x0-_dz[0]/2,y:y0-_dz[1]/2,w:_dz[0],h:_dz[1],cornerType:'fillet',cornerSize:10,groupId:'grp'+nextId,groupRole:'main',applianceType:'doma',domaKey:'doma'+((_DOMA_SIZES[_domaSize]?_domaSize:0)+1)});
     saveHistory();shapes.push(dms);
     // 도마는 둘레 전체 밑면연마 + 고스라가 붙은 채로 (2026-11-23 사용자 요청) — 한 묶음(groupId)이라 누르면 같이 선택·이동
     _sinkAddGosra(dms); // 밑면연마는 안쪽 전체(그리기에서 빗금), 둘레 고스라 — 가공비는 도마 한 개 금액에 포함
@@ -7049,7 +7051,7 @@ function loadAllTierPrices(){
 }
 function calcCost(){
   _fullVer++; // 원판 그대로 판정 다시
-  var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
+  var lenMm={rect:0,line:0,chamfer:0,grind:0,grindMid:0,grind100:0,jolly:0,gosra:0,circlecut:0};
   var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0,r100:0,r150:0,r200:0,r250:0,doma1:0,doma2:0,doma3:0};
   var _domaG={};shapes.forEach(function(s){if(s.kind==='rect'&&s.applianceType==='doma'&&s.groupId)_domaG[s.groupId]=1;}); // 도마 묶음의 고스라·밑면연마는 도마 금액에 포함
   shapes.forEach(function(s){
@@ -7085,7 +7087,9 @@ function calcCost(){
     } else if(s.kind==='grindregion'){
       var _g150=s.depth===150&&Math.round(Math.hypot(s.x2-s.x1,s.y2-s.y1))===150;
       var _g100=!_g150&&s.depth>=100;
-      if(_g150)cnt.grind150++;else if(_g100)lenMm.grind100+=Math.hypot(s.x2-s.x1,s.y2-s.y1);else lenMm.grind+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
+      if(_g150)cnt.grind150++;else if(_g100)lenMm.grind100+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
+      else if(s.depth>_GRIND_MM)lenMm.grindMid+=Math.hypot(s.x2-s.x1,s.y2-s.y1); // 50 넘고 100 미만 = 보통 밑면연마 단가, 내역만 따로
+      else lenMm.grind+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='jollymark'){
       lenMm.jolly+=Math.hypot(s.x2-s.x1,s.y2-s.y1);
     } else if(s.kind==='gosramark'){
@@ -7116,6 +7120,8 @@ function calcCost(){
   var mCirclecut=lenMm.circlecut/1000,subCirclecut=mCirclecut*pLine*qty;
   var pChamfer=gta('chamfer'),subChamfer=cnt.chamfer*pChamfer*qty;
   var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
+  var mGrindMid=lenMm.grindMid/1000,subGrindMid=mGrindMid*pGrind*qty;
+  upd('pl-grindmid','ps-grindmid',mGrindMid>0.001?mGrindMid.toFixed(3)+'m':'-',subGrindMid);
   var pGrind150=gta('grind150'),subGrind150=cnt.grind150*pGrind150*qty;
   var pGrind100=gta('grind100'),mGrind100=lenMm.grind100/1000,subGrind100=mGrind100*pGrind100*qty;
   var pJolly=gta('jolly'),mJolly=lenMm.jolly/1000,subJolly=mJolly*pJolly*qty;
@@ -7140,7 +7146,7 @@ function calcCost(){
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
   var totalCut=subRect+subSink+subCook+subDish+subFood+subDoma+subHolef+subHoleo+subLine+subCirclecut;
-  var totalAdd=subChamfer+subRR+subGrind+subGrind150+subGrind100+subJolly+subGosra;
+  var totalAdd=subChamfer+subRR+subGrind+subGrindMid+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
   var grand=totalCut+totalAdd+totalOther;
