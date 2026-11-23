@@ -9696,8 +9696,10 @@ function _bpMarks(g,p,pc,M,sc,k){
       g.beginPath();q.forEach(function(v,i){if(i)g.lineTo(v[0],v[1]);else g.moveTo(v[0],v[1]);});g.closePath();g.fillStyle='rgba(255,152,0,0.18)';g.fill();g.save();g.clip();
       var ex=(b[0]-a[0])/bl,ey=(b[1]-a[1])/bl,step=Math.max(4,7*k);g.beginPath();for(var t=-d;t<=bl+d;t+=step){g.moveTo(a[0]+ex*t,a[1]+ey*t);g.lineTo(a[0]+ex*(t-d)+np[0]*d,a[1]+ey*(t-d)+np[1]*d);}
       g.strokeStyle=_GRIND_COL;g.lineWidth=1.2*k;g.stroke();g.restore();}
-    else if(kd==='gosra'){if(s.sym!==false){var z=Math.max(5,9*k),tp=[mid[0]+np[0]*z*1.6,mid[1]+np[1]*z*1.6],ex2=(b[0]-a[0])/bl,ey2=(b[1]-a[1])/bl;
-      g.beginPath();g.moveTo(tp[0],tp[1]);g.lineTo(mid[0]+np[0]*2+ex2*z*0.8,mid[1]+np[1]*2+ey2*z*0.8);g.lineTo(mid[0]+np[0]*2-ex2*z*0.8,mid[1]+np[1]*2-ey2*z*0.8);g.closePath();g.fillStyle='#111';g.fill();}}
+    else if(kd==='gosra'){if(s.sym!==false){ // 도면과 같은 ▲: 꼭지점이 변 위, 조각 변은 바깥에서·싱크볼 등 타공부 변은 구멍 안에서 변을 향함 (_gosraSym, 2026-11-23 사용자 요청 "온장 배치 고스라가 이상")
+      var gs=_gosraSym(s),z=Math.max(5,9*k);
+      if(gs){var ap=M(gs.mx,gs.my),q2=M(gs.mx+gs.dx*10,gs.my+gs.dy*10),dl=Math.hypot(q2[0]-ap[0],q2[1]-ap[1])||1,dv=[(q2[0]-ap[0])/dl,(q2[1]-ap[1])/dl],bc=[ap[0]-dv[0]*z*1.5,ap[1]-dv[1]*z*1.5];
+        g.beginPath();g.moveTo(ap[0],ap[1]);g.lineTo(bc[0]-dv[1]*z*0.8,bc[1]+dv[0]*z*0.8);g.lineTo(bc[0]+dv[1]*z*0.8,bc[1]-dv[0]*z*0.8);g.closePath();g.fillStyle='#111';g.fill();}}}
     else{g.strokeStyle='rgba(229,57,53,0.85)';g.lineWidth=3*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
       if(s.sym!==false){var R=Math.max(5,8*k),sc2=[mid[0]+np[0]*R*1.7,mid[1]+np[1]*R*1.7];g.beginPath();for(var i=0;i<10;i++){var an=-Math.PI/2+i*Math.PI/5,rr=i%2?R*0.42:R;g.lineTo(sc2[0]+Math.cos(an)*rr,sc2[1]+Math.sin(an)*rr);}g.closePath();
         if(s.front){g.strokeStyle='#E53935';g.lineWidth=1.5*k;g.stroke();}else{g.fillStyle='#E53935';g.fill();}}}
