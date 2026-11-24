@@ -7617,7 +7617,11 @@ function updatePropsPanel(){
     var _mhH=selectedShapes.some(function(s){return s.hideDims&&Object.keys(s.hideDims).some(function(k){return s.hideDims[k];});});
     var _jAll=selectedShapes.some(function(s){return s.kind==='jollymark';}),_jF=selectedShapes.filter(function(s){return s.kind==='jollymark';}).every(function(s){return s.front;});
     var _jRow=_jAll?'<div class="prop-row" style="margin-top:6px"><label>졸리컷 면:</label><div style="display:flex;gap:4px;flex:1">'+[[false,'★ 뒷면'],[true,'☆ 앞면']].map(function(o){var a=_jF===o[0];return '<button onclick="setJollyFaceSel('+o[0]+')" style="flex:1;padding:2px 4px;font-size:11px;border-radius:2px;cursor:pointer;color:#fff;border:1px solid '+(a?'#2A4F92':'#56647E')+';background:'+(a?'#1F3F7A':'#121D33')+'">'+o[1]+'</button>';}).join('')+'</div></div>':'';
-    pp.innerHTML='<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨</div>'+_jRow+'<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+(_mhH?'<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>':'')+'<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button></div>';return;
+    // 직선 커팅으로 만든 닫힌 조각(선 여러 개 선택)도 번호 고치기 (2026-11-24 사용자 요청 "자동으로만 된다") — 그룹 번호 = 선 중 하나라도 정한 값
+    var _allLn=selectedShapes.every(function(s){return s.kind==='line'||s.kind==='arc';}),_lnNum='';
+    if(_allLn)selectedShapes.some(function(s){if(s.shapeNum!==undefined&&s.shapeNum!==''){_lnNum=s.shapeNum;return true;}});
+    var _nRow=_allLn?'<div class="prop-row"><label>번호:</label><input type="text" value="'+escHtml(String(_lnNum))+'" placeholder="자동" style="font-size:11px" oninput="livePropShapeNum(this.value)"></div>':'';
+    pp.innerHTML=_nRow+'<div class="multi-sel-info">'+selectedShapes.length+'개 선택됨</div>'+_jRow+'<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+(_mhH?'<button onclick="resetDims()" style="width:100%;background:#1a3a2a;border:1px solid #2d6a4a;color:#6ee7b7;padding:5px 0;border-radius:3px;font-size:11px;cursor:pointer">↺ 치수 초기화</button>':'')+'<button onclick="deleteSelected()" style="width:100%;background:#7f1d1d;border:none;color:#fca5a5;padding:6px 0;border-radius:3px;font-size:12px;cursor:pointer;font-weight:bold">🗑 삭제</button></div>';return;
   }
   var s=selectedShapes[0],html='';
   if(s.kind==='note'||s.kind==='arrow'||s.kind==='linkmark'){pp.innerHTML=_annPropsHtml(s);return;}
@@ -7739,8 +7743,8 @@ function livePropDim(axis,val){
 }
 // 조각 이름 (도면화 때 조각 가운데 크게 표시)
 function livePropShapeNum(val){
+  saveHistory();
   selectedShapes.forEach(function(s){
-    saveHistory();
     s.shapeNum=(val.trim()==='')?undefined:val.trim();
   });
   redraw();
