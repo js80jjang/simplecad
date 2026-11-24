@@ -1,8 +1,74 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-11-19",
+"updated":"2026-11-24",
 "source":"https://www.younhyunmall.com",
 "items":[
+{
+"id":"1000007311",
+"name":"몬타냐 그레이 혼드",
+"en":"MONTAGNA GREY HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007311/image/list/1000007311_list_015.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007311",
+"cate":"009003"
+},
+{
+"id":"1000007310",
+"name":"퓨전 화이트 혼드",
+"en":"FUSION WHITE HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007310/image/list/1000007310_list_056.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007310",
+"cate":"009003"
+},
+{
+"id":"1000007309",
+"name":"아르마니 누아르 혼드",
+"en":"ARMANI NOIR HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007309/image/list/1000007309_list_025.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007309",
+"cate":"009003"
+},
+{
+"id":"1000007308",
+"name":"비앙코 디올 혼드",
+"en":"BIANCO DIOR HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007308/image/list/1000007308_list_029.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007308",
+"cate":"009003"
+},
+{
+"id":"1000007307",
+"name":"오로 누아르 혼드",
+"en":"ORO NOIR HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007307/image/list/1000007307_list_081.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007307",
+"cate":"009003"
+},
+{
+"id":"1000007306",
+"name":"비앙코 스트라투라 혼드",
+"en":"BIANCO STRATURA HONED",
+"size":"1600×3200×12T",
+"price":1239000,
+"m2":242000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007306/image/list/1000007306_list_061.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007306",
+"cate":"009003"
+},
 {
 "id":"1000006504",
 "name":"칼라카타 그린 북매치",
