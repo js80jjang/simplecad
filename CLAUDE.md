@@ -386,6 +386,8 @@
     "＋ 설정 추가" `addTier` = 지금 설정 값을 복사한 `{id:'tN',pf:'tN-'}`(`scd_tier_extra`, `_tierMakePanel`이 커스텀 판을 복제·`TIER_PREFIX`에 더함, 시작 때 `_tierInit`), "－ 빼기" `delTier`(기본 다섯 개는 못 뺌).
     단가 파일에 `names`·`extra`도. 설정 목록은 `_tierIds()`(하드코딩한 다섯 개 목록 쓰지 않기)
 - 객체 1식 금액(2026-11-24 사용자 요청): calcCost가 객체(groupRole main rect·원 타공·타원 타공) 둘레 가공 표시를 안 셈 — 같은 groupId(`_objG`) + 손으로 객체 변·라운드 코너·원 둘레 위에 그린 것(`_onObjEdge`, 가운데 점 ±2~3mm). 객체 코너 R도 R 구간 금액 없음(groupId 있는 rect는 원래 제외)
+- 오른쪽 가공비 패널 순서 = 왼쪽 도구 묶음(2026-11-24 사용자 요청 "기준은 좌측"): ① 커팅 가공(rect·holef·holeo·circlecut·line) ② 객체 삽입(sink·cook·dish·food·doma1~3) ③ 추가 가공 ④ 기타 비용 ⑤ 합계(`s-cut`·`s-obj`·`s-add`·`s-other`) ⑥ 단가 설정.
+  단가 칸은 `_EXTRA_PRICE_ROWS` IIFE 끝에서 판마다 "객체 삽입" 제목을 넣고 sink·cook·food·doma 줄을 옮김("선 커팅" 글자 = "직선 커팅"). 새 가공 줄도 이 순서에 맞춰 넣기
 - 용어: 화면 글자는 "절단" 대신 "커팅"(2026-11-24 사용자 요청 — index.html·patch-notes.js 모두 바꿈, 새 글자도 커팅)
 
 ## 도면 표기 규칙 (사용자 확정)

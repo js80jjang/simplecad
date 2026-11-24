@@ -487,6 +487,15 @@ canvas{display:block;cursor:crosshair}
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">사각 커팅</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
+    <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
+    <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
+    <div class="proc-row2"><span class="pr-name" style="font-size:10px;letter-spacing:-0.4px">원형·타원형 커팅</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
+    <div class="proc-row2"><span class="pr-name">직선 커팅</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
+  </div>
+  <!-- 왼쪽 도구 묶음과 같은 순서(2026-11-24 사용자 요청): 커팅 가공 → 객체 삽입 → 추가 가공 -->
+  <div class="r-sec">② 객체 삽입</div>
+  <div class="r-card" style="padding:4px">
+    <div class="proc-hdr2"><span>공정</span><span>수량</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">싱크볼</span><span class="pr-qty" id="pl-sink">-</span><span class="pr-sub" id="ps-sink">-</span></div>
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
     <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
@@ -494,12 +503,8 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 200×300</span><span class="pr-qty" id="pl-doma1">-</span><span class="pr-sub" id="ps-doma1">-</span></div>
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 300×400</span><span class="pr-qty" id="pl-doma2">-</span><span class="pr-sub" id="ps-doma2">-</span></div>
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 400×600</span><span class="pr-qty" id="pl-doma3">-</span><span class="pr-sub" id="ps-doma3">-</span></div>
-    <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
-    <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
-    <div class="proc-row2"><span class="pr-name">선 커팅</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
-    <div class="proc-row2"><span class="pr-name">원형 커팅</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
   </div>
-  <div class="r-sec">② 추가 가공</div>
+  <div class="r-sec">③ 추가 가공</div>
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">라운드</span><span class="pr-qty" id="pl-chamfer">-</span><span class="pr-sub" id="ps-chamfer">-</span></div>
@@ -514,16 +519,17 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name">졸리컷</span><span class="pr-qty" id="pl-jolly">-</span><span class="pr-sub" id="ps-jolly">-</span></div>
     <div class="proc-row2"><span class="pr-name">고스라</span><span class="pr-qty" id="pl-gosra">-</span><span class="pr-sub" id="ps-gosra">-</span></div>
   </div>
-  <div class="r-sec">③ 기타 비용</div>
+  <div class="r-sec">④ 기타 비용</div>
   <div class="r-card">
     <div class="other-row"><label>포장비</label><input type="number" id="r-pkg" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>운임 (공장이동)</label><input type="number" id="r-ship1" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>운임 (현장출고)</label><input type="number" id="r-ship2" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
     <div class="other-row"><label>기타</label><input type="number" id="r-other" value="0" min="0" oninput="calcCost()"><span class="u">원</span></div>
   </div>
-  <div class="r-sec">④ 합계</div>
+  <div class="r-sec">⑤ 합계</div>
   <div class="r-card">
     <div class="sum-row"><span>커팅 가공 합</span><span class="sum-val" id="s-cut">-</span></div>
+    <div class="sum-row"><span>객체 삽입 합</span><span class="sum-val" id="s-obj">-</span></div>
     <div class="sum-row"><span>추가 가공 합</span><span class="sum-val" id="s-add">-</span></div>
     <div class="sum-row"><span>기타 비용 합</span><span class="sum-val" id="s-other">-</span></div>
     <div class="sum-row total"><span>합계(원)</span><span class="sum-val" id="s-total">0</span></div>
@@ -682,6 +688,14 @@ var _FIXED_TIER_KEYS={doma1:1,doma2:1,doma3:1}; // 원가를 바꿔도 업체·�
       row.appendChild(lb);row.appendChild(inp);row.appendChild(un);
       after.parentNode.parentNode.insertBefore(row,after.parentNode.nextSibling);
     });
+  });
+  // 단가 칸 순서도 왼쪽 도구 묶음과 같게(2026-11-24 사용자 요청): 커팅 가공(사각·수전·콘센트·직선) → 객체 삽입(싱크볼·쿡탑·음식물·도마) → 추가 가공
+  ['su-','du-','ru-','xt-','cu-'].forEach(function(pf){
+    var first=document.getElementById(pf+'rect');if(!first)return;var panel=first.closest('.r-card');
+    var addSub=[].filter.call(panel.querySelectorAll('.su-sub'),function(d){return d.textContent==='추가 가공';})[0];if(!addSub)return;
+    var h=document.createElement('div');h.className='su-sub';h.textContent='객체 삽입';panel.insertBefore(h,addSub);
+    ['sink','cook','food','doma1','doma2','doma3'].forEach(function(k){var el=document.getElementById(pf+k);if(el)panel.insertBefore(el.parentNode,addSub);});
+    var ln=document.getElementById(pf+'line'),lb=ln&&ln.parentNode.querySelector('label');if(lb){lb.textContent='직선 커팅';lb.title='원형·타원형 커팅도 이 단가(m당)';}
   });
 })();
 
@@ -7391,14 +7405,15 @@ function calcCost(){
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subSink+subCook+subDish+subFood+subDoma+subHolef+subHoleo+subLine+subCirclecut;
+  var totalCut=subRect+subHolef+subHoleo+subLine+subCirclecut,totalObj=subSink+subCook+subDish+subFood+subDoma; // 커팅 가공 / 객체 삽입 (왼쪽 도구 묶음과 같게)
   var totalAdd=subChamfer+subRR+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
-  var grand=totalCut+totalAdd+totalOther;
+  var grand=totalCut+totalObj+totalAdd+totalOther;
   var sc=document.getElementById('s-cut'),sa=document.getElementById('s-add');
   var so=document.getElementById('s-other'),st=document.getElementById('s-total');
   if(sc)sc.textContent=totalCut>0?Math.round(totalCut).toLocaleString():'-';
+  var sob=document.getElementById('s-obj');if(sob)sob.textContent=totalObj>0?Math.round(totalObj).toLocaleString():'-';
   if(sa)sa.textContent=totalAdd>0?Math.round(totalAdd).toLocaleString():'-';
   if(so)so.textContent=totalOther>0?Math.round(totalOther).toLocaleString():'-';
   if(st)st.textContent=Math.round(grand).toLocaleString();
