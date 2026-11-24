@@ -259,7 +259,7 @@
   - 끌어 옮기는 치수 글자 공통: `dimLabels` 항목에 `start()/drag(ex,ey,dx,dy,st)` (선택·선 절단 도구 mousedown → `dimDragInfo`, document mousemove가 호출).
     지시선 글자 `s.lblOff[key]=[dx,dy]px`(`_lblOff/_lblDrag`, key: rc·r_코너·phi), 선 사이 각도 호 반지름 `line.angR{a|b}`(px),
     치수선 도구: 길이=offsetMm, 각도=x2,y2(반지름), R/Φ=끝점 회전. 모두 편집 화면 전용(도면화는 자동 자리)
-  - 편집 화면 선 길이 치수(`drawDimsLine`)는 끌어서 옮김: `s.dimOffPx`(px, 바깥쪽 +, 자동 자리 8px 안이면 지움 → 자동). 도면화는 자동 자리 그대로
+  - 편집 화면 선 길이 치수(`drawDimsLine`): ✕ 삭제 = `hideDims.dist`면 안 그림(2026-11-24 수정, 도면화는 그대로). 끌어서 옮김: `s.dimOffPx`(px, 바깥쪽 +, 자동 자리 8px 안이면 지움 → 자동). 도면화는 자동 자리 그대로
   - 도면화 조각 치수(사각 폭·높이, 선 조각의 가로·세로 선)는 `_expDimRows`(2026-10-27 사용자 확정 "공통 치수 빼고 치수 줄 쭉 맞추기"):
     같은 방향·같은 값·범위 50% 이상 겹침·조각 사이 800mm 이하인 것끼리 묶음(union-find, 이어진 조각 줄 전체) → 하나만.
     쪽(b→r→t→l)마다 바깥 변부터, 기존 줄 중 가장 가까운 줄에 붙임(보조선·치수선이 조각 안을 안 지나고 1500mm 이내, 같은 줄 범위 안 겹침), 없으면 자기 변 옆 새 줄(가까운 줄과 58px 간격).

@@ -2472,6 +2472,7 @@ function drawDimsLine(s,col){
   if(_lineOutwardSide(s)<0)perp+=Math.PI; // 상판 바깥쪽에 표시
   // 편집 화면: 사각형 치수처럼 보조선 + 화살표 치수선 + 숫자. 가로/세로 선은 조각 바깥 치수 줄에 맞춤(_lineDimPlan)
   if(!printRender&&!isArc){
+    if(s.hideDims&&s.hideDims.dist)return; // ✕ 삭제·Delete로 지운 길이 치수 (2026-11-24 사용자 요청 "직선 커팅 치수가 안 지워진다" — 숨김 값은 저장됐지만 그릴 때 안 봤음), 속성 칸 "↺ 치수 초기화"로 다시
     if(!_lgDimPlan){
       _lgDimPlan=new Map();
       if(!_lgFrameGroups)_lgFrameGroups=_lineBoundaryGroups();
