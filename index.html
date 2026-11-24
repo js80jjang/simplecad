@@ -9624,8 +9624,8 @@ function _drawCleanExport(){
       }
       var cen=toCanvas(q.x+Math.abs(q.w)/2,q.y+Math.abs(q.h)/2),wpx=mm2px(g.w),hpx=mm2px(g.h);
       var fs=Math.round(Math.max(18,Math.min(44,wpx*0.7/nm.length,hpx*0.25)));
-      if(at==='doma'){ // 도마: 이름 + 그 아래 크기 (안쪽 가운데)
-        var dsz=_fmtDim(g.w)+'×'+_fmtDim(g.h),fs2=Math.max(14,Math.round(fs*0.6));
+      if(at==='doma'||_drwSimple){ // 도마(·치수 간단히면 모든 객체): 이름 + 그 아래 크기 "800×450 R20" (자기 가로·세로 치수선·R 지시선 대신)
+        var dsz=at==='doma'?_fmtDim(g.w)+'×'+_fmtDim(g.h):_objSize(q).replace(/^\(|\)$/g,''),fs2=Math.max(14,Math.round(fs*0.6));
         _expText(nm,cen[0],cen[1]-fs2*0.6,p.col[0],fs,'bold',[0,4],6);
         _expText(dsz,cen[0],cen[1]+fs*0.55,p.col[0],fs2,'bold',[0,4],6);
       } else
@@ -9696,7 +9696,8 @@ function _drawCleanExport(){
       var wBottom=useTop;if(holesAt(wBottom?'b':'t')&&!holesAt(wBottom?'t':'b'))wBottom=!wBottom;
       var hRight=useLeft;if(holesAt(hRight?'r':'l')&&!holesAt(hRight?'l':'r'))hRight=!hRight;
       // 화면상 가로/세로 길이 (90° 돌린 싱크볼은 W·H가 바뀌어 보이므로 상자 기준)
-      if(q.capsule){ // 캡슐 타공: 두 반원 중심 사이 거리만 (Φ는 지시선으로)
+      if(_drwSimple){} // 치수 간단히: 자기 크기는 이름 아래 글자로 (③-2)
+      else if(q.capsule){ // 캡슐 타공: 두 반원 중심 사이 거리만 (Φ는 지시선으로)
         var cpD=Math.min(R-L,B-T),cpH=(R-L)>=(B-T),cpo=mm2px(cpD)/2+28;
         if(cpH&&R-L-cpD>0.05){var cy0=(T+B)/2;_expDim(toCanvas(L+cpD/2,cy0),toCanvas(R-cpD/2,cy0),wBottom?[0,1]:[0,-1],cpo,_fmtDim(R-L-cpD),col,28);}
         else if(!cpH&&B-T-cpD>0.05){var cx0=(L+R)/2;_expDim(toCanvas(cx0,T+cpD/2),toCanvas(cx0,B-cpD/2),hRight?[1,0]:[-1,0],cpo,_fmtDim(B-T-cpD),col,28);}
@@ -9742,7 +9743,8 @@ function _drawCleanExport(){
     var rows=[];
     p.holes.slice().sort(function(a,b){return a.cy-b.cy||a.cx-b.cx;}).forEach(function(h){
       var fct=h.holeType==='faucet';
-      var row=rows.filter(function(r){return Math.abs(r[0].cy-h.cy)<5&&(r[0].holeType==='faucet')===fct;})[0];if(row)row.push(h);else rows.push([h]);
+      // 치수 간단히면 300mm 안에 붙어 있는 것끼리만 한 줄 (멀리 떨어진 콘센트끼리 상판을 가로지르는 간격 치수가 생기지 않게)
+      var row=rows.filter(function(r){return Math.abs(r[0].cy-h.cy)<5&&(r[0].holeType==='faucet')===fct&&(!_drwSimple||Math.abs(r[r.length-1].cx-h.cx)<=300);})[0];if(row)row.push(h);else rows.push([h]);
     });
     rows.forEach(function(row){
       row.sort(function(a,b){return a.cx-b.cx;});
@@ -9751,6 +9753,10 @@ function _drawCleanExport(){
       var first=row[0],last=row[row.length-1];
       // 타공 위치 = 가까운 외부 끝변(상판 바깥 변) + 같은 조각에 싱크볼이 있으면 싱크볼 변까지도 (2026-11-19 사용자 요청)
       var sk=sinkSegs(first);
+      var _inSk=sinks.some(function(q){return first.cx>q.x&&first.cx<q.x+Math.abs(q.w)&&first.cy>q.y&&first.cy<q.y+Math.abs(q.h);});
+      if(_drwSimple){ // 치수 간단히(2026-11-24): 가로 1·세로 1 — 상판 바깥 변과 싱크볼 변 중 가장 가까운 것까지만
+        var _bv=(pV.length?pV:vSeg).concat(sk&&!_inSk?sk.v:[]),_bh=(pH.length?pH:hSeg).concat(sk&&!_inSk?sk.h:[]);
+        _holeRowDims({v:_bv,h:_bh},false);return;}
       _holeRowDims({v:pV.length?pV:vSeg,h:pH.length?pH:hSeg},false);
       if(sk&&!sinks.some(function(q){return first.cx>q.x&&first.cx<q.x+Math.abs(q.w)&&first.cy>q.y&&first.cy<q.y+Math.abs(q.h);}))_holeRowDims(sk,true);
       function _holeRowDims(segs,isSink){
@@ -9778,7 +9784,7 @@ function _drawCleanExport(){
       }
     });
     // 이웃 타공·객체 사이 관계 치수 (2026-11-19 사용자 요청, 편집 화면 _nestNeighborDims와 같은 규칙, 이미 나온 치수는 뺌)
-    var nbl=p.holes.filter(_isNestItem).concat(p.cutouts.filter(_isNestItem));
+    var nbl=_drwSimple?[]:p.holes.filter(_isNestItem).concat(p.cutouts.filter(_isNestItem)); // 치수 간단히면 이웃 관계 치수 없음
     _nestNbPairs(nbl,_nbSkipStd(nbl)).forEach(function(n){
       _expBestDim(toCanvas(n.p1[0],n.p1[1]),toCanvas(n.p2[0],n.p2[1]),n.H?[[0,1],[0,-1]]:[[1,0],[-1,0]],[0,30,60,95,130,170],_fmtDim(n.v),col,22,{pad:6,txtLine:6});
     });
@@ -9815,7 +9821,7 @@ function _drawCleanExport(){
   if(!SO)pieces.forEach(function(p){
     var col=p.col[0];
     cornerLeaders(p.s,col);
-    p.cutouts.forEach(function(q){cornerLeaders(q,col);});
+    if(!_drwSimple)p.cutouts.forEach(function(q){cornerLeaders(q,col);}); // 치수 간단히면 객체 R은 이름 아래 글자에
     p.holes.forEach(function(q){
       var c=toCanvas(q.cx,q.cy),rp=mm2px(q.r),D=[[0.7071,0.7071],[0.7071,-0.7071],[-0.7071,0.7071],[-0.7071,-0.7071]];
       _expLeader(D.map(function(d){return{S:[c[0]+d[0]*rp,c[1]+d[1]*rp],dirs:[d]};}),'Φ'+_fmtDim(q.r*2),col,24);
@@ -10376,6 +10382,9 @@ var _DRW_AW=1660,_DRW_AH=851; // _renderDrawingImage의 도면 영역(px): 2000�
 // 도면화 상세 쪽 조각 손으로 옮기기(2026-11-24 사용자 요청 "객체별로 이동해서 최적화를 직접 수정"):
 //   _drwOv['방식:조각키'] = {dx,dy}(mm, 자동 자리에서 더 옮긴 만큼, 파일 drawingOv) · _drwMode = 지금 그리는 방식 · _drwMeta = 그 쪽 조각 상자(mm, 옮긴 뒤)
 var _drwOv={},_drwMode='area',_drwMeta=null,_drw=null;
+// 치수 간단히(2026-11-24 사용자 요청 "사람이 보는 도면이라 치수가 많거나 겹치면 보기 어렵다"): 기본 켬, 도면화 메뉴 체크(localStorage scd_drw_simple)
+//   켜면 ① 타공 위치 = 가로 1·세로 1(상판 바깥 변·싱크볼 변 중 가장 가까운 것), 이웃 관계 치수 없음 ② 객체(싱크볼·쿡탑·사각/캡슐 타공 등) 크기 = 이름 아래 글자(_objSize), 자기 치수선·R 지시선 없음
+var _drwSimple=true;try{_drwSimple=localStorage.getItem('scd_drw_simple')!=='0';}catch(e){}
 function _drwPieceKey(sh){return sh.kind==='linegroup'?'L'+(sh.lines[0]&&sh.lines[0].id):String(sh.id);}
 // 조각 번호를 전체 기준으로 고정한 채 fn 실행 (구역별은 번호 보기 꺼 놨어도 번호)
 function _drwWithNums(mode,fn){
@@ -10533,6 +10542,10 @@ function drawingMenu(btn){
     b.onclick=function(){m.remove();try{localStorage.setItem('scd_drw_mode',o[0]);}catch(e){}exportDrawingA4(o[0]);};
     m.appendChild(b);
   });
+  var ck=document.createElement('label');ck.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 8px 2px;color:#D9DFEA;font-size:12px;cursor:pointer;border-top:1px solid #1C2A47;margin-top:2px';
+  ck.innerHTML='<input type="checkbox"'+(_drwSimple?' checked':'')+'> <span><b style="color:#E3B861">치수 간단히</b><br><span style="font-size:10.5px;color:#A9B4C8">타공 위치 가로·세로 하나씩 · 객체 크기는 이름 아래 글자로</span></span>';
+  ck.querySelector('input').onchange=function(){_drwSimple=this.checked;try{localStorage.setItem('scd_drw_simple',_drwSimple?'1':'0');}catch(e){}};
+  m.appendChild(ck);
   document.body.appendChild(m);
   setTimeout(function(){document.addEventListener('mousedown',function h(e){if(!m.contains(e.target)){m.remove();document.removeEventListener('mousedown',h);}});},0);
 }
