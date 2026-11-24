@@ -124,6 +124,9 @@ canvas{display:block;cursor:crosshair}
 .setup-hdr:hover{background:#0F1A2E!important}
 .tier-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:#75839C;background:#08101E;border:1px solid #1A2843;border-radius:4px;padding:3px 7px;cursor:pointer;user-select:none;transition:all 0.15s;white-space:nowrap}
 .tier-btn.active{color:#D9DFEA;background:#1F3F7A;border-color:#2A4F92}
+.tier-btn .tier-nm{overflow:hidden;text-overflow:ellipsis}
+.tier-tool-btn{flex:1;font-size:10.5px;color:#A9B4C8;background:#121D33;border:1px solid #1C2A47;border-radius:4px;padding:3px 4px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.tier-tool-btn:hover{background:#16233D;color:#F1D69A}
 .tier-btn:hover:not(.active){background:#0F1A2E;color:#A9B4C8}
 .tier-chk{width:9px;height:9px;border-radius:50%;border:1.5px solid #56647E;display:inline-block;flex-shrink:0}
 .tier-btn.active .tier-chk{background:#D9DFEA;border-color:#D9DFEA}
@@ -462,7 +465,7 @@ canvas{display:block;cursor:crosshair}
       <input type="number" id="dim-inline" step="0.1" style="position:static;display:block;border:none;border-right:1px solid #1C2A47;border-radius:3px 0 0 3px;margin:0">
       <button id="dim-hide-btn" title="이 치수 지우기 (Delete) — 속성 칸의 치수 단추로 다시 켤 수 있음" style="background:#3A1520;border:1px solid #E53935;border-radius:3px;color:#FF8A80;font-size:11px;padding:2px 6px;margin-left:3px;cursor:pointer;line-height:1.2;flex-shrink:0;white-space:nowrap">✕ 삭제</button>
     </div>
-    <!-- 선 절단: 드래그로 방향을 정하고 놓으면 나오는 길이 입력란 -->
+    <!-- 선 커팅: 드래그로 방향을 정하고 놓으면 나오는 길이 입력란 -->
     <div id="line-pop" style="position:absolute;display:none;z-index:22;background:#050912;border:1px solid #FFD740;border-radius:3px;padding:3px 5px;font:11px 'Malgun Gothic';color:#75839C;box-shadow:0 2px 8px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;gap:4px"><span style="color:#FFD740;font-weight:bold">길이</span><input id="line-inp" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#050912;border:1px solid #1C2A47;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>mm</span></div>
       <div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="color:#FFD740;font-weight:bold">각도</span><input id="line-ang" type="text" inputmode="decimal" autocomplete="off" style="width:76px;background:#050912;border:1px solid #1C2A47;color:#FFD740;font:bold 13px Consolas,monospace;padding:2px 4px;outline:none;text-align:right"><span>°</span></div>
@@ -480,10 +483,10 @@ canvas{display:block;cursor:crosshair}
 <div id="right-wrap">
 <button id="right-toggle" onclick="toggleRight()" title="가공비 패널 접기/펼치기">▶</button>
 <div id="right">
-  <div class="r-sec">① 절단 가공</div>
+  <div class="r-sec">① 커팅 가공</div>
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량/길이</span><span>소계(원)</span></div>
-    <div class="proc-row2"><span class="pr-name">사각 절단</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
+    <div class="proc-row2"><span class="pr-name">사각 커팅</span><span class="pr-qty" id="pl-rect">-</span><span class="pr-sub" id="ps-rect">-</span></div>
     <div class="proc-row2"><span class="pr-name">싱크볼</span><span class="pr-qty" id="pl-sink">-</span><span class="pr-sub" id="ps-sink">-</span></div>
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
     <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
@@ -493,8 +496,8 @@ canvas{display:block;cursor:crosshair}
     <div class="proc-row2"><span class="pr-name" style="font-size:9.5px;letter-spacing:-0.4px">도마 400×600</span><span class="pr-qty" id="pl-doma3">-</span><span class="pr-sub" id="ps-doma3">-</span></div>
     <div class="proc-row2"><span class="pr-name">수전 타공</span><span class="pr-qty" id="pl-holef">-</span><span class="pr-sub" id="ps-holef">-</span></div>
     <div class="proc-row2"><span class="pr-name">콘센트 타공</span><span class="pr-qty" id="pl-holeo">-</span><span class="pr-sub" id="ps-holeo">-</span></div>
-    <div class="proc-row2"><span class="pr-name">선 절단</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
-    <div class="proc-row2"><span class="pr-name">원형 절단</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
+    <div class="proc-row2"><span class="pr-name">선 커팅</span><span class="pr-qty" id="pl-line">-</span><span class="pr-sub" id="ps-line">-</span></div>
+    <div class="proc-row2"><span class="pr-name">원형 커팅</span><span class="pr-qty" id="pl-circlecut">-</span><span class="pr-sub" id="ps-circlecut">-</span></div>
   </div>
   <div class="r-sec">② 추가 가공</div>
   <div class="r-card" style="padding:4px">
@@ -520,7 +523,7 @@ canvas{display:block;cursor:crosshair}
   </div>
   <div class="r-sec">④ 합계</div>
   <div class="r-card">
-    <div class="sum-row"><span>절단 가공 합</span><span class="sum-val" id="s-cut">-</span></div>
+    <div class="sum-row"><span>커팅 가공 합</span><span class="sum-val" id="s-cut">-</span></div>
     <div class="sum-row"><span>추가 가공 합</span><span class="sum-val" id="s-add">-</span></div>
     <div class="sum-row"><span>기타 비용 합</span><span class="sum-val" id="s-other">-</span></div>
     <div class="sum-row total"><span>합계(원)</span><span class="sum-val" id="s-total">0</span></div>
@@ -534,22 +537,28 @@ canvas{display:block;cursor:crosshair}
       <span id="tier-sec-arrow">▶</span>
     </div>
     <div id="tier-sec-body" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px 4px 0">
-        <div class="tier-btn" id="tier-cost" onclick="setTier('cost')"><span class="tier-chk"></span>원가</div>
-        <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')"><span class="tier-chk"></span>업체용</div>
-        <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')"><span class="tier-chk"></span>소비자용</div>
-        <div class="tier-btn" id="tier-custom" onclick="setTier('custom')"><span class="tier-chk"></span>커스텀</div>
-        <div class="tier-btn" id="tier-retail" onclick="setTier('retail')" style="grid-column:1/-1"><span class="tier-chk"></span>취급점</div>
+      <div id="tier-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px 4px 0">
+        <div class="tier-btn" id="tier-cost" onclick="setTier('cost')" ondblclick="renameTier('cost')"><span class="tier-chk"></span><span class="tier-nm">원가</span></div>
+        <div class="tier-btn" id="tier-dealer" onclick="setTier('dealer')" ondblclick="renameTier('dealer')"><span class="tier-chk"></span><span class="tier-nm">업체용</span></div>
+        <div class="tier-btn active" id="tier-consumer" onclick="setTier('consumer')" ondblclick="renameTier('consumer')"><span class="tier-chk"></span><span class="tier-nm">소비자용</span></div>
+        <div class="tier-btn" id="tier-custom" onclick="setTier('custom')" ondblclick="renameTier('custom')"><span class="tier-chk"></span><span class="tier-nm">커스텀</span></div>
+        <div class="tier-btn" id="tier-retail" onclick="setTier('retail')" ondblclick="renameTier('retail')"><span class="tier-chk"></span><span class="tier-nm">취급점</span></div>
+      </div>
+      <!-- 단가 설정 이름 바꾸기·추가·빼기 (2026-11-24 사용자 요청) -->
+      <div style="display:flex;gap:3px;padding:3px 4px 0">
+        <button class="tier-tool-btn" onclick="renameTier(_tier)" title="고른 단가 설정의 이름 바꾸기 (버튼 더블클릭도 됨)">✏ 이름</button>
+        <button class="tier-tool-btn" onclick="addTier()" title="지금 고른 단가 설정 값을 복사해 새 단가 설정 만들기">＋ 설정 추가</button>
+        <button class="tier-tool-btn" id="tier-del-btn" onclick="delTier(_tier)" title="추가한 단가 설정 빼기" style="display:none">－ 빼기</button>
       </div>
       <div id="panel-cost" class="r-card" style="display:none;padding:5px;margin-top:3px">
-        <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">커팅 가공</div>
+        <div class="su-row"><label>사각 커팅</label><input id="su-rect" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="su-sink" type="text" inputmode="numeric" value="50,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="su-cook" type="text" inputmode="numeric" value="30,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="su-food" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="su-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="su-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>선 커팅</label><input id="su-line" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>라운드</label><input id="su-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="su-grind" type="text" inputmode="numeric" value="9,000" oninput="fmtMoney(this);syncAllTierPrices()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -560,14 +569,14 @@ canvas{display:block;cursor:crosshair}
         <button class="tier-save-btn" onclick="saveTierPrices('cost')">💾 저장</button>
       </div>
       <div id="panel-dealer" class="r-card" style="display:none;padding:5px;margin-top:3px">
-        <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="du-rect" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">커팅 가공</div>
+        <div class="su-row"><label>사각 커팅</label><input id="du-rect" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="du-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="du-cook" type="text" inputmode="numeric" value="36,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="du-food" type="text" inputmode="numeric" value="24,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="du-holef" type="text" inputmode="numeric" value="6,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="du-holeo" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>선 커팅</label><input id="du-line" type="text" inputmode="numeric" value="12,960" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>라운드</label><input id="du-chamfer" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="du-grind" type="text" inputmode="numeric" value="10,800" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -578,14 +587,14 @@ canvas{display:block;cursor:crosshair}
         <button class="tier-save-btn" onclick="saveTierPrices('dealer')">💾 저장</button>
       </div>
       <div id="panel-consumer" class="r-card" style="display:none;padding:5px;margin-top:3px">
-        <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="ru-rect" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">커팅 가공</div>
+        <div class="su-row"><label>사각 커팅</label><input id="ru-rect" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="ru-sink" type="text" inputmode="numeric" value="65,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="ru-cook" type="text" inputmode="numeric" value="39,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="ru-food" type="text" inputmode="numeric" value="26,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="ru-holef" type="text" inputmode="numeric" value="6,500" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="ru-holeo" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>선 커팅</label><input id="ru-line" type="text" inputmode="numeric" value="14,040" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>라운드</label><input id="ru-chamfer" type="text" inputmode="numeric" value="13,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="ru-grind" type="text" inputmode="numeric" value="11,700" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -596,14 +605,14 @@ canvas{display:block;cursor:crosshair}
         <button class="tier-save-btn" onclick="saveTierPrices('consumer')">💾 저장</button>
       </div>
       <div id="panel-custom" class="r-card" style="display:none;padding:5px;margin-top:3px">
-        <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">커팅 가공</div>
+        <div class="su-row"><label>사각 커팅</label><input id="cu-rect" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="cu-sink" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="cu-cook" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="cu-food" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="cu-holef" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="cu-holeo" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>선 커팅</label><input id="cu-line" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>라운드</label><input id="cu-chamfer" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="cu-grind" type="text" inputmode="numeric" placeholder="0" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -614,14 +623,14 @@ canvas{display:block;cursor:crosshair}
         <button class="tier-save-btn" onclick="saveTierPrices('custom')">💾 저장</button>
       </div>
       <div id="panel-retail" class="r-card" style="display:none;padding:5px;margin-top:3px">
-        <div class="su-sub">절단 가공</div>
-        <div class="su-row"><label>사각 절단</label><input id="xt-rect" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-sub">커팅 가공</div>
+        <div class="su-row"><label>사각 커팅</label><input id="xt-rect" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-row"><label>싱크볼</label><input id="xt-sink" type="text" inputmode="numeric" value="60,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>쿡탑</label><input id="xt-cook" type="text" inputmode="numeric" value="35,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label style="font-size:10px">음식물투입구</label><input id="xt-food" type="text" inputmode="numeric" value="20,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>수전 타공</label><input id="xt-holef" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>콘센트 타공</label><input id="xt-holeo" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
-        <div class="su-row"><label>선 절단</label><input id="xt-line" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
+        <div class="su-row"><label>선 커팅</label><input id="xt-line" type="text" inputmode="numeric" value="12,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
         <div class="su-sub">추가 가공</div>
         <div class="su-row"><label>라운드</label><input id="xt-chamfer" type="text" inputmode="numeric" value="5,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/회</span></div>
         <div class="su-row"><label>밑면연마</label><input id="xt-grind" type="text" inputmode="numeric" value="10,000" oninput="fmtMoney(this);calcCost()" style="ime-mode:disabled"><span class="su-unit">원/m</span></div>
@@ -676,9 +685,57 @@ var _FIXED_TIER_KEYS={doma1:1,doma2:1,doma3:1}; // 원가를 바꿔도 업체·�
   });
 })();
 
+// ── 단가 설정 이름 바꾸기·추가(2026-11-24 사용자 요청) ──
+//   이름 = localStorage scd_tier_names {id:이름}, 추가한 설정 = scd_tier_extra [{id,pf}] (커스텀 칸을 복사한 판, 입력칸 접두어 pf) — TIER_PREFIX에 더해
+//   저장·불러오기·단가 내보내기가 그대로 다룸. 기본 다섯 개는 빼지 못함
+var _TIER_BASE=['cost','dealer','consumer','custom','retail'],_TIER_DEFNM={cost:'원가',dealer:'업체용',consumer:'소비자용',custom:'커스텀',retail:'취급점'};
+var _tierExtra=[],_tierNames={};
+function _tierIds(){return _TIER_BASE.concat(_tierExtra.map(function(t){return t.id;}));}
+function tierName(id){return _tierNames[id]||_TIER_DEFNM[id]||id;}
+function _tierSaveMeta(){try{localStorage.setItem('scd_tier_names',JSON.stringify(_tierNames));localStorage.setItem('scd_tier_extra',JSON.stringify(_tierExtra));}catch(e){}}
+function _tierMakePanel(t){ // 커스텀 판을 복사해 이 설정의 버튼·판 만들기
+  if(document.getElementById('panel-'+t.id))return;
+  var src=document.getElementById('panel-custom'),p=src.cloneNode(true);p.id='panel-'+t.id;p.style.display='none';
+  p.querySelectorAll('input[id^="cu-"]').forEach(function(inp){inp.id=t.pf+inp.id.slice(3);inp.value='';});
+  var sb=p.querySelector('.tier-save-btn');if(sb)sb.setAttribute('onclick',"saveTierPrices('"+t.id+"')");
+  var last=document.getElementById('panel-'+_tierIds()[_tierIds().indexOf(t.id)-1])||document.getElementById('panel-retail');last.parentNode.insertBefore(p,last.nextSibling);
+  var b=document.createElement('div');b.className='tier-btn';b.id='tier-'+t.id;b.setAttribute('onclick',"setTier('"+t.id+"')");b.setAttribute('ondblclick',"renameTier('"+t.id+"')");
+  b.innerHTML='<span class="tier-chk"></span><span class="tier-nm"></span>';document.getElementById('tier-grid').appendChild(b);
+  TIER_PREFIX[t.id]=t.pf;
+}
+function _tierLabels(){_tierIds().forEach(function(id){var b=document.getElementById('tier-'+id),n=b&&b.querySelector('.tier-nm');if(n){n.textContent=tierName(id);b.title=tierName(id)+' (더블클릭 = 이름 바꾸기)';}});
+  var db=document.getElementById('tier-del-btn');if(db)db.style.display=_TIER_BASE.indexOf(_tier)<0?'':'none';}
+function _tierInit(){
+  try{_tierNames=JSON.parse(localStorage.getItem('scd_tier_names')||'{}')||{};}catch(e){_tierNames={};}
+  try{_tierExtra=(JSON.parse(localStorage.getItem('scd_tier_extra')||'[]')||[]).filter(function(t){return t&&/^t\d+$/.test(t.id)&&t.pf===t.id+'-';});}catch(e){_tierExtra=[];}
+  _tierExtra.forEach(_tierMakePanel);_tierLabels();
+}
+function renameTier(id){
+  if(!id)return;var v=prompt('단가 설정 이름 (비우면 처음 이름: '+(_TIER_DEFNM[id]||'새 설정')+')',tierName(id));if(v==null)return;v=v.trim().slice(0,20);
+  if(v&&v!==(_TIER_DEFNM[id]||''))_tierNames[id]=v;else delete _tierNames[id];
+  if(!v&&!_TIER_DEFNM[id])_tierNames[id]='새 설정';
+  _tierSaveMeta();_tierLabels();calcCost();
+}
+function addTier(){
+  var n=1;while(_tierIds().indexOf('t'+n)>=0)n++;
+  var nm=prompt('새 단가 설정 이름\n(지금 고른 "'+tierName(_tier)+'" 값을 복사해서 만듭니다)','새 설정 '+n);if(nm==null)return;nm=nm.trim().slice(0,20)||('새 설정 '+n);
+  var t={id:'t'+n,pf:'t'+n+'-'},from=TIER_PREFIX[_tier];_tierExtra.push(t);_tierNames[t.id]=nm;_tierMakePanel(t);
+  var d={};TIER_KEYS.forEach(function(k){var a=document.getElementById(from+k),b=document.getElementById(t.pf+k);if(a&&b){b.value=a.value;d[k]=a.value;}});
+  try{localStorage.setItem('scd_prices_'+t.id,JSON.stringify(d));}catch(e){}
+  _tierSaveMeta();setTier(t.id);
+}
+function delTier(id){
+  if(_TIER_BASE.indexOf(id)>=0)return;
+  if(!confirm('"'+tierName(id)+'" 단가 설정을 뺄까요?\n이 PC에 저장한 그 단가도 지워집니다.'))return;
+  _tierExtra=_tierExtra.filter(function(t){return t.id!==id;});delete _tierNames[id];delete TIER_PREFIX[id];
+  ['panel-','tier-'].forEach(function(p){var el=document.getElementById(p+id);if(el)el.remove();});
+  try{localStorage.removeItem('scd_prices_'+id);}catch(e){}
+  _tierSaveMeta();setTier('consumer');
+}
 function setTier(t){
+  if(!TIER_PREFIX[t])t='consumer';
   _tier=t;
-  ['cost','dealer','consumer','custom','retail'].forEach(function(id){
+  _tierIds().forEach(function(id){
     var el=document.getElementById('tier-'+id);
     if(el)el.classList.toggle('active',id===t);
     var p=document.getElementById('panel-'+id);
@@ -688,7 +745,7 @@ function setTier(t){
   var body=document.getElementById('tier-sec-body');
   var arrow=document.getElementById('tier-sec-arrow');
   if(body&&body.style.display==='none'){body.style.display='block';if(arrow)arrow.textContent='▼';}
-  calcCost();
+  _tierLabels();calcCost();
 }
 // 제품 검색 목록 = 윤현몰 상품만 (mall-catalog.js, GitHub Actions가 매일 갱신)
 // 몰 상품은 {name(한글), en(영문), size, price(장당), m2(㎡당), url, id}
@@ -1191,7 +1248,7 @@ function _findCornerAttach(x1,y1,x2,y2){
         var ck=cks[j],info=_rcInfo(s,ck);
         if(!info||info.type!=='fillet'||info.r<=0)continue;
         var pin=_rcPIn(s,ck),pout=_rcPOut(s,ck);
-        // 싱크볼/쿡탑은 이 rect가 "구멍"이라 재료가 코너 바깥쪽에 있음 (일반 사각 절단은 반대로 안쪽)
+        // 싱크볼/쿡탑은 이 rect가 "구멍"이라 재료가 코너 바깥쪽에 있음 (일반 사각 커팅은 반대로 안쪽)
         var _atCk=_applianceType(s),_matOutCk=(_atCk==='sink'||_atCk==='cook'||_atCk==='dish'||_atCk==='doma');
         if(Math.hypot(x1-pin.x,y1-pin.y)<=tol&&Math.hypot(x2-pout.x,y2-pout.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
         if(Math.hypot(x1-pout.x,y1-pout.y)<=tol&&Math.hypot(x2-pin.x,y2-pin.y)<=tol)return{arc:_rcArc(s,ck),matOutward:_matOutCk};
@@ -1205,7 +1262,7 @@ function _findCornerAttach(x1,y1,x2,y2){
         return{arc:{x:s.cx,y:s.cy,r:s.r,a0:s.a0,a1:s.a1}};
       }
     } else if(s.kind==='circle'||s.kind==='hole'){
-      // 원(원형 절단 등)의 둘레 위에 양 끝점이 놓인 밑면연마/고스라/졸리컷은 그 원의 곡률을 따라 휘어져야 함
+      // 원(원형 커팅 등)의 둘레 위에 양 끝점이 놓인 밑면연마/고스라/졸리컷은 그 원의 곡률을 따라 휘어져야 함
       var dd1=Math.hypot(x1-s.cx,y1-s.cy),dd2=Math.hypot(x2-s.cx,y2-s.cy);
       if(Math.abs(dd1-s.r)<=tol&&Math.abs(dd2-s.r)<=tol&&Math.hypot(x1-x2,y1-y2)>0.01){
         var ang1=Math.atan2(y1-s.cy,x1-s.cx),ang2=Math.atan2(y2-s.cy,x2-s.cx);
@@ -1215,8 +1272,8 @@ function _findCornerAttach(x1,y1,x2,y2){
         // a0<a1이 되도록, 더 짧은 방향의 호로 정규화
         var ca0=ang1,ca1=ang1+da;
         if(ca1<ca0){var _tmp=ca0;ca0=ca1;ca1=_tmp;}
-        // 원형 절단(홀)도 재료가 원 바깥쪽에 있음
-        return{arc:{x:s.cx,y:s.cy,r:s.r,a0:ca0,a1:ca1},matOutward:(s.holeType==='cut'&&_inAnyPiece(s.cx,s.cy,s))}; // 조각 안의 원형 절단(구멍)만 재료가 바깥, 단독 원 조각은 안쪽
+        // 원형 커팅(홀)도 재료가 원 바깥쪽에 있음
+        return{arc:{x:s.cx,y:s.cy,r:s.r,a0:ca0,a1:ca1},matOutward:(s.holeType==='cut'&&_inAnyPiece(s.cx,s.cy,s))}; // 조각 안의 원형 커팅(구멍)만 재료가 바깥, 단독 원 조각은 안쪽
       }
     } else if(s.kind==='line'&&s.arcS&&s.arcR>0){
       // 자르기로 선분이 된 원·라운드 코너(_cutLines): 선분에서 원 중심을 다시 구해 같은 곡선으로
@@ -1327,7 +1384,7 @@ function mm2px(v){return v*scale;}
 function toCanvas(mx,my){return[offsetX+mx*scale,offsetY+my*scale];}
 function resizeCanvas(){var w=document.getElementById('canvas-wrap');cv.width=w.clientWidth;cv.height=w.clientHeight;if(!_viewInit&&cv.width>200&&cv.height>100){_viewInit=true;var pad=60;var s5=Math.min((cv.width-2*pad)/5000,(cv.height-2*pad)/5000);scale=Math.max(0.01,s5);_annRef=scale;offsetX=pad;offsetY=pad;}redraw();}
 window.addEventListener('resize',resizeCanvas);setTimeout(resizeCanvas,50);setTimeout(resizeCanvas,200);
-loadAllTierPrices();
+_tierInit();loadAllTierPrices(); // 추가한 단가 설정 판을 먼저 만들고 저장값 넣기
 renderProductList();
 
 // ═══ 스냅 ═══
@@ -1479,7 +1536,7 @@ function applySnap(cx,cy,excl){
     if(_eb<=_et){mx=_ex;my=_ey;snapKind='edge';}
   }
   if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
-  // 직교 모드: 선 절단은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
+  // 직교 모드: 선 커팅은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)
   var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'&&tool!=='doma'));
   if(applyOrtho){var dx=Math.abs(mx-drawStart[0]),dy=Math.abs(my-drawStart[1]);if(dx>=dy)my=drawStart[1];else mx=drawStart[0];}
@@ -1583,7 +1640,7 @@ function getBBox(s){
   if(s.kind==='ellipse'){var eh=_ellHalf(s);return{l:s.cx-eh[0],t:s.cy-eh[1],r:s.cx+eh[0],b:s.cy+eh[1],mx:s.cx,my:s.cy};} // 돌린 타원은 회전 포함 상자
   return null;
 }
-// getBBox 확장판: line(선 절단 등)도 포함 — 도면 전체 맞춤(fit) 계산처럼 모든 도형을 빠짐없이 포함해야 하는 경우에 사용.
+// getBBox 확장판: line(선 커팅 등)도 포함 — 도면 전체 맞춤(fit) 계산처럼 모든 도형을 빠짐없이 포함해야 하는 경우에 사용.
 // getBBox가 line에 대해 null을 반환하는 이유(회전 rect 등과 개념이 다름)는 그대로 두고, 여기서만 보완함.
 function getBBoxAny(s){
   if(s.kind==='line')return{l:Math.min(s.x1,s.x2),t:Math.min(s.y1,s.y2),r:Math.max(s.x1,s.x2),b:Math.max(s.y1,s.y2)};
@@ -1687,7 +1744,7 @@ function findEdgeContext(x1,y1,x2,y2){
     }
     if(found){
       // 싱크볼/쿡탑은 이 rect가 "재료"가 아니라 "잘려나가는 구멍"이므로, 재료는 이 rect 바깥쪽에 있음.
-      // 따라서 일반 사각 절단(재료=rect 안쪽)과 반대로 inward/outward를 뒤집어, 밑면연마/고스라 등이
+      // 따라서 일반 사각 커팅(재료=rect 안쪽)과 반대로 inward/outward를 뒤집어, 밑면연마/고스라 등이
       // 도형 바깥쪽(둘러싼 상판 재료 쪽)으로 적용되도록 함.
       var _at=_applianceType(s);
       if(_at==='sink'||_at==='cook'||_at==='dish'||_at==='doma'){var _tmpIO=found.inward;found.inward=found.outward;found.outward=_tmpIO;}
@@ -1720,7 +1777,7 @@ function findEdgeContext(x1,y1,x2,y2){
 // ═══ 도형 그리기 ═══
 var SCOL={rect:'#ffffff',circle:'#ffffff',ellipse:'#ffffff',hole:'#ffffff',line:'#ffffff',dimline:'#75839C'};
 var SFILL={rect:'',circle:'',ellipse:'',hole:''};
-// 싱크볼/쿡탑 메인 사각형은 일반 절단(흰색)과 구별되도록 각각 다른 색으로 표시
+// 싱크볼/쿡탑 메인 사각형은 일반 커팅(흰색)과 구별되도록 각각 다른 색으로 표시
 function _applianceType(s){
   if(s.kind!=='rect')return null;
   if(s.applianceType)return s.applianceType;
@@ -1814,7 +1871,7 @@ function drawGrindRegion(s,preview){
   var hov=s===hoverShape&&(!isSelected(s)||_hoverSelected)&&!preview&&!printRender; // 마우스 올림: 빗금 칸을 진하게 + 테두리
   var _gFill=hov?'rgba(255,215,0,0.38)':'rgba(255,215,0,0.12)';if(hov)alpha=1;
 
-  // 라운드 코너(탄젠트점↔탄젠트점) 또는 원(원형 절단 등)의 둘레 위에 양 끝점이 있으면,
+  // 라운드 코너(탄젠트점↔탄젠트점) 또는 원(원형 커팅 등)의 둘레 위에 양 끝점이 있으면,
   // 방향(수평/수직/대각선)과 무관하게 항상 실제 곡선을 따라가는 환형(부채꼴) 해칭으로 그림.
   // (원의 경우 두 점이 정확히 수평/수직으로 마주보는 경우도 있을 수 있어 isH/isV 분기보다 먼저 확인해야 함)
   {
@@ -1822,7 +1879,7 @@ function drawGrindRegion(s,preview){
     if(_corner){
       var ai=_corner.arc;
       // 라운드 코너의 재질(솔리드)은 보통 곡선 안쪽(중심 방향)에 있으므로 경계(r)에서 중심 쪽으로 depth만큼 연마함.
-      // 단, 싱크볼/쿡탑/원형 절단처럼 이 곡선이 "구멍"의 경계인 경우엔 재료가 반대로 바깥쪽에 있으므로
+      // 단, 싱크볼/쿡탑/원형 커팅처럼 이 곡선이 "구멍"의 경계인 경우엔 재료가 반대로 바깥쪽에 있으므로
       // 연마도 바깥쪽(반경이 커지는 방향)으로 적용해야 함.
       var rOuter,rInner;
       // 사용자가 "방향 반전" 버튼으로 직접 뒤집은 경우(s.matOutwardOverride)엔 항상 그 값을 우선함
@@ -2086,7 +2143,7 @@ function drawJollyMark(s,preview){
   // 졸리컷은 길이 치수를 표기하지 않음 (편집 화면·도면화 모두) — 길이는 속성 칸에서만 확인
 }
 
-// 고스라 삼각형 방향(꼭지점 = 방향): 사각/선 절단 조각 변 → 바깥에서 조각 안쪽을 향함,
+// 고스라 삼각형 방향(꼭지점 = 방향): 사각/선 커팅 조각 변 → 바깥에서 조각 안쪽을 향함,
 // 싱크볼/쿡탑(타공부) 변 → 타공부 안쪽에서 선을 향함. 반환 {mx,my(변 중점, mm), dx,dy(꼭지점 방향 단위벡터)}
 // 타공부 사각형인지: 싱크볼/쿡탑(main·applianceType) 또는 다른 일반 사각형 안에 든 사각형. rects = 도면의 사각형 목록
 function _isCutRect(s,rects){return s.groupRole==='main'||!!s.applianceType||rects.some(function(o){return o!==s&&!o.groupId&&isInsideRect(s,o);});}
@@ -2105,7 +2162,7 @@ function _gosraDir(m){
   function inCut(x,y){return rects.some(function(s){return isCut(s)&&inRectS(s,x,y);})||ells.some(function(s){return ellCut(s)&&inEll(s,x,y);});}
   function inPiece(x,y){
     if(rects.some(function(s){return !isCut(s)&&inRectS(s,x,y);}))return true;
-    if(ells.some(function(s){return !ellCut(s)&&inEll(s,x,y);}))return true; // 타원 절단 조각
+    if(ells.some(function(s){return !ellCut(s)&&inEll(s,x,y);}))return true; // 타원 커팅 조각
     if(!_lgFrameGroups)_lgFrameGroups=_lineBoundaryGroups();
     return _lgFrameGroups.some(function(g){if(g.length<3)return false;var ins=false;g.forEach(function(it){var l=it.s;if((l.y1>y)!==(l.y2>y)){var xi=l.x1+(y-l.y1)*(l.x2-l.x1)/(l.y2-l.y1);if(xi>x)ins=!ins;}});return ins;});
   }
@@ -2115,7 +2172,7 @@ function _gosraDir(m){
   else d=-(m.outward||1);                                   // 판단 불가: 저장된 바깥 방향의 반대
   return{mx:mx,my:my,dx:nx*d,dy:ny*d};
 }
-// 고스라 ▲ 자리·방향 (mm): 곧은 변 = _gosraDir, 라운드 코너·원 둘레(_findCornerAttach) = 호 가운데 점, 꼭지점은 재료 쪽(코너 = 중심 쪽, 싱크볼·원형 절단 = 바깥) —
+// 고스라 ▲ 자리·방향 (mm): 곧은 변 = _gosraDir, 라운드 코너·원 둘레(_findCornerAttach) = 호 가운데 점, 꼭지점은 재료 쪽(코너 = 중심 쪽, 싱크볼·원형 커팅 = 바깥) —
 //   곡면도 다른 고스라처럼 ▲가 변 바깥에서 변을 향하게 (2026-11-03 사용자 요청: 곡면은 ▲가 선 위에 겹쳐 있었음)
 function _gosraSym(m){
   var c=_findCornerAttach(m.x1,m.y1,m.x2,m.y2);if(!c)return _gosraDir(m);
@@ -2346,10 +2403,10 @@ function drawShape(s,preview){
     var cc=toCanvas(s.cx,s.cy),cr=mm2px(s.r);
     ctx.beginPath();ctx.arc(cc[0],cc[1],cr,0,2*Math.PI);
     if(fill&&!preview){ctx.fillStyle=fill;ctx.fill();}
-    // 타공 절단 경로: 파선 원 (선택/미리보기 시에는 실선 유지). 원형 절단(홀 아닌 실제 커팅)은 항상 실선.
+    // 타공 커팅 경로: 파선 원 (선택/미리보기 시에는 실선 유지). 원형 커팅(홀 아닌 실제 커팅)은 항상 실선.
     if(!preview&&!sel&&s.holeType!=='cut'){ctx.setLineDash([5,3]);}
     ctx.stroke();ctx.setLineDash([]);
-    // 중심 십자선 (원형 절단은 타공이 아니므로 십자선 생략)
+    // 중심 십자선 (원형 커팅은 타공이 아니므로 십자선 생략)
     if(!preview&&s.holeType!=='cut'){var cs=Math.max(4,Math.min(cr*0.28,11));ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cc[0]-cs,cc[1]);ctx.lineTo(cc[0]+cs,cc[1]);ctx.moveTo(cc[0],cc[1]-cs);ctx.lineTo(cc[0],cc[1]+cs);ctx.stroke();}
     if(!preview)_dimDraw(function(){drawDimsCircle(s,col);});
   } else if(s.kind==='ellipse'){
@@ -2988,7 +3045,7 @@ function drawDimLine(s,preview){
 //         e1/e2 = 기준선에서 실제 측정점까지 보조선을 더 늘릴 길이(가로/세로 치수에서 두 점 높이가 다를 때)
 //   각도: labelType 'ang', x1,y1 = 꼭지점, x2,y2 = 호 위 한 점(반지름), a0·sweep = 호 시작각·크기(화면 기준 시계방향, 라디안)
 var _dimSt=null; // {stage:1(첫 점)|2(위치 정하기), p1, p2} 또는 각도 {ang:true, l1, l2, v}
-// ── 타원 절단 = 오토캐드 ELLIPSE (2026-10-30 사용자 요청) ──
+// ── 타원 커팅 = 오토캐드 ELLIPSE (2026-10-30 사용자 요청) ──
 //   기본: 축 끝점 → 다른 끝점(= 한 축) → 다른 축까지 거리(중심에서 수직 = 반지름) / C = 중심 → 축 끝점(반지름) → 다른 축 거리
 //   단계마다 클릭 또는 숫자 + Enter(2단계: 마우스 방향으로 축 길이(중심 방식이면 반지름), 3단계: 다른 축 반지름). 기본 직교(Shift = 비스듬히), Esc = 취소
 //   결과 = ellipse {cx,cy,rx(축1 반지름),ry,rotation(축1 각도)} — 가로/세로 축이면 rotation 0
@@ -3383,7 +3440,7 @@ function _drawCircleVDimRight(hcx,hcy,ref,dist,dir,inner){
   // 클릭 편집 가능하도록 dimLabels 등록
   if(inner)dimLabels.push({kind:'gap',outer:ref,inner:inner,dir:dir,field:'_gap',shape:inner,px:_lx+10,py:_ly});
 }
-// 선 절단(line)만으로 그려진 상판 외곽 등, 이를 감싸는 단일 rect가 없을 때 쓰는 대체 외곽 기준.
+// 선 커팅(line)만으로 그려진 상판 외곽 등, 이를 감싸는 단일 rect가 없을 때 쓰는 대체 외곽 기준.
 // 도형 전체(선/사각/아크/타원 - 홀/타공/그룹(싱크볼·쿡탑 등)/치수선/가공마크는 제외)의 바운딩박스를 구함.
 function _boundaryBBox(excludeInner){
   var l=Infinity,t=Infinity,r=-Infinity,b=-Infinity,found=false;
@@ -3427,7 +3484,7 @@ function drawNestDims(){
     }
     if((isCirc&&inner.holeType==='cut')||(inner.kind==='ellipse'&&!inner.hole))continue; // 원형·타원형 커팅은 다른 객체와 관계(위치) 치수 없음 (2026-11-07 사용자 요청, 타공만 씀)
     if(!bestOuter){
-      // 사각 절단(rect)으로 둘러싸여 있지 않은 경우(선 절단으로만 상판 외곽을 그린 경우 등)에도
+      // 사각 커팅(rect)으로 둘러싸여 있지 않은 경우(선 커팅으로만 상판 외곽을 그린 경우 등)에도
       // 싱크볼/쿡탑/타공의 위치를 치수로 지정할 수 있도록, 전체 도형(선/사각/아크 등)의 바운딩박스를
       // 대신 외곽 기준으로 사용한다.
       var _isApplianceMain=(inner.kind==='rect'&&inner.groupId&&inner.groupRole==='main');
@@ -3470,7 +3527,7 @@ function drawNestDims(){
       continue;
     }
     if(isCirc){
-      // 타공: 가장 가까운 싱크볼/쿡탑 라인 기준 — 없으면 사각절단 경계
+      // 타공: 가장 가까운 싱크볼/쿡탑 라인 기준 — 없으면 사각커팅 경계
       var _ngr=null,_ngd=Infinity;
       shapes.forEach(function(o0){
         if(o0===inner||o0.kind!=='rect'||!o0.groupId||o0.groupRole!=='main')return;
@@ -3913,9 +3970,9 @@ function _doSave(){
 
 // ═══ DXF 불러오기 (오토캐드 → 다른 이름으로 저장 → DXF) ═══
 // 지원: LINE, LWPOLYLINE, POLYLINE(구형), CIRCLE, ARC. 모형 공간만, 블록/치수/글자/해치 등은 무시.
-// - 직각 닫힌 사각형(폴리선 또는 선 4개) → 사각 절단 (RECTANG 모깎기/모따기 사각형은 라운드/모따기 코너로)
-// - 그 외 선/폴리선 → 선 절단. 곡선은 직선 여러 개로 근사(선 절단 조각·원판 배치에 그대로 연결되도록)
-// - 원: 지름 300 이상 → 원형 절단, 그 외 → 현재 선택된 타공 종류
+// - 직각 닫힌 사각형(폴리선 또는 선 4개) → 사각 커팅 (RECTANG 모깎기/모따기 사각형은 라운드/모따기 코너로)
+// - 그 외 선/폴리선 → 선 커팅. 곡선은 직선 여러 개로 근사(선 커팅 조각·원판 배치에 그대로 연결되도록)
+// - 원: 지름 300 이상 → 원형 커팅, 그 외 → 현재 선택된 타공 종류
 function _parseDxfEntities(text){
   // 큰 파일(삽입된 이미지/OLE 등으로 수십 MB)도 가볍게: 줄 배열만 만들고 HEADER/ENTITIES 외 구간은 값 해석 없이 건너뜀
   var raw=text.split('\n');
@@ -4027,7 +4084,7 @@ function importDxf(text){
     }
     if(e.type==='LINE'){segs.push({x1:_dxfNum(e,10,0),y1:_dxfNum(e,20,0),x2:_dxfNum(e,11,0),y2:_dxfNum(e,21,0)});}
     else if(e.type==='LWPOLYLINE'||e.type==='POLYLINE'){
-      // 선 두께(전역 폭)가 있는 폴리선 = 도면 테두리/주석 박스 (절단선은 폭 0)
+      // 선 두께(전역 폭)가 있는 폴리선 = 도면 테두리/주석 박스 (커팅선은 폭 0)
       if(_dxfNum(e,43,0)>=1){skip('테두리/주석 박스(폭 있는 폴리선)');return;}
       var verts=[],closed=(parseInt(_dxfGet(e,70,'0'),10)&1)===1;
       if(e.type==='LWPOLYLINE'){
@@ -4069,7 +4126,7 @@ function importDxf(text){
     }
     else if(e.type!=='VERTEX'&&e.type!=='SEQEND')skip(e.type);
   });
-  // 선 4개로 그린 직각 사각형 → 사각 절단 (끝점 연결 그룹이 정확히 사각형 4변일 때만)
+  // 선 4개로 그린 직각 사각형 → 사각 커팅 (끝점 연결 그룹이 정확히 사각형 4변일 때만)
   var straight=segs.filter(function(s){return s.arcR===undefined;});
   var par=straight.map(function(_,i){return i;});
   function fd(x){while(par[x]!==x)x=par[x]=par[par[x]];return x;}
@@ -4109,7 +4166,7 @@ function importDxf(text){
   function inRect(px,py,q,tl){tl=tl||0;return px>=q.x-tl&&px<=q.x+q.w+tl&&py>=q.y-tl&&py<=q.y+q.h+tl;}
   function rectInside(a,b){return a!==b&&a.x>=b.x-tolE&&a.y>=b.y-tolE&&a.x+a.w<=b.x+b.w+tolE&&a.y+a.h<=b.y+b.h+tolE&&(a.w<b.w||a.h<b.h);}
   var nSeam=0,nBand=0;
-  // 1) 가장자리 띠 표시선(OPEN/해치 경계): 사각형 안쪽, 평행한 변에서 60mm 이내의 직선 → 절단선 아님
+  // 1) 가장자리 띠 표시선(OPEN/해치 경계): 사각형 안쪽, 평행한 변에서 60mm 이내의 직선 → 커팅선 아님
   //    (분할 전에 걸러야 조각 전체 길이에 걸친 띠 선도 잡힘)
   segs=segs.filter(function(s){
     if(s.arcR!==undefined)return true;
@@ -4150,7 +4207,7 @@ function importDxf(text){
     }
   }
   // 3) 조각 안의 사각형 = 타공부: 라운드 → 싱크볼, 직각 → 안에 쿡탑 표기(쿡탑·인덕션·하이라이트·가스·전기레인지·COOK·HOB) 글자가 있을 때만 쿡탑,
-  //    표기가 없으면 보통 사각 절단 (2026-10-30 사용자 요청 "따로 표기가 안되어 있으면 기본 사각 절단")
+  //    표기가 없으면 보통 사각 커팅 (2026-10-30 사용자 요청 "따로 표기가 안되어 있으면 기본 사각 커팅")
   var cookRe=/쿡탑|인덕션|하이라이트|가스\s*레인지|가스|전기\s*레인지|cook|hob/i;
   rects.forEach(function(q){if(!rects.some(function(o){return rectInside(q,o);}))return;
     if(q.cornerType==='fillet')q.cutout='sink';
@@ -4383,7 +4440,7 @@ function _dxfCollect(H){
         pts.push([a[0],a[1],ci.type==='fillet'?B:0],[b[0],b[1]]);
       });
       var cut=isCut(s);poly(_applianceType(s)==='hole'?'SC-HOLE':(cut?'SC-CUTOUT':'SC-PIECE'),pts,true); // 사각 타공은 타공 레이어(점선)
-      if(_applianceType(s)==='cook'){var cc0=g0.W(0,0);text('SC-NAME',cc0[0],cc0[1],H*1.2,'쿡탑',0);} // 다시 불러올 때 쿡탑 표기(없으면 사각 절단으로 읽음)
+      if(_applianceType(s)==='cook'){var cc0=g0.W(0,0);text('SC-NAME',cc0[0],cc0[1],H*1.2,'쿡탑',0);} // 다시 불러올 때 쿡탑 표기(없으면 사각 커팅으로 읽음)
       if(_applianceType(s)==='doma'){ // 도마 = 안쪽 전체 밑면연마 해치(R2000+), 이름 글자
         ents.push({t:'HATCH',L:'SC-GRIND',pts:_expRectPath(g0).map(function(p){return Q(p[0],p[1]);}),spacing:Math.max(15,H*0.25),r12:[]});
         var cd0=g0.W(0,0);text('SC-NAME',cd0[0],cd0[1],H*1.2,'도마',0);}
@@ -5076,7 +5133,7 @@ function _nearestEdge(mx,my,tol){
   });
   return best;
 }
-// ── 곡선 트림 (2026-11-03 사용자 요청 "트림이 직선에만 된다"): 원(원형 절단)·호·타원도 자르고, 선·사각형도 원·호·타원에 맞춰 자름 ──
+// ── 곡선 트림 (2026-11-03 사용자 요청 "트림이 직선에만 된다"): 원(원형 커팅)·호·타원도 자르고, 선·사각형도 원·호·타원에 맞춰 자름 ──
 //   원·호 = 각도로 정확히(교점은 선-원·원-원 공식), 타원 = 둘레 _ELL_N 점 꺾은선으로 교점 → 남는 부분은 선들로 (타원 호 도형이 없어서)
 function _trimCurveOK(s){return s.kind==='arc'||s.kind==='ellipse'&&!s.hole||s.kind==='circle'&&s.holeType==='cut';} // 수전·콘센트 타공 원은 그대로
 function _arcNorm(s){var a0=s.a0,a1=s.a1;while(a1<=a0)a1+=2*Math.PI;return[a0,a1];}
@@ -5504,7 +5561,7 @@ function _joinMove(mx,my,free){
   if(best){dx+=best.x;dy+=best.y;st.snap=best.q;}
   _joinSetD(st,dx,dy);
 }
-// 놓은 뒤 두 조각이 변으로 맞닿으면 한 조각(선 조각)으로 합침 — 맞닿은 구간은 절단선이 아니므로 없앰 (2026-11-23 사용자 요청 "붙는 부위는 커팅하면 안 되니 그 선이 없게")
+// 놓은 뒤 두 조각이 변으로 맞닿으면 한 조각(선 조각)으로 합침 — 맞닿은 구간은 커팅선이 아니므로 없앰 (2026-11-23 사용자 요청 "붙는 부위는 커팅하면 안 되니 그 선이 없게")
 //   두 둘레를 같은 방향(반시계)으로 → 서로의 꼭짓점에서 변을 나눔 → 반대 방향으로 겹친 구간을 둘 다 뺌 → 남은 변을 한 고리로 이음(넓이가 두 조각 합과 같을 때만, 겹치거나 구멍이 생기면 안 합침)
 //   → 같은 직선 위 이어진 곧은 변은 하나로. 맞닿은 구간 위의 고스라·졸리컷·밑면연마는 지움. 조각 안 도형은 그대로. 반환 = 새 선들(안 합쳤으면 null)
 function _joinMerge(st){
@@ -5592,8 +5649,8 @@ function doTrim(mx,my){
 
   // 트림 대상이 라운드(필릿)를 가진 rect이면, 그 라운드의 탄젠트점 좌표를 미리 구해둔다.
   // 안내선/치수선 등이 우연히 탄젠트점에 딱 맞춰 그려져 있는 경우, 그 지점의 "닿음"을
-  // 진짜 트림 절단 교차점으로 오인해서 관련 없는 코너의 라운드가 잘못 제거되는 것을 막기 위함
-  // (탄젠트점 자체에서 트림해도 실질적으로 잘려나가는 재료가 없으므로, 이 지점은 트림 절단 기준으로 의미가 없음).
+  // 진짜 트림 커팅 교차점으로 오인해서 관련 없는 코너의 라운드가 잘못 제거되는 것을 막기 위함
+  // (탄젠트점 자체에서 트림해도 실질적으로 잘려나가는 재료가 없으므로, 이 지점은 트림 커팅 기준으로 의미가 없음).
   var _tanPts=[];
   if(hit.kind==='rect'&&(hitEdge.side==='top'||hitEdge.side==='right'||hitEdge.side==='bottom'||hitEdge.side==='left')){
     var _ecMap={top:['tl','tr'],right:['tr','br'],bottom:['br','bl'],left:['bl','tl']};
@@ -5786,7 +5843,7 @@ function _trimOverlaps(ax,ay,bx,by,except){
   shapes=out;
 }
 
-// ═══ 선 절단: 오토캐드 LINE 방식 ═══
+// ═══ 선 커팅: 오토캐드 LINE 방식 ═══
 // 클릭으로 시작점 → 클릭/숫자 입력으로 다음 점, 끝점에서 계속 이어서. drawStart = 지금 점(직교·스냅 기준)
 var lineChain=null; // {first:[x,y] 시작점, segs:[이번에 그은 선들], buf:'입력 중인 글자', dir:[ux,uy] 드래그로 정한 방향}
 var lineDown=null;  // 누른 순간 {px:[화면], pt:[mm], isNew:시작점을 찍은 누름인지}
@@ -5830,10 +5887,10 @@ function _linePopOpen(){var p=document.getElementById('line-pop');return !!p&&p.
     var c=lineChain;
     if(e.key==='Enter'){
       e.preventDefault();c.buf=inp.value.trim();
-      if(!c.buf){_lineEnd();return;} // 빈 Enter = 끝 (선 절단 도구는 그대로)
+      if(!c.buf){_lineEnd();return;} // 빈 Enter = 끝 (선 커팅 도구는 그대로)
       var p=_lineTarget(c.buf);if(p)_lineAddTo(p[0],p[1]);else{inp.focus();inp.select();}
     } else if(e.key==='Escape'){
-      e.preventDefault();c.buf='';c.dir=null;_linePopHide();_lineRedraw(); // 방향 취소 (선 절단은 계속)
+      e.preventDefault();c.buf='';c.dir=null;_linePopHide();_lineRedraw(); // 방향 취소 (선 커팅은 계속)
     } else if(e.key==='Tab'){
       e.preventDefault();var o=(e.target===inp)?angInp:inp;o.focus();o.select();
     } else if(e.target===inp&&!inp.value&&/^[cCuU]$/.test(e.key)){ // 빈 칸에서 C=닫기, U=마지막 선 취소
@@ -5875,7 +5932,7 @@ function _lineTarget(buf){
   }
   return null;
 }
-// 선 절단 중 키 입력 (처리했으면 true)
+// 선 커팅 중 키 입력 (처리했으면 true)
 function _lineKey(e){
   var c=lineChain,k=e.key;
   if(/^[0-9.,<@\-]$/.test(k)){c.buf+=k;_lineRedraw();return true;}
@@ -6078,7 +6135,7 @@ function _drawNumBadge(ax,ay,numStr){
   ctx.fillStyle='#fff';
   ctx.fillText(numStr,bx+bw/2,by+bh/2);
 }
-// 자동 번호는 상판 조각(그룹 없는 rect, 선 절단 부모도형)만 순서대로 1,2,3… 부여.
+// 자동 번호는 상판 조각(그룹 없는 rect, 선 커팅 부모도형)만 순서대로 1,2,3… 부여.
 // 싱크볼/쿡탑/수전·콘센트 타공/연마·고스라 마크 등은 번호를 차지하지 않음.
 // 반환: shapes 배열 인덱스 → 자동 번호
 function _autoPieceNums(lgRep){
@@ -6092,7 +6149,7 @@ function _autoPieceNums(lgRep){
   });
   return nums;
 }
-// line 그룹(선 절단으로만 그려진 부모도형)마다, 배열상 가장 앞에 있는 line 하나를 "대표"로 삼아 배지 하나만 표시.
+// line 그룹(선 커팅으로만 그려진 부모도형)마다, 배열상 가장 앞에 있는 line 하나를 "대표"로 삼아 배지 하나만 표시.
 // 그룹 안의 line들 중 하나라도 번호(shapeNum)가 지정돼 있으면 그 값을 쓰고, 없으면 자동 번호 사용.
 // 반환: shapes 배열 인덱스(대표 line) → {num, x, y}
 function _lineGroupReps(){
@@ -6322,7 +6379,7 @@ function _redrawBody(_fxNow){
     var f=Math.min(1,(_fxNow-t0)/_FX_IN),e=1-Math.pow(1-f,3);_fxDraw(s,e,0.9+0.1*e); // 나타나기
   });
   if(!printRender)_fxOut.forEach(function(o){var f=Math.min(1,(_fxNow-o.t)/_FX_OUT);_fxDraw(o.s,1-f,1-0.06*f);}); // 사라지기
-  if(!printRender&&(_fxIn.size||_fxOut.length||_fxMorph.size)&&!_fxRaf)_fxRaf=requestAnimationFrame(function(){_fxRaf=0; // 도구 미리보기(선 절단·타원·크기 손잡이)도 같이 다시
+  if(!printRender&&(_fxIn.size||_fxOut.length||_fxMorph.size)&&!_fxRaf)_fxRaf=requestAnimationFrame(function(){_fxRaf=0; // 도구 미리보기(선 커팅·타원·크기 손잡이)도 같이 다시
     if(tool==='line'&&lineChain&&typeof _lineRedraw==='function')_lineRedraw();else{redraw();if(tool==='ellipse')_ellPreview(lastMx,lastMy);if(_rsz)_rszOverlay(_rsz.px||0,_rsz.py||0);}});
   drawUserGroups();
   _dimDraw(function(){_drawAngleMarks(printRender?{R:60,fs:36,colOf:function(){return '#1F3F7A';},exp:false}:{R:26,fs:10,colOf:function(){return '#FFCC80';}});});
@@ -6438,7 +6495,7 @@ function hitDim(ex,ey){
   for(var j=0;j<dimLabels.length;j++){var l=dimLabels[j].line;if(l&&ptLD(ex,ey,l[0][0],l[0][1],l[1][0],l[1][1])<=5)return dimLabels[j];}
   return null;
 }
-// (mx,my)가 안에 있는 닫힌 선 조각(선 절단으로 만든 것)의 선 목록, 없으면 null. 여러 개면 가장 작은 것
+// (mx,my)가 안에 있는 닫힌 선 조각(선 커팅으로 만든 것)의 선 목록, 없으면 null. 여러 개면 가장 작은 것
 function _lineGroupAt(mx,my){
   var best=null,ba=Infinity;
   _collectBoardItems().forEach(function(it){
@@ -6515,7 +6572,7 @@ cv.addEventListener('mousedown',function(e){
       cv.style.cursor='crosshair';
       e.preventDefault();return;
     }
-    // 선 절단으로 만든 닫힌 조각: 선 위가 아니라 안쪽을 눌러도 그 조각(선 전체)으로
+    // 선 커팅으로 만든 닫힌 조각: 선 위가 아니라 안쪽을 눌러도 그 조각(선 전체)으로
     // 고르기 판정은 스냅 전 실제 마우스 자리로 (스냅 점은 12px까지 옮겨져 커서 모양과 달리 잡히던 것, 2026-11-19) — 마우스 올림 커서(_selPick)와 같은 판정
     var _pk=_selPick(e.offsetX,e.offsetY),_lgAt=_pk.lg,dh=_pk.dh;
     if(dh){
@@ -6624,12 +6681,12 @@ cv.addEventListener('mousedown',function(e){
     cv.focus();_joinDown((e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale);
 
   } else if(tool==='line'&&!(lineChain&&drawStart)&&(!snapKind||snapKind==='grid')&&(function(){var _h=hitDim(e.offsetX,e.offsetY);return _h&&(_h.lineDim||_h.drag);})()){
-    // 선 절단 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
+    // 선 커팅 도구 그대로(이어 그리는 중이 아닐 때) 선 길이 치수의 글자·치수선을 누르면 치수 위치 옮기기 (끝은 document mouseup)
     var _hd=hitDim(e.offsetX,e.offsetY);
     selectedShapes=[_hd.shape];updatePropsPanel();
     dimDragInfo=_hd;dimDragStartX=e.offsetX;dimDragStartY=e.offsetY;dimDragL0=null;e.preventDefault();redraw();
   } else if(tool==='line'){
-    // 선 절단 (오토캐드 LINE): 클릭 = 시작점 → 마우스를 움직이면 길이가 계속 바뀌는 미리보기
+    // 선 커팅 (오토캐드 LINE): 클릭 = 시작점 → 마우스를 움직이면 길이가 계속 바뀌는 미리보기
     //   클릭(또는 끌다 놓기) = 그 점까지 선 / 움직이며 숫자 + Enter = 마우스 방향으로 그 길이 (Tab = 각도까지 입력)
     //   끝점에서 바로 다음 선 이어 그리기. 빈 Enter·Esc·오른쪽 클릭 = 끝 / C = 시작점으로 닫기 / U = 마지막 선 취소
     _linePopHide();cv.focus();
@@ -6641,7 +6698,7 @@ cv.addEventListener('mousedown',function(e){
   } else {
     cv.focus();
     // 길이·각도 치수선: 클릭 단계로 (두 점/두 선 → 마우스로 위치 → 클릭)
-    if(tool==='ellipse'){_ellClick(mx,my,e.shiftKey);drawStart=null;return;} // 타원 절단: 클릭 단계 (ELLIPSE)
+    if(tool==='ellipse'){_ellClick(mx,my,e.shiftKey);drawStart=null;return;} // 타원 커팅: 클릭 단계 (ELLIPSE)
     if(tool==='dimline')_dimRaw=[(e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale]; // R·Φ는 스냅 안 한 자리로 중심·변 판정
     if(tool==='dimline'&&_dimClick(mx,my,e.shiftKey)){drawStart=null;if(_dimSt&&_dimSt.stage===1)_dimSt.down=[e.offsetX,e.offsetY];return;}
     // R/Φ 치수선: 원 클릭 감지
@@ -6684,7 +6741,7 @@ cv.addEventListener('pointerdown',function(e){
 cv.addEventListener('pointerup',function(e){
   if(e.button!==0)return;
   try{cv.releasePointerCapture(e.pointerId);}catch(ex){}
-  if(tool==='line'){if(!dimDragInfo)_lineMouseUp(e);return;} // 선 절단: 드래그=방향 고정, 클릭=그 점까지 (치수 끌기 중이면 그쪽)
+  if(tool==='line'){if(!dimDragInfo)_lineMouseUp(e);return;} // 선 커팅: 드래그=방향 고정, 클릭=그 점까지 (치수 끌기 중이면 그쪽)
   if(tool==='cut'){_cutUp(e);return;} // 자르기: 시작점에서 끌다 놓으면 그 점이 P
   if(tool==='fillet'||tool==='select'||tool==='grind'||tool==='trim')return;
   // 길이 치수: 첫 점에서 끌어서 놓으면 놓은 곳이 두 번째 점
@@ -6804,7 +6861,7 @@ cv.addEventListener('mousemove',function(e){
     // 커서 = 지금 누르면 일어날 일 (누르기와 같은 판정 _selPick: 선 조각 안쪽·여러 개 선택 위 치수 건너뛰기 포함)
     cv.style.cursor=_selCursor(e.offsetX,e.offsetY,_selPick(e.offsetX,e.offsetY));
   } else if(tool==='line'&&!(lineChain&&drawStart)&&!dimDragInfo){
-    // 선 절단 도구에서도 선 치수 위에서는 옮기기 화살표
+    // 선 커팅 도구에서도 선 치수 위에서는 옮기기 화살표
     var dhl=hitDim(e.offsetX,e.offsetY);
     cv.style.cursor=(dhl&&(dhl.lineDim||dhl.drag)&&(!snapKind||snapKind==='grid'))?(dhl.lineDim?_lineDimCursor(dhl):'move'):'crosshair';
   } else if(!dimDragInfo){cv.style.cursor='crosshair';}
@@ -6857,7 +6914,7 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='foodhole'&&_foodShape==='r'){ps={kind:'rect',x:x0-_FOOD_RW/2,y:y0-_FOOD_RH/2,w:_FOOD_RW,h:_FOOD_RH,cornerType:'none',cornerSize:0,applianceType:'hole',food:true,ops:[]};}
     else if(tool==='foodhole'){ps={kind:'circle',cx:x0,cy:y0,r:80,holeType:'food',ops:[]};}
     if(ps){ctx.globalAlpha=0.8;_annDraw(function(){drawShape(ps,true);});ctx.globalAlpha=1;}
-    if(tool==='line')_lineOverlay(); // 선 절단: 미리보기 + 길이/입력 상자
+    if(tool==='line')_lineOverlay(); // 선 커팅: 미리보기 + 길이/입력 상자
   }
 });
 
@@ -6878,7 +6935,7 @@ document.addEventListener('mousemove',function(e){
       dimDragInfo.drag(ex,ey,_dx,_dy,dimDragInfo._st);
     }
     else if(dimDragInfo.lineDim){
-      // 선 절단 길이 치수: 선에서 마우스까지 법선 거리(px) = 치수선 자리. 자동 자리 8px 안이면 자동으로
+      // 선 커팅 길이 치수: 선에서 마우스까지 법선 거리(px) = 치수선 자리. 자동 자리 8px 안이면 자동으로
       if(dimDragInfo.off0==null)dimDragInfo.off0=_ds.dimOffPx!=null?_ds.dimOffPx:dimDragInfo.auto;
       var _n=dimDragInfo.n,_o=dimDragInfo.off0+_dx*_n[0]+_dy*_n[1];
       if(Math.abs(_o-dimDragInfo.auto)<8)delete _ds.dimOffPx;else _ds.dimOffPx=_o;
@@ -6912,7 +6969,7 @@ document.addEventListener('mouseup',function(e){
   if(e.button!==0)return;
   if(panOrigin){panOrigin=null;return;}
   if(_endDrag){_endDrag=null;cv.style.cursor='default';updatePropsPanel();redraw();return;} // 화살표 끝점 드래그 종료
-  // 선 절단 도구에서 선 치수 끌기 종료 (클릭만 했으면 길이 수정)
+  // 선 커팅 도구에서 선 치수 끌기 종료 (클릭만 했으면 길이 수정)
   if(tool==='line'&&dimDragInfo){
     if(Math.hypot(e.offsetX-dimDragStartX,e.offsetY-dimDragStartY)<=3){if(!dimDragInfo.line)showDimInput(dimDragInfo);}else saveHistory();
     dimDragInfo=null;redraw();return;
@@ -6959,7 +7016,7 @@ document.addEventListener('mouseup',function(e){
     return;
   }
 
-  if(tool==='fillet'||tool==='line')return; // 선 절단은 _lineMouseUp이 처리 (놓을 때 그리지 않음)
+  if(tool==='fillet'||tool==='line')return; // 선 커팅은 _lineMouseUp이 처리 (놓을 때 그리지 않음)
   if(!drawStart){return;}
   finalizeShape(lastMx,lastMy);
 });
@@ -6972,7 +7029,7 @@ cv.addEventListener('wheel',function(e){
 },{passive:false});
 
 cv.setAttribute('tabindex','0');
-cv.addEventListener('contextmenu',function(e){e.preventDefault();if(tool==='line'&&lineChain)_lineEnd();if(tool==='join')_joinCancel();}); // 선 절단 중 오른쪽 클릭 = 끝내기
+cv.addEventListener('contextmenu',function(e){e.preventDefault();if(tool==='line'&&lineChain)_lineEnd();if(tool==='join')_joinCancel();}); // 선 커팅 중 오른쪽 클릭 = 끝내기
 function fmtMoney(el){
   var raw=el.value.replace(/[^0-9]/g,'');
   el.value=raw?parseInt(raw).toLocaleString():'';
@@ -7193,7 +7250,7 @@ function _applyAllPrices(all,persist){
 // 다른 PC로 옮길 단가 파일 내보내기
 function exportTierPrices(){
   var d=new Date(),ds=_ymd(d);
-  var blob=new Blob([JSON.stringify({type:'scd-prices',version:1,saved:d.toISOString(),prices:_currentAllPrices()},null,2)],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({type:'scd-prices',version:1,saved:d.toISOString(),prices:_currentAllPrices(),names:_tierNames,extra:_tierExtra},null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='단가설정_'+ds+'.json';a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
 }
@@ -7206,6 +7263,10 @@ function importTierPrices(){
       try{
         var d=JSON.parse(e.target.result);
         if(d.type!=='scd-prices'||!d.prices)throw new Error('단가 파일이 아닙니다.');
+        // 추가한 단가 설정·이름도 같이 (없는 설정은 만듦)
+        (d.extra||[]).forEach(function(x){if(x&&/^t\d+$/.test(x.id)&&x.pf===x.id+'-'&&!TIER_PREFIX[x.id]){_tierExtra.push({id:x.id,pf:x.pf});_tierMakePanel(x);}});
+        if(d.names)Object.keys(d.names).forEach(function(k){if(TIER_PREFIX[k])_tierNames[k]=String(d.names[k]).slice(0,20);});
+        _tierSaveMeta();_tierLabels();
         _applyAllPrices(d.prices,true);
         alert('단가를 불러와 이 PC에 저장했습니다.');
       }catch(ex){alert('단가 파일을 읽을 수 없습니다.\n'+ex.message);}
@@ -7240,7 +7301,7 @@ function calcCost(){
       } else if(!s.groupId){
         var _rl=Math.abs(perimeterMm(s)),_ff=_fullBoardFit(s),_vb=s.rotation?getBBox(s):null;
         var _vw=_vb?_vb.r-_vb.l:Math.abs(s.w),_vh=_vb?_vb.b-_vb.t:Math.abs(s.h);
-        // 원판 배치에서 원판 그대로 사이즈인 방향의 양쪽 면은 원판 원래 끝면이라 절단비 없음 (w가 원판 폭이면 h 길이 두 면)
+        // 원판 배치에서 원판 그대로 사이즈인 방향의 양쪽 면은 원판 원래 끝면이라 커팅비 없음 (w가 원판 폭이면 h 길이 두 면)
         if(_ff.w)_rl-=2*_vh;if(_ff.h)_rl-=2*_vw;
         lenMm.rect+=Math.max(0,_rl);
         if(s.cornerType==='chamfer'&&s.cornerSize>0)cnt.chamfer++;
@@ -7252,7 +7313,7 @@ function calcCost(){
       }
     } else if(s.kind==='ellipse'){
       if(s.hole)cnt.holeo++; // 타원 타공 = 콘센트 타공 금액
-      else lenMm.circlecut+=perimeterMm(s); // 타원 절단 = 원형 절단 단가로 둘레 길이
+      else lenMm.circlecut+=perimeterMm(s); // 타원 커팅 = 원형 커팅 단가로 둘레 길이
     } else if(s.kind==='circle'||s.kind==='hole'){
       if(s.holeType==='cut')lenMm.circlecut+=perimeterMm(s);
       else if(s.holeType==='faucet')cnt.holef++;else if(s.holeType==='food')cnt.food++;else cnt.holeo++;
@@ -7289,7 +7350,7 @@ function calcCost(){
   var pHolef=gta('holef'),subHolef=cnt.holef*pHolef*qty;
   var pHoleo=gta('holeo'),subHoleo=cnt.holeo*pHoleo*qty;
   var pLine=gta('line'),mLine=lenMm.line/1000,subLine=mLine*pLine*qty;
-  // 원형 절단 커팅비는 별도 단가 없이 "선 절단" 단가(pLine)를 그대로 따라간다
+  // 원형 커팅 커팅비는 별도 단가 없이 "선 커팅" 단가(pLine)를 그대로 따라간다
   var mCirclecut=lenMm.circlecut/1000,subCirclecut=mCirclecut*pLine*qty;
   var pChamfer=gta('chamfer'),subChamfer=cnt.chamfer*pChamfer*qty;
   var pGrind=gta('grind'),mGrind=lenMm.grind/1000,subGrind=mGrind*pGrind*qty;
@@ -7383,12 +7444,12 @@ function resetDims(){
 }
 document.addEventListener('keydown',function(e){
   if(_rsz&&_rszKey(e)){e.preventDefault();e.stopPropagation();return;} // 크기 손잡이를 끄는 중: 숫자·Enter·Esc
-  // 선 절단 이어 그리기 중: 숫자·Enter·Esc·C·U를 먼저 받음 (입력칸에 쓰는 중이면 제외)
+  // 선 커팅 이어 그리기 중: 숫자·Enter·Esc·C·U를 먼저 받음 (입력칸에 쓰는 중이면 제외)
   if(tool==='line'&&lineChain&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
     if(_lineKey(e)){e.preventDefault();e.stopPropagation();return;}
   }
   if(e.key==='Shift'){shiftDown=true;ortho=!orthoMode;}
-  // 타원 절단(ELLIPSE): C·숫자·Backspace·Enter·Esc를 먼저 받음 (입력칸에 쓰는 중이면 제외)
+  // 타원 커팅(ELLIPSE): C·숫자·Backspace·Enter·Esc를 먼저 받음 (입력칸에 쓰는 중이면 제외)
   if(tool==='ellipse'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){
     if(_ellKey(e)){e.preventDefault();e.stopPropagation();return;}
   }
@@ -7465,7 +7526,7 @@ var _TOOL_FOCUS={fillet:'fillet-r',circle:'circle-phi',circlecut:'circlecut-phi'
 document.querySelectorAll('.tool-btn').forEach(function(b){
   b.onclick=function(){
     if(!b.dataset.tool)return;
-    if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 절단 이어 그리기 끝
+    if(lineChain)_lineEnd(); // 다른 도구로 바꾸면 선 커팅 이어 그리기 끝
     if(_joinSt&&_joinSt.stage===2)_joinRestore(_joinSt); // 결합 중 다른 도구 = 옮기던 조각 제자리
     _joinSt=null;_joinHover=null;
     tool=b.dataset.tool;filletSel=[];drawStart=null;selBox=null;_dimSt=null;_ellSt=null;_cutSt=null;_cutHover=null;
@@ -7569,7 +7630,7 @@ function updatePropsPanel(){
     html+='<div class="prop-row"><label>Φ(mm):</label><input type="number" id="pp-phi" value="'+(s.r*2).toFixed(2)+'" step="1" oninput="livePropPhi(this.value)"></div>';
     var _ht=s.holeType||'outlet';
     if(_ht==='cut'){
-      html+='<div style="color:#E3B861;font-size:11px;padding:4px">원형 절단 (커팅비는 선 절단 단가 적용)</div>';
+      html+='<div style="color:#E3B861;font-size:11px;padding:4px">원형 커팅 (커팅비는 선 커팅 단가 적용)</div>';
     } else if(_ht==='food'){
       html+='<div style="color:#E3B861;font-size:11px;padding:4px">음식물투입구 (고스라 없음)</div>';
     } else {
@@ -7712,7 +7773,7 @@ function flipGrindInward(){
   // 밑면연마 해칭이 도형 바깥쪽으로 나가면 사용자가 직접 방향을 뒤집을 수 있도록 함.
   var s=selectedShapes[0];if(!s||s.kind!=='grindregion')return;
   saveHistory();
-  // 원형 절단/라운드 코너(탄젠트점↔탄젠트점)에 붙은 경우: matOutward(바깥쪽/안쪽) 반전
+  // 원형 커팅/라운드 코너(탄젠트점↔탄젠트점)에 붙은 경우: matOutward(바깥쪽/안쪽) 반전
   var _corner=_findCornerAttach(s.x1,s.y1,s.x2,s.y2);
   if(_corner){
     var curOut=(s.matOutwardOverride!==undefined)?s.matOutwardOverride:_corner.matOutward;
@@ -7822,7 +7883,7 @@ function _lineDimPlan(lines){
 }
 // 원판 그대로 사이즈: 사각 조각을 원판 배치에서 원판 가로(세로)와 같은 길이의 변이 원판 가로(세로) 방향이 되게 놓았을 때만
 //   (1600×3200 원판에 1600 변을 1600 방향으로) 그 방향은 원판 원래 끝면 그대로
-//   → 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 절단비 없음, 치수 옆에 "원판 그대로 사이즈". 1600 변을 3200 방향으로 놓으면 보통 조각
+//   → 여백 없이 끝에 붙여 배치, 그 방향 양쪽 면은 커팅비 없음, 치수 옆에 "원판 그대로 사이즈". 1600 변을 3200 방향으로 놓으면 보통 조각
 var _FULL_TXT='원판 그대로 사이즈';
 // 조각 한 변이 그 제품 원판의 폭이나 길이와 같은지 (실제로 원판 그대로인지는 배치 방향으로 정함: _placeDims)
 function _fullElig(s,w,h){
@@ -8008,7 +8069,7 @@ function _unfitReason(u){
   return nm+' — '+why.join(', ')+(s.kind==='linegroup'?' (선 조각은 돌려 봐도 안 들어감)':'')+' · 원판 '+u.bw+'×'+u.bh+'에서 여백 10mm씩 뺀 크기 기준';
 }
 // 저장된 배치(_savedBoardLayout.boards)를 현재 피스(items)에 매핑. 하나라도 못 찾거나 개수가 다르면 null.
-// 선 절단 피스는 lineIds로 매핑, lineIds가 없는 예전 파일은 크기가 같은 선 그룹 피스로 매핑.
+// 선 커팅 피스는 lineIds로 매핑, lineIds가 없는 예전 파일은 크기가 같은 선 그룹 피스로 매핑.
 function _restoreSavedBoards(saved,items){
   if(!saved||!saved.boards)return null;
   var used=[],ok=true,count=0;
@@ -8988,7 +9049,7 @@ function closeBoardModal(){
           var _sh=p.item&&p.item.shape;
           var _rec={shapeId:(_sh&&_sh.id!=null)?_sh.id:null,x:p.x,y:p.y,pw:p.pw,ph:p.ph,rotated:p.rotated||false,label:p.item?p.item.label:''};
           if(p.flip)_rec.flip=true; // 180° 더 돌림
-          if(_sh&&_sh.kind==='linegroup'){_rec.lineIds=_sh.lines.map(function(l){return l.id;});_rec.rot=p.item.rot||0;} // 선 절단 피스는 선 id로 복원 + 돌린 각도
+          if(_sh&&_sh.kind==='linegroup'){_rec.lineIds=_sh.lines.map(function(l){return l.id;});_rec.rot=p.item.rot||0;} // 선 커팅 피스는 선 id로 복원 + 돌린 각도
           return _rec;
         });
       })
@@ -9006,7 +9067,7 @@ function closeBoardModal(){
   }
   document.getElementById('board-modal').classList.remove('show');
   _updateBoardQty(); // 손으로 고친 배치 장수를 수량에
-  calcCost(); // 원판 그대로 사이즈는 배치 방향에 따라 절단비가 달라짐
+  calcCost(); // 원판 그대로 사이즈는 배치 방향에 따라 커팅비가 달라짐
 }
 function resetBoardLayout(){
   _savedBoardLayout=null;_savedBoardImg=null;

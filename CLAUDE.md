@@ -382,6 +382,10 @@
   - door-tex 이미지는 외부 카탈로그 자료 — 공개 저장소에 올려도 되는지 사용자 확인 후 올림
 - 가공비: `calcCost` / 저장·불러오기: `_makeProjectData`, `loadProject`(.ceramic=JSON, 단가 포함) / DXF: `importDxf`
 - 단가: 브라우저 localStorage(`scd_prices_<등급>`), 다른 PC로는 `exportTierPrices`/`importTierPrices`
+  - 단가 설정 이름·추가(2026-11-24 사용자 요청): 이름 `tierName(id)`(localStorage `scd_tier_names`, 기본 `_TIER_DEFNM`), 버튼 더블클릭·"✏ 이름" = `renameTier`,
+    "＋ 설정 추가" `addTier` = 지금 설정 값을 복사한 `{id:'tN',pf:'tN-'}`(`scd_tier_extra`, `_tierMakePanel`이 커스텀 판을 복제·`TIER_PREFIX`에 더함, 시작 때 `_tierInit`), "－ 빼기" `delTier`(기본 다섯 개는 못 뺌).
+    단가 파일에 `names`·`extra`도. 설정 목록은 `_tierIds()`(하드코딩한 다섯 개 목록 쓰지 않기)
+- 용어: 화면 글자는 "절단" 대신 "커팅"(2026-11-24 사용자 요청 — index.html·patch-notes.js 모두 바꿈, 새 글자도 커팅)
 
 ## 도면 표기 규칙 (사용자 확정)
 - (도면화·원판 배치) 변은 모두 조각 색 실선, **밑면연마 = 변에서 재료 쪽 50mm 띠에 주황 45° 빗금**(`_expHatchBand`, `_GRIND_MM`),
