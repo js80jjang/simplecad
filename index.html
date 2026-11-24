@@ -3811,7 +3811,7 @@ function clearAll(){
 function newProject(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
   if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
-  _pairOv={};
+  _pairOv={};_drwOv={};
   if(lineChain)_lineEnd();
   saveHistory();
   shapes=[];selectedShapes=[];nextId=1;hoverShape=null;filletSel=[];_dimSt=null;drawStart=null;
@@ -3857,6 +3857,7 @@ function _makeProjectData(){
     scale:scale,
     boardLayout:_savedBoardLayout,
     boardPairOv:Object.keys(_pairOv).length?_pairOv:undefined, // 원판 배치 인접면 표시 옮김·지움
+    drawingOv:Object.keys(_drwOv).length?_drwOv:undefined, // 도면화 상세 쪽에서 손으로 옮긴 조각
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
     view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
@@ -5084,7 +5085,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
         document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
         // 저장해 둔 원판 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
-        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};
+        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};_drwOv=data.drawingOv||{};
         // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
         //   비교는 계산에 쓸 등급(파일의 등급, 없으면 지금 등급)만, 쉼표·띄어쓰기 무시하고 숫자로, 한쪽이라도 빈 칸이면 비교 안 함
         var useTier=(data.tier&&TIER_PREFIX[data.tier])?data.tier:_tier,fp=data.prices&&data.prices[useTier],cp=_currentAllPrices()[useTier]||{};
@@ -10324,7 +10325,7 @@ function _renderDrawingImage(pageLine){
   offsetY=padT+(mainCv.height-padT-padB-mmH*newSc)/2-allBB.t*newSc;
   // 도면화 전용 렌더러로 캡처 (printRender: 사용자 치수선 등 기존 인쇄용 크기 사용)
   _exportLegend=[];printRender=true;printMode=true;
-  var img='';
+  var img='',_geo={sc:newSc,ox:offsetX,oy:offsetY,W:mainCv.width,H:mainCv.height}; // 도면화 창에서 조각 끌기용 (mm → 그림 px)
   try{
     _drawCleanExport();
     var tmpCv=document.createElement('canvas');tmpCv.width=mainCv.width;tmpCv.height=mainCv.height;
@@ -10351,18 +10352,75 @@ function _renderDrawingImage(pageLine){
     scale=svScale;offsetX=svOffX;offsetY=svOffY;
     printRender=false;printMode=false;
   }
-  return{img:img,isPort:isPort};
+  return{img:img,isPort:isPort,sc:_geo.sc,ox:_geo.ox,oy:_geo.oy,W:_geo.W,H:_geo.H};
 }
 // 쪽 나누기 도면: 그 쪽 조각들의 원래 배치는 그대로, 큰 빈 곳만 줄여 도면을 크게.
 // 조각마다 딸린 도형(타공·밑면연마·고스라·글자 등)은 같이 옮긴 복사본으로 돌려줌 (원본 shapes는 그대로)
 var _DRW_AW=1660,_DRW_AH=851; // _renderDrawingImage의 도면 영역(px): 2000×1281에서 여백 뺀 크기
+// 도면화 상세 쪽 조각 손으로 옮기기(2026-11-24 사용자 요청 "객체별로 이동해서 최적화를 직접 수정"):
+//   _drwOv['방식:조각키'] = {dx,dy}(mm, 자동 자리에서 더 옮긴 만큼, 파일 drawingOv) · _drwMode = 지금 그리는 방식 · _drwMeta = 그 쪽 조각 상자(mm, 옮긴 뒤)
+var _drwOv={},_drwMode='area',_drwMeta=null,_drw=null;
+function _drwPieceKey(sh){return sh.kind==='linegroup'?'L'+(sh.lines[0]&&sh.lines[0].id):String(sh.id);}
+// 조각 번호를 전체 기준으로 고정한 채 fn 실행 (구역별은 번호 보기 꺼 놨어도 번호)
+function _drwWithNums(mode,fn){
+  var svNums=showShapeNumbers;if(mode==='area')showShapeNumbers=true;
+  var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
+  all.forEach(function(s,i){if(auto[i]&&s.shapeNum==null){s.shapeNum=auto[i];frozen.push(s);}});
+  try{return fn();}finally{shapes=all;frozen.forEach(function(s){delete s.shapeNum;});showShapeNumbers=svNums;}
+}
+// 쪽 하나 그리기 → {img,isPort,boxes:[{key,l,t,r,b} 그림 px]}
+function _drwRenderPage(pd,mode,pmap,items){
+  var all=shapes;_drwMode=mode;_drwMeta=pd.list?[]:null;
+  try{
+    if(pd.list)shapes=_compactPageShapes(pd.list,pmap,items);
+    _expShapeOnly=!!pd.shapeOnly;
+    var r=_renderDrawingImage(pd.label);if(!r)return null;
+    r.boxes=(_drwMeta||[]).map(function(m){return{key:m.key,l:m.l*r.sc+r.ox,t:m.t*r.sc+r.oy,r:m.r*r.sc+r.ox,b:m.b*r.sc+r.oy};});
+    return r;
+  }finally{shapes=all;_expShapeOnly=false;_drwMeta=null;}
+}
+// 도면화 창이 부름: pi쪽 조각 key를 그림 px로 (ddx,ddy)만큼 옮기고 다시 그린 쪽을 돌려줌 / reset = 그 쪽 옮긴 것 모두 처음대로
+function _drwMove(pi,key,ddx,ddy){
+  var D=_drw,pg=D&&D.pages[pi];if(!pg||!pg.pd.list)return null;
+  if(key){var k=D.mode+':'+key,o=_drwOv[k]||(_drwOv[k]={dx:0,dy:0});o.dx=Math.round(o.dx+ddx/pg.sc);o.dy=Math.round(o.dy+ddy/pg.sc);if(!o.dx&&!o.dy)delete _drwOv[k];}
+  return _drwRedo(pi);
+}
+// 도면화 창 안에서 도는 코드(toString으로 넣음): 상세 쪽 그림 위 조각 올림 = 파란 점선 상자, 끌어 놓기 = opener._drwMove, "↺ 처음 배치" = opener._drwReset
+function _drwPopupScript(){
+  var O=window.opener;if(!O||!O._drw)return;
+  O._drw.pages.forEach(function(pg,pi){
+    var img=document.getElementById('_dimg'+pi);if(!img||!pg.boxes||pg.boxes.length<2)return;
+    var area=img.parentNode,hl=document.createElement('div'),rb=document.createElement('button'),drag=null;
+    hl.className='drw-hl';area.appendChild(hl);rb.className='drw-reset';rb.textContent='↺ 처음 배치';rb.title='이 쪽에서 옮긴 조각을 자동 자리로';area.appendChild(rb);
+    img.draggable=false;img.style.cursor='default';
+    function put(r){if(r)img.src=r.img;hl.style.display='none';}
+    rb.onclick=function(){put(O._drwReset(pi));};
+    function geo(){var R=img.getBoundingClientRect(),A=area.getBoundingClientRect(),k=Math.min(R.width/pg.W,R.height/pg.H);
+      return{k:k,x0:R.left+(R.width-pg.W*k)/2,y0:R.top+(R.height-pg.H*k)/2,ax:A.left,ay:A.top};}
+    function hit(e){var g=geo(),x=(e.clientX-g.x0)/g.k,y=(e.clientY-g.y0)/g.k,best=null,ba=Infinity;
+      pg.boxes.forEach(function(b){var a=(b.r-b.l)*(b.b-b.t);if(x>=b.l&&x<=b.r&&y>=b.t&&y<=b.b&&a<ba){ba=a;best=b;}});return best;}
+    function show(b,dx,dy){var g=geo();hl.style.display='block';hl.style.left=(g.x0-g.ax+b.l*g.k+dx)+'px';hl.style.top=(g.y0-g.ay+b.t*g.k+dy)+'px';hl.style.width=((b.r-b.l)*g.k)+'px';hl.style.height=((b.b-b.t)*g.k)+'px';}
+    img.addEventListener('mousemove',function(e){if(drag)return;var b=hit(e);if(b){show(b,0,0);img.style.cursor='move';}else{hl.style.display='none';img.style.cursor='default';}});
+    img.addEventListener('mouseleave',function(){if(!drag)hl.style.display='none';});
+    img.addEventListener('mousedown',function(e){if(e.button!==0)return;var b=hit(e);if(!b)return;e.preventDefault();drag={b:b,sx:e.clientX,sy:e.clientY};hl.classList.add('on');});
+    window.addEventListener('mousemove',function(e){if(drag)show(drag.b,e.clientX-drag.sx,e.clientY-drag.sy);});
+    window.addEventListener('mouseup',function(e){if(!drag)return;var d=drag;drag=null;hl.classList.remove('on');var k=geo().k,dx=(e.clientX-d.sx)/k,dy=(e.clientY-d.sy)/k;
+      if(Math.hypot(dx,dy)*k<3){hl.style.display='none';return;}
+      document.body.style.cursor='wait';setTimeout(function(){put(O._drwMove(pi,d.b.key,dx,dy));document.body.style.cursor='';},10);});
+  });
+}
+function _drwReset(pi){var D=_drw,pg=D&&D.pages[pi];if(!pg)return null;(pg.boxes||[]).forEach(function(b){delete _drwOv[D.mode+':'+b.key];});return _drwRedo(pi);}
+function _drwRedo(pi){
+  var D=_drw,pg=D.pages[pi],r=_drwWithNums(D.mode,function(){return _drwRenderPage(pg.pd,D.mode,D.pmap,D.items);});
+  redraw();if(!r)return null;pg.sc=r.sc;pg.boxes=r.boxes;pg.W=r.W;pg.H=r.H;return{img:r.img,boxes:r.boxes,W:r.W,H:r.H};
+}
 function _compactPageShapes(list,pmap,items){
   var groups={},G=[];
   list.forEach(function(s){
     var k=pmap.get(s);if(k==null)return;
     if(!groups[k]){
       var sh=items[k].shape,b0=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!b0)return;
-      groups[k]={ss:[],bb:{l:b0.l,t:b0.t,r:b0.r,b:b0.b}};G.push(groups[k]);
+      groups[k]={ss:[],bb:{l:b0.l,t:b0.t,r:b0.r,b:b0.b},k:k};G.push(groups[k]);
     }
     var g=groups[k],b=getBBoxAny(s);g.ss.push(s);
     if(b){g.bb.l=Math.min(g.bb.l,b.l);g.bb.t=Math.min(g.bb.t,b.t);g.bb.r=Math.max(g.bb.r,b.r);g.bb.b=Math.max(g.bb.b,b.b);}
@@ -10382,10 +10440,12 @@ function _compactPageShapes(list,pmap,items){
     SX=squeeze(function(g){return g.bb.l;},function(g){return g.bb.r;},gap);SY=squeeze(function(g){return g.bb.t;},function(g){return g.bb.b;},gap);
     sc=Math.min(_DRW_AW/Math.max(1,SX.len),_DRW_AH/Math.max(1,SY.len));
   }
-  // 조각(+딸린 도형)마다 같은 만큼 옮긴 복사본
-  var out=[];
+  // 조각(+딸린 도형)마다 같은 만큼 옮긴 복사본 (+ 도면화 창에서 손으로 옮긴 만큼 _drwOv, 2026-11-24 사용자 요청)
+  var out=[];if(_drwMeta)_drwMeta.length=0;
   G.forEach(function(g,i){
-    var dx=SX.f(g.bb.l)-g.bb.l,dy=SY.f(g.bb.t)-g.bb.t;
+    var dx=SX.f(g.bb.l)-g.bb.l,dy=SY.f(g.bb.t)-g.bb.t,pk=_drwPieceKey(items[g.k].shape),ov=_drwOv[_drwMode+':'+pk];
+    if(ov){dx+=ov.dx;dy+=ov.dy;}
+    if(_drwMeta)_drwMeta.push({key:pk,l:g.bb.l+dx,t:g.bb.t+dy,r:g.bb.r+dx,b:g.bb.b+dy});
     g.ss.forEach(function(s){
       var c=JSON.parse(JSON.stringify(s));
       ['x','x1','x2','cx'].forEach(function(k){if(typeof c[k]==='number')c[k]+=dx;});
@@ -10477,19 +10537,17 @@ function exportDrawingA4(mode){
   else pagesDef.unshift({list:null,label:'전체 도면 (다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh});
   // 조각 번호는 전체 도면 기준으로 고정 (쪽마다 다시 매기지 않게)
   // 구역별은 번호 보기를 꺼 놨어도 조각 번호를 넣음 (1쪽 전체 도면과 상세 쪽을 번호로 맞춰 봄)
-  var svNums=showShapeNumbers;if(mode==='area')showShapeNumbers=true;
-  var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
-  all.forEach(function(s,i){if(auto[i]&&s.shapeNum==null){s.shapeNum=auto[i];frozen.push(s);}});
   var pages=[];
+  _drw={mode:mode,pmap:pmap,items:items,pages:[]}; // 도면화 창에서 조각 끌어 옮기기(_drwMove)가 다시 그릴 때 씀
   try{
-    pagesDef.forEach(function(pd){
-      if(pd.list)shapes=_compactPageShapes(pd.list,pmap,items); // 배치 그대로 빈 곳만 줄여 크게 (번호 고정 후라 복사본에도 번호가 따라감)
-      _expShapeOnly=!!pd.shapeOnly;
-      try{var r=_renderDrawingImage(pd.label);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);}}
-      finally{shapes=all;_expShapeOnly=false;}
+    _drwWithNums(mode,function(){
+      pagesDef.forEach(function(pd){
+        // 배치 그대로 빈 곳만 줄여 크게 (번호 고정 후라 복사본에도 번호가 따라감) + 손으로 옮긴 조각
+        var r=_drwRenderPage(pd,mode,pmap,items);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);_drw.pages.push({pd:pd,sc:r.sc,boxes:r.boxes,W:r.W,H:r.H});}
+      });
     });
   }catch(e){alert('캡처 오류: '+e.message);}
-  finally{shapes=all;frozen.forEach(function(s){delete s.shapeNum;});showShapeNumbers=svNums;redraw();}
+  finally{redraw();}
   if(!pages.length)return;
   var _delivDateRaw=(document.getElementById('deliv-date')||{}).value||'';
   var _delivTimeRaw=(document.getElementById('deliv-time')||{}).value||'';
@@ -10542,9 +10600,11 @@ function exportDrawingA4(mode){
     +'.board-area{flex:1;min-height:0;position:relative;}'
     +'.board-area img{position:absolute;left:4mm;top:4mm;width:calc(100% - 8mm);height:calc(100% - 8mm);object-fit:contain;object-position:top center;display:block;}'
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
-    +'@media print{.page2{page-break-before:always;}}';
+    +'@media print{.page2{page-break-before:always;}.drw-hl,.drw-reset{display:none!important;}}'
+    +'.drw-hl{position:absolute;display:none;border:2px dashed #1E88E5;background:rgba(30,136,229,0.07);pointer-events:none;z-index:2}.drw-hl.on{border-style:solid;background:rgba(30,136,229,0.15)}'
+    +'.drw-reset{position:absolute;right:3mm;top:3mm;z-index:3;padding:3px 9px;font-size:11px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;cursor:pointer}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
-    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span></div>';
+    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span>'+(_drw.pages.some(function(p){return p.boxes&&p.boxes.length>1;})?'<span style="color:#A9B4C8">· 상세 쪽 조각은 끌어서 옮길 수 있어요 (↺ 처음 배치 = 자동 자리)</span>':'')+'</div>';
   pages.forEach(function(pg,pi){
     var bwT=pg.bw||_prodBoardSize('').bw,bhT=pg.bh||_prodBoardSize('').bh;
     body+='<div class="page '+(pg.isPort?'port':'land')+'"><div class="frame"><div class="inner-border">'
@@ -10589,7 +10649,7 @@ function exportDrawingA4(mode){
       +'</div></div>';
   });
   // 창 제목 = 크롬 "PDF로 저장" 파일 이름 → .ceramic 저장과 같은 이름(업체명-주소-작성일)
-  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+escHtml(_saveBaseName())+'</title><style>'+css+'</style></head><body>'+body+'</body></html>');
+  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+escHtml(_saveBaseName())+'</title><style>'+css+'</style></head><body>'+body+'<script>('+_drwPopupScript.toString()+')();<\/script></body></html>');
   pw.document.close();
   // 큰 그림은 문서를 쓴 뒤에 넣음
   setTimeout(function(){

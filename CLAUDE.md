@@ -248,6 +248,9 @@
   `exportDrawingA4('detail')` = 아래 예전 방식(1쪽 전체 도면에 치수 포함 + 원판별 상세). `_renderDrawingImage` 위 여백 padT = 왼쪽 위 글자 높이(업체 39 + 제품마다 32 + 쪽 설명 37) + 125 이상
 - 도면화(PDF): `exportDrawingA4` → `_drawCleanExport`(도면 쪽, `_exp*` 함수들) + `_renderCleanBoards`(원판 배치 쪽, 한 쪽에 최대 2장 `_BPP`, `bi0`로 "원판 N" 번호 유지)
   + 맨 끝 "사용 제품" 쪽 = 제품마다 한 쪽씩 원판 사진(`window._MALL_IMG[id]`, 불러오는 중이면 300ms마다 다시 넣음)·제품명·영문명·사이즈·장수 (공장 확인용)
+  - 상세 쪽 조각 손으로 옮기기(2026-11-24 사용자 요청): `_compactPageShapes`가 자동 자리에 `_drwOv['방식:조각키'(_drwPieceKey)]={dx,dy}`(mm, 파일 `drawingOv`, 새로 만들기·불러오기에서 바꿈)를 더하고 `_drwMeta`에 조각 상자를 남김 →
+    `_drwRenderPage`(쪽 하나, boxes = 그림 px) · `_drwWithNums`(조각 번호 고정) · `_renderDrawingImage`가 sc/ox/oy/W/H도 돌려줌. 내보낼 때 `_drw`={mode,pmap,items,pages[{pd,sc,boxes,W,H}]}.
+    인쇄 창에 `_drwPopupScript`(toString으로 넣음, window.opener 사용): 조각 2개 이상인 쪽 그림 위 올림 = `.drw-hl` 상자, 끌어 놓기 = `opener._drwMove(pi,key,dx,dy)`(그림 px) → 그 쪽만 다시 그려 src 바꿈, `.drw-reset` = `_drwReset(pi)`. 인쇄 때 숨김
   - 1쪽은 항상 **전체 도면**(모든 도형 원래 자리). 원판 2장 이상이면 2쪽부터 **원판마다 상세 한 쪽**("상세 · 원판 N"): `_drawingBoards`(저장 배치/자동 배치) → `_shapePieceMap`(도형 → 속한 조각: 조각 안·변 위 → 가장 작은 조각,
     밖이면 가장 가까운 조각, 그룹은 main 자리) → 쪽마다 `shapes`를 그 장 조각 것만으로 잠시 바꿔 `_renderDrawingImage`.
     이때 `_compactPageShapes`가 조각(+딸린 도형)을 옮긴 복사본으로 바꿈 — **원래 배치 유지**(2026-10-28 사용자 확정 "설치 위치를 알 수 있게 배치해 놓은 것"):
