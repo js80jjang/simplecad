@@ -385,6 +385,7 @@
   - 단가 설정 이름·추가(2026-11-24 사용자 요청): 이름 `tierName(id)`(localStorage `scd_tier_names`, 기본 `_TIER_DEFNM`), 버튼 더블클릭·"✏ 이름" = `renameTier`,
     "＋ 설정 추가" `addTier` = 지금 설정 값을 복사한 `{id:'tN',pf:'tN-'}`(`scd_tier_extra`, `_tierMakePanel`이 커스텀 판을 복제·`TIER_PREFIX`에 더함, 시작 때 `_tierInit`), "－ 빼기" `delTier`(기본 다섯 개는 못 뺌).
     단가 파일에 `names`·`extra`도. 설정 목록은 `_tierIds()`(하드코딩한 다섯 개 목록 쓰지 않기)
+- 객체 1식 금액(2026-11-24 사용자 요청): calcCost가 객체(groupRole main rect·원 타공·타원 타공) 둘레 가공 표시를 안 셈 — 같은 groupId(`_objG`) + 손으로 객체 변·라운드 코너·원 둘레 위에 그린 것(`_onObjEdge`, 가운데 점 ±2~3mm). 객체 코너 R도 R 구간 금액 없음(groupId 있는 rect는 원래 제외)
 - 용어: 화면 글자는 "절단" 대신 "커팅"(2026-11-24 사용자 요청 — index.html·patch-notes.js 모두 바꿈, 새 글자도 커팅)
 
 ## 도면 표기 규칙 (사용자 확정)
