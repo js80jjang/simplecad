@@ -205,6 +205,8 @@
 - 조각/배치: `_collectBoardItems` → `_packBoardItems` / `_restoreSavedBoards`, `showBoardLayout`, `renderBoardLayout`
   - 트림으로 생긴 호(`arc`)도 선 그룹에 들어감(2026-11-07 사용자 요청): `_arcSegs(a)` = 대리 선분(5° 간격, 짧으면 4mm 이상으로 줄임, `arcR`·가운데 `arcMid`, 도형 목록엔 없음, WeakMap 캐시로 같은 객체),
     그룹은 진짜 선을 앞에(조각 key = lines[0]). 대리 선분 → 원래 호는 `_realOf(l)` — 제품 지정·`_lineGroupAt`(끌기)·3D 구분·조각 순서·`_shapePieceMap`이 씀
+  - 닫힌 조각 안의 열린 선(2026-11-25 사용자 파일 "수전 아래 70mm 보조선"): `_collectBoardItems`가 닫힌 선 조각(`_expChain` 외곽, 칼집 선 같은 갈래가 있어도)·사각형 안이나 변 위에만 있는 열린 선 그룹은 조각에서 뺌 → `_shapePieceMap`이 감싸는 조각에 붙임.
+    `_restoreSavedBoards`는 예전에 조각이던 선(lineIds가 다 있는데 이제 어느 조각에도 없음)의 칸만 빼고 나머지 배치 복원(flip은 빼기 전 순서로 `_flip`). 가공비는 그대로(그 선도 직선 커팅 길이에 듦)
   - 조각 = 다른 사각형·닫힌 선 조각 안에 들지 않은 rect/원 + 이어진 선 그룹. 선이 사각형 안인지는 `_lineInRect`(사각형 변 위에 겹친 선은 안이 아님 — 미드웨이를 상판 변에 붙여 그려도 선 조각 유지), 같은 자리 두 번 그린 선은 하나만. 돌린 rect는 회전 포함 상자 크기(`getBBox`)로, 그리기(`_expRectPathLocal`)도 회전 포함
   - 객체 이름(2026-11-07 사용자 요청): `_boardPiece`가 타공부·타공 가운데에 `_objName(q)`(싱크볼·쿡탑·식기세척기·사각타공·타원타공·수전·콘센트·음식물, 원형 절단은 없음)을 칸에 맞게(9px 미만이면 생략),
     조각 이름·크기 글자가 객체 상자와 겹치면 조각 안 빈 곳(5% 격자, 가운데에 가까운 곳, 선 조각은 `_Minv`로 글자 상자가 조각 안인지 확인)으로 옮김.

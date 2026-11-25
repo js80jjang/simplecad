@@ -8019,6 +8019,17 @@ function _collectBoardItems(){
     var pseudo={kind:'linegroup',lines:grp,x:lx1,y:ly1,w:lw,h:lh};
     pieces.push(pseudo);
   }
+  // 닫힌 조각(사각형·닫힌 선 조각) 안이나 변 위에 그린 열린 선(치수 보조선·칼집 표시 등)은 따로 조각이 아님 (2026-11-25 사용자 파일:
+  //   수전 아래 70mm 세로선이 "0×70" 조각이 돼서 원판 배치에 들어가고, 수전이 그 선 조각에 딸려 도면화에서 엉뚱한 자리에 나옴)
+  var _closedL=pieces.filter(function(p){return p.kind==='linegroup';}).map(function(p){var ch=_expChain(p.lines);return ch&&ch.length>=3?{p:p,L:_cutPrep({pts:ch.map(function(q){return[q[0],q[1]];}),src:[]})}:null;}).filter(Boolean); // 외곽(_expChain: 칼집 선 같은 갈래가 있어도 둘레를 잡음)
+  function _inClosed(x,y,self){
+    if(_closedL.some(function(c){if(c.p===self)return false;return _cutIn(c.L,x,y)||(_cutProj(c.L,x,y)||{d:9}).d<1;}))return true;
+    return allRects.some(function(r){if(r.groupId)return false;var q=_axisBox(r);return x>=q.x-1&&x<=q.x+Math.abs(q.w)+1&&y>=q.y-1&&y<=q.y+Math.abs(q.h)+1;});
+  }
+  pieces=pieces.filter(function(p){
+    if(p.kind!=='linegroup'||_closedL.some(function(c){return c.p===p;}))return true;
+    return !p.lines.every(function(l){return _inClosed((l.x1+l.x2)/2,(l.y1+l.y2)/2,p);});
+  });
   // 선으로 그린 조각 안에 든 사각형·원 = 타공(따로 원판에 배치하지 않음)
   var lgs=pieces.filter(function(p){return p.kind==='linegroup'&&p.lines.length>=3;});
   if(lgs.length)pieces=pieces.filter(function(s){
@@ -8119,6 +8130,9 @@ function _restoreSavedBoards(saved,items){
       if(p.shapeId!=null)it=take(function(x){return x.shape.id===p.shapeId;});
       else if(p.lineIds&&p.lineIds.length)it=take(function(x){return x.shape.kind==='linegroup'&&p.lineIds.every(function(id){return x.shape.lines.some(function(l){return l.id===id;});});});
       else it=take(function(x){return x.shape.kind==='linegroup'&&Math.abs(x.w-_w)<1&&Math.abs(x.h-_h)<1;});
+      // 예전엔 조각이던 선이 이제 조각이 아님(닫힌 조각 안의 열린 선, 2026-11-25): 그 칸만 빼고 나머지 배치는 그대로
+      if(!it&&p.lineIds&&p.lineIds.length&&p.lineIds.every(function(id){return shapes.some(function(s){return s.id===id;});})&&
+        !items.some(function(x){return x.shape.kind==='linegroup'&&x.shape.lines.some(function(l){return p.lineIds.indexOf(l.id)>=0;});})){count--;return null;}
       if(!it){ok=false;return null;}
       var _it={shape:it.shape,w:_w,h:_h,label:it.label||p.label};
       if(it.full){ // 원판 그대로 사이즈가 될 수 있는 조각: 그 방향이면 칸이 여백만큼 작음
@@ -8142,6 +8156,8 @@ function _restoreSavedBoards(saved,items){
     });
   });
   if(!ok||count!==items.length)return null;
+  boards.forEach(function(b,i){b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(p&&sp&&sp.flip)p._flip=true;});}); // 빠진 칸을 지우기 전에 저장 순서로 돌림 정보
+  boards=boards.map(function(b){return b.filter(Boolean);});
   // 크기를 고친 조각(_adj)이 다른 조각과 겹치면 저장 배치는 버리고 새로
   if(boards.some(function(b){return b.some(function(p){return p._adj&&b.some(function(o){
     return o!==p&&p.x<o.x+o.pw-0.5&&o.x<p.x+p.pw-0.5&&p.y<o.y+o.ph-0.5&&o.y<p.y+p.ph-0.5;});});}))return null;
@@ -8149,7 +8165,7 @@ function _restoreSavedBoards(saved,items){
   boards.forEach(function(b,i){
     if(saved.boardProds&&saved.boardProds[i])b.prod=saved.boardProds[i]; // 장마다 제품
     if(saved.boardKeep&&saved.boardKeep[i])b.keep=true; // 손으로 더한 원판
-    b.forEach(function(p,j){var sp=saved.boards[i]&&saved.boards[i][j];if(sp&&sp.flip)p.flip=true;}); // 180°·270° 돌림 (2026-11-23: 모든 조각 네 방향 — 각도를 늘 표시하니 대칭 조각도 그대로)
+    b.forEach(function(p){if(p._flip)p.flip=true;delete p._flip;}); // 180°·270° 돌림 (2026-11-23: 모든 조각 네 방향 — 각도를 늘 표시하니 대칭 조각도 그대로)
     var sz=(saved.boardSizes&&saved.boardSizes[i])||{bw:saved.bw,bh:saved.bh};b.bw=sz.bw;b.bh=sz.bh; // 장마다 원판 크기
   });
   return boards;
