@@ -254,6 +254,10 @@
   - 타공 치수 싱크볼 기준(2026-11-25 사용자 요청 "무조건 가까운 쪽이 아니라 싱크볼과의 거리"): 치수 간단히에서 같은 조각에 싱크볼이 있으면(싱크볼 안이 아닌 타공) `_holeRowDims(sk,true)`만 — 체인 조각은 그 타공을 체인에서 빼고(`p._skHoles`) ⑤에서. 싱크볼 없으면 체인/가까운 상판 변
   - 도면화 창 글자·지시선(2026-11-25 사용자 요청): ⑥-1이 그린 note·arrow 자리를 `_drwAnns`(→ pg.anns)에, `_drwHide['a'+id]`면 안 그림(_drwSkip). 크기 배수 `_drwAnnK[id]`(파일 `drawingAnnK`, 0.3~3) → `_noteFs`·`drawArrowMark`(printRender일 때 굵기·촉).
     창: 누르기 = 고르기 + `.drw-abar`(－ ×0.8 · ＋ ×1.25 · ↺ · ✕ = `_drwAnnScale`/`_drwAnnHide`), Delete도. 치수 끌기 미리보기·`_drwDimMove`는 길이 치수면 법선 성분만(편집 화면과 같게)
+  - 도면화 창 편집 2차(2026-11-25 사용자 요청): `_drwPopupScript` 새로 — `pick` 순서 = 숫자 안쪽 → 치수선(`_drwHits.ln`, 6px) → 숫자 둘레 → 글자·지시선·번호(`pg.anns`, 번호는 `num` 키) → 조각.
+    치수선 끌기 = 법선 성분만 + 같은 방향 다른 치수선(8px)에 `lineSnap` → `_drwDimMove` / 숫자 끌기 = `_drwItemMove({t:'dimtext'})`(tx,ty만) / 글자·지시선 = `_drwX.annOv[id]`(⑥-1이 옮긴 복사본으로 그림) / 번호 = `_drwX.numOv[조각키]`(⑦, 멀면 점선).
+    고르기 `items`(누르기·Shift/Ctrl 더하기·빈 곳 끌기 범위 `.drw-band`) → `.drw-abar` － ＋ ↺ ✕ = `_drwSelOp(pi,items,f)`: 치수 `_drwDimOv[key].fk`(`_expDim`·`_expLeader` 글자 크기), 글자·지시선 `_drwAnnK`, 번호 `_drwX.numK`, f<0 = `_drwHide`(번호 'n'+키). 파일 `drawingX`.
+    `_expDim`은 숫자가 치수선 위에 있으면 숫자 폭만큼 선을 비움. `_drwReset`이 이 쪽 글자·번호 자리·크기도 지움
   - 조각 다른 쪽으로 보내기(2026-11-25 사용자 요청): 상세 쪽 pagesDef에 `bid`('b'+원판 번호 / 'rest'), `_drwPageOv[조각키]=bid`(파일 `drawingPageOv`)를 exportDrawingA4가 idx에 적용(빈 쪽은 빠짐).
     창: 조각 오른쪽 클릭 = `.drw-menu`(bid 있는 다른 쪽) → `opener._drwSendPiece(pi,key,toPi)` = 두 쪽 pd.list 바꿈·그 조각 `_drwOv` 지움·받는 쪽 geo 지움 → 두 쪽 다시. 빈 쪽은 `_drwRenderPage`가 안내 글자 빈 그림.
     조각 하나인 쪽도 `_compactPageShapes`가 `_drwMeta`를 남김(누르기용). 원판 배치(`_savedBoardLayout`)는 안 바뀜
