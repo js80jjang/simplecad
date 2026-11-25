@@ -251,6 +251,9 @@
   - 도면화 창 치수 옮기기·고정: `_drwDimOv[키]`(파일 `drawingDimOv`) = 길이 치수 {o 치수선 거리 mm, tx,ty 글자(기준 조각 원점 `_drwKeyOrg` 기준 mm)} / 지시선 {ex,ey,tx,ty,r} → `_expDim`·`_expLeader`가 자동 자리 대신 씀, 그릴 때 `_drwHits`에 지금 자리 `g`(+길이 치수 법선 n).
     `_drwPin(pg)` = 쪽을 처음 고칠 때(조각·치수 옮기기·지우기) 배율·자리 `pg.geo`(→ `_renderDrawingImage(label,fix)`)와 그 쪽 모든 치수 자리를 고정 → 조각을 옮겨도 다른 치수가 안 움직임.
     `_drwDimMove(pi,key,dx,dy)`(치수선은 법선 방향만, 글자는 그대로), `_drwReset` = 조각·치수 자리·geo 모두 지움. 창: 치수 끌기 = 옮기기, 누르기 = 고르기(`.drw-hl.sel` + `.drw-x` ✕, Delete)
+  - 타공 치수 싱크볼 기준(2026-11-25 사용자 요청 "무조건 가까운 쪽이 아니라 싱크볼과의 거리"): 치수 간단히에서 같은 조각에 싱크볼이 있으면(싱크볼 안이 아닌 타공) `_holeRowDims(sk,true)`만 — 체인 조각은 그 타공을 체인에서 빼고(`p._skHoles`) ⑤에서. 싱크볼 없으면 체인/가까운 상판 변
+  - 도면화 창 글자·지시선(2026-11-25 사용자 요청): ⑥-1이 그린 note·arrow 자리를 `_drwAnns`(→ pg.anns)에, `_drwHide['a'+id]`면 안 그림(_drwSkip). 크기 배수 `_drwAnnK[id]`(파일 `drawingAnnK`, 0.3~3) → `_noteFs`·`drawArrowMark`(printRender일 때 굵기·촉).
+    창: 누르기 = 고르기 + `.drw-abar`(－ ×0.8 · ＋ ×1.25 · ↺ · ✕ = `_drwAnnScale`/`_drwAnnHide`), Delete도. 치수 끌기 미리보기·`_drwDimMove`는 길이 치수면 법선 성분만(편집 화면과 같게)
   - 조각 다른 쪽으로 보내기(2026-11-25 사용자 요청): 상세 쪽 pagesDef에 `bid`('b'+원판 번호 / 'rest'), `_drwPageOv[조각키]=bid`(파일 `drawingPageOv`)를 exportDrawingA4가 idx에 적용(빈 쪽은 빠짐).
     창: 조각 오른쪽 클릭 = `.drw-menu`(bid 있는 다른 쪽) → `opener._drwSendPiece(pi,key,toPi)` = 두 쪽 pd.list 바꿈·그 조각 `_drwOv` 지움·받는 쪽 geo 지움 → 두 쪽 다시. 빈 쪽은 `_drwRenderPage`가 안내 글자 빈 그림.
     조각 하나인 쪽도 `_compactPageShapes`가 `_drwMeta`를 남김(누르기용). 원판 배치(`_savedBoardLayout`)는 안 바뀜
