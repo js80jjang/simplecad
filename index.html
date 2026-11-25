@@ -3811,7 +3811,7 @@ function clearAll(){
 function newProject(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
   if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
-  _pairOv={};_drwOv={};_drwHide={};_drwDimOv={};
+  _pairOv={};_drwOv={};_drwHide={};_drwDimOv={};_drwPageOv={};
   if(lineChain)_lineEnd();
   saveHistory();
   shapes=[];selectedShapes=[];nextId=1;hoverShape=null;filletSel=[];_dimSt=null;drawStart=null;
@@ -3859,6 +3859,7 @@ function _makeProjectData(){
     boardPairOv:Object.keys(_pairOv).length?_pairOv:undefined, // 원판 배치 인접면 표시 옮김·지움
     drawingHide:Object.keys(_drwHide).length?_drwHide:undefined, // 도면화 창에서 지운 치수
     drawingDimOv:Object.keys(_drwDimOv).length?_drwDimOv:undefined, // 도면화 창에서 옮기거나 고정한 치수 자리
+    drawingPageOv:Object.keys(_drwPageOv).length?_drwPageOv:undefined, // 도면화 창에서 다른 쪽으로 보낸 조각
     drawingOv:Object.keys(_drwOv).length?_drwOv:undefined, // 도면화 상세 쪽에서 손으로 옮긴 조각
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
@@ -5087,7 +5088,7 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
         document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
         document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
         // 저장해 둔 원판 배치 복원 (이미지는 도면화 때 배치 정보로 다시 렌더링)
-        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};_drwOv=data.drawingOv||{};_drwHide=data.drawingHide||{};_drwDimOv=data.drawingDimOv||{};
+        _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};_drwOv=data.drawingOv||{};_drwHide=data.drawingHide||{};_drwDimOv=data.drawingDimOv||{};_drwPageOv=data.drawingPageOv||{};
         // 파일에 저장된 단가가 이 PC 단가와 다르면 어느 쪽을 쓸지 물어봄 (적용해도 이 PC 저장값은 그대로)
         //   비교는 계산에 쓸 등급(파일의 등급, 없으면 지금 등급)만, 쉼표·띄어쓰기 무시하고 숫자로, 한쪽이라도 빈 칸이면 비교 안 함
         var useTier=(data.tier&&TIER_PREFIX[data.tier])?data.tier:_tier,fp=data.prices&&data.prices[useTier],cp=_currentAllPrices()[useTier]||{};
@@ -10447,6 +10448,11 @@ function _drwWithNums(mode,fn){
 }
 // 쪽 하나 그리기 → {img,isPort,boxes:[{key,l,t,r,b} 그림 px]}
 function _drwRenderPage(pd,mode,pmap,items,fix){
+  if(pd.list&&!pd.list.length){ // 조각을 모두 다른 쪽으로 보낸 쪽: 빈 쪽 (도면화 창에서 다시 보낼 수 있게 남김)
+    var bc=document.createElement('canvas');bc.width=2000;bc.height=1281;var bg=bc.getContext('2d');bg.fillStyle='#fff';bg.fillRect(0,0,2000,1281);
+    bg.fillStyle='#1F3F7A';bg.font='bold 36px "Malgun Gothic",sans-serif';bg.fillText(pd.label||'',40,70);bg.fillStyle='#888';bg.font='32px "Malgun Gothic",sans-serif';bg.textAlign='center';bg.fillText('이 쪽에 조각이 없어요 — 다른 쪽 조각을 오른쪽 클릭해 여기로 보낼 수 있어요',1000,640);
+    return{img:bc.toDataURL('image/png'),isPort:false,sc:1,ox:0,oy:0,W:2000,H:1281,boxes:[],dims:[],skip:[]};
+  }
   var all=shapes;_drwMode=mode;_drwMeta=pd.list?[]:null;_drwHits=[];_drwSkip=[];
   try{
     if(pd.list)shapes=pd.layout?pd.list:_compactPageShapes(pd.list,pmap,items); // 제품별 배치도는 원래 자리 그대로
@@ -10483,7 +10489,7 @@ function _drwPopupScript(){
   window.addEventListener('keydown',function(e){if(sel&&(e.key==='Delete'||e.key==='Backspace')){e.preventDefault();var s=sel;sel=null;s.put(O._drwHideDim(s.pi,s.key));}});
   O._drw.pages.forEach(function(pg,pi){
     var img=document.getElementById('_dimg'+pi);if(!img)return;
-    var mv=pg.boxes&&pg.boxes.length>1; // 조각 옮기기는 조각 2개 이상인 상세 쪽만, 치수 옮기기·지우기는 모든 쪽
+    var mv=!!pg.pd.list; // 조각 옮기기·다른 쪽 보내기는 상세 쪽만, 치수 옮기기·지우기는 모든 쪽
     var area=img.parentNode,hl=document.createElement('div'),sh=document.createElement('div'),xb=document.createElement('button'),bar=document.createElement('div'),drag=null;
     hl.className='drw-hl';area.appendChild(hl);sh.className='drw-hl sel';area.appendChild(sh);bar.className='drw-bar';area.appendChild(bar);
     xb.className='drw-x';xb.textContent='✕';xb.title='이 치수 지우기 (Delete)';area.appendChild(xb);
@@ -10498,7 +10504,7 @@ function _drwPopupScript(){
       return{k:k,x0:R.left+(R.width-pg.W*k)/2,y0:R.top+(R.height-pg.H*k)/2,ax:A.left,ay:A.top};}
     function pt(e){var g=geo();return[(e.clientX-g.x0)/g.k,(e.clientY-g.y0)/g.k];}
     function dimAt(e){var p=pt(e),r=null;(pg.dims||[]).forEach(function(d){var b=d.box;if(p[0]>=b[0]-3&&p[0]<=b[2]+3&&p[1]>=b[1]-3&&p[1]<=b[3]+3)r=d;});return r;}
-    function hit(e){if(!mv)return null;var p=pt(e),x=p[0],y=p[1],best=null,ba=Infinity;
+    function hit(e){if(!mv||!pg.boxes)return null;var p=pt(e),x=p[0],y=p[1],best=null,ba=Infinity;
       pg.boxes.forEach(function(b){var a=(b.r-b.l)*(b.b-b.t);if(x>=b.l&&x<=b.r&&y>=b.t&&y<=b.b&&a<ba){ba=a;best=b;}});return best;}
     function boxOf(el,l,t,r,b,dx,dy){var g=geo();el.style.display='block';el.style.left=(g.x0-g.ax+l*g.k+dx)+'px';el.style.top=(g.y0-g.ay+t*g.k+dy)+'px';el.style.width=((r-l)*g.k)+'px';el.style.height=((b-t)*g.k)+'px';return g;}
     function showDim(d,dx,dy){boxOf(hl,d.box[0]-3,d.box[1]-3,d.box[2]+3,d.box[3]+3,dx,dy);hl.classList.add('dim');}
@@ -10510,6 +10516,22 @@ function _drwPopupScript(){
       if(d){e.preventDefault();drag={d:d,sx:e.clientX,sy:e.clientY};return;}
       unsel();var b=hit(e);if(!b)return;e.preventDefault();drag={b:b,sx:e.clientX,sy:e.clientY};hl.classList.add('on');});
     xb.onclick=function(){if(!sel)return;var s=sel;sel=null;put(O._drwHideDim(s.pi,s.key));};
+    // 조각 오른쪽 클릭 = 다른 쪽(원판별 상세)으로 보내기
+    img.addEventListener('contextmenu',function(e){var b=hit(e);if(!b)return;e.preventDefault();
+      var old=document.getElementById('drw-menu');if(old)old.remove();
+      var m=document.createElement('div');m.id='drw-menu';m.className='drw-menu';
+      m.innerHTML='<div class="drw-mh">이 조각을 보낼 쪽</div>';
+      O._drw.pages.forEach(function(q,qi){if(qi===pi||!q.pd.bid||!q.pd.list)return;
+        var it=document.createElement('button');it.textContent=(qi+1)+'쪽 · '+String(q.pd.label||'').replace(/^상세 · /,'');
+        it.onclick=function(){m.remove();document.body.style.cursor='wait';setTimeout(function(){
+          var r=O._drwSendPiece(pi,b.key,qi);document.body.style.cursor='';if(!r)return;put(r.a);
+          var im2=document.getElementById('_dimg'+qi);if(im2&&r.b)im2.src=r.b.img;if(window._drwPut&&window._drwPut[qi])window._drwPut[qi](null);},10);};
+        m.appendChild(it);});
+      if(m.children.length<2){var n=document.createElement('div');n.className='drw-mh';n.textContent='보낼 수 있는 다른 원판 쪽이 없어요';m.appendChild(n);}
+      document.body.appendChild(m);m.style.left=Math.min(e.pageX,window.scrollX+innerWidth-m.offsetWidth-6)+'px';m.style.top=e.pageY+'px';
+      setTimeout(function(){document.addEventListener('mousedown',function h(ev){if(!m.contains(ev.target)){m.remove();document.removeEventListener('mousedown',h);}});},0);
+    });
+    (window._drwPut=window._drwPut||[])[pi]=function(){hl.style.display='none';unsel();btns();}; // 다른 쪽에서 보내 받은 뒤 단추 다시
     window.addEventListener('mousemove',function(e){if(!drag)return;var dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
       if(drag.d)showDim(drag.d,dx,dy);else boxOf(hl,drag.b.l,drag.b.t,drag.b.r,drag.b.b,dx,dy);});
     window.addEventListener('mouseup',function(e){if(!drag)return;var d=drag;drag=null;hl.classList.remove('on');var k=geo().k,dx=(e.clientX-d.sx)/k,dy=(e.clientY-d.sy)/k;
@@ -10519,7 +10541,18 @@ function _drwPopupScript(){
         return;}
       document.body.style.cursor='wait';setTimeout(function(){put(d.d?O._drwDimMove(pi,d.d.key,dx,dy):O._drwMove(pi,d.b.key,dx,dy));document.body.style.cursor='';},10);});
   });
-}function _drwReset(pi){var D=_drw,pg=D&&D.pages[pi];if(!pg)return null;(pg.boxes||[]).forEach(function(b){delete _drwOv[D.mode+':'+b.key];});
+}// 조각을 다른 쪽(원판별 상세)으로 보내기(2026-11-25 사용자 요청): 두 쪽의 도형 목록을 바꾸고 _drwPageOv에 기억(파일 drawingPageOv), 두 쪽을 다시 그림
+var _drwPageOv={};
+function _drwSendPiece(pi,key,toPi){
+  var D=_drw,a=D&&D.pages[pi],b=D&&D.pages[toPi];if(!a||!b||pi===toPi||!a.pd.list||!b.pd.list||!b.pd.bid)return null;
+  var k=D.items.findIndex(function(it){return _drwPieceKey(it.shape)===key;});if(k<0)return null;
+  var mine=a.pd.list.filter(function(s){return D.pmap.get(s)===k;});if(!mine.length)return null;
+  a.pd.list=a.pd.list.filter(function(s){return D.pmap.get(s)!==k;});b.pd.list=b.pd.list.concat(mine);
+  _drwPageOv[key]=b.pd.bid;delete _drwOv[D.mode+':'+key];
+  _drwPin(a);delete b.geo; // 받는 쪽은 조각이 늘어나니 배율을 다시 (다른 치수 자리는 조각 기준이라 그대로)
+  return{a:_drwRedo(pi),b:_drwRedo(toPi)};
+}
+function _drwReset(pi){var D=_drw,pg=D&&D.pages[pi];if(!pg)return null;(pg.boxes||[]).forEach(function(b){delete _drwOv[D.mode+':'+b.key];});
   (pg.dims||[]).forEach(function(h){delete _drwDimOv[h.key];});delete pg.geo; // 처음 배치 = 조각·치수 자리·배율 모두 자동으로
   return _drwRedo(pi);}
 function _drwRedo(pi){
@@ -10540,7 +10573,9 @@ function _compactPageShapes(list,pmap,items){
     var g=groups[k],b=getBBoxAny(s);g.ss.push(s);
     if(b){g.bb.l=Math.min(g.bb.l,b.l);g.bb.t=Math.min(g.bb.t,b.t);g.bb.r=Math.max(g.bb.r,b.r);g.bb.b=Math.max(g.bb.b,b.b);}
   });
-  if(G.length<2)return list;
+  if(G.length<2){ // 조각 하나: 그대로 (도면화 창에서 다른 쪽으로 보낼 수 있게 상자만 남김)
+    if(_drwMeta){_drwMeta.length=0;G.forEach(function(g){_drwMeta.push({key:_drwPieceKey(items[g.k].shape),l:g.bb.l,t:g.bb.t,r:g.bb.r,b:g.bb.b});});}
+    return list;}
   // 원래 배치 유지(2026-10-28 사용자 요청 "설치 위치를 알 수 있게 배치해 놓은 것"): 조각의 위아래·좌우 순서·줄 맞춤은 그대로 두고
   // 가로·세로 축마다 조각이 하나도 없는 빈 띠만 치수 두 줄 자리(약 150px)로 줄임 (원래 더 좁은 틈은 그대로)
   function squeeze(lo,hi,gap){ // 축 하나: 조각 구간을 합친 뒤 큰 빈 틈만 줄이는 함수 x → x'
@@ -10633,10 +10668,15 @@ function exportDrawingA4(mode){
   boards.forEach(function(b,bi){
     var idx=[];b.forEach(function(p){var k=items.findIndex(function(it){return it.shape===p.item.shape;});if(k>=0){idx.push(k);onBoard[k]=1;}});
     var d=_boardDims(b),nm=_boardLabel(b);
-    pagesDef.push({idx:idx,label:'상세 · 원판 '+(bi+1)+'/'+boards.length+(nm?' · '+nm:'')+'  ('+d.bw+'×'+d.bh+')',bw:d.bw,bh:d.bh});
+    pagesDef.push({idx:idx,bid:'b'+bi,label:'상세 · 원판 '+(bi+1)+'/'+boards.length+(nm?' · '+nm:'')+'  ('+d.bw+'×'+d.bh+')',bw:d.bw,bh:d.bh});
   });
   var rest=[];items.forEach(function(it,k){if(!onBoard[k])rest.push(k);});
-  if(rest.length)pagesDef.push({idx:rest,label:'상세 · 원판에 배치되지 않은 조각',bw:null,bh:null});
+  if(rest.length)pagesDef.push({idx:rest,bid:'rest',label:'상세 · 원판에 배치되지 않은 조각',bw:null,bh:null});
+  // 도면화 창에서 다른 쪽으로 보낸 조각 (_drwPageOv[조각키] = 쪽 bid, 2026-11-25 사용자 요청) — 그 쪽이 있을 때만
+  Object.keys(_drwPageOv).forEach(function(pk){
+    var to=pagesDef.filter(function(pd){return pd.bid===_drwPageOv[pk];})[0],k=items.findIndex(function(it){return _drwPieceKey(it.shape)===pk;});
+    if(!to||k<0)return;pagesDef.forEach(function(pd){var j=pd.idx.indexOf(k);if(j>=0)pd.idx.splice(j,1);});to.idx.push(k);
+  });
   pagesDef.forEach(function(pd){var set={};pd.idx.forEach(function(k){set[k]=1;});pd.list=shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];});});
   pagesDef=pagesDef.filter(function(pd){return pd.list.length;});
   var d0=boards[0]?_boardDims(boards[0]):_prodBoardSize('');
@@ -10712,11 +10752,11 @@ function exportDrawingA4(mode){
     +'.board-area{flex:1;min-height:0;position:relative;}'
     +'.board-area img{position:absolute;left:4mm;top:4mm;width:calc(100% - 8mm);height:calc(100% - 8mm);object-fit:contain;object-position:top center;display:block;}'
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
-    +'@media print{.page2{page-break-before:always;}.drw-hl,.drw-reset,.drw-bar,.drw-x{display:none!important;}}'
+    +'@media print{.page2{page-break-before:always;}.drw-hl,.drw-reset,.drw-bar,.drw-x,.drw-menu{display:none!important;}}'
     +'.drw-hl{position:absolute;display:none;border:2px dashed #1E88E5;background:rgba(30,136,229,0.07);pointer-events:none;z-index:2}.drw-hl.on{border-style:solid;background:rgba(30,136,229,0.15)}'
-    +'.drw-bar{position:absolute;right:3mm;top:3mm;z-index:3;display:flex;gap:4px}.drw-reset{padding:3px 9px;font-size:11px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;cursor:pointer}.drw-hl.dim{border:2px solid #FB8C00;background:rgba(251,140,0,0.12)}.drw-hl.sel{border:2px solid #1E88E5;background:rgba(30,136,229,0.10)}.drw-x{position:absolute;display:none;z-index:4;width:18px;height:18px;border-radius:9px;border:none;background:#E53935;color:#fff;font-size:11px;line-height:18px;padding:0;cursor:pointer}';
+    +'.drw-bar{position:absolute;right:3mm;top:3mm;z-index:3;display:flex;gap:4px}.drw-reset{padding:3px 9px;font-size:11px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;cursor:pointer}.drw-hl.dim{border:2px solid #FB8C00;background:rgba(251,140,0,0.12)}.drw-hl.sel{border:2px solid #1E88E5;background:rgba(30,136,229,0.10)}.drw-menu{position:absolute;z-index:10;background:#fff;border:1px solid #1F3F7A;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.25);padding:3px;min-width:200px;font-size:12px}.drw-menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:5px 8px;cursor:pointer;font-size:12px;color:#1F3F7A}.drw-menu button:hover{background:#E8EEF8}.drw-mh{padding:4px 8px;color:#888;font-size:11px}.drw-x{position:absolute;display:none;z-index:4;width:18px;height:18px;border-radius:9px;border:none;background:#E53935;color:#fff;font-size:11px;line-height:18px;padding:0;cursor:pointer}';
   var body='<div class="ctrl"><button onclick="window.print()">🖨 인쇄 / PDF 저장</button>'
-    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span>'+(_drw.pages.some(function(p){return p.boxes&&p.boxes.length>1;})?'<span style="color:#A9B4C8">· 상세 쪽 조각은 끌어서 옮길 수 있어요 (↺ 처음 배치 = 자동 자리)</span>':'')+'<span style="color:#A9B4C8">· 치수 글자를 끌면 옮기기, 누르면 고르기(✕·Delete = 지우기)</span>'+'</div>';
+    +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span>'+(_drw.pages.some(function(p){return p.boxes&&p.boxes.length>1;})?'<span style="color:#A9B4C8">· 상세 쪽 조각은 끌어서 옮길 수 있어요 (↺ 처음 배치 = 자동 자리)</span>':'')+'<span style="color:#A9B4C8">· 치수 글자를 끌면 옮기기, 누르면 고르기(✕·Delete = 지우기) · 조각 오른쪽 클릭 = 다른 쪽으로 보내기</span>'+'</div>';
   pages.forEach(function(pg,pi){
     var bwT=pg.bw||_prodBoardSize('').bw,bhT=pg.bh||_prodBoardSize('').bh;
     body+='<div class="page '+(pg.isPort?'port':'land')+'"><div class="frame"><div class="inner-border">'
