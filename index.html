@@ -11566,7 +11566,12 @@ function _3dDragTarget(m,ray,free){ // free = Alt (맞춤 없이)
   // 판 밑에 매달 때도 지금 방향 그대로 (오른쪽 클릭으로 돌린 방향 유지 — 서랍처럼 가로로 붙이는 판)
   var e=h.e,s=(h.P[0]-e.a[0])*e.ux+(h.P[1]-e.a[1])*e.uz,ov=Math.min(20,e.len/2,m.Lm/2),s0=Math.max(ov-m.Lm,Math.min(s-m.Lm/2,e.len-ov));
   var mg=free?{s0:s0,guide:null}:_3dMagnet(e,s0,m);
-  return{e:e,s0:mg.s0,floor:h===F&&!e.pan,guide:mg.guide};
+  // 도면에서 붙어 있던 상판 변에 다시 놓으면 자동 자리처럼: 키가 _3D_TALL 넘으면 바닥부터 (2026-11-26 사용자 요청 "ㄱ자 판을 상판 끝에 붙이려는데 안 됨")
+  //   변 따라 자리도 도면 자리에서 150 안이면 그 자리로
+  var fl=h===F&&!e.pan,s0f=mg.s0;
+  if(!e.pan&&!e.bot&&!m.panel&&st.scene){var spc=st.scene.pieces.find(function(p){return p.shape===m.shape;}),ctc=spc&&_3dMidContact(spc,st.r.edges);
+    if(ctc&&ctc.e.id===e.id){if(m.Hm>_3D_TALL)fl=true;if(!free&&Math.abs(s0f-ctc.s0)<150)s0f=ctc.s0;}}
+  return{e:e,s0:s0f,floor:fl,guide:mg.guide};
 }
 // 판 끌기 자석: 놓을 변 방향으로 판의 시작·끝이 변 끝·다른 상판 꼭짓점·다른 판 모서리와 같은 자리면 딱 맞춤 (변에서 1500 안쪽 것만)
 //   → {s0, guide(기준선 — _3dLabels가 분홍 점선으로)}
@@ -12121,7 +12126,9 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
       var mir=fc===0?(e.ux*e.nz-e.uz*e.nx)<0:(e.uz*e.nx-e.ux*e.nz)<0;
       // 도면에서 상판 변에 붙여 그린 판(자동 자리) = 그 변을 축으로 세운 모양 그대로 (2026-11-26 사용자 요청 "ㄱ자 판이 도면과 다르게 뒤집혀 나옴"):
       //   붙은 변 = 판 아랫변, 변에서 멀어질수록 위, 변 따라 = 도면 그대로 (좌우 뒤집기 없음)
-      var foldO=(!man&&!ch&&ct&&ct.e===e0&&!rr)?ct.e.o:null;
+      //   손으로 끌어 그 변에 다시 놓아도(같은 변·같은 방향·안 돌림) 같은 모양
+      var ctF=ch?null:(ct||(man&&eid?_3dMidContact(pc,allEdges):null));
+      var foldO=(ctF&&!rr&&(man?(ctF.e.id===eid&&ctF.along===along):ctF.e===e0))?ctF.e.o:null;
       function uv(a,h){if(foldO){var ss=s0+a*Lm,dd=h*Hm,px=foldO.a[0]+foldO.ux*ss-foldO.nx*dd,pz=foldO.a[1]+foldO.uz*ss-foldO.nz*dd;return[(px-pb.l)/bw,(pz-pb.t)/bh];}
         if(mir)a=1-a;for(var k=0;k<rr;k++){var t=a;a=1-h;h=t;}return bLand?[a,1-h]:[1-h,a];} // 평면에서 긴 쪽 = 벽 따라 (돌렸으면 판 면 안에서 90°씩 돌려 돌리기 전 자리로)
       // 졸리컷(45° 맞물림): 도면 사각형 변 → 판의 위·아래·시작·끝 변 (uv와 같은 대응: land면 위=윗변·왼=시작, 아니면 왼=윗변·위=시작)
