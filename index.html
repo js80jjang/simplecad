@@ -9899,7 +9899,16 @@ function _drawCleanExport(){
     });
   });
   // ⑥ 사용자가 그린 치수선/졸리컷/호 (기존 인쇄 표현 그대로)
-  if(!SO)shapes.forEach(function(s){if(s.kind==='dimline')drawDimLine(s,false);else if(s.kind==='jollymark')drawJollyMark(s,false);});
+  // 사용자가 그린 길이 치수선은 자동 치수와 같은 _expDim으로 (도면화 창에서 옮기기·숫자 옮기기·크기·지우기가 되게, 2026-11-26 사용자 요청) — R·Φ·각도 치수선은 예전대로
+  if(!SO)shapes.forEach(function(s){
+    if(s.kind==='dimline'){
+      var lt=s.labelType||'dist';if(lt!=='dist'&&lt!=='phi'){drawDimLine(s,false);return;}
+      var p1=toCanvas(s.x1,s.y1),p2=toCanvas(s.x2,s.y2),an=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]),c=[Math.cos(an-Math.PI/2),Math.sin(an-Math.PI/2)];
+      var offPx=(s.offsetMm!=null?s.offsetMm:15)*scale,sg=offPx>=0?1:-1,n=[c[0]*sg,c[1]*sg],d=Math.hypot(s.x2-s.x1,s.y2-s.y1);
+      ctx.strokeStyle='#E53935';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath(); // 실제 잰 점(기준선 뒤 e1·e2)에서 기준선까지 보조선
+      [[p1,s.e1],[p2,s.e2]].forEach(function(q){var e=(q[1]||0)*scale;if(e>0.5){ctx.moveTo(q[0][0]-c[0]*e,q[0][1]-c[1]*e);ctx.lineTo(q[0][0]+n[0]*6,q[0][1]+n[1]*6);}});ctx.stroke();
+      _expDim(p1,p2,n,Math.abs(offPx),lt==='phi'?'Φ'+_fmtDim(d):_fmtDim(d),'#E53935',32,null,true);
+    } else if(s.kind==='jollymark')drawJollyMark(s,false);});
   // ⑥-1 도면 주석(글자·화살표): 사용자가 놓은 자리 그대로. 뒤에 그리는 R/Φ 지시선이 피해 가도록 등록
   //   도면화 창에서 지운 글자·지시선(_drwHide['a'+id])은 건너뛰고, 그린 것은 _drwAnns에 자리(그림 px)를 남김 (누르기 → 크기 줄이기·키우기·지우기)
   shapes.forEach(function(s){
