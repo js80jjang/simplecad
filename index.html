@@ -11363,10 +11363,10 @@ function _doorFinishSwatch(id){var f=_3dFinish(id);if(!f)return '';if(f._sw)retu
     for(var i=0;i<p.length;i+=4){var k=1+((0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])/avg-1)*0.7;p[i]=Math.min(255,f.rgb[0]*k);p[i+1]=Math.min(255,f.rgb[1]*k);p[i+2]=Math.min(255,f.rgb[2]*k);}g.putImageData(d,0,0);}
   f._sw=s.toDataURL('image/jpeg',0.85);return 'background:url('+f._sw+') center/cover';}
 // 다각형을 안쪽으로 d만큼 줄임 (변마다 평행 이동한 직선끼리 교점). i번째 변 = 원래 i번째 변을 옮긴 것
-function _3dInset(pts,d){
+function _3dInset(pts,d,zero){ // zero[i] = 그 변은 들이지 않음 (다른 상판과 맞붙은 이음 변)
   var n=pts.length,A=0;for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n];A+=p[0]*q[1]-q[0]*p[1];}
   var sg=A>0?1:-1,lines=[]; // 도면 좌표(아래가 +y)에서 A>0 = 시계 방향 → 안쪽 법선은 (-dy,dx)
-  for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n],dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*sg,ny=dx/L*sg;lines.push([p[0]+nx*d,p[1]+ny*d,dx,dy]);}
+  for(var i=0;i<n;i++){var p=pts[i],q=pts[(i+1)%n],dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*sg,ny=dx/L*sg,di=(zero&&zero[i])?0:d;lines.push([p[0]+nx*di,p[1]+ny*di,dx,dy]);}
   var out=[];
   for(var i=0;i<n;i++){
     var a=lines[(i+n-1)%n],b=lines[i],den=a[2]*b[3]-a[3]*b[2];
@@ -11374,6 +11374,26 @@ function _3dInset(pts,d){
     var t=((b[0]-a[0])*b[3]-(b[1]-a[1])*b[2])/den;out.push([a[0]+a[2]*t,a[1]+a[3]*t]);
   }
   return out;
+}
+// 상판 외곽(3D 자리 pos3d 적용) — 이음 변 찾기용
+function _3dTopWorld(pc){
+  var bb=pc.bb,ps=_3dKey(pc.shape).pos3d||{},rot=(((ps.rot||0)%4)+4)%4,co=[1,0,-1,0][rot],si=[0,1,0,-1][rot],cx=(bb.l+bb.r)/2,cz=(bb.t+bb.b)/2;
+  return pc.loops.outer.map(function(p){var x=p[0]-cx,z=p[1]-cz;return[cx+x*co-z*si+(ps.dx||0),cz+x*si+z*co+(ps.dz||0)];});
+}
+// 이음 변: 하부장이 있는 다른 상판 변과 같은 선 위에서 50mm 넘게 맞붙은 변 → [i]=true
+function _3dJointEdges(pc,scene){
+  var me=_3dTopWorld(pc),n=me.length,res=[],oth=[];
+  scene.pieces.forEach(function(q){if(q===pc||q.type!=='top'||(_3dKey(q.shape).pos3d||{}).dy)return;oth.push(_3dTopWorld(q));});
+  for(var i=0;i<n;i++){
+    var a=me[i],b=me[(i+1)%n],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<1)continue;var ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L;
+    var ov=0; // 맞붙은 길이 합 — 변 거의 전체가 맞붙었을 때만 (ㄱ자 모서리처럼 일부만 붙은 앞면 변은 그대로 들임)
+    oth.forEach(function(O){for(var j=0;j<O.length;j++){var c=O[j],d=O[(j+1)%O.length];
+      if(Math.abs((c[0]-a[0])*uz-(c[1]-a[1])*ux)>3||Math.abs((d[0]-a[0])*uz-(d[1]-a[1])*ux)>3)continue;
+      var s1=(c[0]-a[0])*ux+(c[1]-a[1])*uz,s2=(d[0]-a[0])*ux+(d[1]-a[1])*uz;
+      ov+=Math.max(0,Math.min(L,Math.max(s1,s2))-Math.max(0,Math.min(s1,s2)));}});
+    res[i]=ov>=L-50;
+  }
+  return res;
 }
 // 앞면 변 찾기: 조각 외곽 변 중 밑면연마·고스라(싱크볼 둘레 제외)가 붙은 변 = 드러나는 앞쪽. 없으면 도면 아래쪽을 보는 가장 긴 변
 function _3dFrontEdges(outer,marks){
@@ -11844,7 +11864,9 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
     });
     // 하부장: 상판 외곽에서 20 들인 몸통(걸레받이 위~상판 아래), 걸레받이(50 더 들임), 앞면 변에 민자 도어(폭 약 500씩 나눔) — 위아래로 옮긴 조각은 없음
     if(furn&&!dyF&&y0>_3D_KICK+60&&!isObj&&Math.min(bb.r-bb.l,bb.b-bb.t)>=300){ // (첫 화면에서 올라가는 동안은 상판 밑까지 자람)
-      var body=_3dInset(loops.outer,_3D_SET),kick=_3dInset(loops.outer,_3D_SET+_3D_KICKSET);
+      // 다른 상판(하부장 있는)과 맞붙은 이음 변은 들이지 않음 — 들이면 이음선 아래 몸통·걸레받이에 40mm 틈이 생겨 어긋나 보임 (2026-11-26 사용자 요청 "1번 4번 깊이가 같은데 어긋남")
+      var jz=_3dJointEdges(pc,scene);
+      var body=_3dInset(loops.outer,_3D_SET,jz),kick=_3dInset(loops.outer,_3D_SET+_3D_KICKSET,jz);
       // 몸통: 도어가 붙는 앞면 변이 있으면 도어마다 한 칸(bay) — 칸 단위로 지우고(Delete) 문을 열면(더블클릭) 선반이 보임. 앞면 변이 없으면 예전처럼 외곽 벽 하나
       var hasDoor=front.some(function(f,i){if(!f)return false;var A=body[i],B=body[(i+1)%body.length];return A&&B&&Math.hypot(B[0]-A[0],B[1]-A[1])>=150;});
       if(!hasDoor){walls(furnDraw.body,body,{outer:body,holes:[]},_3D_KICK,y0);walls(furnDraw.kick,kick,{outer:kick,holes:[]},0,_3D_KICK);}
