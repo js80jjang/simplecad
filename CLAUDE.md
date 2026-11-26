@@ -252,6 +252,8 @@
 - **도면화는 한 가지(2026-11-24 사용자 확정)**: `drawingMenu` = "📐 도면화" 단추 + "치수 간단히" 체크 → `exportDrawingA4('board')`(mode는 늘 'board'):
   1쪽 = 치수 없는 배치도(`shapeOnly`, 번호 넣음), 제품이 2개 이상이면 제품마다 배치도 한 쪽(`pd.layout` = 그 제품 조각만 원래 자리, `_compactPageShapes` 안 함) → 다음 쪽부터 원판마다 상세(원판 1장이어도) + 배치 안 된 조각 쪽.
   아래 'area'/'detail' 설명은 예전 방식 기록(코드에 `_areaPages` 등은 남아 있음)
+  - 쪽 빼기·되살리기(2026-11-26 사용자 요청 "배치도를 빼되 되살릴 수 있게"): 모든 쪽(.page/.page2)에 `data-pid`(배치도 'lay'·'lay:제품', 상세 bid, 원판 배치도 'board장', 사용 제품 'prod:제품명') + `_pgDelUI`(🗑 단추·뺀 쪽 줄) →
+    창 스크립트 `_pgDelScript`가 `.gone` 토글·`opener._drwPageSetDel` → `_drwPageDel`(파일 `drawingPageDel`, 다음 도면화에서도 `.gone`으로 시작), 인쇄에서 `.gone` 숨김, `.pgno` 쪽 번호 다시 매김
   - 구역 도면화(2026-11-26 사용자 요청 "전체 도면화인데 구역을 여러 장"): 메뉴 둘째 단추 → `_drwRegionStart`(`_drwRgn={list,a,b}`, 안내 막대 `#drw-rgn-tip` = ✅ 도면화·↶ 마지막 빼기·✕ 취소, cv capture 리스너가 다른 도구보다 먼저, 가운데 버튼 화면 옮기기는 통과,
     redraw 끝 `_drwRegionDraw` = 번호 붙은 구역) → 끌 때마다 구역 추가, 오른쪽 클릭 = 마지막 빼기, Enter = `_drwRegionDone` → `exportDrawingA4('region',[{l,t,r,b}…])`:
     배치도·원판 배치·사용 제품 쪽은 그대로, 상세 쪽만 구역마다(조각 상자 가운데가 든 첫 구역, `bid:'r'+i`, 압축·편집 됨) + 구역 밖 조각(`bid:'rout'`). mode 'region'(번호 넣음)

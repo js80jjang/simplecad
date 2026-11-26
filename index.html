@@ -3850,7 +3850,7 @@ function clearAll(){
 function newProject(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
   if(has&&!confirm('지금 도면을 비우고 새로 만들까요?\n저장하지 않은 내용은 사라집니다.'))return;
-  _pairOv={};_drwOv={};_drwHide={};_drwAnnK={};_drwX={annOv:{},numOv:{},numK:{}};_drwDimOv={};_drwPageOv={};
+  _pairOv={};_drwOv={};_drwHide={};_drwAnnK={};_drwX={annOv:{},numOv:{},numK:{}};_drwDimOv={};_drwPageOv={};_drwPageDel={};
   if(lineChain)_lineEnd();
   saveHistory();
   shapes=[];selectedShapes=[];nextId=1;hoverShape=null;filletSel=[];_dimSt=null;drawStart=null;
@@ -3902,6 +3902,7 @@ function _makeProjectData(){
     drawingDimOv:Object.keys(_drwDimOv).length?_drwDimOv:undefined, // 도면화 창에서 옮기거나 고정한 치수 자리
     drawingPageOv:Object.keys(_drwPageOv).length?_drwPageOv:undefined, // 도면화 창에서 다른 쪽으로 보낸 조각
     drawingOv:Object.keys(_drwOv).length?_drwOv:undefined, // 도면화 상세 쪽에서 손으로 옮긴 조각
+    drawingPageDel:Object.keys(_drwPageDel).length?_drwPageDel:undefined, // 도면화 창에서 뺀 쪽
     prices:_currentAllPrices(), // 견적 당시 단가 (다른 PC에서 열어도 같은 금액을 확인할 수 있게)
     tier:_tier,
     view3dOpts:_3dOpts, // 3D 보기 설정 (하부장·상부장 켜기, 상판만/상판+미드웨이)
@@ -5147,7 +5148,7 @@ function _docApply(data){
   document.getElementById('deliv-date').value=_normDate(data.delivDate||'');
   document.getElementById('deliv-time').value=_normTime(data.delivTime||'');
   // 저장해 둔 원판 배치 (이미지는 도면화 때 배치 정보로 다시 렌더링)·도면화 창에서 고친 것
-  _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};_drwOv=data.drawingOv||{};_drwHide=data.drawingHide||{};_drwAnnK=data.drawingAnnK||{};_drwX=data.drawingX||{annOv:{},numOv:{},numK:{}};_drwDimOv=data.drawingDimOv||{};_drwPageOv=data.drawingPageOv||{};
+  _savedBoardLayout=data.boardLayout||null;_savedBoardImg=null;_pairOv=data.boardPairOv||{};_drwOv=data.drawingOv||{};_drwHide=data.drawingHide||{};_drwAnnK=data.drawingAnnK||{};_drwX=data.drawingX||{annOv:{},numOv:{},numK:{}};_drwDimOv=data.drawingDimOv||{};_drwPageOv=data.drawingPageOv||{};_drwPageDel=data.drawingPageDel||{};
 }
 
 // ═══ 도면 탭 (2026-11-26 사용자 요청 "오토캐드처럼 작업창 여러 개를 탭으로") ═══
@@ -10900,6 +10901,23 @@ function _drwRegionTip(){var tip=document.getElementById('drw-rgn-tip');if(!tip|
     +'<button data-a="x" style="'+B+'#1C2A47;background:#121D33;color:#D9DFEA">✕ 취소 (Esc)</button>';
   tip.style.display='flex';
   tip.querySelectorAll('button').forEach(function(b){b.onclick=function(){var a=b.dataset.a;if(a==='ok')_drwRegionDone();else if(a==='undo'){_drwRgn.list.pop();_drwRegionTip();redraw();}else _drwRegionEnd();};});}
+// ── 도면화 창 쪽 빼기·되살리기 (2026-11-26 사용자 요청 "배치도는 빼고 싶은데 필요할 수도 있으니 지우고 되살리기") ──
+//   _drwPageDel[쪽 id] = 1 (파일 drawingPageDel): 쪽 id = 배치도 'lay'·'lay:제품', 상세 'b원판'·'rest'·'r구역'·'rout', 원판 배치도 'board장', 사용 제품 'prod:제품명'
+//   뺀 쪽은 창에서 얇은 줄(↺ 되살리기)만, 인쇄·PDF엔 안 나옴 — 다음 도면화에서도 빠진 채로 (되살릴 수 있게 줄은 남김)
+var _drwPageDel={};
+function _pgDelCls(pid){return _drwPageDel[pid]?' gone':'';}
+function _pgDelUI(label){var t=escHtml(String(label||'이 쪽'));
+  return '<button class="pg-del" data-a="del" title="이 쪽을 도면에서 빼기 (되살릴 수 있음)">🗑 이 쪽 빼기</button>'
+    +'<div class="pg-gone">🗑 뺀 쪽 — '+t+' <button data-a="back">↺ 되살리기</button></div>';}
+function _drwPageSetDel(pid,on){if(on)_drwPageDel[pid]=1;else delete _drwPageDel[pid];}
+function _pgDelScript(){ // 도면화 창 안에서 돎 (window.opener = 본 창)
+  function renum(){var ps=[].slice.call(document.querySelectorAll('.page')).filter(function(p){return !p.classList.contains('gone')&&p.style.display!=='none';});
+    ps.forEach(function(p,i){var s=p.querySelector('.pgno');if(s)s.textContent='('+(i+1)+'/'+ps.length+')';});}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-a]');if(!b)return;var pg=b.closest('.page,.page2');if(!pg)return;
+    var a=b.getAttribute('data-a');if(a!=='del'&&a!=='back')return;e.stopPropagation();
+    pg.classList.toggle('gone',a==='del');try{window.opener._drwPageSetDel(pg.getAttribute('data-pid'),a==='del');}catch(x){}renum();},true);
+  renum();
+}
 function _drwRegionDone(){if(!_drwRgn||!_drwRgn.list.length)return;var L=_drwRgn.list.slice();_drwRegionEnd();exportDrawingA4('region',L);}
 function _drwRegionEnd(){_drwRgn=null;var tip=document.getElementById('drw-rgn-tip');if(tip)tip.style.display='none';cv.style.cursor='';redraw();}
 function _drwRegionMm(e){var r=cv.getBoundingClientRect();return[(e.clientX-r.left-offsetX)/scale,(e.clientY-r.top-offsetY)/scale];}
@@ -10946,9 +10964,9 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
     prods.slice().reverse().forEach(function(nm,ri){
       var set={};items.forEach(function(it,k){if(_itemProd(it.shape)===nm)set[k]=1;});
       var bd=_prodBoardSize(nm);
-      pagesDef.unshift({list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];}),label:'배치도 '+(prods.length-ri)+'/'+prods.length+' · '+nm+' (치수는 원판별 상세 쪽에)',bw:bd.bw,bh:bd.bh,shapeOnly:true,layout:true});
+      pagesDef.unshift({list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];}),label:'배치도 '+(prods.length-ri)+'/'+prods.length+' · '+nm+' (치수는 원판별 상세 쪽에)',bw:bd.bw,bh:bd.bh,shapeOnly:true,layout:true,pid:'lay:'+nm});
     });
-  } else pagesDef.unshift({list:null,label:'배치도 (치수는 다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh,shapeOnly:true});
+  } else pagesDef.unshift({list:null,label:'배치도 (치수는 다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh,shapeOnly:true,pid:'lay'});
   // 구역 도면화(2026-11-26 사용자 요청 "본 도면에서 구역을 정해서 도면화"): 편집 화면에서 끈 사각형(mm) 안에 조각 상자 가운데가 든 조각만, 원래 자리 그대로 치수와 함께 한 쪽 (원판 배치·사용 제품 쪽 없음)
   //   여러 구역(2026-11-26 사용자 요청 "전체 도면화인데 구역을 여러 장"): 배치도·원판 배치·사용 제품 쪽은 그대로, 원판별 상세 대신 구역마다 한 쪽(조각 가운데가 든 첫 구역) + 구역 밖 조각 쪽
   if(region){
@@ -10970,7 +10988,7 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
     _drwWithNums(mode,function(){
       pagesDef.forEach(function(pd){
         // 배치 그대로 빈 곳만 줄여 크게 (번호 고정 후라 복사본에도 번호가 따라감) + 손으로 옮긴 조각
-        var r=_drwRenderPage(pd,mode,pmap,items);if(r){r.label=pd.label;r.bw=pd.bw;r.bh=pd.bh;pages.push(r);_drw.pages.push({pd:pd,sc:r.sc,ox:r.ox,oy:r.oy,boxes:r.boxes,W:r.W,H:r.H,dims:r.dims,skip:r.skip,anns:r.anns});}
+        var r=_drwRenderPage(pd,mode,pmap,items);if(r){r.label=pd.label;r.pid=pd.pid||pd.bid||('p'+pages.length);r.bw=pd.bw;r.bh=pd.bh;pages.push(r);_drw.pages.push({pd:pd,sc:r.sc,ox:r.ox,oy:r.oy,boxes:r.boxes,W:r.W,H:r.H,dims:r.dims,skip:r.skip,anns:r.anns});}
       });
     });
   }catch(e){alert('캡처 오류: '+e.message);}
@@ -11027,6 +11045,11 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
     +'.board-area{flex:1;min-height:0;position:relative;}'
     +'.board-area img{position:absolute;left:4mm;top:4mm;width:calc(100% - 8mm);height:calc(100% - 8mm);object-fit:contain;object-position:top center;display:block;}'
     +'.page2-title{padding:3mm 4mm;border-bottom:0.7pt solid #333;font-size:11pt;font-weight:900;color:#111;}'
+    // 쪽 빼기·되살리기 (2026-11-26 사용자 요청): 뺀 쪽은 창에서 얇은 줄만, 인쇄·PDF엔 안 나옴
+    +'.page,.page2{position:relative}.pg-del{position:absolute;left:50%;transform:translateX(-50%);top:2mm;z-index:6;padding:3px 9px;font-size:11px;border:1px solid #C62828;border-radius:3px;background:#fff;color:#C62828;cursor:pointer;opacity:.55}.pg-del:hover{opacity:1;background:#FFEBEE}'
+    +'.pg-gone{display:none;align-items:center;gap:10px;padding:7px 12px;font-size:12px;color:#555;background:#eceff1}.pg-gone button{padding:3px 10px;font-size:11px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;cursor:pointer;font-weight:bold}'
+    +'.gone{height:auto!important;border-style:dashed!important;background:#eceff1!important}.gone>*{display:none!important}.gone>.pg-gone{display:flex!important}'
+    +'@media print{.gone{display:none!important}.pg-del{display:none!important}}'
     +'@media print{.page2{page-break-before:always;}.drw-hl,.drw-reset,.drw-bar,.drw-x,.drw-menu,.drw-abar,.drw-band,.drw-guide,.drw-layer{display:none!important;}}'
     +'.drw-hl{position:absolute;display:none;border:2px dashed #1E88E5;background:rgba(30,136,229,0.07);pointer-events:none;z-index:2}.drw-hl.on{border-style:solid;background:rgba(30,136,229,0.15)}'
     +'.drw-bar{position:absolute;right:3mm;top:3mm;z-index:3;display:flex;gap:4px}.drw-reset{padding:3px 9px;font-size:11px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;cursor:pointer}.drw-hl.dim{border:2px solid #FB8C00;background:rgba(251,140,0,0.12)}.drw-hl.sel{border:2px solid #1E88E5;background:rgba(30,136,229,0.10)}.drw-menu{position:absolute;z-index:10;background:#fff;border:1px solid #1F3F7A;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.25);padding:3px;min-width:200px;font-size:12px}.drw-menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:5px 8px;cursor:pointer;font-size:12px;color:#1F3F7A}.drw-menu button:hover{background:#E8EEF8}.drw-mh{padding:4px 8px;color:#888;font-size:11px}.drw-band{position:absolute;display:none;z-index:4;border:1px dashed #1E88E5;background:rgba(30,136,229,0.08);pointer-events:none}.drw-guide{position:absolute;display:none;z-index:4;border:0 dashed #E91E63;border-top-width:1px;border-left-width:1px;pointer-events:none}.drw-layer{position:absolute;left:0;top:0;pointer-events:none}.drw-abar{position:absolute;display:none;z-index:5;gap:2px}.drw-abar button{width:24px;height:22px;border:1px solid #1F3F7A;border-radius:3px;background:#fff;color:#1F3F7A;font-size:13px;line-height:18px;padding:0;cursor:pointer}.drw-abar button:last-child{background:#E53935;color:#fff;border-color:#E53935}.drw-x{position:absolute;display:none;z-index:4;width:18px;height:18px;border-radius:9px;border:none;background:#E53935;color:#fff;font-size:11px;line-height:18px;padding:0;cursor:pointer}';
@@ -11034,12 +11057,12 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
     +'<span>PDF 저장: 인쇄창 → 프린터 → Microsoft Print to PDF 선택'+(pages.length>1?' · 도면 '+pages.length+'쪽 + 원판 배치도':'')+'</span>'+(_drw.pages.some(function(p){return p.boxes&&p.boxes.length>1;})?'<span style="color:#A9B4C8">· 상세 쪽 조각은 끌어서 옮길 수 있어요 (↺ 처음 배치 = 자동 자리)</span>':'')+'<span style="color:#A9B4C8">· 치수선 끌기 = 직각 이동(다른 치수선에 맞춤) · 숫자·글자·지시선·번호 끌기 = 옮기기 · 누르기/빈 곳 끌기 = 고르기 → － ＋ 크기·✕ · 조각 오른쪽 클릭 = 다른 쪽으로</span>'+'</div>';
   pages.forEach(function(pg,pi){
     var bwT=pg.bw||_prodBoardSize('').bw,bhT=pg.bh||_prodBoardSize('').bh;
-    body+='<div class="page '+(pg.isPort?'port':'land')+'"><div class="frame"><div class="inner-border">'
+    body+='<div class="page '+(pg.isPort?'port':'land')+_pgDelCls(pg.pid)+'" data-pid="'+escHtml(pg.pid)+'">'+_pgDelUI(pg.label)+'<div class="frame"><div class="inner-border">'
       +'<div class="drawing-area"><img id="_dimg'+pi+'" src=""></div>'
       +'<div class="title-block">'
       +'<div class="tb-main">'
       +'<div class="tb-co">윤현상재</div>'
-      +'<div class="tb-title">세라믹 가공 도면'+(pages.length>1?' <span style="font-size:9pt;font-weight:bold;color:#1F3F7A">('+(pi+1)+'/'+pages.length+')</span>':'')+'</div>'
+      +'<div class="tb-title">세라믹 가공 도면'+(pages.length>1?' <span class="pgno" style="font-size:9pt;font-weight:bold;color:#1F3F7A">('+(pi+1)+'/'+pages.length+')</span>':'')+'</div>'
       +'<div class="tb-size"><span style="font-size:6.5pt;color:#888;margin-right:4px;">원판</span>'+bwT.toFixed(0)+' × '+bhT.toFixed(0)+' mm</div>'
       +'</div>'
       +'<div class="tb-cells">'
@@ -11051,7 +11074,7 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
   });
   boardImgs.forEach(function(im,k){
     var a=k*_BPP+1,b=Math.min(boards.length,a+_BPP-1);
-    body+='<div class="page2">'
+    body+='<div class="page2'+_pgDelCls('board'+k)+'" data-pid="board'+k+'">'+_pgDelUI('원판 배치도'+(boardImgs.length>1?' '+(k+1)+'/'+boardImgs.length:''))
       +'<div class="page2-title">📋 원판 배치도 — '+_sizes.join(', ')+' mm'+(DB.fromSaved?'  ✅ 저장배치':'  ⚠ 자동배치')
       +(boardImgs.length>1?'  <span style="color:#1F3F7A">(원판 '+a+(b>a?'~'+b:'')+' / 전체 '+boards.length+'장)</span>':'')+'</div>'
       +'<div class="board-area"><img id="_bimg'+k+'" src=""></div>'
@@ -11067,7 +11090,7 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
   // 제품마다 한 쪽씩 (사진을 크게): 제품이 여러 개면 "사용 제품 1/3"처럼
   _prodCards.forEach(function(c,k){
     var n=_prodCards.length;
-    body+='<div class="page2"><div class="page2-title">📷 사용 제품'+(n>1?' '+(k+1)+'/'+n:'')+' — 원판 사진 (공장 확인용)</div>'
+    body+='<div class="page2'+_pgDelCls('prod:'+c.name)+'" data-pid="'+escHtml('prod:'+c.name)+'">'+_pgDelUI('사용 제품 · '+c.name)+'<div class="page2-title">📷 사용 제품'+(n>1?' '+(k+1)+'/'+n:'')+' — 원판 사진 (공장 확인용)</div>'
       +'<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:2mm;padding:5mm">'
       +'<div style="font-size:16pt;font-weight:900;color:#111">'+escHtml(c.name)+(c.en?' <span style="font-size:10pt;font-weight:normal;color:#555">'+escHtml(c.en)+'</span>':'')+'</div>'
       +'<div style="font-size:10pt;color:#333;font-family:Consolas,monospace">'+escHtml(c.size)+(c.qty?'  ·  '+c.qty+'장':'')+'</div>'
@@ -11076,7 +11099,7 @@ cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.s
       +'</div></div>';
   });
   // 창 제목 = 크롬 "PDF로 저장" 파일 이름 → .ceramic 저장과 같은 이름(업체명-주소-작성일)
-  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+escHtml(_saveBaseName())+'</title><style>'+css+'</style></head><body>'+body+'<script>('+_drwPopupScript.toString()+')();<\/script></body></html>');
+  pw.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>'+escHtml(_saveBaseName())+'</title><style>'+css+'</style></head><body>'+body+'<script>('+_drwPopupScript.toString()+')();('+_pgDelScript.toString()+')();<\/script></body></html>');
   pw.document.close();
   // 큰 그림은 문서를 쓴 뒤에 넣음
   setTimeout(function(){
