@@ -10637,10 +10637,11 @@ function _drwPopupScript(){
       var old=document.getElementById('drw-menu');if(old)old.remove();
       var m=document.createElement('div');m.id='drw-menu';m.className='drw-menu';
       m.innerHTML='<div class="drw-mh">이 조각을 보낼 쪽</div>';
-      O._drw.pages.forEach(function(q,qi){if(qi===pi||!q.pd.bid||!q.pd.list)return;
+      O._drw.pages.forEach(function(q,qi){if(qi===pi||!q.pd.bid||!q.pd.list||!q.pd.list.length)return; // 빈 쪽(숨김)은 받는 쪽 목록에서 뺌
         var it=document.createElement('button');it.textContent=(qi+1)+'쪽 · '+String(q.pd.label||'').replace(/^상세 · /,'');
         it.onclick=function(){m.remove();busy(function(){
           var r=O._drwSendPiece(pi,b.key,qi);if(!r)return;put(r.a);
+          if(!pg.pd.list.length){var pe=img.closest('.page');if(pe)pe.style.display='none';} // 조각을 다 보낸 쪽은 바로 숨김 (인쇄에도 안 나옴, 2026-11-26 사용자 요청)
           var im2=document.getElementById('_dimg'+qi);if(im2&&r.b)im2.src=r.b.img;if(window._drwPut&&window._drwPut[qi])window._drwPut[qi]();});};
         m.appendChild(it);});
       if(m.children.length<2){var n=document.createElement('div');n.className='drw-mh';n.textContent='보낼 수 있는 다른 원판 쪽이 없어요';m.appendChild(n);}

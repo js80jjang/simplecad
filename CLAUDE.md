@@ -259,7 +259,7 @@
     고르기 `items`(누르기·Shift/Ctrl 더하기·빈 곳 끌기 범위 `.drw-band`) → `.drw-abar` － ＋ ↺ ✕ = `_drwSelOp(pi,items,f)`: 치수 `_drwDimOv[key].fk`(`_expDim`·`_expLeader` 글자 크기), 글자·지시선 `_drwAnnK`, 번호 `_drwX.numK`, f<0 = `_drwHide`(번호 'n'+키). 파일 `drawingX`.
     `_expDim`은 숫자가 치수선 위에 있으면 숫자 폭만큼 선을 비움. `_drwReset`이 이 쪽 글자·번호 자리·크기도 지움
   - 조각 다른 쪽으로 보내기(2026-11-25 사용자 요청): 상세 쪽 pagesDef에 `bid`('b'+원판 번호 / 'rest'), `_drwPageOv[조각키]=bid`(파일 `drawingPageOv`)를 exportDrawingA4가 idx에 적용(빈 쪽은 빠짐).
-    창: 조각 오른쪽 클릭 = `.drw-menu`(bid 있는 다른 쪽) → `opener._drwSendPiece(pi,key,toPi)` = 두 쪽 pd.list 바꿈·그 조각 `_drwOv` 지움·받는 쪽 geo 지움 → 두 쪽 다시. 빈 쪽은 `_drwRenderPage`가 안내 글자 빈 그림.
+    창: 조각 오른쪽 클릭 = `.drw-menu`(bid 있는 다른 쪽) → `opener._drwSendPiece(pi,key,toPi)` = 두 쪽 pd.list 바꿈·그 조각 `_drwOv` 지움·받는 쪽 geo 지움 → 두 쪽 다시. 빈 쪽은 창에서 그 `.page`를 바로 숨김(2026-11-26 사용자 요청, 받는 쪽 목록에서도 뺌, 다음 도면화에선 빠짐).
     조각 하나인 쪽도 `_compactPageShapes`가 `_drwMeta`를 남김(누르기용). 원판 배치(`_savedBoardLayout`)는 안 바뀜
 - 도면화 버튼 = `drawingMenu`(예전: 방식 고르기, localStorage `scd_drw_mode`, 예전 값 'one'은 'area'로):
   `exportDrawingA4('area')`(2026-10-28 사용자 확정) = 1쪽 전체 도면 **모양만**(`_expShapeOnly` → `_drawCleanExport`가 밑면연마·고스라·치수·사용자 치수선·졸리컷·각도·R/Φ·범례를 건너뜀, 외곽·싱크볼/쿡탑·타공·이름·번호·도면 글자만)
