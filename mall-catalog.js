@@ -1,8 +1,30 @@
 // 자동 생성 파일 — tools/update_mall_catalog.py (GitHub Actions 매일 실행). 직접 고치지 마세요.
 window._MALL_CATALOG={
-"updated":"2026-11-24",
+"updated":"2026-11-26",
 "source":"https://www.younhyunmall.com",
 "items":[
+{
+"id":"1000007305",
+"name":"무쉘카크 내추럴",
+"en":"MUSCHELKALK NATURAL",
+"size":"1600×3200×12T",
+"price":2027500,
+"m2":396000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007305/image/list/1000007305_list_026.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007305",
+"cate":"009003"
+},
+{
+"id":"1000007303",
+"name":"브레치아 로사 4D",
+"en":"BRECCIA ROSA 4D",
+"size":"1600×3200×12T",
+"price":2196400,
+"m2":429000,
+"img":"https://godomall-storage.cdn-nhncommerce.com/88d5aefd6a68f2c9d7629fd244147052/goods/1000007303/image/list/1000007303_list_043.jpg",
+"url":"https://www.younhyunmall.com/goods/goods_view.php?goodsNo=1000007303",
+"cate":"009003"
+},
 {
 "id":"1000007311",
 "name":"몬타냐 그레이 혼드",
