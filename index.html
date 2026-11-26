@@ -6410,6 +6410,7 @@ function redraw(){
     ctx.restore();
   }
   if(tool==='join'&&!printRender)_joinPreview(); // 결합: 기준·붙일 조각·맞춘 꼭짓점 (다시 그릴 때마다)
+  if(_drwRgn&&!printRender)_drwRegionDraw(); // 구역 도면화: 정한 구역들
 }
 function _redrawBody(_fxNow){
   dimLabels=[];_dimDraw(autoAdjustDims); // 치수 자리 맞춤도 치수 틀에서
@@ -10813,25 +10814,41 @@ function drawingMenu(btn){
   setTimeout(function(){document.addEventListener('mousedown',function h(e){if(!m.contains(e.target)){m.remove();document.removeEventListener('mousedown',h);}});},0);
 }
 // 구역 도면화(2026-11-26 사용자 요청): 메뉴 → 편집 화면에서 끌어서 사각형 → 그 안(조각 상자 가운데)의 조각만 exportDrawingA4('region',{l,t,r,b}). Esc·오른쪽 클릭 = 취소
-var _drwRgn=null;
+var _drwRgn=null; // 구역 정하기 중: {list:[{l,t,r,b}], a, b}
 function _drwRegionStart(){
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
-  _drwRgn={a:null,b:null};var tip=document.getElementById('drw-rgn-tip');if(!tip){tip=document.createElement('div');tip.id='drw-rgn-tip';document.body.appendChild(tip);}
-  tip.style.cssText='position:fixed;z-index:9999;left:50%;top:70px;transform:translateX(-50%);background:#0A1222;border:1px solid #E3B861;color:#F1D69A;padding:7px 14px;border-radius:6px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.5)';
-  tip.textContent='🔲 도면화할 구역을 도면에서 끌어서 정하세요 · Esc = 취소';tip.style.display='block';cv.style.cursor='crosshair';
+  _drwRgn={list:[],a:null,b:null};var tip=document.getElementById('drw-rgn-tip');if(!tip){tip=document.createElement('div');tip.id='drw-rgn-tip';document.body.appendChild(tip);}
+  tip.style.cssText='position:fixed;z-index:9999;left:50%;top:70px;transform:translateX(-50%);background:#0A1222;border:1px solid #E3B861;color:#F1D69A;padding:7px 10px 7px 14px;border-radius:6px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.5);display:flex;align-items:center;gap:8px';
+  _drwRegionTip();cv.style.cursor='crosshair';
 }
+function _drwRegionTip(){var tip=document.getElementById('drw-rgn-tip');if(!tip||!_drwRgn)return;var n=_drwRgn.list.length,B='padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid ';
+  tip.innerHTML='<span>🔲 구역을 끌어서 정하세요 (여러 개) · 정한 구역 <b>'+n+'</b>개</span>'
+    +'<button data-a="ok" style="'+B+'#2A4F92;background:#1F3F7A;color:#fff"'+(n?'':' disabled')+'>✅ 도면화 (Enter)</button>'
+    +'<button data-a="undo" style="'+B+'#1C2A47;background:#121D33;color:#D9DFEA"'+(n?'':' disabled')+'>↶ 마지막 빼기</button>'
+    +'<button data-a="x" style="'+B+'#1C2A47;background:#121D33;color:#D9DFEA">✕ 취소 (Esc)</button>';
+  tip.style.display='flex';
+  tip.querySelectorAll('button').forEach(function(b){b.onclick=function(){var a=b.dataset.a;if(a==='ok')_drwRegionDone();else if(a==='undo'){_drwRgn.list.pop();_drwRegionTip();redraw();}else _drwRegionEnd();};});}
+function _drwRegionDone(){if(!_drwRgn||!_drwRgn.list.length)return;var L=_drwRgn.list.slice();_drwRegionEnd();exportDrawingA4('region',L);}
 function _drwRegionEnd(){_drwRgn=null;var tip=document.getElementById('drw-rgn-tip');if(tip)tip.style.display='none';cv.style.cursor='';redraw();}
 function _drwRegionMm(e){var r=cv.getBoundingClientRect();return[(e.clientX-r.left-offsetX)/scale,(e.clientY-r.top-offsetY)/scale];}
-cv.addEventListener('mousedown',function(e){if(!_drwRgn)return;e.stopImmediatePropagation();e.preventDefault();if(e.button!==0){_drwRegionEnd();return;}_drwRgn.a=_drwRegionMm(e);_drwRgn.b=_drwRgn.a;},true);
-cv.addEventListener('mousemove',function(e){if(!_drwRgn)return;e.stopImmediatePropagation();if(!_drwRgn.a)return;_drwRgn.b=_drwRegionMm(e);redraw();
-  var p=toCanvas(_drwRgn.a[0],_drwRgn.a[1]),q=toCanvas(_drwRgn.b[0],_drwRgn.b[1]);ctx.save();ctx.setLineDash([8,5]);ctx.strokeStyle='#E3B861';ctx.lineWidth=2;ctx.fillStyle='rgba(227,184,97,0.10)';
-  ctx.fillRect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]));ctx.strokeRect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]));ctx.restore();},true);
-document.addEventListener('mouseup',function(e){if(!_drwRgn||!_drwRgn.a)return;e.stopImmediatePropagation();var a=_drwRgn.a,b=_drwRegionMm(e);_drwRegionEnd();
-  if(Math.abs(b[0]-a[0])*scale<8||Math.abs(b[1]-a[1])*scale<8)return; // 너무 작으면 취소
-  exportDrawingA4('region',{l:Math.min(a[0],b[0]),t:Math.min(a[1],b[1]),r:Math.max(a[0],b[0]),b:Math.max(a[1],b[1])});},true);
-document.addEventListener('keydown',function(e){if(_drwRgn&&e.key==='Escape'){e.stopImmediatePropagation();e.preventDefault();_drwRegionEnd();}},true);
-cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.stopImmediatePropagation();_drwRegionEnd();}},true);
-function exportDrawingA4(mode,region){ // region = {l,t,r,b} mm (구역 도면화)
+// 정한 구역(번호)과 끄는 중인 사각형 — redraw 끝에서
+function _drwRegionDraw(){if(!_drwRgn)return;ctx.save();ctx.setLineDash([8,5]);ctx.lineWidth=2;
+  function box(a,b,i){var p=toCanvas(a[0],a[1]),q=toCanvas(b[0],b[1]),x=Math.min(p[0],q[0]),y=Math.min(p[1],q[1]),w=Math.abs(q[0]-p[0]),h=Math.abs(q[1]-p[1]);
+    ctx.fillStyle='rgba(227,184,97,0.10)';ctx.strokeStyle='#E3B861';ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
+    if(i!=null){ctx.setLineDash([]);ctx.fillStyle='#E3B861';ctx.fillRect(x,y,30,22);ctx.fillStyle='#0A1222';ctx.font='bold 14px "Malgun Gothic",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),x+15,y+11);ctx.setLineDash([8,5]);}}
+  _drwRgn.list.forEach(function(r,i){box([r.l,r.t],[r.r,r.b],i);});
+  if(_drwRgn.a&&_drwRgn.b)box(_drwRgn.a,_drwRgn.b,null);ctx.restore();}
+cv.addEventListener('mousedown',function(e){if(!_drwRgn||e.button===1)return;e.stopImmediatePropagation();e.preventDefault(); // 가운데 버튼 = 화면 옮기기는 그대로
+  if(e.button!==0){_drwRgn.list.pop();_drwRegionTip();redraw();return;} // 오른쪽 클릭 = 마지막 구역 빼기
+  _drwRgn.a=_drwRegionMm(e);_drwRgn.b=_drwRgn.a;},true);
+cv.addEventListener('mousemove',function(e){if(!_drwRgn||!_drwRgn.a)return;e.stopImmediatePropagation();_drwRgn.b=_drwRegionMm(e);redraw();},true);
+document.addEventListener('mouseup',function(e){if(!_drwRgn||!_drwRgn.a)return;e.stopImmediatePropagation();var a=_drwRgn.a,b=_drwRegionMm(e);_drwRgn.a=null;_drwRgn.b=null;
+  if(Math.abs(b[0]-a[0])*scale>=8&&Math.abs(b[1]-a[1])*scale>=8)_drwRgn.list.push({l:Math.min(a[0],b[0]),t:Math.min(a[1],b[1]),r:Math.max(a[0],b[0]),b:Math.max(a[1],b[1])});
+  _drwRegionTip();redraw();},true);
+document.addEventListener('keydown',function(e){if(!_drwRgn)return;
+  if(e.key==='Escape'){e.stopImmediatePropagation();e.preventDefault();_drwRegionEnd();}
+  else if(e.key==='Enter'){e.stopImmediatePropagation();e.preventDefault();_drwRegionDone();}},true);
+cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.stopImmediatePropagation();}},true);function exportDrawingA4(mode,region){ // region = {l,t,r,b} mm (구역 도면화)
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
   // 도면화는 한 가지(2026-11-24 사용자 확정): 1쪽 = 치수 없는 배치도(제품이 여러 개면 제품마다 한 쪽, 그 제품 조각만 배치 그대로), 다음 쪽부터 원판마다 상세
@@ -10861,12 +10878,18 @@ function exportDrawingA4(mode,region){ // region = {l,t,r,b} mm (구역 도면�
     });
   } else pagesDef.unshift({list:null,label:'배치도 (치수는 다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh,shapeOnly:true});
   // 구역 도면화(2026-11-26 사용자 요청 "본 도면에서 구역을 정해서 도면화"): 편집 화면에서 끈 사각형(mm) 안에 조각 상자 가운데가 든 조각만, 원래 자리 그대로 치수와 함께 한 쪽 (원판 배치·사용 제품 쪽 없음)
+  //   여러 구역(2026-11-26 사용자 요청 "전체 도면화인데 구역을 여러 장"): 배치도·원판 배치·사용 제품 쪽은 그대로, 원판별 상세 대신 구역마다 한 쪽(조각 가운데가 든 첫 구역) + 구역 밖 조각 쪽
   if(region){
-    var rset={},rn=0;items.forEach(function(it,k){var sh=it.shape,bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!bb)return;var cx=(bb.l+bb.r)/2,cy=(bb.t+bb.b)/2;
-      if(cx>=region.l&&cx<=region.r&&cy>=region.t&&cy<=region.b){rset[k]=1;rn++;}});
-    if(!rn){alert('정한 구역 안에 조각이 없습니다.\n조각 가운데가 구역 안에 들도록 끌어 주세요.');return;}
-    pagesDef=[{list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&rset[k];}),label:'구역 도면 · 조각 '+rn+'개',bw:d0.bw,bh:d0.bh,layout:true}];
-    boards=[];
+    var regs=Array.isArray(region)?region:[region],own={},any=0;
+    items.forEach(function(it,k){var sh=it.shape,bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!bb)return;var cx=(bb.l+bb.r)/2,cy=(bb.t+bb.b)/2;
+      for(var ri=0;ri<regs.length;ri++){var g=regs[ri];if(cx>=g.l&&cx<=g.r&&cy>=g.t&&cy<=g.b){own[k]=ri;any++;break;}}});
+    if(!any){alert('정한 구역 안에 조각이 없습니다.\n조각 가운데가 구역 안에 들도록 끌어 주세요.');return;}
+    var lay=pagesDef.filter(function(pd){return pd.shapeOnly;}),rp=[];lay.forEach(function(pd){pd.label=String(pd.label).replace('원판별 상세','구역별 상세');});
+    regs.forEach(function(g,ri){var ks=Object.keys(own).filter(function(k){return own[k]===ri;});if(!ks.length)return;var set={};ks.forEach(function(k){set[k]=1;});
+      rp.push({list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];}),label:'상세 · 구역 '+(ri+1)+' (조각 '+ks.length+'개)',bw:d0.bw,bh:d0.bh,bid:'r'+ri});}); // 원판별 상세처럼 빈 곳만 줄여 크게 (조각 끌기·다른 쪽 보내기 됨)
+    var out={};items.forEach(function(it,k){if(own[k]==null)out[k]=1;});
+    if(Object.keys(out).length)rp.push({list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&out[k];}),label:'상세 · 구역 밖 조각',bw:d0.bw,bh:d0.bh,bid:'rout'});
+    pagesDef=lay.concat(rp);
   }
   // 조각 번호는 전체 도면 기준으로 고정, 번호 보기를 꺼 놨어도 넣음 (배치도와 상세 쪽을 번호로 맞춰 봄)
   var pages=[];
@@ -10963,7 +10986,7 @@ function exportDrawingA4(mode,region){ // region = {l,t,r,b} mm (구역 도면�
       +'</div>';
   });
   // 맨 마지막 쪽: 사용 제품의 원판 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
-  var _prodCards=(region?[]:(products||[])).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
+  var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
     var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
     if(id)((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).forEach(function(c){if(c.id===id)cat=c;});
     if(id)_slabImgFor(_prodNames()[products.indexOf(p)]); // 아직 안 불러왔으면 지금 불러오기 시작

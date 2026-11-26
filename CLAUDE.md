@@ -248,8 +248,9 @@
 - **도면화는 한 가지(2026-11-24 사용자 확정)**: `drawingMenu` = "📐 도면화" 단추 + "치수 간단히" 체크 → `exportDrawingA4('board')`(mode는 늘 'board'):
   1쪽 = 치수 없는 배치도(`shapeOnly`, 번호 넣음), 제품이 2개 이상이면 제품마다 배치도 한 쪽(`pd.layout` = 그 제품 조각만 원래 자리, `_compactPageShapes` 안 함) → 다음 쪽부터 원판마다 상세(원판 1장이어도) + 배치 안 된 조각 쪽.
   아래 'area'/'detail' 설명은 예전 방식 기록(코드에 `_areaPages` 등은 남아 있음)
-  - 구역 도면화(2026-11-26 사용자 요청): 메뉴 둘째 단추 → `_drwRegionStart`(`_drwRgn`, 안내 `#drw-rgn-tip`, cv capture 리스너가 다른 도구보다 먼저) → 끈 사각형(mm) → `exportDrawingA4('region',{l,t,r,b})`:
-    조각 상자 가운데가 구역 안인 조각만 한 쪽(`layout:true` = 원래 자리, 치수 포함), `boards=[]`·`_prodCards` 없음, mode 'region'(번호 넣음). Esc·오른쪽 클릭·너무 작은 끌기 = 취소
+  - 구역 도면화(2026-11-26 사용자 요청 "전체 도면화인데 구역을 여러 장"): 메뉴 둘째 단추 → `_drwRegionStart`(`_drwRgn={list,a,b}`, 안내 막대 `#drw-rgn-tip` = ✅ 도면화·↶ 마지막 빼기·✕ 취소, cv capture 리스너가 다른 도구보다 먼저, 가운데 버튼 화면 옮기기는 통과,
+    redraw 끝 `_drwRegionDraw` = 번호 붙은 구역) → 끌 때마다 구역 추가, 오른쪽 클릭 = 마지막 빼기, Enter = `_drwRegionDone` → `exportDrawingA4('region',[{l,t,r,b}…])`:
+    배치도·원판 배치·사용 제품 쪽은 그대로, 상세 쪽만 구역마다(조각 상자 가운데가 든 첫 구역, `bid:'r'+i`, 압축·편집 됨) + 구역 밖 조각(`bid:'rout'`). mode 'region'(번호 넣음)
   - 도면화 창 치수 옮기기·고정: `_drwDimOv[키]`(파일 `drawingDimOv`) = 길이 치수 {o 치수선 거리 mm, tx,ty 글자(기준 조각 원점 `_drwKeyOrg` 기준 mm)} / 지시선 {ex,ey,tx,ty,r} → `_expDim`·`_expLeader`가 자동 자리 대신 씀, 그릴 때 `_drwHits`에 지금 자리 `g`(+길이 치수 법선 n).
     `_drwPin(pg)` = 쪽을 처음 고칠 때(조각·치수 옮기기·지우기) 배율·자리 `pg.geo`(→ `_renderDrawingImage(label,fix)`)와 그 쪽 모든 치수 자리를 고정 → 조각을 옮겨도 다른 치수가 안 움직임.
     `_drwDimMove(pi,key,dx,dy)`(치수선은 법선 방향만, 글자는 그대로), `_drwReset` = 조각·치수 자리·geo 모두 지움. 창: 치수 끌기 = 옮기기, 누르기 = 고르기(`.drw-hl.sel` + `.drw-x` ✕, Delete)
