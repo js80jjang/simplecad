@@ -11556,7 +11556,8 @@ function _3dMidContact(pc,edges){
       if(Math.abs(dx/len*o.uz-dz/len*o.ux)>0.02)continue; // 평행
       if(Math.abs((p[0]-o.a[0])*o.nx+(p[1]-o.a[1])*o.nz)>3)continue; // 같은 선 위
       var sp=(p[0]-o.a[0])*o.ux+(p[1]-o.a[1])*o.uz,sq=(q[0]-o.a[0])*o.ux+(q[1]-o.a[1])*o.uz,s0=Math.min(sp,sq),ov=Math.min(o.len,Math.max(sp,sq))-Math.max(0,s0);
-      if(ov>50&&(!best||ov>best.ov))best={e:e,s0:s0,ov:ov,along:Math.abs(dx)>=Math.abs(dz)?'x':'z'};}
+      // s0 = 조각 전체가 변 따라 시작하는 자리 (닿은 변만이 아니라 — ㄱ자 판은 닿은 변이 조각 일부라 그만큼 밀려 보였음, 2026-11-26)
+      if(ov>50&&(!best||ov>best.ov))best={e:e,s0:Math.min.apply(null,L.map(function(r){return (r[0]-o.a[0])*o.ux+(r[1]-o.a[1])*o.uz;})),ov:ov,along:Math.abs(dx)>=Math.abs(dz)?'x':'z'};}
   });
   return best;
 }
@@ -11987,7 +11988,7 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
       // 손으로 정한 자리(mid3d: edge=상판 변 id, off=변 시작에서 mm, swap=가로/세로 바꿈)가 있으면 그대로, 없으면 자동
       // 자동 = 도면에서 상판 변에 붙어 있으면 그 변·그 위치에 (붙은 변 따라 = 벽 따라, 다른 쪽 = 높이, 높이가 _3D_TALL 넘으면 바닥부터 세운 키 큰 판)
       var isP=_3dIsPanel(pc.type),cfg=_3dKey(pc.shape).mid3d||{},bw=pc.bb.r-pc.bb.l,bh=pc.bb.b-pc.bb.t,man=cfg.edge!=null,ct=man?null:_3dMidContact(pc,allEdges);
-      var e=null,s0,defA=bw>=bh?'x':'z',tm=pc.th,ch=isP&&!man?pChain.get(pc):null,along,land,Lm,Hm,floor,onObj,inAnim,myObj,myHb,sw,eid,rr=0,bLand;
+      var e=null,s0,defA=bw>=bh?'x':'z',tm=pc.th,ch=isP&&!man?pChain.get(pc):null,e0=null,along,land,Lm,Hm,floor,onObj,inAnim,myObj,myHb,sw,eid,rr=0,bLand;
       if(ch){ // 도면에서 상판 변에 붙은 하부판 + 그 판에 이어 붙인 하부판들 (2026-11-21): 도면 자리 그대로 같은 면에 — 상판 쪽 = 위, 멀어질수록 아래 (바닥 밑은 자름)
         var ce=ch.e,yRef=ce.y0;onObj=!!ce.obj;inAnim=!!(_3d&&_3d.anim)&&!onObj;
         if(yRef==null||(yRef<(onObj?1:50)&&!inAnim))return;if(inAnim)yRef=Math.max(yRef,_3D_H-tm);
@@ -12007,7 +12008,7 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
         e={id:null,a:[stage.x,stage.z],ux:1,uz:0,nx:0,nz:-1,len:Lm,used:0,y:0,stage:true};stage.x+=Lm+150;}
       if(isP&&e&&!man&&!ct)s0=Math.max(0,(e.len-Lm)/2);
       else if(e){var ov=Math.min(20,e.len/2,Lm/2);s0=Math.max(ov-Lm,Math.min(cfg.off||0,e.len-ov));} // 손으로 놓은 자리: 변보다 길거나 변 끝을 넘어도 됨 (끝 조금은 걸쳐 있게)
-      else if(ct){e=ct.e;s0=ct.s0;if(!floor)e.used=Math.max(e.used,s0+Lm);}
+      else if(ct){e=ct.e;s0=ct.s0;if(!floor)e.used=Math.max(e.used,s0+Lm);e0=ct.e;}
       onObj=isP&&e&&e.obj; // 오브제에 붙인 판 = 상판 밑면에 매달림 (오브제를 옮기거나 위아래로 움직이면 같이)
       inAnim=!!(_3d&&_3d.anim)&&!onObj; // 첫 화면: 상판이 아직 바닥 가까이 있어도 판은 다 놓였을 때 높이로 (눕힌 데서 세움)
       var fixY=man&&cfg.y0!=null&&!!e; // 높이를 손으로 정한 판(숫자 칸·면 클릭 붙이기·Shift 끌기, 2026-11-21) = 그 높이 그대로, 상판 밑면·위 판에 맞춰 자르거나 매달지 않음
@@ -12046,7 +12047,11 @@ ph=(side==='l'?-1:1)*ang*Math.PI/180,cs=Math.cos(ph),sn=Math.sin(ph);
       // 거울상 막기 (2026-11-21 사용자 요청 "도면 모양과 3D가 다르다"): 무늬 면을 그 면 앞에서 볼 때 변 방향(s 증가)이 화면 왼쪽이면 좌우를 뒤집어 도면 그대로 보이게
       //   F면(+법선 쪽)은 −법선 방향으로, W면은 +법선 방향으로 봄 → 화면 오른쪽 = 시선 f에 대해 (−f.z, f.x)
       var mir=fc===0?(e.ux*e.nz-e.uz*e.nx)<0:(e.uz*e.nx-e.ux*e.nz)<0;
-      function uv(a,h){if(mir)a=1-a;for(var k=0;k<rr;k++){var t=a;a=1-h;h=t;}return bLand?[a,1-h]:[1-h,a];} // 평면에서 긴 쪽 = 벽 따라 (돌렸으면 판 면 안에서 90°씩 돌려 돌리기 전 자리로)
+      // 도면에서 상판 변에 붙여 그린 판(자동 자리) = 그 변을 축으로 세운 모양 그대로 (2026-11-26 사용자 요청 "ㄱ자 판이 도면과 다르게 뒤집혀 나옴"):
+      //   붙은 변 = 판 아랫변, 변에서 멀어질수록 위, 변 따라 = 도면 그대로 (좌우 뒤집기 없음)
+      var foldO=(!man&&!ch&&ct&&ct.e===e0&&!rr)?ct.e.o:null;
+      function uv(a,h){if(foldO){var ss=s0+a*Lm,dd=h*Hm,px=foldO.a[0]+foldO.ux*ss-foldO.nx*dd,pz=foldO.a[1]+foldO.uz*ss-foldO.nz*dd;return[(px-pb.l)/bw,(pz-pb.t)/bh];}
+        if(mir)a=1-a;for(var k=0;k<rr;k++){var t=a;a=1-h;h=t;}return bLand?[a,1-h]:[1-h,a];} // 평면에서 긴 쪽 = 벽 따라 (돌렸으면 판 면 안에서 90°씩 돌려 돌리기 전 자리로)
       // 졸리컷(45° 맞물림): 도면 사각형 변 → 판의 위·아래·시작·끝 변 (uv와 같은 대응: land면 위=윗변·왼=시작, 아니면 왼=윗변·위=시작)
       var pb=pc.bb,jT=onMark(jMarks,[pb.l,pb.t],[pb.r,pb.t]),jB=onMark(jMarks,[pb.l,pb.b],[pb.r,pb.b]),jL=onMark(jMarks,[pb.l,pb.t],[pb.l,pb.b]),jR=onMark(jMarks,[pb.r,pb.t],[pb.r,pb.b]);
       var jTop=bLand?jT:jL,jBot=bLand?jB:jR,j0=bLand?jL:jT,j1=bLand?jR:jB;
