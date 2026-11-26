@@ -10517,7 +10517,7 @@ var _drwSimple=true;try{_drwSimple=localStorage.getItem('scd_drw_simple')!=='0';
 function _drwPieceKey(sh){return sh.kind==='linegroup'?'L'+(sh.lines[0]&&sh.lines[0].id):String(sh.id);}
 // 조각 번호를 전체 기준으로 고정한 채 fn 실행 (구역별은 번호 보기 꺼 놨어도 번호)
 function _drwWithNums(mode,fn){
-  var svNums=showShapeNumbers;if(mode==='area'||mode==='board')showShapeNumbers=true; // 배치도와 상세 쪽을 번호로 맞춰 봄
+  var svNums=showShapeNumbers;if(mode==='area'||mode==='board'||mode==='region')showShapeNumbers=true; // 배치도와 상세 쪽을 번호로 맞춰 봄
   var all=shapes,frozen=[],auto=showShapeNumbers?_autoPieceNums():[];
   all.forEach(function(s,i){if(auto[i]&&s.shapeNum==null){s.shapeNum=auto[i];frozen.push(s);}});
   try{return fn();}finally{shapes=all;frozen.forEach(function(s){delete s.shapeNum;});showShapeNumbers=svNums;}
@@ -10801,6 +10801,10 @@ function drawingMenu(btn){
   b.innerHTML='<b style="color:#E3B861">📐 도면화</b><br><span style="font-size:10.5px;color:#A9B4C8">1쪽 배치도(치수 없음, 제품별) · 다음 쪽부터 원판마다 상세</span>';
   b.onclick=function(){m.remove();exportDrawingA4('board');};
   m.appendChild(b);
+  var b2=document.createElement('button');b2.style.cssText='text-align:left;padding:7px 10px;border-radius:4px;cursor:pointer;border:1px solid #1C2A47;background:#121D33;color:#D9DFEA;font-size:12px';
+  b2.innerHTML='<b style="color:#E3B861">🔲 구역 정해서 도면화</b><br><span style="font-size:10.5px;color:#A9B4C8">도면에서 끌어서 고른 구역의 조각만 치수와 함께 한 쪽</span>';
+  b2.onclick=function(){m.remove();_drwRegionStart();};
+  m.appendChild(b2);
   var ck=document.createElement('label');ck.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 8px 2px;color:#D9DFEA;font-size:12px;cursor:pointer;border-top:1px solid #1C2A47;margin-top:2px';
   ck.innerHTML='<input type="checkbox"'+(_drwSimple?' checked':'')+'> <span><b style="color:#E3B861">치수 간단히</b><br><span style="font-size:10.5px;color:#A9B4C8">타공 위치 가로·세로 하나씩 · 객체 크기는 이름 아래 글자로</span></span>';
   ck.querySelector('input').onchange=function(){_drwSimple=this.checked;try{localStorage.setItem('scd_drw_simple',_drwSimple?'1':'0');}catch(e){}};
@@ -10808,11 +10812,30 @@ function drawingMenu(btn){
   document.body.appendChild(m);
   setTimeout(function(){document.addEventListener('mousedown',function h(e){if(!m.contains(e.target)){m.remove();document.removeEventListener('mousedown',h);}});},0);
 }
-function exportDrawingA4(mode){
+// 구역 도면화(2026-11-26 사용자 요청): 메뉴 → 편집 화면에서 끌어서 사각형 → 그 안(조각 상자 가운데)의 조각만 exportDrawingA4('region',{l,t,r,b}). Esc·오른쪽 클릭 = 취소
+var _drwRgn=null;
+function _drwRegionStart(){
+  if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
+  _drwRgn={a:null,b:null};var tip=document.getElementById('drw-rgn-tip');if(!tip){tip=document.createElement('div');tip.id='drw-rgn-tip';document.body.appendChild(tip);}
+  tip.style.cssText='position:fixed;z-index:9999;left:50%;top:70px;transform:translateX(-50%);background:#0A1222;border:1px solid #E3B861;color:#F1D69A;padding:7px 14px;border-radius:6px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.5)';
+  tip.textContent='🔲 도면화할 구역을 도면에서 끌어서 정하세요 · Esc = 취소';tip.style.display='block';cv.style.cursor='crosshair';
+}
+function _drwRegionEnd(){_drwRgn=null;var tip=document.getElementById('drw-rgn-tip');if(tip)tip.style.display='none';cv.style.cursor='';redraw();}
+function _drwRegionMm(e){var r=cv.getBoundingClientRect();return[(e.clientX-r.left-offsetX)/scale,(e.clientY-r.top-offsetY)/scale];}
+cv.addEventListener('mousedown',function(e){if(!_drwRgn)return;e.stopImmediatePropagation();e.preventDefault();if(e.button!==0){_drwRegionEnd();return;}_drwRgn.a=_drwRegionMm(e);_drwRgn.b=_drwRgn.a;},true);
+cv.addEventListener('mousemove',function(e){if(!_drwRgn)return;e.stopImmediatePropagation();if(!_drwRgn.a)return;_drwRgn.b=_drwRegionMm(e);redraw();
+  var p=toCanvas(_drwRgn.a[0],_drwRgn.a[1]),q=toCanvas(_drwRgn.b[0],_drwRgn.b[1]);ctx.save();ctx.setLineDash([8,5]);ctx.strokeStyle='#E3B861';ctx.lineWidth=2;ctx.fillStyle='rgba(227,184,97,0.10)';
+  ctx.fillRect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]));ctx.strokeRect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]));ctx.restore();},true);
+document.addEventListener('mouseup',function(e){if(!_drwRgn||!_drwRgn.a)return;e.stopImmediatePropagation();var a=_drwRgn.a,b=_drwRegionMm(e);_drwRegionEnd();
+  if(Math.abs(b[0]-a[0])*scale<8||Math.abs(b[1]-a[1])*scale<8)return; // 너무 작으면 취소
+  exportDrawingA4('region',{l:Math.min(a[0],b[0]),t:Math.min(a[1],b[1]),r:Math.max(a[0],b[0]),b:Math.max(a[1],b[1])});},true);
+document.addEventListener('keydown',function(e){if(_drwRgn&&e.key==='Escape'){e.stopImmediatePropagation();e.preventDefault();_drwRegionEnd();}},true);
+cv.addEventListener('contextmenu',function(e){if(_drwRgn){e.preventDefault();e.stopImmediatePropagation();_drwRegionEnd();}},true);
+function exportDrawingA4(mode,region){ // region = {l,t,r,b} mm (구역 도면화)
   if(!shapes.length){alert('도면에 도형이 없습니다.');return;}
   var DB=_drawingBoards(),boards=DB.boards,items=DB.items;
   // 도면화는 한 가지(2026-11-24 사용자 확정): 1쪽 = 치수 없는 배치도(제품이 여러 개면 제품마다 한 쪽, 그 제품 조각만 배치 그대로), 다음 쪽부터 원판마다 상세
-  mode='board';
+  mode=region?'region':'board';
   var pagesDef=[],pmap=_shapePieceMap(items),onBoard={};
   boards.forEach(function(b,bi){
     var idx=[];b.forEach(function(p){var k=items.findIndex(function(it){return it.shape===p.item.shape;});if(k>=0){idx.push(k);onBoard[k]=1;}});
@@ -10837,6 +10860,14 @@ function exportDrawingA4(mode){
       pagesDef.unshift({list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&set[k];}),label:'배치도 '+(prods.length-ri)+'/'+prods.length+' · '+nm+' (치수는 원판별 상세 쪽에)',bw:bd.bw,bh:bd.bh,shapeOnly:true,layout:true});
     });
   } else pagesDef.unshift({list:null,label:'배치도 (치수는 다음 쪽부터 원판별 상세)',bw:d0.bw,bh:d0.bh,shapeOnly:true});
+  // 구역 도면화(2026-11-26 사용자 요청 "본 도면에서 구역을 정해서 도면화"): 편집 화면에서 끈 사각형(mm) 안에 조각 상자 가운데가 든 조각만, 원래 자리 그대로 치수와 함께 한 쪽 (원판 배치·사용 제품 쪽 없음)
+  if(region){
+    var rset={},rn=0;items.forEach(function(it,k){var sh=it.shape,bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);if(!bb)return;var cx=(bb.l+bb.r)/2,cy=(bb.t+bb.b)/2;
+      if(cx>=region.l&&cx<=region.r&&cy>=region.t&&cy<=region.b){rset[k]=1;rn++;}});
+    if(!rn){alert('정한 구역 안에 조각이 없습니다.\n조각 가운데가 구역 안에 들도록 끌어 주세요.');return;}
+    pagesDef=[{list:shapes.filter(function(s){var k=pmap.get(s);return k!=null&&rset[k];}),label:'구역 도면 · 조각 '+rn+'개',bw:d0.bw,bh:d0.bh,layout:true}];
+    boards=[];
+  }
   // 조각 번호는 전체 도면 기준으로 고정, 번호 보기를 꺼 놨어도 넣음 (배치도와 상세 쪽을 번호로 맞춰 봄)
   var pages=[];
   _drw={mode:mode,pmap:pmap,items:items,pages:[]}; // 도면화 창에서 조각 끌어 옮기기(_drwMove)가 다시 그릴 때 씀
@@ -10932,7 +10963,7 @@ function exportDrawingA4(mode){
       +'</div>';
   });
   // 맨 마지막 쪽: 사용 제품의 원판 사진 + 제품명 (공장에서 무늬·색 확인용). 윤현몰 제품이 아니면 사진 없이 이름만
-  var _prodCards=(products||[]).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
+  var _prodCards=(region?[]:(products||[])).filter(function(p){return (p.name||'').trim();}).map(function(p,i){
     var nm=p.name.trim(),id=_mallIdFor(nm,p.size),cat=null;
     if(id)((window._MALL_CATALOG&&window._MALL_CATALOG.items)||[]).forEach(function(c){if(c.id===id)cat=c;});
     if(id)_slabImgFor(_prodNames()[products.indexOf(p)]); // 아직 안 불러왔으면 지금 불러오기 시작
