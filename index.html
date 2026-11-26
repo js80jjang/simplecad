@@ -12597,7 +12597,9 @@ function _3dPiecePanel(sc){
     var key=_3dKey(pc.shape),moved=key.pos3d||key.mid3d||key.midFace!=null;
     return '<div data-row="'+i+'" style="display:flex;align-items:center;gap:4px;margin:2px 0;padding:1px 3px;border-radius:3px"><span data-pick="'+i+'" style="min-width:78px;color:#ECEFF1;cursor:pointer" title="누르면 3D에서 이 조각 선택">'+(i+1)+'. '+pc.label+'</span>'
       +T.map(function(t){var on=pc.type===t[0]||(t[0]==='panel'&&_3dIsPanel(pc.type));return '<button data-i="'+i+'" data-t="'+t[0]+'" style="padding:2px 6px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid '+(on?'#2A4F92':'#56647E')+';background:'+(on?'#1F3F7A':'#121D33')+';color:#fff">'+t[1]+'</button>';}).join('')
-      +'<button data-i="'+i+'" data-a="au" style="'+bs+';visibility:'+(moved?'visible':'hidden')+'" title="이 조각만 처음 자리·무늬로">↺</button></div>';
+      +'<button data-i="'+i+'" data-a="au" style="'+bs+';visibility:'+(moved?'visible':'hidden')+'" title="이 조각만 처음 자리·무늬로">↺</button>'
+      // 상판마다 하부장 높이 (2026-11-26 사용자 요청 "상판별로 높이 — 지금은 전체가 바뀜"): 머리줄 "기본 높이"와 같으면 따로 안 정함(흐리게), 다르면 금색
+      +(pc.type==='top'?'<label style="display:flex;align-items:center;gap:2px;margin-left:4px;color:#75839C;font-size:10.5px" title="이 상판만 하부장 높이(바닥~상판 윗면 mm). 기본 높이와 같게 치면 기본을 따름">높이<input data-hh="'+i+'" type="number" min="200" max="1500" step="10" value="'+(key.h3d||_3D_H)+'" style="width:52px;background:#121D33;color:'+(key.h3d?'#E3B861':'#75839C')+';border:1px solid '+(key.h3d?'#E3B861':'#1C2A47')+';border-radius:3px;padding:1px 3px;font-size:11px"></label>':'')+'</div>';
   }).join('')+'<div style="color:#75839C;font-size:10px;margin-top:5px;line-height:1.5">'
     +'<b style="color:#FFD740">끌기</b> = 옮기기 (바닥 라인에 놓으면 바닥부터) · <b style="color:#FFD740">Shift+끌기</b> = 위아래<br>'
     +'<b style="color:#FFD740">오른쪽 클릭</b> = 돌리기·가로/세로 · <b style="color:#FFD740">더블클릭</b> = 무늬 면(앞/뒤/양면)<br>'
@@ -12615,6 +12617,10 @@ function _3dPiecePanel(sc){
     else if(t==='top'||t==='obj'){var mx=-Infinity,mz=Infinity;((_3d&&_3d.r&&_3d.r.tops)||[]).forEach(function(tp){if(tp.key===k)return;tp.loops.outer.forEach(function(p){mx=Math.max(mx,p[0]);mz=Math.min(mz,p[1]);});});
       if(isFinite(mx))k.pos3d={dx:Math.round(mx+600-pc.bb.l),dz:Math.round(mz-pc.bb.t),rot:0,dy:0};else delete k.pos3d;delete k.mid3d;}
     _3dRebuild(0);};});
+  box.querySelectorAll('input[data-hh]').forEach(function(inp){
+    inp.onkeydown=function(e){e.stopPropagation();if(e.key==='Enter')inp.blur();};inp.onmousedown=function(e){e.stopPropagation();};
+    inp.onchange=function(){var pc=sc.pieces[+inp.dataset.hh];if(!pc||!_3d)return;var v=Math.round(+inp.value);if(!isFinite(v)||v<200||v>1500){_3dPiecePanel(sc);return;}
+      var k=_3dKey(pc.shape);saveHistory();if(v===_3D_H)delete k.h3d;else k.h3d=v;_3dRegeom();_3dPiecePanel(_3d.scene||sc);};});
   box.querySelectorAll('button[data-a="au"]').forEach(function(b){b.onclick=function(){ // ↺ 이 조각만 처음 자리·무늬로
     var pc=sc.pieces[+b.dataset.i];if(!pc)return;saveHistory();var key=_3dKey(pc.shape);delete key.pos3d;delete key.mid3d;delete key.midFace;_3dRebuild(0);
   };});
@@ -12842,7 +12848,7 @@ function show3D(){
     +'<span id="v3d-msg" style="color:#FFD740;font-size:11px"></span><span style="flex:1"></span>'
     +'<button style="'+bs+'" data-mode="top">상판만</button><button style="'+bs+'" data-mode="mid">상판+미드웨이</button><span style="width:6px"></span>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer"><input type="checkbox" id="v3d-furn"'+(_3dOpts.furn?' checked':'')+'> 하부장</label>'
-    +'<label style="color:#A9B4C8;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:8px" title="바닥에서 상판 윗면까지 (mm) — 하부장·하부판 높이가 이만큼, 숫자를 고치고 Enter"><span>높이</span><input type="number" id="v3d-h" min="200" max="1500" step="10" value="'+_3D_H+'" style="width:58px;background:#121D33;color:#E3B861;border:1px solid #1C2A47;border-radius:4px;padding:2px 4px;font-size:12px"></label>'
+    +'<label style="color:#A9B4C8;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:8px" title="모든 상판의 기본 하부장 높이 (바닥~상판 윗면 mm). 상판마다 다르게 = 왼쪽 조각 구분 목록의 높이 칸 또는 3D에서 상판을 눌러 위 칸"><span>기본 높이</span><input type="number" id="v3d-h" min="200" max="1500" step="10" value="'+_3D_H+'" style="width:58px;background:#121D33;color:#E3B861;border:1px solid #1C2A47;border-radius:4px;padding:2px 4px;font-size:12px"></label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="체크하면 가구 칸(하부장·상부장)을 고르고 옮기고 지울 수 있음 — 끄면 상판·판만 잡힘"><input type="checkbox" id="v3d-fedit"> 가구 배치</label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="미드웨이 위(없으면 벽 쪽 변)에 상부장"><input type="checkbox" id="v3d-upper"'+(_3dOpts.upper?' checked':'')+'> 상부장</label>'
     +'<label style="color:#ECEFF1;font-size:12px;display:flex;align-items:center;gap:4px;margin-right:6px;cursor:pointer" title="도면 글자(글자 도구)를 그 글자가 있는 조각 윗면에"><input type="checkbox" id="v3d-notes"'+(_3dOpts.notes?' checked':'')+'> 도면 글자</label>'
