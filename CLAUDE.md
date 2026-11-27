@@ -81,7 +81,7 @@
     없으면 "다른 이름으로 저장"(`saveProjectAs`, `#btn-save-as`, Ctrl+Shift+S = 예전 저장 창 → 고른 파일이 `_curFile`)
 - 도면 탭(2026-11-26 사용자 요청 "오토캐드처럼 여러 탭"): `#doc-tabs`(작업 정보 줄 위, `_tabRender` — 1.2초마다 이름·● 갱신) / `_tabs[{n,data,hist,file,sig,dirty,oth,title}]`·`_tabCur`.
   살아 있는 탭만 화면, 다른 탭은 `_tabStash`(= `_makeProjectData` 문자열 + `_hist`·`_curFile`·`_savedSig`·기타 비용 칸) → `_tabLoad`가 `_docApply`(불러오기와 공통, 단가·등급 안 건드림)로 꺼냄.
-  `_tabNew`(＋), `_tabClose`(✕·가운데 버튼, 저장 안 했으면 confirm, 마지막 탭은 빈 도면으로), `_tabForLoad` = 불러오기·DXF 불러오기 전에 지금 탭에 내용이 있으면 새 탭. 새로 만들기는 지금 탭만 비움. beforeunload는 다른 탭 dirty도 봄.
+  `_tabNew`(＋, 번호 `_tabFreeN` = 다른 탭이 안 쓰는 가장 작은 n, 하나만 남으면 n=1), `_tabClose`(✕·가운데 버튼, 저장 안 했으면 confirm, 마지막 탭은 빈 도면으로), `_tabForLoad` = 불러오기·DXF 불러오기 전에 지금 탭에 내용이 있으면 새 탭. 새로 만들기는 지금 탭만 비움. beforeunload는 다른 탭 dirty도 봄.
   새 도면 상태 변수를 만들면 `_makeProjectData`·`_docApply`에 넣어야 탭마다 따로 됨
 - 저장 안 한 변경 알림(2026-11-07 사용자 요청): `_docSig()` = 도형·제품·작업 정보·원판 배치·3D 설정 JSON('_' 속성 뺌, 화면 이동·배율·단가 제외),
   `_markSaved()` = 기준(처음 열 때 load+300ms·새로 만들기·불러오기·DXF 불러오기, 저장·다른 이름으로 저장·다운로드 저장 성공 때 `_savedSig`) → `beforeunload`에서 `_isDirty()`면 브라우저 확인 창(문구는 크롬이 정함, 저장 단추 넣을 수 없음)

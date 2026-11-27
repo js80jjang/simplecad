@@ -5178,7 +5178,8 @@ function _tabLoad(i){
   _tabRender(true);
 }
 function _tabSwitch(i){if(i===_tabCur||!_tabs[i])return;_tabStash();_tabLoad(i);}
-function _tabNew(){_tabStash();_tabs.push({n:++_tabSeq});_tabLoad(_tabs.length-1);}
+function _tabFreeN(){var n=1;while(_tabs.some(function(t){return t.n===n;}))n++;return n;} // 새 도면 번호 = 지금 탭들이 안 쓰는 가장 작은 수 (2026-11-27 사용자 요청 "지우면 1부터")
+function _tabNew(){_tabStash();_tabs.push({n:_tabFreeN()});_tabLoad(_tabs.length-1);}
 // 파일 불러오기 전: 지금 탭에 도형이나 작업 정보가 있으면 새 탭을 열어 거기에
 function _tabForLoad(){
   var has=shapes.length||(document.getElementById('site-info')||{}).value||(products||[]).some(function(p){return (p.name||'').trim();});
@@ -5188,9 +5189,11 @@ function _tabClose(i,ev){
   if(ev)ev.stopPropagation();
   var t=_tabs[i],dirty=i===_tabCur?_isDirty():t.dirty;
   if(dirty&&!confirm('"'+(i===_tabCur?_tabTitleNow():t.title)+'" 탭에 저장하지 않은 변경이 있습니다.\n그래도 닫을까요?'))return;
-  if(_tabs.length===1){_tabs=[{n:++_tabSeq}];_tabLoad(0);return;}
+  if(_tabs.length===1){_tabs=[{n:1}];_tabLoad(0);return;}
   if(i===_tabCur){_tabs.splice(i,1);_tabLoad(Math.min(i,_tabs.length-1));}
-  else{_tabs.splice(i,1);if(i<_tabCur)_tabCur--;_tabRender(true);}
+  else{_tabs.splice(i,1);if(i<_tabCur)_tabCur--;}
+  if(_tabs.length===1)_tabs[0].n=1; // 하나만 남으면 다시 "새 도면 1"
+  _tabRender(true);
 }
 function _tabTitleNow(){
   var c=((document.getElementById('company-name')||{}).value||'').trim(),a=((document.getElementById('site-addr')||{}).value||'').trim();
