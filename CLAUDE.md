@@ -102,6 +102,7 @@
   - 모서리 R 금액(2026-11-23 사용자 요청): 사각 조각(groupId 없음)의 라운드 코너 하나마다 R 구간 `r100`(R50~100)·`r150`·`r200`·`r250`(R250 넘어도 이 단가), R50 미만은 없음 — calcCost `cnt.r*`, 오른쪽 내역은 구간마다 줄 `pl-/ps-r100…r250`(도마도 크기마다 `pl-/ps-doma1…3`, 2026-11-23 사용자 요청 "퉁치지 말고"). 밑면연마 내역: 맨 위 "밑면연마" 줄(`pl-/ps-grind`) = 세 가지 합친 표시만, "└ 100mm 미만"(`pl-/ps-grindmid` = `lenMm.grind`, 깊이 100 미만 전부·50 포함, 보통 단가)·"└ 150×150"·"└ 100mm+". 도마 단가 = 넣을 때 고른 크기 `s.domaKey`(크기 바꿔도 그대로, 없으면 예전처럼 가까운 크기). 선 조각의 호 코너는 안 셈
   - 밑면연마 150×150 원클릭(`grind150mode`, mousedown): 누른 점 = 한 꼭짓점, 네 방향 중 150×150 안 5×5 점이 재료(`_inAnyPiece`, 타공부 제외)에 가장 많이 드는 쪽으로(2026-11-23 사용자 요청 "클릭 점 내부로") — 가로 변이면 가로 띠 + inward = 세로 방향
   - 밑면연마 "100mm+ 모드" 단추는 없앰(2026-11-23) — 150×150 원클릭만, 깊이 100 이상 띠는 calcCost가 계속 grind100 단가로
+  - 세면볼 `basin` 도구(2026-11-27 사용자 요청, 싱크볼 아래) = 누른 자리 가운데 490×310 R14 싱크볼 rect(`applianceType:'sink'` + `basin:true`, `_sinkGosra`면 둘레 고스라) → 가공비 `cnt.basin` × 싱크볼 단가(`pl-/ps-basin` 줄), 이름 "세면볼"(`_objName`·도면화 ③-2)
   - 식기세척기(상부개폐형) `dishwasher` 도구 = 누른 자리 가운데 470×460 `groupRole:'main'`·`applianceType:'dish'` rect(고스라 없음, 쿡탑처럼 재료가 바깥) → 가공비 `cnt.dish` × 쿡탑 단가(`gta('cook')`), 편집 색 보라, 도면화 이름 "식기세척기"
   - 음식물투입구 `foodhole` 도구 = 보조 칸 `#foodhole-sub` 모양(`setFoodShape`, `_foodShape` 'c'|'r', localStorage `scd_food_shape`, 2026-11-21 사용자 요청):
     사각 = 사각 타공 rect(`applianceType:'hole'`) + `food:true` 202×264(`_FOOD_RW/_FOOD_RH`, 가공비 `cnt.food`, 이름 음식물투입구, 갈색) / 원형 = `circle{holeType:'food', r:80}`(Φ160, 고스라 없음) → `cnt.food` × 단가 키 `food`(TIER_KEYS, 기본 원가 20,000 = 콘센트 타공 2배, 업체 ×1.2·소비자 ×1.3, 취급점 20,000)

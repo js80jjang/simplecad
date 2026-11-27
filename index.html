@@ -288,6 +288,7 @@ canvas{display:block;cursor:crosshair}
       <button id="sink-gos-off" onclick="setSinkGosra(false)" style="flex:1;padding:3px 0;border:1px solid #56647E;border-radius:3px;cursor:pointer;font-size:11px;color:#fff">빼기</button>
     </div>
   </div>
+  <button class="tool-btn" data-tool="basin" title="세면볼 490×310 R14 — 단가는 싱크볼과 같음, 둘레 고스라는 싱크볼 칸 넣기/빼기를 따름"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="1.75" y="1.75" width="12.5" height="8.5" rx="2.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><circle cx="8" cy="6" r="1.2" fill="#2A4F92"/></svg> 세면볼</button>
   <button class="tool-btn" data-tool="cooktop"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#2A4F92" stroke-width="1.5" fill="none"/><circle cx="5" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="4.5" r="1.9" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="5" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/><circle cx="11" cy="8" r="1.6" stroke="#2A4F92" stroke-width="1" fill="none"/></svg> 쿡탑</button>
   <button class="tool-btn" data-tool="dishwasher" title="식기세척기(상부개폐형) 타공 470×460, 고스라 없음, 가공비 = 쿡탑 단가"><svg width="16" height="12" viewBox="0 0 16 12" style="vertical-align:middle;margin-right:4px"><rect x="0.75" y="0.75" width="14.5" height="10.5" stroke="#AB47BC" stroke-width="1.5" fill="none"/><line x1="3" y1="4" x2="13" y2="4" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="6.5" x2="13" y2="6.5" stroke="#AB47BC" stroke-width="1"/><line x1="3" y1="9" x2="13" y2="9" stroke="#AB47BC" stroke-width="1"/></svg> 식기세척기 <span style="font-size:9px;color:#56647E;margin-left:2px">상부개폐형</span></button>
   <button class="tool-btn" data-tool="foodhole" title="음식물투입구 원형 Φ160 / 사각 202×264, 고스라 없음"><svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:middle;margin-right:4px"><circle cx="6.5" cy="6.5" r="5.75" stroke="#8D6E63" stroke-width="1.5" stroke-dasharray="4,2" fill="none"/><circle cx="6.5" cy="6.5" r="2" fill="#8D6E63"/></svg> 음식물투입구</button>
@@ -509,6 +510,7 @@ canvas{display:block;cursor:crosshair}
   <div class="r-card" style="padding:4px">
     <div class="proc-hdr2"><span>공정</span><span>수량</span><span>소계(원)</span></div>
     <div class="proc-row2"><span class="pr-name">싱크볼</span><span class="pr-qty" id="pl-sink">-</span><span class="pr-sub" id="ps-sink">-</span></div>
+    <div class="proc-row2"><span class="pr-name">세면볼</span><span class="pr-qty" id="pl-basin">-</span><span class="pr-sub" id="ps-basin">-</span></div>
     <div class="proc-row2"><span class="pr-name">쿡탑</span><span class="pr-qty" id="pl-cook">-</span><span class="pr-sub" id="ps-cook">-</span></div>
     <div class="proc-row2"><span class="pr-name">식기세척기</span><span class="pr-qty" id="pl-dish">-</span><span class="pr-sub" id="ps-dish">-</span></div>
     <div class="proc-row2"><span class="pr-name">음식물투입구</span><span class="pr-qty" id="pl-food">-</span><span class="pr-sub" id="ps-food">-</span></div>
@@ -1574,7 +1576,7 @@ function applySnap(cx,cy,excl){
   if(_gridLater&&!snapKind){mx=Math.round(mx/gridMm)*gridMm;my=Math.round(my/gridMm)*gridMm;snapKind='grid';}
   // 직교 모드: 선 커팅은 기본 직교 / Shift=자유. 나머지 선 계열은 ortho 설정 따름
   // 단, 끝점/중간점/중심/교차점 등 실제 스냅 타깃을 찾았으면 직교 강제보다 스냅을 우선함(라운드 끝점 등 대각선 위치 스냅 보존)
-  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'&&tool!=='doma'));
+  var applyOrtho=(!snapKind||snapKind==='grid')&&((tool==='line')?(drawStart&&!shiftDown):(ortho&&drawStart&&tool!=='rect'&&tool!=='circle'&&tool!=='sinkbowl'&&tool!=='basin'&&tool!=='cooktop'&&tool!=='dishwasher'&&tool!=='foodhole'&&tool!=='doma'));
   if(applyOrtho){var dx=Math.abs(mx-drawStart[0]),dy=Math.abs(my-drawStart[1]);if(dx>=dy)my=drawStart[1];else mx=drawStart[0];}
   return[mx,my];
 }
@@ -6192,6 +6194,12 @@ function finalizeShape(fmx,fmy){
     if(_sinkGosra)_sinkAddGosra(rs); // 둘레 고스라 — 왼쪽 싱크볼 칸 "빼기"면 안 넣음(인셋형, 2026-11-20 사용자 요청)
     selectedShapes=getGroupShapes(rs);_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
   }
+  else if(tool==='basin'){ // 세면볼 490×310 R14 (2026-11-27 사용자 요청) — 싱크볼과 같은 묶음·단가, 이름만 세면볼(basin:true)
+    var bs=makeShape('rect',{x:x0-245,y:y0-155,w:490,h:310,cornerType:'fillet',cornerSize:14,groupId:'grp'+nextId,groupRole:'main',applianceType:'sink',basin:true});
+    saveHistory();shapes.push(bs);
+    if(_sinkGosra)_sinkAddGosra(bs);
+    selectedShapes=getGroupShapes(bs);_savedBoardLayout=null;_savedBoardImg=null;s=null;_toolOptsReset();
+  }
   else if(tool==='cooktop'){
     var rx2=x0-280,ry2=y0-240;
     var cgid='grp'+(nextId);
@@ -7041,6 +7049,7 @@ cv.addEventListener('mousemove',function(e){
     else if(tool==='linkmark'||tool==='veinmark'){ps={kind:'linkmark',x1:x0,y1:y0,x2:mx,y2:my,color:annColor,vein:tool==='veinmark',ops:[]};}
     else if(tool==='gosra'){var ctx3=findEdgeContext(x0,y0,mx,my);ps={kind:'gosramark',x1:x0,y1:y0,x2:mx,y2:my,outward:ctx3.outward,ops:[]};}
     else if(tool==='sinkbowl'){ps={kind:'rect',x:x0-414,y:y0-216,w:828,h:432,cornerType:'fillet',cornerSize:24,applianceType:'sink',ops:[]};}
+    else if(tool==='basin'){ps={kind:'rect',x:x0-245,y:y0-155,w:490,h:310,cornerType:'fillet',cornerSize:14,applianceType:'sink',basin:true,ops:[]};}
     else if(tool==='cooktop'){ps={kind:'rect',x:x0-280,y:y0-240,w:560,h:480,cornerType:'none',cornerSize:0,applianceType:'cook',ops:[]};}
     else if(tool==='doma'){var _dz2=_DOMA_SIZES[_domaSize]||_DOMA_SIZES[0];ps={kind:'rect',x:x0-_dz2[0]/2,y:y0-_dz2[1]/2,w:_dz2[0],h:_dz2[1],cornerType:'fillet',cornerSize:10,applianceType:'doma',ops:[]};}
     else if(tool==='dishwasher'){ps={kind:'rect',x:x0-235,y:y0-230,w:470,h:460,cornerType:'none',cornerSize:0,applianceType:'dish',ops:[]};}
@@ -7420,7 +7429,7 @@ function loadAllTierPrices(){
 function calcCost(){
   _fullVer++; // 원판 그대로 판정 다시
   var lenMm={rect:0,line:0,chamfer:0,grind:0,grind100:0,jolly:0,gosra:0,circlecut:0};
-  var cnt={sink:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0,r100:0,r150:0,r200:0,r250:0,doma1:0,doma2:0,doma3:0};
+  var cnt={sink:0,basin:0,cook:0,dish:0,food:0,holef:0,holeo:0,grind150:0,grind100:0,chamfer:0,r100:0,r150:0,r200:0,r250:0,doma1:0,doma2:0,doma3:0};
   // 객체(싱크볼·쿡탑·식기세척기·타공·도마 …)는 1식 금액 — 그 둘레의 고스라·밑면연마·졸리컷은 따로 안 셈 (2026-11-24 사용자 요청, 예전엔 도마만)
   //   같은 groupId 표시 + 손으로 그 객체 변(라운드 코너 포함)·원 타공 둘레 위에 그린 표시
   var _objG={},_objs=[];shapes.forEach(function(s){
@@ -7440,6 +7449,7 @@ function calcCost(){
         if(s.applianceType==='hole'){if(s.food)cnt.food++;else cnt.holeo++;} // 사각 타공 = 콘센트 타공 금액, 사각 음식물투입구 = 음식물투입구 금액
         else if(s.applianceType==='dish')cnt.dish++; // 식기세척기 = 쿡탑 단가
         else if(s.applianceType==='doma')cnt[_domaKey(s)]++; // 도마 = 크기별 단가
+        else if(s.basin)cnt.basin++; // 세면볼 = 싱크볼과 같은 단가 (2026-11-27 사용자 요청)
         else if(s.cornerType==='fillet')cnt.sink++;
         else cnt.cook++;
       } else if(!s.groupId){
@@ -7487,7 +7497,7 @@ function calcCost(){
     if(sEl)sEl.textContent=sub>0?Math.round(sub).toLocaleString():'-';
   }
   var pRect=gta('rect'),mRect=lenMm.rect/1000,subRect=mRect*pRect*qty;
-  var pSink=gta('sink'),subSink=cnt.sink*pSink*qty;
+  var pSink=gta('sink'),subSink=cnt.sink*pSink*qty,subBasin=cnt.basin*pSink*qty;
   var pCook=gta('cook'),subCook=cnt.cook*pCook*qty;
   var subDish=cnt.dish*pCook*qty; // 식기세척기 = 쿡탑과 같은 단가
   var pFood=gta('food'),subFood=cnt.food*pFood*qty;
@@ -7510,6 +7520,7 @@ function calcCost(){
   ['doma1','doma2','doma3'].forEach(function(k){upd('pl-'+k,'ps-'+k,cnt[k]>0?cnt[k]+'개':'-',cnt[k]*gta(k)*qty);});
   upd('pl-rect','ps-rect',mRect>0.001?mRect.toFixed(3)+'m':'-',subRect);
   upd('pl-sink','ps-sink',cnt.sink>0?cnt.sink+'회':'-',subSink);
+  upd('pl-basin','ps-basin',cnt.basin>0?cnt.basin+'회':'-',subBasin);
   upd('pl-cook','ps-cook',cnt.cook>0?cnt.cook+'회':'-',subCook);
   upd('pl-dish','ps-dish',cnt.dish>0?cnt.dish+'회':'-',subDish);
   upd('pl-food','ps-food',cnt.food>0?cnt.food+'회':'-',subFood);
@@ -7524,7 +7535,7 @@ function calcCost(){
   upd('pl-grind100','ps-grind100',mGrind100>0.001?mGrind100.toFixed(3)+'m':'-',subGrind100);
   upd('pl-jolly','ps-jolly',mJolly>0.001?mJolly.toFixed(3)+'m':'-',subJolly);
   upd('pl-gosra','ps-gosra',mGosra>0.001?mGosra.toFixed(3)+'m':'-',subGosra);
-  var totalCut=subRect+subHolef+subHoleo+subLine+subCirclecut,totalObj=subSink+subCook+subDish+subFood+subDoma; // 커팅 가공 / 객체 삽입 (왼쪽 도구 묶음과 같게)
+  var totalCut=subRect+subHolef+subHoleo+subLine+subCirclecut,totalObj=subSink+subBasin+subCook+subDish+subFood+subDoma; // 커팅 가공 / 객체 삽입 (왼쪽 도구 묶음과 같게)
   var totalAdd=subChamfer+subRR+subGrind+subGrind150+subGrind100+subJolly+subGosra;
   var pkg=gp('r-pkg'),ship1=gp('r-ship1'),ship2=gp('r-ship2'),other=gp('r-other');
   var totalOther=pkg+ship1+ship2+other;
@@ -9822,7 +9833,7 @@ function _drawCleanExport(){
   pieces.forEach(function(p){
     p.cutouts.forEach(function(q){
       if(q.kind!=='rect')return;
-      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?'싱크볼':(at==='cook'?'쿡탑':(at==='dish'?'식기세척기':at==='doma'?'도마':(at==='hole'?(q.food?'음식물투입구':q.capsule?'캡슐타공':'사각타공'):'타공')));
+      var g=_expRectGeo(q),at=_applianceType(q),nm=at==='sink'?(q.basin?'세면볼':'싱크볼'):(at==='cook'?'쿡탑':(at==='dish'?'식기세척기':at==='doma'?'도마':(at==='hole'?(q.food?'음식물투입구':q.capsule?'캡슐타공':'사각타공'):'타공')));
       if(at==='doma'&&!SO){ // 도마 = 안쪽 전체 밑면연마 빗금 (이름보다 먼저)
         var dp=_expRectPath(g).map(function(w){return toCanvas(w[0],w[1]);});
         if(dp.length>2){ctx.save();ctx.beginPath();dp.forEach(function(c,i){if(i)ctx.lineTo(c[0],c[1]);else ctx.moveTo(c[0],c[1]);});ctx.closePath();ctx.clip();
@@ -10205,7 +10216,7 @@ function _boardSheen(g,bx,by,w,h,gloss,k){
 // tex: {img,bx,by,w,h} 제품 원판 사진과 원판 상자(px) — 있으면 조각을 무늬로 채움
 // 조각 안 객체(타공부·타공) 이름 — 원판 배치 글자용
 function _objName(q){
-  if(q.kind==='rect'){var at=_applianceType(q);return at==='sink'?'싱크볼':at==='cook'?'쿡탑':at==='dish'?'식기세척기':at==='doma'?'도마':at==='hole'?(q.food?'음식물':q.capsule?'캡슐타공':'사각타공'):'타공';}
+  if(q.kind==='rect'){var at=_applianceType(q);return at==='sink'?(q.basin?'세면볼':'싱크볼'):at==='cook'?'쿡탑':at==='dish'?'식기세척기':at==='doma'?'도마':at==='hole'?(q.food?'음식물':q.capsule?'캡슐타공':'사각타공'):'타공';}
   if(q.kind==='ellipse')return q.hole?'타원타공':'타원';
   if(q.kind==='circle'||q.kind==='hole'){var t=q.holeType;return t==='faucet'?'수전':t==='food'?'음식물':t==='cut'?'':'콘센트';}
   return '';
