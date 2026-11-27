@@ -78,6 +78,8 @@
   — 저장 창 `_pickSaveFile(kind,기본위치,opts)`: 처음은 바탕화면(.ceramic)/문서(DXF), 그다음은 지난번 저장 파일 핸들(IndexedDB `scd-files`, kind별)의 폴더 + picker `id`.
     불러오기 `loadProject`도 `showOpenFilePicker`로 지난번 불러온 폴더('open', 없으면 'save' → 바탕화면), 없는 브라우저는 파일 칸 → `_loadProjectFile(file,핸들)`
   — "💾 저장"(`saveProject`, `#btn-save`, Ctrl+S) = 지금 파일 핸들 `_curFile`(`_setCurFile`: 열기 창으로 불러온 .ceramic·다른 이름으로 저장한 파일, 새로만들기·DXF·파일 칸 불러오기면 없음)에 창 없이 덮어씀(권한 `requestPermission`),
+  — 바깥에서 파일 열기(2026-11-27 사용자 요청): `_openExtFiles([{file,handle}])` = 차례로 `_loadProjectFile`(이제 Promise). 끌어 놓기 = window dragover/drop(파일일 때만, `#drop-hint` 덮개, `getAsFileSystemHandle`로 핸들 → 💾 저장이 그 파일에),
+    설치 앱 더블클릭 = manifest `file_handlers`(.ceramic, `application/x-ceramic`) + `launch_handler` focus-existing → `launchQueue.setConsumer`(처음 열 때는 load 뒤). 브라우저 패널은 PWA 없음 → 크롬 설치 앱에서 확인
     없으면 "다른 이름으로 저장"(`saveProjectAs`, `#btn-save-as`, Ctrl+Shift+S = 예전 저장 창 → 고른 파일이 `_curFile`)
 - 도면 탭(2026-11-26 사용자 요청 "오토캐드처럼 여러 탭"): `#doc-tabs`(작업 정보 줄 위, `_tabRender` — 1.2초마다 이름·● 갱신) / `_tabs[{n,data,hist,file,sig,dirty,oth,title}]`·`_tabCur`.
   살아 있는 탭만 화면, 다른 탭은 `_tabStash`(= `_makeProjectData` 문자열 + `_hist`·`_curFile`·`_savedSig`·기타 비용 칸) → `_tabLoad`가 `_docApply`(불러오기와 공통, 단가·등급 안 건드림)로 꺼냄.

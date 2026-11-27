@@ -71,6 +71,9 @@ body{background:#060B16;color:#D9DFEA;font-family:'NanumSquare','나눔스퀘어
 #doc-tabs .dt:hover{background:#121D33;color:#A9B4C8}
 #doc-tabs .dt.on{background:#0F1A2E;color:#F1D69A;border-color:#2A4F92;box-shadow:inset 0 2px 0 #E3B861}
 #doc-tabs .dt.drag{opacity:0.45}
+#drop-hint{position:fixed;inset:0;z-index:99999;background:rgba(6,11,22,0.72);display:flex;align-items:center;justify-content:center;pointer-events:none}
+#drop-hint>div{border:3px dashed #E3B861;border-radius:16px;padding:34px 54px;color:#F1D69A;font-size:22px;font-weight:bold;text-align:center;background:rgba(15,26,46,0.9)}
+#drop-hint span{font-size:13px;color:#A9B4C8;font-weight:normal}
 #doc-tabs .dt.dl{box-shadow:inset 3px 0 0 #FF8A3D}
 #doc-tabs .dt.dr{box-shadow:inset -3px 0 0 #FF8A3D}
 #doc-tabs .dt-nm{flex:1;overflow:hidden;text-overflow:ellipsis}
@@ -5117,8 +5120,11 @@ async function loadProject(){
   inp.onchange=function(){if(inp.files[0])_loadProjectFile(inp.files[0]);};
   inp.click();
 }
-function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸들 → "💾 저장"이 그 파일에 그대로
+function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸들 → "💾 저장"이 그 파일에 그대로. 다 읽으면 끝나는 Promise (여러 파일 차례로 열기)
+  return new Promise(function(done){
     var reader=new FileReader();
+    reader.onerror=function(){alert('파일을 읽을 수 없습니다: '+file.name);done();};
+    reader.onloadend=function(){setTimeout(done,0);};
     reader.onload=function(e){
       if(/\.dxf$/i.test(file.name)){try{_tabForLoad();importDxf(e.target.result);_setCurFile(null);_markSaved();}catch(ex){alert('DXF 파일을 읽을 수 없습니다.\n'+ex.message);}return;}
       try{
@@ -5141,7 +5147,45 @@ function _loadProjectFile(file,fh){ // fh = 열기 창에서 고른 파일 핸�
       }catch(ex){alert('파일을 읽을 수 없습니다.\n'+ex.message);}
     };
     reader.readAsText(file);
+  });
 }
+// 바깥에서 받은 파일 열기 (2026-11-27 사용자 요청): 탐색기·바탕화면에서 끌어 놓기 / 설치한 앱에서 .ceramic 더블클릭(launchQueue)
+//   items = [{file, handle}] — .ceramic·.json은 핸들이 있으면 "💾 저장"이 그 파일에 그대로, .dxf는 핸들 없이. 여러 개면 차례로(각각 새 탭)
+async function _openExtFiles(items){
+  for(var i=0;i<items.length;i++){var it=items[i],f=it.file;if(!f||!/\.(ceramic|json|dxf)$/i.test(f.name))continue;
+    await _loadProjectFile(f,/\.dxf$/i.test(f.name)?null:(it.handle||null));}
+}
+(function(){
+  if('launchQueue' in window&&window.launchQueue&&window.launchQueue.setConsumer){
+    window.launchQueue.setConsumer(async function(p){
+      if(!p||!p.files||!p.files.length)return;
+      var items=[];for(var i=0;i<p.files.length;i++){var h=p.files[i];try{items.push({file:await h.getFile(),handle:h});}catch(e){}}
+      if(document.readyState!=='complete')await new Promise(function(r){window.addEventListener('load',function(){setTimeout(r,400);},{once:true});}); // 처음 열 때는 앱 준비 뒤
+      _openExtFiles(items);
+    });
+  }
+  // 끌어 놓기: 창 어디에 놓아도 (파일일 때만 막고, 글자·도형 끌기는 그대로)
+  function isFiles(e){var t=e.dataTransfer&&e.dataTransfer.types;return !!t&&Array.prototype.indexOf.call(t,'Files')>=0;}
+  var hint=null,leaveT=null;
+  function showHint(on){
+    if(on&&!hint){hint=document.createElement('div');hint.id='drop-hint';
+      hint.innerHTML='<div>📂 여기에 놓으면 도면을 열어요<br><span>.ceramic · .dxf</span></div>';document.body.appendChild(hint);}
+    if(!on&&hint){hint.remove();hint=null;}
+  }
+  window.addEventListener('dragover',function(e){if(!isFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';clearTimeout(leaveT);showHint(true);});
+  window.addEventListener('dragleave',function(e){if(!isFiles(e))return;clearTimeout(leaveT);leaveT=setTimeout(function(){showHint(false);},120);});
+  window.addEventListener('drop',async function(e){
+    if(!isFiles(e))return;e.preventDefault();showHint(false);
+    var dt=e.dataTransfer,list=[],its=dt.items?Array.prototype.slice.call(dt.items):[];
+    // 핸들은 놓는 순간에만 받을 수 있어 먼저 모두 요청 (크롬·엣지)
+    var hs=its.map(function(it){return it.kind==='file'&&it.getAsFileSystemHandle?it.getAsFileSystemHandle().catch(function(){return null;}):Promise.resolve(null);});
+    var files=Array.prototype.slice.call(dt.files||[]);
+    var hh=await Promise.all(hs);
+    files.forEach(function(f,i){list.push({file:f,handle:(hh[i]&&hh[i].kind==='file')?hh[i]:null});});
+    if(!list.some(function(x){return /\.(ceramic|json|dxf)$/i.test(x.file.name);})){alert('.ceramic 또는 .dxf 파일만 열 수 있어요.');return;}
+    _openExtFiles(list);
+  });
+})();
 // 도면 데이터(.ceramic JSON)를 화면에 넣기 — 불러오기·탭 바꾸기 공통 (단가·등급은 안 건드림). 빈 객체 = 새 도면
 function _docApply(data){
   _3dOptsLoad(data.view3dOpts||null);_3dStyleLoad(data.view3d||null); // 3D 보기 설정(예전 파일은 기본) · 3D 디자인 설정
