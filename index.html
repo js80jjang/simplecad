@@ -5178,7 +5178,10 @@ function _tabLoad(i){
   _tabRender(true);
 }
 function _tabSwitch(i){if(i===_tabCur||!_tabs[i])return;_tabStash();_tabLoad(i);}
-function _tabFreeN(){var n=1;while(_tabs.some(function(t){return t.n===n;}))n++;return n;} // 새 도면 번호 = 지금 탭들이 안 쓰는 가장 작은 수 (2026-11-27 사용자 요청 "지우면 1부터")
+// 새 도면 번호 = "새 도면 N" 이름으로 보이는 탭들이 안 쓰는 가장 작은 수 (2026-11-27 사용자 요청 "지우면 1부터", 불러온 파일·업체명 이름 탭은 번호를 안 차지)
+function _tabFreeN(){
+  var used=_tabs.filter(function(t,i){var nm=i===_tabCur?_tabTitleNow():(t.title||'새 도면 '+t.n);return nm==='새 도면 '+t.n;}).map(function(t){return t.n;});
+  var n=1;while(used.indexOf(n)>=0)n++;return n;}
 function _tabNew(){_tabStash();_tabs.push({n:_tabFreeN()});_tabLoad(_tabs.length-1);}
 // 파일 불러오기 전: 지금 탭에 도형이나 작업 정보가 있으면 새 탭을 열어 거기에
 function _tabForLoad(){
