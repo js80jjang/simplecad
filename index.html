@@ -6342,12 +6342,13 @@ function _drawProdTints(){
     // 제품명 (조각 왼쪽 아래 안쪽)
     var bb=getBBoxAny(sh.kind==='linegroup'?{kind:'rect',x:sh.x,y:sh.y,w:sh.w,h:sh.h}:sh);
     if(bb){
-      var p=toCanvas(bb.l,bb.b),wpx=(bb.r-bb.l)*scale;
-      ctx.font='bold 11px "Malgun Gothic",sans-serif';var t=nm,tw=ctx.measureText(t).width;
-      if(tw+12>wpx){while(t.length>2&&ctx.measureText(t+'…').width+12>wpx)t=t.slice(0,-1);t+='…';tw=ctx.measureText(t).width;}
-      if(wpx>30&&(bb.b-bb.t)*scale>22){
-        ctx.fillStyle=col;ctx.fillRect(p[0]+3,p[1]-19,tw+10,16);
-        ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,p[0]+8,p[1]-11);
+      // 글자 크기는 화면에서 늘 같게(10px) — 주석 틀(_annCur)이라 확대하면 같이 커져서 너무 컸음 (2026-11-27 사용자 요청)
+      var g=1/(_annCur||1),p=toCanvas(bb.l,bb.b),wpx=(bb.r-bb.l)*scale;
+      ctx.font='bold '+(10*g)+'px "Malgun Gothic",sans-serif';var t=nm,tw=ctx.measureText(t).width,pd=8*g;
+      if(tw+pd>wpx){while(t.length>2&&ctx.measureText(t+'…').width+pd>wpx)t=t.slice(0,-1);t+='…';tw=ctx.measureText(t).width;}
+      if(wpx>24*g&&(bb.b-bb.t)*scale>18*g){
+        ctx.fillStyle=col;ctx.fillRect(p[0]+2*g,p[1]-15*g,tw+8*g,13*g);
+        ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,p[0]+6*g,p[1]-8.5*g);
       }
     }
     ctx.restore();

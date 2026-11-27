@@ -58,7 +58,7 @@
     `_prodKeyWas`(WeakMap)로 알아채 도형 `s.label`·저장 배치 `boardProds`를 옮김. 이름으로 제품 찾기는 `_prodIdxOf/_prodOf`(예전 파일의 제품명도 첫 같은 이름으로)
   - **도형마다 제품**(`s.label`=제품 구분 이름, 안 정하면 첫 제품 — `_shapeProdIdx`/`_itemProd`): 도형 선택 → 제품 줄 앞 ●(`assignProduct`).
     그룹(싱크볼 등)·이어진 선 조각 전체가 같이 바뀜, 지정하면 저장된 원판 배치는 초기화. 제품 이름 바꾸면 도형도 따라감(`_setProdName`), 제품 빼면 첫 제품으로
-  - 편집 화면: 제품 2개 이상이면 조각을 제품 색으로 옅게 + 왼쪽 아래 제품명(`_drawProdTints`), ●에 마우스 올리면 그 제품만 진하게(`_hoverProd`). 도형 속성창의 제품 선택은 없앰
+  - 편집 화면: 제품 2개 이상이면 조각을 제품 색으로 옅게 + 왼쪽 아래 제품명(`_drawProdTints`, 글자는 화면 10px 고정 = 주석 틀 `1/_annCur`, 2026-11-27 사용자 요청 "너무 크다"), ●에 마우스 올리면 그 제품만 진하게(`_hoverProd`). 도형 속성창의 제품 선택은 없앰
   - 원판 배치: 제품별로 장을 따로(`_packBoardItems` 그룹 = `_itemProd`), 장 머리글 `_boardTitle`="원판 N · 제품명", 원판 사진도 그 제품(`_boardLabel`).
     **원판 크기도 제품마다**: 제품 사이즈 칸에서(`_prodBoardSize`, 없으면 도구줄 원판 칸) → 장마다 `board.bw/bh`(`_boardDims`),
     배치 창·도면화 2쪽 칸은 가장 큰 원판 기준·장은 자기 크기로, 끌기·돌리기 한계는 그 장 유효 영역(`_bsArea`). 저장 배치는 `sig`(`_boardSizeSig`)가 같을 때만 복원
