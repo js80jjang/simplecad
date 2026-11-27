@@ -8636,6 +8636,7 @@ function _bsInitEvents(){
       var hit=_bs.selectedPiece,p=hit.p;
       _bs.overPark=_bs.dragMoved&&_bs.parkX!=null&&ex>=_bs.parkX; // 미배치 칸 위에서 놓으면 빼 둠
       _bs.parkIns=_bs.overPark?(_bsParkAuto(ey,bcv.height),_bsParkIns(ey)):null;
+      _bs.float=_bs.overPark?{ex:ex,ey:ey}:null;
       if(_bs.overPark){renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
       var mg=_bs.margin*_bs.sc;
 
@@ -8681,6 +8682,10 @@ function _bsInitEvents(){
       var rawX=(ex-_bs.dragOffX-ox-mg)/_bs.sc;
       var rawY=(ey-_bs.dragOffY-oy_-mg)/_bs.sc;
       var EA=_bsArea(hit.bi),EW=EA.ew,EH=EA.eh; // 이 장의 유효 영역
+      // 조각이 원판 끝을 25px 넘게 벗어나는 자리로 끌면 = 원판에서 떼어 커서를 따라 그림 (놓으면 원판 안 마지막 자리 / 미배치 칸이면 빼 둠)
+      var _over=Math.max(-rawX,rawX-(EW-p.pw),-rawY,rawY-(EH-p.ph))*_bs.sc;
+      if(_bs.dragMoved&&_over>25){_bs.float={ex:ex,ey:ey};_bs.snapState=null;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
+      _bs.float=null;
       rawX=Math.max(0,Math.min(EW-p.pw,rawX));
       rawY=Math.max(0,Math.min(EH-p.ph,rawY));
 
@@ -8766,7 +8771,7 @@ function _bsInitEvents(){
     }
     _bs.selectedPiece=null;
     _bs.dragMoved=false;
-    _bs.snapState=null;
+    _bs.snapState=null;_bs.float=null;
     bcv.style.cursor='default';
     updateBoardMoveButtons();
     renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
@@ -8925,6 +8930,7 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
     _bpDefer=[];
     for(var i=0;i<placed.length;i++){
       var p=placed[i];
+      if(!targetCanvas&&_bs&&_bs.float&&_bs.selectedPiece&&_bs.selectedPiece.p===p)continue; // 원판 밖으로 끄는 중 = 커서에 그림(_bsDrawPark)
       var px=ox+mg+p.x*sc,py=oy+mg+p.y*sc;
       var pw=(p.pw||p.item.w)*sc,ph=(p.ph||p.item.h)*sc;
       _boardPiece(bctx,p,i,px,py,sc,ref,k,_tex);
@@ -9030,6 +9036,9 @@ function _bsDrawPark(g,cv,sc,ref,k){
     _bs.parkBar={x:tx0,y:TOP+2,w:SB,h:th,kh:kh,ky:ky};
     g.fillStyle='rgba(31,63,122,0.12)';g.fillRect(tx0,TOP+2,SB,th);g.fillStyle=_bs.parkBarDrag?'#1F3F7A':'#8FA0BC';g.fillRect(tx0+1,ky,SB-2,kh);
   } else _bs.parkBar=null;
+  var fl=_bs.float,fs=_bs.selectedPiece; // 원판에서 끌어 원판 밖으로 나간 조각: 커서를 그대로 따라감 (2026-11-27 사용자 요청 "끝 선에서 걸리지 않게")
+  if(fl&&fs){var fx=fl.ex-_bs.dragOffX,fy=fl.ey-_bs.dragOffY,fp=fs.p;g.save();g.globalAlpha=0.85;_boardPiece(g,fp,0,fx,fy,sc,ref,k,{img:null,bx:fx,by:fy,w:fp.pw*sc,h:fp.ph*sc,board:[]});g.restore();
+    g.strokeStyle='#FF6D00';g.lineWidth=2;g.setLineDash([5,3]);g.strokeRect(fx-2,fy-2,fp.pw*sc+4,fp.ph*sc+4);g.setLineDash([]);}
   var d=_bs.parkDrag; // 끄는 조각은 원판과 같은 배율로 커서에
   if(d){var dx=d.ex-d.offX,dy=d.ey-d.offY;g.save();g.globalAlpha=0.85;_boardPiece(g,d.p,0,dx,dy,sc,ref,k,{img:null,bx:dx,by:dy,w:d.p.pw*sc,h:d.p.ph*sc,board:[]});g.restore();
     g.strokeStyle=d.bad?'#E53935':'#FF6D00';g.lineWidth=2;g.setLineDash([5,3]);g.strokeRect(dx-2,dy-2,d.p.pw*sc+4,d.p.ph*sc+4);g.setLineDash([]);}
