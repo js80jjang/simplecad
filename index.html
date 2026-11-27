@@ -70,6 +70,9 @@ body{background:#060B16;color:#D9DFEA;font-family:'NanumSquare','나눔스퀘어
 #doc-tabs .dt{display:flex;align-items:center;gap:6px;max-width:230px;min-width:90px;padding:5px 8px 5px 11px;background:#0A1222;border:1px solid #1C2A47;border-bottom:none;border-radius:6px 6px 0 0;color:#75839C;font-size:12px;cursor:pointer;user-select:none;white-space:nowrap}
 #doc-tabs .dt:hover{background:#121D33;color:#A9B4C8}
 #doc-tabs .dt.on{background:#0F1A2E;color:#F1D69A;border-color:#2A4F92;box-shadow:inset 0 2px 0 #E3B861}
+#doc-tabs .dt.drag{opacity:0.45}
+#doc-tabs .dt.dl{box-shadow:inset 3px 0 0 #FF8A3D}
+#doc-tabs .dt.dr{box-shadow:inset -3px 0 0 #FF8A3D}
 #doc-tabs .dt-nm{flex:1;overflow:hidden;text-overflow:ellipsis}
 #doc-tabs .dt-dot{color:#E3B861;font-size:9px}
 #doc-tabs .dt-x{color:#56647E;font-size:11px;padding:0 3px;border-radius:3px}
@@ -5213,11 +5216,24 @@ function _tabRender(force){
   var key=JSON.stringify(items);if(!force&&key===_tabRenderKey)return;_tabRenderKey=key;
   var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   bar.innerHTML=items.map(function(it,i){
-    return '<div class="dt'+(it.c?' on':'')+'" title="'+esc(it.t)+'" onclick="_tabSwitch('+i+')" onauxclick="if(event.button===1)_tabClose('+i+',event)">'
+    return '<div class="dt'+(it.c?' on':'')+'" title="'+esc(it.t)+'" draggable="true" data-ti="'+i+'" ondragstart="_tabDragStart(event,'+i+')" ondragover="_tabDragOver(event,this)" ondragleave="this.classList.remove(\'dl\',\'dr\')" ondrop="_tabDrop(event,this)" ondragend="_tabDragEnd()" onclick="_tabSwitch('+i+')" onauxclick="if(event.button===1)_tabClose('+i+',event)">'
       +(it.d?'<span class="dt-dot">●</span>':'')+'<span class="dt-nm">'+esc(it.t)+'</span><span class="dt-x" title="탭 닫기" onclick="_tabClose('+i+',event)">✕</span></div>';
   }).join('')+'<button class="dt-add" onclick="_tabNew()" title="새 도면 탭">＋</button>';
 }
-setInterval(function(){try{_tabRender();}catch(e){}},1200); // 이름·저장 안 함(●) 표시 갱신
+setInterval(function(){try{if(_tabDragI==null)_tabRender();}catch(e){}},1200); // 이름·저장 안 함(●) 표시 갱신 (탭 끄는 중엔 안 함)
+// 탭 끌어 옮기기 (2026-11-27 사용자 요청): 놓은 탭의 왼쪽 절반 = 그 앞, 오른쪽 절반 = 그 뒤 (주황 세로선으로 표시)
+var _tabDragI=null;
+function _tabDragStart(e,i){_tabDragI=i;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','tab'+i);}catch(x){}e.currentTarget.classList.add('drag');}
+function _tabSide(e,el){var r=el.getBoundingClientRect();return e.clientX<r.left+r.width/2?'dl':'dr';}
+function _tabDragOver(e,el){if(_tabDragI==null)return;e.preventDefault();e.dataTransfer.dropEffect='move';var sd=_tabSide(e,el);el.classList.toggle('dl',sd==='dl');el.classList.toggle('dr',sd==='dr');}
+function _tabDrop(e,el){
+  if(_tabDragI==null)return;e.preventDefault();
+  var from=_tabDragI,to=+el.getAttribute('data-ti')+(_tabSide(e,el)==='dr'?1:0);_tabDragI=null;
+  if(to>from)to--;
+  if(to!==from){var cur=_tabs[_tabCur],t=_tabs.splice(from,1)[0];_tabs.splice(to,0,t);_tabCur=_tabs.indexOf(cur);}
+  _tabRender(true);
+}
+function _tabDragEnd(){_tabDragI=null;_tabRender(true);}
 
 // ═══ 트림 ═══
 // 트림용 rect 실제 모양: 회전 없으면 그대로, 90° 단위 회전이면 화면에 보이는 대로 회전 없는 rect(코너 키도 돌려서),
