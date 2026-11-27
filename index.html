@@ -3342,11 +3342,15 @@ function _nestRef(s){ // {L,R,T,B} 기준 (원 = 중심 점)
   if(s.kind==='circle'||s.kind==='hole')return{L:s.cx,R:s.cx,T:s.cy,B:s.cy,c:1};
   var b=getBBox(s);return{L:b.l,R:b.r,T:b.t,B:b.b};
 }
+function _isTapHole(o){return (o.kind==='circle'&&o.holeType!=='cut')||(o.kind==='ellipse'&&o.hole)||(o.kind==='rect'&&o.groupRole==='main'&&o.applianceType==='hole');} // 타공(수전·콘센트·음식물 원·사각·캡슐·타원)
+function _isObjIns(o){return o.kind==='rect'&&o.groupRole==='main'&&o.applianceType!=='hole';} // 객체 삽입(싱크볼·쿡탑·식기세척기·도마)
 function _nestNeighborDims(inner,outer,skip){
   var A=_nestRef(inner),ib=getBBox(inner),ay=A.c?inner.cy:ib.my,ax=A.c?inner.cx:ib.mx,best={};
   shapes.forEach(function(o){
     if(o===inner||!_isNestItem(o)||(inner.groupId&&o.groupId===inner.groupId))return;
     if(o.rotation&&!_rightAngle(o.rotation))return;
+    // 객체 삽입(싱크볼·쿡탑 등)에서 타공까지는 안 그림 — 같은 치수를 타공 쪽이 그리고, 겹친 자리에서 객체 쪽이 눌려 싱크볼이 움직였음 (2026-11-27 사용자 요청 "싱크볼은 그대로, 타공이 움직여야")
+    if(_isObjIns(inner)&&_isTapHole(o))return;
     var B=_nestRef(o);
     if(B.L<outer.x-0.5||B.R>outer.x+outer.w+0.5||B.T<outer.y-0.5||B.B>outer.y+outer.h+0.5)return; // 같은 상판 상자 안만
     if(skip&&o.kind==='rect'){var q=_axisBox(o);if(Math.abs(q.x-skip.x)<0.01&&Math.abs(q.y-skip.y)<0.01)return;} // 싱크볼 치수로 이미 나온 것

@@ -115,6 +115,7 @@
   사각형 안이 아니면 감싸는 닫힌 선 조각(`_lineGroupAt`)의 선들, 어디에도 안 든 조각이면 null = 모든 도형(2026-11-20 "조각끼리 꼭짓점 스냅이 안 된다" 수정). 끌기 한 번 동안 `_dssC`에 고정
   이웃 관계 치수 `_nestNeighborDims`(2026-11-19 사용자 요청 "옆 타공 중심까지 거리도", 편집 화면): 타공·객체 삽입(`_isNestItem`)마다 같은 상판 상자 안 이웃 중 왼·오른·위·아래 방향마다
   그쪽에 완전히 있고 옆 범위가 `_NEST_NB_M`(300) 안에서 겹치는 가장 가까운 하나 → 원 = 중심, 나머지 = 상자 변(`_nestRef`) 사이. 원 타공은 싱크볼 치수로 나온 싱크볼 제외.
+  객체 삽입(`_isObjIns`)에서 타공(`_isTapHole`)까지는 안 그림(2026-11-27 사용자 요청 "싱크볼은 그대로, 타공이 움직여야" — 같은 치수가 겹쳐 객체 쪽이 눌렸음).
   숨김 키 nL/nR/nT/nB(`drawGapDim`·`drawCircleGapDim`의 hk, 속성 칸 `_nbToggles`), 누르면 이웃 기준 점 상자 {x,y,w:0,h:0}로 `showGapDimInput`, 글자는 선 반대쪽(아래·오른쪽)
   도면화·DXF 타공도 같게: 가까운 외부 끝변(상판 바깥 변 `pV/pH`, DXF `refs(o)`) + 싱크볼 변(도면화 `_holeRowDims(sinkSegs,true)` 가로 치수 아래쪽, DXF `refs(o,'sink')`) — 같은 줄 타공 사이 간격은 한 번만.
   치수를 누르면 `showGapDimInput`(타원 타공 이동 포함) — "✕ 삭제" 단추(`#dim-hide-btn`) 또는 값을 안 고친 채 Delete = `hideDims[dir]`, 속성 칸 ← → ↑ ↓로 다시 켬. 묶음 선택 중에도 gap 치수는 클릭됨
