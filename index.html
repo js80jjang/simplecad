@@ -8487,7 +8487,10 @@ function _bsInitEvents(){
     if(e.button===1){e.preventDefault();_bs.panDrag={ex:ex,ey:ey,px:_bs.panX||0,py:_bs.panY||0};bcv.style.cursor='move';return;} // 가운데 버튼 끌기 = 화면 옮기기
     if(e.button!==0)return;
     if(_bs.parkX!=null&&ex>=_bs.parkX){ // 미배치 칸: 조각을 눌러 끌기 시작 (원판 배율로 커서에)
-      var pr=(_bs.parkRects||[]).filter(function(q){return ex>=q.x&&ex<=q.x+q.w&&ey>=q.y&&ey<=q.y+q.h;})[0];
+      var pb=_bs.parkBar;if(pb&&ex>=pb.x-3&&ey>=pb.y&&ey<=pb.y+pb.h){ // 스크롤 막대: 손잡이 끌기 / 빈 곳 누르면 그 자리로
+        if(ey<pb.ky||ey>pb.ky+pb.kh)_bs.parkScroll=(ey-pb.y-pb.kh/2)/(pb.h-pb.kh)*_bs.parkMax;
+        _bs.parkBarDrag={ey:ey,s:0};renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);_bs.parkBarDrag.s=_bs.parkScroll;return;}
+      var pr=ey<_BS_PARK_TOP?null:(_bs.parkRects||[]).filter(function(q){return ex>=q.x&&ex<=q.x+q.w&&ey>=q.y&&ey<=q.y+q.h;})[0];
       if(pr){_bs.parkDrag={p:pr.p,offX:(ex-pr.x)*_bs.sc/pr.s,offY:(ey-pr.y)*_bs.sc/pr.s,ex:ex,ey:ey,home:true};bcv.style.cursor='grabbing';
         _bs.pickedPiece=null;updateBoardMoveButtons();renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}
       return;
@@ -8567,7 +8570,7 @@ function _bsInitEvents(){
     var r=bcv.getBoundingClientRect();
     var ex=e.clientX-r.left,ey=e.clientY-r.top;
     if(_bs.parkX!=null&&ex>=_bs.parkX){ // 미배치 조각 90° 돌리기 (그 제품 원판에 들어가는 방향만)
-      var pr=(_bs.parkRects||[]).filter(function(q){return ex>=q.x&&ex<=q.x+q.w&&ey>=q.y&&ey<=q.y+q.h;})[0];if(!pr)return;
+      var pr=ey<_BS_PARK_TOP?null:(_bs.parkRects||[]).filter(function(q){return ex>=q.x&&ex<=q.x+q.w&&ey>=q.y&&ey<=q.y+q.h;})[0];if(!pr)return;
       var pp=pr.p,bsz=_prodBoardSize(_itemProd(pp.item.shape));_bsTurn(pp,bsz.bw-2*_bs.margin,bsz.bh-2*_bs.margin);
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;
     }
@@ -8614,18 +8617,25 @@ function _bsInitEvents(){
       ov.dx=Math.round((pd.off[0]+(ex-pd.ex0)/pd.sc)*10)/10;ov.dy=Math.round((pd.off[1]+(ey-pd.ey0)/pd.sc)*10)/10;
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(!_bs.parkDrag&&!_bs.gdrag&&!_bs.rband&&!_bs.panDrag&&!_bs.selectedPiece&&_bsPairAt(ex,ey)){var _pa=_bsPairAt(ex,ey);bcv.style.cursor=_pa.xHit?'pointer':'move';return;}
+    if(_bs.parkBarDrag){var pbd=_bs.parkBarDrag,pb=_bs.parkBar;if(pb)_bs.parkScroll=pbd.s+(ey-pbd.ey)*_bs.parkMax/Math.max(1,pb.h-pb.kh);
+      renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(_bs.parkDrag){ // 미배치 조각 끌기: 커서를 따라 그림, 놓을 수 없는 원판 위면 빨간 테두리
       var d=_bs.parkDrag;d.ex=ex;d.ey=ey;d.home=ex>=_bs.parkX;var tb=d.home?-1:_bsBoardAt(ex,ey);
+      if(d.home){_bsParkAuto(ey,bcv.height);_bs.parkIns=_bsParkIns(ey,d.p);}else _bs.parkIns=null;
       d.bad=tb>=0&&(_boardLabel(_bs.boards[tb])!==_itemProd(d.p.item.shape)||!_bsFitDims(d.p,tb,!!d.p.rotated));
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;
     }
-    if(_bs.gdrag){_bsGroupMove(ex,ey);return;}
+    if(_bs.gdrag){ // 여러 조각도 미배치 칸 어디에 놓든 빼 둠
+      _bs.overPark=(_bs.gdrag.moved||Math.hypot(ex-_bs.gdrag.ex0,ey-_bs.gdrag.ey0)>5)&&_bs.parkX!=null&&ex>=_bs.parkX;
+      if(_bs.overPark){_bsParkAuto(ey,bcv.height);_bs.parkIns=_bsParkIns(ey);renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
+      _bs.parkIns=null;_bsGroupMove(ex,ey);return;}
     if(_bs.panDrag){var pd=_bs.panDrag;_bs.panX=pd.px+ex-pd.ex;_bs.panY=pd.py+ey-pd.ey;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(_bs.rband){_bs.rband.x1=ex;_bs.rband.y1=ey;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(_bs.selectedPiece&&Math.hypot(ex-_bs.dragStartX,ey-_bs.dragStartY)>5)_bs.dragMoved=true;
     if(_bs.selectedPiece){
       var hit=_bs.selectedPiece,p=hit.p;
       _bs.overPark=_bs.dragMoved&&_bs.parkX!=null&&ex>=_bs.parkX; // 미배치 칸 위에서 놓으면 빼 둠
+      _bs.parkIns=_bs.overPark?(_bsParkAuto(ey,bcv.height),_bsParkIns(ey)):null;
       if(_bs.overPark){renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
       var mg=_bs.margin*_bs.sc;
 
@@ -8717,14 +8727,22 @@ function _bsInitEvents(){
   bcv.onmouseup=function(){
     if(!_bs)return;
     if(_bs.pairDrag){_bs.pairDrag=null;bcv.style.cursor='move';return;} // 인접면 표시 글자 옮기기 끝
-    if(_bs.parkDrag){ // 미배치 조각 놓기: 원판 위면 그 자리에, 아니면 그대로 미배치
+    if(_bs.parkBarDrag){_bs.parkBarDrag=null;renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
+    if(_bs.parkDrag){ // 미배치 조각 놓기: 원판 위면 그 자리에, 미배치 칸이면 놓은 자리 순서로, 아니면 그대로 미배치
       var d=_bs.parkDrag;_bs.parkDrag=null;bcv.style.cursor='default';
+      var ins=_bs.parkIns;_bs.parkIns=null;
+      if(d.home&&ins!=null){var pa=_bs.parked,oi=pa.indexOf(d.p);if(oi>=0){pa.splice(oi,1);pa.splice(Math.min(ins,pa.length),0,d.p);}}
       var tb=d.home?-1:_bsBoardAt(d.ex,d.ey);
       if(tb>=0){var o=_bs.boardOffsets[tb],mg0=_bs.margin*_bs.sc;
         var why=_bsPlaceParked(d.p,tb,(d.ex-d.offX-o.ox-mg0)/_bs.sc,(d.ey-d.offY-o.oy-mg0)/_bs.sc);
         renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);if(why)alert(why);return;}
       renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;
     }
+    if(_bs.gdrag&&_bs.overPark){ // 여러 조각을 미배치 칸으로: 처음 자리로 돌려 놓고 원판에서 빼서 놓은 자리 순서로
+      var G=_bs.gdrag,pa=_bs.parked||(_bs.parked=[]),at=Math.min(_bs.parkIns==null?pa.length:_bs.parkIns,pa.length);_bs.gdrag=null;_bs.overPark=false;_bs.parkIns=null;
+      G.list.forEach(function(o){o.p.x=o.x;o.p.y=o.y;var ar=_bs.boards[o.bi],ix=ar.indexOf(o.p);if(ix>=0)ar.splice(ix,1);pa.splice(at++,0,o.p);});
+      _bs.multi=[];_bs.pickedPiece=null;_bsCleanBoards();updateBoardMoveButtons();bcv.style.cursor='default';
+      renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(_bs.gdrag){_bsGroupDrop();bcv.style.cursor='default';renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;}
     if(_bs.panDrag){_bs.panDrag=null;bcv.style.cursor='default';return;}
     if(_bs.rband){var rb=_bs.rband;_bs.rband=null; // 범위 안에 걸친 조각 모두 고르기
@@ -8737,7 +8755,7 @@ function _bsInitEvents(){
     var hit=_bs.selectedPiece;
     if(_bs.overPark){ // 미배치 칸으로 빼 둠
       var ar=_bs.boards[hit.bi],ix=ar.indexOf(hit.p);if(ix>=0)ar.splice(ix,1);
-      (_bs.parked||(_bs.parked=[])).push(hit.p);_bs.overPark=false;
+      var pa=_bs.parked||(_bs.parked=[]);pa.splice(_bs.parkIns==null?pa.length:Math.min(_bs.parkIns,pa.length),0,hit.p);_bs.overPark=false;_bs.parkIns=null;
     } else _bsResolve(hit.bi,hit.p);
     _bsCleanBoards(); // 빈 장 제거 - 그룹 메타데이터도 함께 갱신
     // 클릭(드래그 없음)이면 pickedPiece로 유지 → 장 이동 버튼 활성화
@@ -8754,7 +8772,8 @@ function _bsInitEvents(){
     renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);
   };
   bcv.onmouseleave=function(){
-    if(_bs&&_bs.parkDrag){_bs.parkDrag=null;_bs.overPark=false;bcv.style.cursor='default';renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;} // 창 밖으로 나가면 미배치 그대로
+    if(_bs&&_bs.parkBarDrag){_bs.parkBarDrag=null;return;}
+    if(_bs&&_bs.parkDrag){_bs.parkDrag=null;_bs.overPark=false;_bs.parkIns=null;bcv.style.cursor='default';renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);return;} // 창 밖으로 나가면 미배치 그대로
     if(_bs&&(_bs.gdrag||_bs.rband||_bs.panDrag)){bcv.onmouseup();return;}
     if(!_bs||!_bs.selectedPiece)return;
     _bs.overPark=false;
@@ -8764,6 +8783,7 @@ function _bsInitEvents(){
   bcv.onwheel=function(e){
     if(!_bs)return;e.preventDefault();
     var r=bcv.getBoundingClientRect(),ex=e.clientX-r.left,ey=e.clientY-r.top;
+    if(_bs.parkX!=null&&ex>=_bs.parkX){if(_bs.parkMax){_bs.parkScroll=Math.max(0,Math.min(_bs.parkMax,(_bs.parkScroll||0)+e.deltaY*0.8));renderBoardLayout(_bs.boards,_bs.bw,_bs.bh,_bs.ew,_bs.eh,_bs.margin);}return;} // 미배치 칸 위 휠 = 목록 스크롤
     var bi0=(_bs.boardPage||0)*2,o=_bs.boardOffsets[bi0];if(!o)return;
     var wx=(ex-o.ox)/_bs.sc,wy=(ey-o.oy)/_bs.sc,z0=_bs.zoom||1,z=Math.max(0.5,Math.min(8,z0*(e.deltaY<0?1.15:1/1.15)));
     if(Math.abs(z-1)<0.01)z=1;
@@ -8965,6 +8985,18 @@ function renderBoardLayout(boards,bw,bh,ew,eh,margin,cw,ch,targetCanvas){
 // _bs.parked = 뺀 조각(배치 항목 그대로: item,pw,ph,rotated), _bs.parkRects = 그린 자리(누르기 판정), _bs.parkDrag = 미배치 칸에서 끄는 중
 var _BS_NAVW=72; // 원판 배치 창 좌우 화살표(left/right 14 + 폭 46) + 틈
 function _bsParkW(W){return Math.round(Math.max(150,Math.min(260,W*0.2)));}
+var _BS_PARK_TOP=64; // 미배치 칸 목록 시작 (위는 제목·안내)
+// 미배치 칸에 놓을 자리(목록 순서): 커서 높이보다 가운데가 아래인 첫 조각 앞, ex = 끄는 조각(자기 자리는 셈에서 뺌)
+function _bsParkIns(ey,ex){
+  var R=(_bs.parkRects||[]).filter(function(q){return q.p!==ex;});
+  for(var i=0;i<R.length;i++)if((R[i].yt+R[i].y+R[i].h)/2>ey)return i;
+  return R.length;
+}
+// 끄는 중 미배치 칸 위·아래 끝에 대면 목록 스크롤
+function _bsParkAuto(ey,H){
+  if(!_bs.parkMax)return;var d=ey<_BS_PARK_TOP+30?-14:(ey>H-30?14:0);
+  if(d)_bs.parkScroll=Math.max(0,Math.min(_bs.parkMax,(_bs.parkScroll||0)+d));
+}
 function _bsDrawPark(g,cv,sc,ref,k){
   var W=cv.width,H=cv.height,x0=_bs.parkX,pw=W-x0,par=_bs.parked||(_bs.parked=[]),hot=_bs.overPark||(_bs.parkDrag&&_bs.parkDrag.home);
   g.fillStyle=hot?'#FFF1E3':'#F2F4F8';g.fillRect(x0,0,pw,H);
@@ -8972,17 +9004,32 @@ function _bsDrawPark(g,cv,sc,ref,k){
   g.fillStyle='#1F3F7A';g.font='bold 14px '+_EXP_FONT;g.textAlign='center';g.textBaseline='top';g.fillText('미배치'+(par.length?' ('+par.length+')':''),x0+pw/2,14);
   g.fillStyle='#75839C';g.font='11px '+_EXP_FONT;
   (par.length?['원판으로 끌어 다시 놓기','오른쪽 클릭 = 90° 돌리기']:['조각을 여기로 끌어','잠시 빼 둘 수 있어요']).forEach(function(t,i){g.fillText(t,x0+pw/2,34+i*14);});
-  var y=70,pad=12;_bs.parkRects=[];
+  // 목록이 칸보다 길면 스크롤 (2026-11-27 사용자 요청): _bs.parkScroll(px), 휠·오른쪽 막대 끌기·끄는 중 위/아래 끝에 대면 저절로
+  var TOP=_BS_PARK_TOP,pad=12,SB=10,y=0,L=[];
   par.forEach(function(p,i){
+    var pn=_itemProd(p.item.shape)||'',s2=Math.min(sc,(pw-2*pad-SB)/p.pw,(H*0.42)/p.ph),w=p.pw*s2,h=p.ph*s2;
+    L.push({p:p,i:i,pn:pn,yt:y,y:y+(pn?15:0),w:w,h:h,s:s2});y+=(pn?15:0)+h+16;});
+  var view=H-TOP-8;_bs.parkMax=Math.max(0,y-view);_bs.parkScroll=Math.max(0,Math.min(_bs.parkMax,_bs.parkScroll||0));
+  var off=TOP+4-_bs.parkScroll;_bs.parkRects=[];
+  g.save();g.beginPath();g.rect(x0,TOP,pw,H-TOP-6);g.clip();
+  L.forEach(function(q){
+    var yt=q.yt+off,yy=q.y+off,x=x0+(pw-SB-q.w)/2;
+    _bs.parkRects.push({p:q.p,x:x,y:yy,w:q.w,h:q.h,s:q.s,yt:yt});
+    if(yy+q.h<TOP||yt>H)return; // 보이는 것만 그림
     // 제품명 (2026-11-03 사용자 요청 — 어느 제품 원판에 놓을 조각인지): 제품 색 ■ + 이름, 칸 폭에 맞게 줄임
-    var pn=_itemProd(p.item.shape)||'',pi2=_prodIdxOf(pn);
-    if(pn){g.font='bold 11px '+_EXP_FONT;g.textAlign='center';g.textBaseline='top';var t=pn;while(t.length>2&&g.measureText('■ '+t).width>pw-2*pad)t=t.slice(0,-2)+'…';
-      var tw=g.measureText('■ '+t).width,tx=x0+(pw-tw)/2;g.textAlign='left';g.fillStyle=pi2>=0?_prodColor(pi2):'#56647E';g.fillText('■',tx,y);g.fillStyle='#1F3F7A';g.fillText(' '+t,tx+g.measureText('■').width,y);y+=15;}
-    var s2=Math.min(sc,(pw-2*pad)/p.pw,(H*0.42)/p.ph),w=p.pw*s2,h=p.ph*s2,x=x0+(pw-w)/2;
-    _bs.parkRects.push({p:p,x:x,y:y,w:w,h:h,s:s2});
-    if(!(_bs.parkDrag&&_bs.parkDrag.p===p))_boardPiece(g,p,i,x,y,s2,ref,k*Math.min(1,s2/sc),{img:null,bx:x0,by:y,w:pw,h:h,board:[]});
-    y+=h+16;
+    if(q.pn){var pi2=_prodIdxOf(q.pn);g.font='bold 11px '+_EXP_FONT;g.textBaseline='top';var t=q.pn;while(t.length>2&&g.measureText('■ '+t).width>pw-2*pad-SB)t=t.slice(0,-2)+'…';
+      var tw=g.measureText('■ '+t).width,tx=x0+(pw-SB-tw)/2;g.textAlign='left';g.fillStyle=pi2>=0?_prodColor(pi2):'#56647E';g.fillText('■',tx,yt);g.fillStyle='#1F3F7A';g.fillText(' '+t,tx+g.measureText('■').width,yt);}
+    if(!(_bs.parkDrag&&_bs.parkDrag.p===q.p))_boardPiece(g,q.p,q.i,x,yy,q.s,ref,k*Math.min(1,q.s/sc),{img:null,bx:x0,by:yy,w:pw,h:q.h,board:[]});
   });
+  if(_bs.parkIns!=null&&hot){ // 놓일 자리 (주황 선)
+    var iy=_bs.parkIns<L.length?L[_bs.parkIns].yt+off-8:(L.length?L[L.length-1].y+L[L.length-1].h+off+8:TOP+10);
+    g.strokeStyle='#FF6D00';g.lineWidth=3;g.beginPath();g.moveTo(x0+14,iy);g.lineTo(x0+pw-SB-14,iy);g.stroke();}
+  g.restore();
+  if(_bs.parkMax>0){ // 스크롤 막대
+    var tx0=x0+pw-SB-4,th=H-TOP-12,kh=Math.max(30,th*view/(view+_bs.parkMax)),ky=TOP+2+(th-kh)*_bs.parkScroll/_bs.parkMax;
+    _bs.parkBar={x:tx0,y:TOP+2,w:SB,h:th,kh:kh,ky:ky};
+    g.fillStyle='rgba(31,63,122,0.12)';g.fillRect(tx0,TOP+2,SB,th);g.fillStyle=_bs.parkBarDrag?'#1F3F7A':'#8FA0BC';g.fillRect(tx0+1,ky,SB-2,kh);
+  } else _bs.parkBar=null;
   var d=_bs.parkDrag; // 끄는 조각은 원판과 같은 배율로 커서에
   if(d){var dx=d.ex-d.offX,dy=d.ey-d.offY;g.save();g.globalAlpha=0.85;_boardPiece(g,d.p,0,dx,dy,sc,ref,k,{img:null,bx:dx,by:dy,w:d.p.pw*sc,h:d.p.ph*sc,board:[]});g.restore();
     g.strokeStyle=d.bad?'#E53935':'#FF6D00';g.lineWidth=2;g.setLineDash([5,3]);g.strokeRect(dx-2,dy-2,d.p.pw*sc+4,d.p.ph*sc+4);g.setLineDash([]);}

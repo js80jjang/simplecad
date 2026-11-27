@@ -225,6 +225,8 @@
   - 미배치 칸(2026-11-02 사용자 요청): 원판 배치 창 오른쪽 `_bsParkW` 폭(창에서만, 도면화 그림엔 없음, `_bs.parkX` = 칸 시작 px, 다음 쪽 화살표도 그 왼쪽).
     조각을 끌어 칸 위에서 놓으면(`_bs.overPark`) `_bs.parked`로, 칸 조각을 누르면 `_bs.parkDrag`(원판 배율로 커서에, 놓을 수 없는 원판이면 빨간 테두리) → 원판 위 놓기 `_bsPlaceParked`(같은 제품만·`_bsFitDims`),
     칸에서 오른쪽 클릭 = 90°. 칸 조각마다 위에 제품명(`_itemProd`, 제품 색 ■, 칸 폭에 맞게 …로 줄임). 겹침 정리 `_bsResolve`(밀어내고 그래도 겹치면 놓은 조각을 가장 가까운 빈 자리로), 빈 장 정리 `_bsCleanBoards`(빈 장도 제품 이름 유지).
+    목록 스크롤(2026-11-27 사용자 요청): `_bs.parkScroll`/`parkMax`, 목록은 `_BS_PARK_TOP`(64) 아래 잘라 그림, 휠(칸 위면 줌 대신)·오른쪽 막대 `_bs.parkBar`(끌기 `parkBarDrag`)·끄는 중 위/아래 끝 `_bsParkAuto`.
+    놓을 자리 `_bs.parkIns` = `_bsParkIns(ey)`(주황 선) — 원판에서 뺄 때·여러 개(gdrag, 처음 자리로 돌린 뒤 뺌)·칸 안에서 순서 바꾸기 모두 그 순서에 넣음
     남긴 채 닫으면 confirm → `_bsAutoPlaceParked`(같은 제품 원판 빈 자리 10mm 훑기, 없으면 그 제품 새 장)
   - 원판 장수(2026-11-03 사용자 요청 — 머리줄 단추는 보기 싫다고 해서 오른쪽 클릭 메뉴로): 원판 빈 곳 오른쪽 클릭(oncontextmenu, 조각 위는 돌리기) → `_bsCtxShow(bi)` 메뉴 `#board-ctx`
     → `_bsAddBoard(bi)` = 그 장 바로 뒤에 같은 제품 빈 장 `keep`(그룹 count·뒤 그룹 startBi `_bsShiftGroups`), `_bsDelBoard(bi)` = 그 장 빼기(조각은 `_bs.parked`로, 제품마다 최소 1장). `keep` 장은 `_bsCleanBoards`·movePieceTo가 안 지우고,
